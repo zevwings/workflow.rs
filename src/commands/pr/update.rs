@@ -15,10 +15,8 @@ impl PullRequestUpdateCommand {
     ///
     /// 根据仓库类型自动选择对应的平台实现
     pub fn update() -> Result<()> {
-        // 获取当前分支的 PR 标题
         let pull_request_title = Self::get_pull_request_title()?;
 
-        // 确定提交消息
         let message = pull_request_title.unwrap_or_else(|| {
             log_warning!("No commit message provided, using default message");
             "update".to_string()
@@ -31,16 +29,15 @@ impl PullRequestUpdateCommand {
             GitPreCommit::run_checks()?;
         }
 
-        // 执行 git commit（会自动暂存所有文件）
         // 使用 --no-verify 跳过 hook，因为我们已经通过 Rust 代码执行了检查
-        GitCommit::commit(&message, true)?; // 使用 --no-verify，因为已经执行了检查
+        GitCommit::commit(&message, true)?;
 
-        // 执行 git push
         let current_branch = GitBranch::current_branch()?;
         log_break!();
         log_info!("Pushing to remote...");
         log_break!();
-        GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
+        // 不使用 -u（分支应该已经存在）
+        GitBranch::push(&current_branch, false)?;
 
         log_break!();
         log_success!("Update completed successfully!");
@@ -49,7 +46,6 @@ impl PullRequestUpdateCommand {
 
     /// 根据仓库类型获取当前分支的 PR 标题
     fn get_pull_request_title() -> Result<Option<String>> {
-        // 获取当前分支的 PR ID（如果不存在，返回 None 而不是错误）
         let pr_id = match get_current_branch_pr_id() {
             Ok(Some(id)) => id,
             Ok(None) | Err(_) => {
@@ -58,7 +54,6 @@ impl PullRequestUpdateCommand {
             }
         };
 
-        // 获取 PR 标题
         let provider = create_provider_auto()?;
         let title = Spinner::with(format!("Fetching PR #{} title...", pr_id), || {
             provider.get_pull_request_title(&pr_id)

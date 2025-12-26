@@ -30,14 +30,17 @@
 | **核心规范** | [测试组织规范](./organization.md) | 测试类型、目录结构、命名约定、共享工具 |
 | | [测试编写规范](./writing.md) | AAA模式、命名规范、独立性、断言最佳实践 |
 | | [测试命令参考](./commands.md) | 常用测试命令、调试命令、Makefile命令 |
-| **参考文档** | [测试工具指南](./references/tools.md) | pretty_assertions、rstest、insta、mockito |
+| **参考文档** | [测试工具指南](./references/tools.md) | pretty_assertions、rstest、mockito |
+| | [测试环境工具指南](./references/environments.md) | TestIsolation、CliTestEnv、GitTestEnv |
+| | [测试辅助工具指南](./references/helpers.md) | CliCommandBuilder、TestDataGenerator |
 | | [Mock服务器使用指南](./references/mock-server.md) | MockServer 使用、端点配置、错误模拟 |
-| | [测试数据工厂指南](./references/data-factory.md) | Builder模式、数据生成、模板扩展 |
+| | [TestDataFactory 使用指南](./references/test-data-factory.md) | 测试数据生成、迁移指南、最佳实践 |
 | | [被忽略测试规范](./references/ignored-tests.md) | 文档格式、测试类型模板、最佳实践 |
 | | [覆盖率测试指南](./references/coverage.md) | 覆盖率工具、报告生成、提升技巧 |
 | | [性能测试指南](./references/performance.md) | 基准测试、性能要求、优化建议 |
 | | [集成测试指南](./references/integration.md) | 环境配置、数据隔离、清理机制 |
-| **测试模板** | [标准测试模板](./templates/test-case.template) | 标准测试用例模板 |
+| **测试模板** | [测试文档模板](./documentation-template.md) | 标准化测试文档模板（推荐） |
+| | [标准测试模板](./templates/test-case.template) | 标准测试用例模板 |
 | | [被忽略测试模板](./templates/ignored-test.template) | 被忽略测试的完整模板 |
 | | [Mock测试模板](./templates/mock-test.template) | Mock 测试模板 |
 
@@ -131,8 +134,9 @@ make coverage
 **包含工具**：
 - `pretty_assertions` - 彩色 diff 断言
 - `rstest` - 参数化测试
-- `insta` - 快照测试
 - `mockito` - HTTP Mock 测试
+- 测试环境工具（TestIsolation、CliTestEnv、GitTestEnv）
+- 测试辅助工具（CliCommandBuilder、TestDataGenerator）
 
 ### [Mock服务器使用指南](./references/mock-server.md)
 
@@ -145,16 +149,16 @@ make coverage
 - 验证 Mock 调用
 - Mock 最佳实践
 
-### [测试数据工厂指南](./references/data-factory.md)
+### [TestDataFactory 使用指南](./references/test-data-factory.md)
 
-介绍测试数据工厂的使用和扩展。
+详细介绍 TestDataFactory 的使用方法和迁移指南。
 
 **关键内容**：
-- Builder 模式架构
-- 支持的数据类型（Git Commit、GitHub PR、Jira Issue、Config）
-- 使用示例和最佳实践
-- 模板文件管理
-- 扩展 Builder
+- 快速开始和基本使用
+- 支持的构建器（GitHub PR、Jira Issue、Git Commit、Branch、User、Config）
+- 应用场景（替换硬编码JSON、与MockServer结合、批量生成）
+- 迁移步骤和实际迁移示例
+- 最佳实践和常见问题
 
 ### [被忽略测试规范](./references/ignored-tests.md)
 
@@ -202,6 +206,18 @@ make coverage
 
 项目提供了常用的测试模板，帮助快速创建标准化的测试代码：
 
+### [测试文档模板](./documentation-template.md) ⭐ 推荐
+
+**标准化测试文档模板**，包含：
+- 标准测试模板（基础版和完整版）
+- 被忽略测试模板
+- 参数化测试模板
+- 集成测试模板
+- 错误处理测试模板
+- 实际使用示例
+
+**使用场景**：所有新编写的测试都应该参考此模板编写文档注释。
+
 ### [标准测试模板](./templates/test-case.template)
 
 标准测试用例的模板，包含完整的 AAA 结构。
@@ -226,14 +242,17 @@ make coverage
    - [测试命令参考](./commands.md) - 掌握常用命令
 
 2. **实践编写测试**（~2小时）
-   - 使用[标准测试模板](./templates/test-case.template)
+   - 参考[测试文档模板](./documentation-template.md)编写测试文档
+   - 使用[标准测试模板](./templates/test-case.template)编写测试代码
    - 参考[测试工具指南](./references/tools.md)
    - 运行测试并查看结果
 
 3. **深入学习**（按需）
-   - 需要 Mock 外部 API → 阅读 [Mock服务器使用指南](./references/mock-server.md)
-   - 需要生成测试数据 → 阅读 [测试数据工厂指南](./references/data-factory.md)
-   - 需要提升覆盖率 → 阅读 [覆盖率测试指南](./references/coverage.md)
+   - 需要隔离的测试环境 → 阅读 [测试环境工具指南](./references/environments.md)
+   - 需要 CLI 命令测试辅助 → 阅读 [测试辅助工具指南](./references/helpers.md)
+  - 需要 Mock 外部 API → 阅读 [Mock服务器使用指南](./references/mock-server.md)
+  - 需要生成测试数据 → 阅读 [TestDataFactory 使用指南](./references/test-data-factory.md)
+  - 需要提升覆盖率 → 阅读 [覆盖率测试指南](./references/coverage.md)
 
 ### 快速检查清单
 
@@ -290,16 +309,9 @@ make coverage-open
 
 ---
 
-## 测试覆盖率目标
-
-- **总体覆盖率**：> 80%
-- **关键业务逻辑**：> 90%
-- **工具函数**：> 70%
-- **CLI 命令层**：> 75%
-
----
-
 ## ✅ 测试质量标准
+
+> **测试覆盖率目标**：详见 [测试组织规范 - 测试覆盖率](./organization.md#-测试覆盖率)
 
 一个高质量的测试应该满足：
 
@@ -312,5 +324,19 @@ make coverage-open
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-01-XX
+
+---
+
+## 📝 变更历史
+
+### 2025-01-XX
+- **优化文档结构**：移除 `README.md` 中重复的测试覆盖率目标，改为链接到 `organization.md`
+- **统一覆盖率目标**：在 `organization.md` 中补充 CLI 命令层覆盖率目标（> 75%）
+
+### 2025-12-25
+- **新增测试文档模板**：添加 `documentation-template.md`，提供标准化的测试文档模板
+- **新增测试环境工具文档**：添加 `environments.md` 和 `helpers.md` 文档
+- **更新Mock服务器文档**：更新 `mock-server.md`，添加高级方法和预设Mock端点说明
+- **更新测试工具指南**：更新 `tools.md`，添加测试环境工具和测试辅助工具的链接
 

@@ -6,6 +6,7 @@
 //! - 配置验证和序列化
 //! - 表格显示结构测试
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 use workflow::base::settings::settings::{
@@ -72,6 +73,17 @@ fn create_test_llm_settings() -> LLMSettings {
 // ==================== JiraSettings 测试 ====================
 
 /// 测试 JiraSettings 创建和字段访问
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_settings_creation() {
     let jira_settings = create_test_jira_settings();
@@ -85,6 +97,17 @@ fn test_jira_settings_creation() {
 }
 
 /// 测试 JiraSettings 默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_settings_default() {
     let default_jira = JiraSettings::default();
@@ -95,6 +118,17 @@ fn test_jira_settings_default() {
 }
 
 /// 测试 JiraSettings 克隆和调试输出
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_settings_clone_and_debug() {
     let original_jira = create_test_jira_settings();
@@ -104,93 +138,181 @@ fn test_jira_settings_clone_and_debug() {
     assert_eq!(original_jira.api_token, cloned_jira.api_token);
     assert_eq!(original_jira.service_address, cloned_jira.service_address);
 
-    // 测试调试输出
+    // Arrange: 准备测试调试输出
     let debug_str = format!("{:?}", original_jira);
     assert!(debug_str.contains("JiraSettings"));
     assert!(debug_str.contains("test@example.com"));
 }
 
-// ==================== GitHubSettings 测试 ====================
+// ==================== GitHubSettings Tests ====================
 
-/// 测试 GitHubSettings 创建和账号管理
+/// 测试创建GitHubSettings并验证账号信息
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_github_settings_creation() {
+fn test_github_settings_creation_with_valid_accounts_creates_settings() {
+    // Arrange: 准备测试用的 GitHubSettings
     let github_settings = create_test_github_settings();
 
+    // Act: 验证设置创建
+    // (验证在 Assert 中完成)
+
+    // Assert: 验证账号数量和当前账号设置正确
     assert_eq!(github_settings.accounts.len(), 2);
     assert_eq!(github_settings.current, Some("personal".to_string()));
-
-    // 验证账号信息
     let personal_account = &github_settings.accounts[0];
     assert_eq!(personal_account.name, "personal");
     assert_eq!(personal_account.email, "personal@example.com");
     assert_eq!(personal_account.api_token, "ghp_personal_token");
 }
 
-/// 测试 GitHubSettings 当前账号获取
+/// 测试获取GitHubSettings的当前账号和token
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_github_settings_current_account() {
+fn test_github_settings_current_account_with_valid_settings_returns_account() -> Result<()> {
+    // Arrange: 准备测试用的 GitHubSettings
     let github_settings = create_test_github_settings();
 
-    // 测试获取当前账号
+    // Act: 获取当前账号和 token
     let current_account = github_settings.get_current_account();
-    assert!(current_account.is_some());
+    let current_token = github_settings.get_current_token();
 
-    let account = current_account.expect("current account should exist");
+    // Assert: 验证当前账号和 token 正确
+    assert!(current_account.is_some());
+    let account =
+        current_account.ok_or_else(|| color_eyre::eyre::eyre!("current account should exist"))?;
     assert_eq!(account.name, "personal");
     assert_eq!(account.email, "personal@example.com");
-
-    // 测试获取当前 token
-    let current_token = github_settings.get_current_token();
     assert_eq!(current_token, Some("ghp_personal_token"));
+    Ok(())
 }
 
-/// 测试 GitHubSettings 无当前账号设置
+/// 测试当current为None时返回第一个账号
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_github_settings_no_current_account() {
+fn test_github_settings_no_current_account_with_none_current_returns_first_account() -> Result<()> {
+    // Arrange: 准备 GitHubSettings（current 为 None）
     let mut github_settings = create_test_github_settings();
     github_settings.current = None;
 
-    // 应该返回第一个账号
+    // Act: 获取当前账号
     let current_account = github_settings.get_current_account();
-    assert!(current_account.is_some());
 
-    let account = current_account.expect("should return first account");
+    // Assert: 验证返回第一个账号
+    assert!(current_account.is_some());
+    let account =
+        current_account.ok_or_else(|| color_eyre::eyre::eyre!("should return first account"))?;
     assert_eq!(account.name, "personal");
+    Ok(())
 }
 
-/// 测试 GitHubSettings 空账号列表
+/// 测试当账号列表为空时返回None
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_github_settings_empty_accounts() {
+fn test_github_settings_empty_accounts_with_no_accounts_returns_none() {
+    // Arrange: 准备空的 GitHubSettings
     let empty_github = GitHubSettings {
         accounts: vec![],
         current: None,
     };
 
-    assert!(empty_github.get_current_account().is_none());
-    assert!(empty_github.get_current_token().is_none());
+    // Act: 获取当前账号和 token
+    let current_account = empty_github.get_current_account();
+    let current_token = empty_github.get_current_token();
+
+    // Assert: 验证返回 None
+    assert!(current_account.is_none());
+    assert!(current_token.is_none());
 }
 
-/// 测试 GitHubSettings 默认实现
+/// 测试创建默认的GitHubSettings
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_github_settings_default() {
+fn test_github_settings_default_with_no_parameters_creates_empty_settings() {
+    // Arrange: 准备创建默认设置
+
+    // Act: 创建默认的 GitHubSettings
     let default_github = GitHubSettings::default();
 
+    // Assert: 验证账号列表为空且当前账号为 None
     assert!(default_github.accounts.is_empty());
     assert_eq!(default_github.current, None);
 }
 
-// ==================== LLMSettings 测试 ====================
+// ==================== LLMSettings Tests ====================
 
-/// 测试 LLMSettings 创建和提供商管理
+/// 测试创建LLMSettings并验证提供商配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_llm_settings_creation() {
+fn test_llm_settings_creation_with_valid_providers_creates_settings() {
+    // Arrange: 准备测试用的 LLMSettings
     let llm_settings = create_test_llm_settings();
 
+    // Act: 验证设置创建
+    // (验证在 Assert 中完成)
+
+    // Assert: 验证提供商和语言设置正确，以及各个提供商配置正确
     assert_eq!(llm_settings.provider, "openai");
     assert_eq!(llm_settings.language, "English");
-
-    // 验证各个提供商配置
     assert_eq!(
         llm_settings.openai.key,
         Some("sk-test_openai_key".to_string())
@@ -206,19 +328,48 @@ fn test_llm_settings_creation() {
     );
 }
 
-/// 测试 LLMSettings 当前提供商获取
+/// 测试获取LLMSettings的当前提供商配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_llm_settings_current_provider() {
+fn test_llm_settings_current_provider_with_valid_settings_returns_provider() {
+    // Arrange: 准备测试用的 LLMSettings
     let llm_settings = create_test_llm_settings();
 
+    // Act: 获取当前提供商
     let current_provider = llm_settings.current_provider();
+
+    // Assert: 验证当前提供商配置正确
     assert_eq!(current_provider.key, Some("sk-test_openai_key".to_string()));
     assert_eq!(current_provider.model, Some("gpt-4".to_string()));
 }
 
-/// 测试 LLMSettings 默认值
+/// 测试LLMSettings的默认值方法
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_llm_settings_defaults() {
+fn test_llm_settings_defaults_with_no_parameters_returns_default_values() {
+    // Arrange: 准备检查默认值
+
+    // Act & Assert: 验证各个默认值方法返回正确的值
     assert_eq!(LLMSettings::default_provider(), "openai");
     assert_eq!(LLMSettings::default_language(), "en");
     assert_eq!(LLMSettings::default_model("openai"), "gpt-4.0");
@@ -226,23 +377,38 @@ fn test_llm_settings_defaults() {
     assert_eq!(LLMSettings::default_model("unknown"), ""); // proxy 必须输入，没有默认值
 }
 
-/// 测试 LLMProviderSettings 创建
+/// 测试创建LLMProviderSettings并验证字段值
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_llm_provider_settings_creation() {
+fn test_llm_provider_settings_creation_with_valid_fields_creates_settings() {
+    // Arrange: 准备提供商设置字段值
+    let url = Some("https://api.example.com".to_string());
+    let key = Some("test_key".to_string());
+    let model = Some("test_model".to_string());
+
+    // Act: 创建 LLMProviderSettings 实例
     let provider_settings = LLMProviderSettings {
-        url: Some("https://api.example.com".to_string()),
-        key: Some("test_key".to_string()),
-        model: Some("test_model".to_string()),
+        url: url.clone(),
+        key: key.clone(),
+        model: model.clone(),
     };
 
-    assert_eq!(
-        provider_settings.url,
-        Some("https://api.example.com".to_string())
-    );
-    assert_eq!(provider_settings.key, Some("test_key".to_string()));
-    assert_eq!(provider_settings.model, Some("test_model".to_string()));
+    // Assert: 验证字段值正确
+    assert_eq!(provider_settings.url, url);
+    assert_eq!(provider_settings.key, key);
+    assert_eq!(provider_settings.model, model);
 
-    // 测试默认值
+    // Arrange: 准备测试默认值
     let default_provider = LLMProviderSettings::default();
     assert_eq!(default_provider.url, None);
     assert_eq!(default_provider.key, None);
@@ -252,6 +418,17 @@ fn test_llm_provider_settings_creation() {
 // ==================== LogSettings 测试 ====================
 
 /// 测试 LogSettings 创建和默认值
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_log_settings_creation() {
     let log_settings = LogSettings {
@@ -271,6 +448,17 @@ fn test_log_settings_creation() {
 }
 
 /// 测试 LogSettings 默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_log_settings_default() {
     let default_log = LogSettings::default();
@@ -283,6 +471,17 @@ fn test_log_settings_default() {
 }
 
 /// 测试 LogSettings 默认方法
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_log_settings_default_methods() {
     assert_eq!(LogSettings::default_log_folder(), "logs");
@@ -299,6 +498,17 @@ fn test_log_settings_default_methods() {
 // ==================== Settings 主结构测试 ====================
 
 /// 测试 Settings 创建和默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_settings_creation() {
     let settings = Settings {
@@ -321,6 +531,17 @@ fn test_settings_creation() {
 }
 
 /// 测试 Settings 默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_settings_default() {
     let default_settings = Settings::default();
@@ -332,12 +553,23 @@ fn test_settings_default() {
     assert!(default_settings.aliases.is_empty());
 }
 
-// ==================== 表格显示结构测试 ====================
+// ==================== Table Display Structure Tests ====================
 
 /// 测试表格行结构创建
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_table_row_structures() {
-    // 测试 LLMConfigRow
+    // Arrange: 准备测试 LLMConfigRow
     let llm_row = LLMConfigRow {
         provider: "openai".to_string(),
         model: "gpt-4".to_string(),
@@ -348,7 +580,7 @@ fn test_table_row_structures() {
     assert_eq!(llm_row.provider, "openai");
     assert_eq!(llm_row.model, "gpt-4");
 
-    // 测试 JiraConfigRow
+    // Arrange: 准备测试 JiraConfigRow
     let jira_row = JiraConfigRow {
         email: "jira@example.com".to_string(),
         service_address: "https://jira.company.com".to_string(),
@@ -358,7 +590,7 @@ fn test_table_row_structures() {
     assert_eq!(jira_row.email, "jira@example.com");
     assert!(jira_row.service_address.contains("jira.company.com"));
 
-    // 测试 GitHubAccountRow
+    // Arrange: 准备测试 GitHubAccountRow
     let github_row = GitHubAccountRow {
         name: "personal".to_string(),
         email: "github@example.com".to_string(),
@@ -370,7 +602,7 @@ fn test_table_row_structures() {
     assert_eq!(github_row.name, "personal");
     assert_eq!(github_row.status, "Active");
 
-    // 测试 GitHubAccountListRow
+    // Arrange: 准备测试 GitHubAccountListRow
     let github_list_row = GitHubAccountListRow {
         index: "1".to_string(),
         name: "work".to_string(),
@@ -384,8 +616,24 @@ fn test_table_row_structures() {
 }
 
 /// 测试复杂配置场景
+///
+/// ## 测试目的
+/// 验证Settings结构体能够正确处理包含所有配置类型的复杂场景
+///
+/// ## 测试场景
+/// 1. 创建包含Jira、GitHub、Log、LLM和别名配置的完整Settings
+/// 2. 验证各个配置模块的字段值正确
+/// 3. 验证GitHub当前账号功能
+/// 4. 验证LLM当前提供商功能
+/// 5. 验证别名功能
+///
+/// ## 预期结果
+/// - 所有配置字段正确设置
+/// - GitHub当前账号功能正常
+/// - LLM当前提供商功能正常
+/// - 别名功能正常
 #[test]
-fn test_complex_configuration_scenario() {
+fn test_complex_configuration_scenario() -> Result<()> {
     // 创建包含所有配置的复杂设置
     let mut aliases = HashMap::new();
     aliases.insert("s".to_string(), "status".to_string());
@@ -446,29 +694,28 @@ fn test_complex_configuration_scenario() {
         aliases,
     };
 
-    // 验证复杂配置的各个方面
+    // Assert: 验证复杂配置的各个方面
     assert!(complex_settings.jira.email.is_some());
     assert_eq!(complex_settings.github.accounts.len(), 3);
     assert_eq!(complex_settings.log.level, Some("info".to_string()));
     assert_eq!(complex_settings.llm.provider, "proxy");
     assert_eq!(complex_settings.aliases.len(), 3);
 
-    // 验证 GitHub 当前账号功能
+    // Assert: 验证 GitHub 当前账号功能
     let current_account = complex_settings.github.get_current_account();
     assert!(current_account.is_some());
-    assert_eq!(
-        current_account.expect("current account should exist").name,
-        "main"
-    );
+    let account =
+        current_account.ok_or_else(|| color_eyre::eyre::eyre!("current account should exist"))?;
+    assert_eq!(account.name, "main");
 
-    // 验证 LLM 当前提供商功能
+    // Assert: 验证 LLM 当前提供商功能
     let current_llm = complex_settings.llm.current_provider();
     assert_eq!(
         current_llm.url,
         Some("https://complex.proxy.api.com".to_string())
     );
 
-    // 验证别名功能
+    // Assert: 验证别名功能
     assert_eq!(
         complex_settings.aliases.get("s"),
         Some(&"status".to_string())
@@ -478,4 +725,5 @@ fn test_complex_configuration_scenario() {
         Some(&"commit".to_string())
     );
     assert_eq!(complex_settings.aliases.get("p"), Some(&"push".to_string()));
+    Ok(())
 }

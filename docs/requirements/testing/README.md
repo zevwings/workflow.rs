@@ -13,6 +13,7 @@
 | 文档 | 描述 | 状态 |
 |------|------|------|
 | [test-coverage-improvement.md](./test-coverage-improvement.md) | 测试覆盖度提升综合方案 | 📋 待实施 |
+| [test-stability-analysis.md](./test-stability-analysis.md) | 测试不稳定性分析与修复方案 | 📋 分析完成，待实施 |
 
 ### 模块测试覆盖率文档
 
@@ -144,10 +145,6 @@
 - [开发规范索引](../../guidelines/development/README.md) - 开发规范总览
 - [代码审查规范](../../guidelines/development/code-review.md) - 代码审查标准
 - [错误处理规范](../../guidelines/development/error-handling.md) - 错误处理最佳实践
-
-### 测试改进追踪
-
-- [测试改进追踪文档](../test-improvement-tracking.md) - 测试代码质量改进工作追踪
 
 ---
 

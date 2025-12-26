@@ -11,6 +11,7 @@ mod cli;
 mod commands; // Commands 模块测试
 mod commit;
 mod completion;
+mod git; // Git 模块测试
 mod integration;
 mod jira;
 mod pr;
@@ -21,4 +22,3 @@ mod template;
 
 // 共享测试工具
 mod common;
-mod utils;

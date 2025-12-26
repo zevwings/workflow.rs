@@ -48,18 +48,6 @@
   - 📊 进度跟踪和里程碑
 - **优先级**: 高优先级（测试覆盖度提升综合指导文档）
 
-#### 2.1 [`test-improvement-tracking.md`](./test-improvement-tracking.md)
-- **状态**: 🚧 进行中
-- **实现度**: 1% (已完成 1/5 任务)
-- **分类**: 测试最佳实践改进追踪
-- **内容**:
-  - 📋 5个改进任务：减少 unwrap() 使用、检查覆盖率、添加文档、扩展数据工厂、管理忽略测试
-  - 📊 详细的进度追踪（626处 unwrap()、153处 expect()、54个被忽略测试）
-  - 🎯 任务优先级和时间表
-  - ✅ 完成标准和验收条件
-  - 📝 改进模式和最佳实践示例
-- **优先级**: ⭐⭐⭐⭐ 高优先级（影响代码质量和可维护性）
-
 #### 3. 核心业务模块测试覆盖率改进计划
 
 ##### 3.1 [`testing/test-coverage-branch.md`](./testing/test-coverage-branch.md)
@@ -152,7 +140,29 @@
   - CI 集成（可选）
 - **优先级**: P2（可选，但建议实施以提升效率）
 
-#### 6. [`internationalization.md`](./internationalization.md)
+#### 6. [`scripts-migration-analysis.md`](./scripts-migration-analysis.md)
+- **状态**: 📋 待实施
+- **实现度**: 0%
+- **分类**: 开发工具脚本迁移
+- **内容**:
+  - `scripts/dev` 目录脚本迁移分析报告
+  - 9 个脚本的技术选型分析（Python vs Rust vs Bash）
+  - 已选择方案 A（Python 统一）
+  - 6 个脚本需要迁移，2 个保持 Bash
+- **优先级**: 🟡 中（提升开发工具可维护性）
+
+#### 7. [`scripts-migration-plan.md`](./scripts-migration-plan.md)
+- **状态**: 📋 待实施
+- **实现度**: 0%
+- **分类**: 开发工具脚本迁移实施计划
+- **内容**:
+  - 详细的 Python 迁移实施计划
+  - 3 个阶段的实施步骤（高优先级 → 中优先级 → 优化整合）
+  - 技术规范、测试策略、风险评估
+  - 预计工作量：9-13 天
+- **优先级**: 🟡 中（与 scripts-migration-analysis.md 配套）
+
+#### 8. [`internationalization.md`](./internationalization.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 国际化支持
@@ -163,7 +173,7 @@
   - Cursor Rules 国际化规则补充
 - **优先级**: 低优先级（当前项目可能不需要）
 
-#### 7. [`test-global-state-refactoring.md`](./test-global-state-refactoring.md)
+#### 9. [`test-global-state-refactoring.md`](./test-global-state-refactoring.md)
 - **状态**: 📋 待实施
 - **实现度**: 99.8-99.9% 测试通过率（目标：100%）
 - **分类**: 测试全局状态依赖重构
@@ -175,6 +185,33 @@
   - 📊 成功指标：100%通过率，连续运行100次0失败
 - **优先级**: 🔵 低（长期优化，当前通过率已达99.8%）
 
+#### 10. [`test-architecture-improvement.md`](./test-architecture-improvement.md)
+- **状态**: 📋 待实施
+- **实现度**: 0%
+- **分类**: 测试架构优化
+- **内容**:
+  - 🔄 统一测试环境使用模式（迁移TempDir到GitTestEnv/CliTestEnv）
+  - 🛡️ 扩展守卫层功能（FileSystemGuard、NetworkGuard等）
+  - 🌐 加强Mock服务器集成和使用
+  - 📦 改进测试数据管理（规范化Fixtures、扩展TestDataFactory）
+  - 🏗️ 新增RepoTestEnv测试环境
+  - ⚡ 性能优化（并行化、资源缓存）
+  - 📚 完善测试文档（使用指南、最佳实践、示例）
+- **优先级**: ⭐⭐⭐ 中（长期优化，提升测试架构一致性）
+
+#### 11. [`test-naming-structure-improvement.md`](./test-naming-structure-improvement.md)
+- **状态**: 📋 待实施
+- **实现度**: 0%
+- **分类**: 测试规范优化
+- **内容**:
+  - 🔤 统一测试函数命名格式（~273个测试需要改进）
+  - 🏗️ 完善代码结构规范（101个文件需要添加分组注释）
+  - 📚 完善文档注释规范（~1573个测试需要添加文档）
+  - ✅ 统一AAA模式规范（~573个测试需要改进）
+  - ⚡ 优化测试并行化（减少不必要的串行测试）
+  - 📋 分阶段实施计划（6个主要任务，约2000+个子任务）
+- **优先级**: ⭐⭐⭐ 中（代码质量改进，提升测试可读性和可维护性）
+
 ---
 
 ## 📁 目录结构
@@ -185,7 +222,6 @@ docs/requirements/
 │
 ├── jira.md                          # JIRA 模块待办事项（🚧 部分完成）
 ├── test-coverage-improvement.md     # 测试覆盖度提升综合方案（🔄 进行中）
-├── test-improvement-tracking.md     # 测试最佳实践改进追踪（🚧 进行中）
 │
 ├── testing/                          # 测试覆盖率需求文档目录
 │   ├── README.md                     # 测试覆盖率文档索引
@@ -203,8 +239,12 @@ docs/requirements/
 │
 ├── integration.md                   # 集成与扩展待办事项（⏳ 待实施）
 ├── doc-check.md                     # 架构文档检查工具待办事项（⏳ 待实施）
+├── scripts-migration-analysis.md    # scripts/dev 脚本迁移分析报告（📋 待实施）
+├── scripts-migration-plan.md        # scripts/dev 脚本迁移实施计划（📋 待实施）
 ├── internationalization.md          # 国际化支持待办事项（⏳ 待实施）
-└── test-global-state-refactoring.md # 测试全局状态依赖重构（📋 待实施）
+├── test-global-state-refactoring.md # 测试全局状态依赖重构（📋 待实施）
+├── test-architecture-improvement.md # 测试架构改进TODO（📋 待实施）
+└── test-naming-structure-improvement.md # 测试命名和结构改进TODO（📋 待实施）
 ```
 
 ---
@@ -214,17 +254,16 @@ docs/requirements/
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
-| 🔄 进行中 | 2 个 | 测试覆盖度提升综合方案、测试最佳实践改进追踪 |
-| 📋 待实施 | 11 个 | 核心业务模块测试覆盖率改进计划（10个）、测试全局状态重构 |
+| 🔄 进行中 | 1 个 | 测试覆盖度提升综合方案 |
+| 📋 待实施 | 15 个 | 核心业务模块测试覆盖率改进计划（10个）、测试全局状态重构、测试架构改进、测试命名结构改进、脚本迁移分析（2个） |
 | ⏳ 待实施 | 3 个 | 集成扩展、文档检查工具、国际化支持 |
-| **总计** | **17 个** | - |
+| **总计** | **20 个** | - |
 
 ### 文档列表
 
 #### 分类待办事项文档
 1. **jira.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
 2. **test-coverage-improvement.md** - 测试覆盖度提升综合方案（🔄 进行中，15.66%-18.09%）
-3. **test-improvement-tracking.md** - 测试最佳实践改进追踪（🚧 进行中，1%）
 
 #### 核心业务模块测试覆盖率改进计划（10 个）
 详见 [`testing/README.md`](./testing/README.md) 获取完整列表。
@@ -244,14 +283,14 @@ docs/requirements/
 
 ### 当前待办事项
 
-本目录包含 13 个文档：
+本目录包含 12 个文档：
 
 #### 部分完成文档（1 个）
 1. **JIRA 模块** (`jira.md`) - 🚧 部分完成（~40%）
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
-#### 进行中文档（2 个）
+#### 进行中文档（1 个）
 2. **测试覆盖度提升综合方案** (`test-coverage-improvement.md`) - 🔄 进行中（15.66%-18.09%）
    - 📊 当前覆盖率：15.66%-18.09% (2382-2751/15206 行)
    - 🎯 目标覆盖率：75%+
@@ -263,12 +302,6 @@ docs/requirements/
    - 📝 分阶段实施计划（核心功能 → 重要功能 → 辅助功能）
    - 📊 任务统计（约 90+ 个待实施任务）
 
-3. **测试最佳实践改进追踪** (`test-improvement-tracking.md`) - 🚧 进行中（1%）
-   - 📋 5个改进任务：减少 unwrap() 使用、检查覆盖率、添加文档、扩展数据工厂、管理忽略测试
-   - 📊 详细的进度追踪（626处 unwrap()、153处 expect()、54个被忽略测试）
-   - 🎯 任务优先级、时间表和完成标准
-   - ✅ 已完成 `tests/base/http/client.rs` 改进
-   - ⏳ 待完成：4个高优先级任务
 
 #### 核心业务模块测试覆盖率改进计划（10 个）
 
@@ -308,7 +341,7 @@ docs/requirements/
 12. **Commands 模块** (`testing/test-coverage-commands.md`) - 📋 待实施（1.1%）
     - 所有 CLI 命令的实现（15 个子模块）
 
-#### 待实施文档（4 个）
+#### 待实施文档（6 个）
 8. **集成与扩展** (`integration.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
 
@@ -318,16 +351,41 @@ docs/requirements/
    - 综合检查脚本（可选）
    - CI 集成（可选）
 
-10. **国际化支持** (`internationalization.md`) - ⏳ 待实施（0%）
+10. **scripts/dev 脚本迁移分析** (`scripts-migration-analysis.md`) - 📋 待实施（0%）
+   - `scripts/dev` 目录脚本迁移分析报告
+   - 9 个脚本的技术选型分析（Python vs Rust vs Bash）
+   - 已选择方案 A（Python 统一）
+
+11. **scripts/dev 脚本迁移计划** (`scripts-migration-plan.md`) - 📋 待实施（0%）
+   - 详细的 Python 迁移实施计划
+   - 3 个阶段的实施步骤
+   - 预计工作量：9-13 天
+
+12. **国际化支持** (`internationalization.md`) - ⏳ 待实施（0%）
    - 多语言支持规则（文本外部化、资源文件组织、语言切换机制）
    - 时区和日期格式处理规则（时区处理、日期格式标准化、本地化显示）
    - 国际化相关的代码规范和最佳实践
 
-11. **测试全局状态依赖重构** (`test-global-state-refactoring.md`) - 📋 待实施（99.8-99.9%）
+13. **测试全局状态依赖重构** (`test-global-state-refactoring.md`) - 📋 待实施（99.8-99.9%）
    - 重构测试以减少对全局状态的依赖
    - 开发 TestIsolation、EnvGuard、GitConfigGuard 工具
    - 修复 2-3 个间歇性失败测试
    - 目标：100% 测试通过率
+
+14. **测试架构改进** (`test-architecture-improvement.md`) - 📋 待实施（0%）
+   - 统一测试环境使用模式
+   - 扩展守卫层功能
+   - 加强Mock服务器集成
+   - 改进测试数据管理
+   - 新增RepoTestEnv
+   - 性能优化和文档完善
+
+15. **测试命名和结构改进** (`test-naming-structure-improvement.md`) - 📋 待实施（0%）
+   - 统一测试函数命名格式（~273个）
+   - 完善代码结构规范（101个文件）
+   - 完善文档注释规范（~1573个）
+   - 统一AAA模式规范（~573个）
+   - 优化测试并行化
 
 > **注意**：架构文档同步机制相关任务已完成，自动化检查工具实施计划已迁移至 `docs/requirements/doc-check.md`。
 
@@ -348,7 +406,6 @@ docs/requirements/
 ### 按模块查找
 - **JIRA 相关** → [`jira.md`](./jira.md) 🚧 部分完成
 - **测试覆盖度提升综合方案** → [`testing/test-coverage-improvement.md`](./testing/test-coverage-improvement.md) 🔄 进行中（15.66%-18.09%）
-- **测试最佳实践改进追踪** → [`test-improvement-tracking.md`](./test-improvement-tracking.md) 🚧 进行中（1%）
 
 **核心业务模块测试覆盖率改进**（详见 [`testing/README.md`](./testing/README.md)）：
 - **Branch 模块** → [`testing/test-coverage-branch.md`](./testing/test-coverage-branch.md) 📋 待实施（27.9%）
@@ -365,25 +422,64 @@ docs/requirements/
 **其他**：
 - **集成与扩展** → [`integration.md`](./integration.md) ⏳ 待实施
 - **文档检查工具** → [`doc-check.md`](./doc-check.md) ⏳ 待实施
+- **scripts/dev 脚本迁移分析** → [`scripts-migration-analysis.md`](./scripts-migration-analysis.md) 📋 待实施
+- **scripts/dev 脚本迁移计划** → [`scripts-migration-plan.md`](./scripts-migration-plan.md) 📋 待实施
 - **国际化支持** → [`internationalization.md`](./internationalization.md) ⏳ 待实施
 - **测试全局状态重构** → [`test-global-state-refactoring.md`](./test-global-state-refactoring.md) 📋 待实施（99.8-99.9%）
+- **测试架构改进** → [`test-architecture-improvement.md`](./test-architecture-improvement.md) 📋 待实施（0%）
+- **测试命名和结构改进** → [`test-naming-structure-improvement.md`](./test-naming-structure-improvement.md) 📋 待实施（0%）
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-12-25（添加 scripts/dev 脚本迁移文档）
 
 ---
 
 ## 📝 更新说明（最新）
 
 ### 2025-12-25 更新（最新）
+- ✅ 新增 `scripts-migration-analysis.md` - scripts/dev 脚本迁移分析报告（📋 待实施）
+  - 📊 9 个脚本的技术选型分析（Python vs Rust vs Bash）
+  - ✅ 已选择方案 A（Python 统一）
+  - 📋 6 个脚本需要迁移，2 个保持 Bash
+- ✅ 新增 `scripts-migration-plan.md` - scripts/dev 脚本迁移实施计划（📋 待实施）
+  - 📝 详细的 Python 迁移实施计划
+  - 🔄 3 个阶段的实施步骤（高优先级 → 中优先级 → 优化整合）
+  - ⏱️ 预计工作量：9-13 天
+- ✅ 更新了统计信息和目录结构（20 个文档）
+- ✅ 更新了快速导航和文档列表
+
+### 2025-12-25 更新（早期）
+- ✅ 新增 `test-naming-structure-improvement.md` - 测试命名和结构改进TODO（📋 待实施）
+  - 🔤 统一测试函数命名格式（~273个测试需要改进，91%符合率）
+  - 🏗️ 完善代码结构规范（101个文件需要添加分组注释，37%符合率）
+  - 📚 完善文档注释规范（~1573个测试需要添加文档，49%符合率）
+  - ✅ 统一AAA模式规范（~573个测试需要改进，81%符合率）
+  - ⚡ 优化测试并行化（减少不必要的串行测试）
+  - 📋 分阶段实施计划（6个主要任务，约2000+个子任务）
+- ✅ 更新了统计信息和目录结构（18 个文档）
+- ✅ 更新了快速导航和文档列表
+
+### 2025-12-25 更新（早期）
+- ✅ 新增 `test-architecture-improvement.md` - 测试架构改进TODO（📋 待实施）
+  - 🔄 统一测试环境使用模式（迁移TempDir到GitTestEnv/CliTestEnv）
+  - 🛡️ 扩展守卫层功能（FileSystemGuard、NetworkGuard等）
+  - 🌐 加强Mock服务器集成和使用
+  - 📦 改进测试数据管理（规范化Fixtures、扩展TestDataFactory）
+  - 🏗️ 新增RepoTestEnv测试环境
+  - ⚡ 性能优化（并行化、资源缓存）
+  - 📚 完善测试文档（使用指南、最佳实践、示例）
+- ✅ 更新了统计信息和目录结构（18 个文档）
+- ✅ 更新了快速导航和文档列表
+
+### 2025-12-25 更新（早期）
 - ✅ 新增 `test-global-state-refactoring.md` - 测试全局状态依赖重构（📋 待实施）
   - 🎯 重构测试以减少对全局状态的依赖，实现100%测试通过率
   - 🔍 分析2-3个间歇性失败测试的根本原因（环境变量、Git配置、Mock服务器、文件系统状态）
   - 🛠️ 提出3个重构方案（增强测试隔离、独立进程运行、容器化测试）
   - 📝 详细的实施计划（工具开发、修复失败测试、重构现有测试、验证优化）
   - 📊 明确的成功指标（100%通过率、连续运行100次0失败、性能不超过120%）
-- ✅ 更新了统计信息和目录结构（13 个文档）
+- ✅ 更新了统计信息和目录结构（17 个文档）
 - ✅ 更新了快速导航和文档列表
 
 ### 2025-12-24 更新（最新）
@@ -397,11 +493,6 @@ docs/requirements/
 - ✅ 更新了快速导航和文档列表
 
 ### 2025-12-24 更新（早期）
-- ✅ 新增 `test-improvement-tracking.md` - 测试最佳实践改进追踪文档（🚧 进行中）
-  - 📋 5个改进任务详细追踪（unwrap()、覆盖率、文档、数据工厂、忽略测试）
-  - 📊 详细的统计数据和进度追踪
-  - 🎯 任务优先级、时间表和完成标准
-  - ✅ 已完成 `tests/base/http/client.rs` 改进示例
 - ✅ 更新了统计信息和目录结构（11 个文档）
 - ✅ 更新了快速导航和文档列表
 
@@ -424,7 +515,7 @@ docs/requirements/
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-12-25（添加 scripts/dev 脚本迁移文档）
 
 ---
 
@@ -432,7 +523,6 @@ docs/requirements/
 
 ### 2025-12-24 更新
 - ✅ 删除 cursorrules-english.md - Cursor Rules 英文翻译任务已完成（100%）
-- ✅ 删除 test-architecture-improvement.md - 测试架构改进任务已完成（90%）
 - ✅ 删除 document-rename.md - 文档重命名任务已完成
 - ✅ 删除 review-improvements-implementation.md - 综合检查改进项实施计划已完成
 - ✅ 更新了统计信息和目录结构

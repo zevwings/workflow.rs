@@ -6,60 +6,21 @@
 //!
 //! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
 //! - Fixture 函数中的 `expect()` 保留（fixture 失败应该panic）
-//! - 使用 `serial_test` 确保 Git 操作串行执行
-//! - 使用 `TempDir` 确保测试隔离和自动清理
+//! - 使用 `GitTestEnv` 确保测试隔离和自动清理（支持并行执行）
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use rstest::fixture;
 use serial_test::serial;
-use std::fs;
-use tempfile::TempDir;
+// Removed serial_test::serial - tests can run in parallel with GitTestEnv isolation
+// But tests using CurrentDirGuard need serial execution
 use workflow::git::GitCommit;
 
-use crate::common::git_helpers::{create_git_repo_with_commit, setup_git_repo};
+use crate::common::fixtures::git_repo_with_commit;
 use crate::common::helpers::CurrentDirGuard;
 
-// ==================== Fixtures ====================
+// ==================== Worktree Status Check Tests ====================
 
-/// 创建带有初始提交的 Git 仓库
-#[fixture]
-fn git_repo_with_commit() -> TempDir {
-    create_git_repo_with_commit()
-}
-
-/// 创建干净的 Git 仓库（无提交）
-#[fixture]
-fn clean_git_repo() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
-
-    // 在临时目录中执行 Git 操作，而不是切换当前工作目录
-    std::process::Command::new("git")
-        .args(["init"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to init git repo");
-
-    // 配置 Git 用户
-    std::process::Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
-
-    std::process::Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    temp_dir
-}
-
-// ==================== 工作树状态检查测试 ====================
-
-// ==================== 使用 gix 重新实现的工作树状态测试 ====================
+// ==================== Worktree Status Tests (Reimplemented with gix) ====================
 
 /// 测试干净的Git工作树状态检测
 ///
@@ -75,7 +36,7 @@ fn clean_git_repo() -> TempDir {
 /// 5. 恢复原始工作目录
 ///
 /// ## 技术细节
-/// - 使用 `#[serial]` 确保测试串行执行（避免工作目录冲突）
+/// - 使用 `GitTestEnv` 确保测试隔离（支持并行执行）
 /// - 使用临时目录进行隔离测试
 /// - 使用 `gix` 库（纯Rust的Git实现）而非git2
 /// - 自动恢复原始工作目录（即使测试失败）
@@ -84,15 +45,17 @@ fn clean_git_repo() -> TempDir {
 /// - `untracked_count == 0`：无未跟踪文件
 /// - `modified_count == 0`：无修改文件
 /// - `staged_count == 0`：无暂存文件
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
-fn test_worktree_status_clean_with_gix() -> Result<()> {
-    let (temp_dir, _original_dir) = setup_git_repo();
+fn test_worktree_status_clean_with_gix_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
 
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
-
-    // 测试干净的工作树状态
+    // Arrange: 准备测试干净的工作树状态
     let status = GitCommit::get_worktree_status()?;
 
     // 干净的工作树应该没有未跟踪或修改的文件
@@ -100,21 +63,37 @@ fn test_worktree_status_clean_with_gix() -> Result<()> {
     assert_eq!(status.modified_count, 0, "Expected no modified files");
     assert_eq!(status.staged_count, 0, "Expected no staged files");
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 更改检查测试 ====================
+// ==================== Change Detection Tests ====================
 
-// ==================== 使用 gix 重新实现的更改检查测试 ====================
+// ==================== Change Detection Tests (Reimplemented with gix) ====================
 
+/// 测试检查干净仓库是否有更改（使用gix）
+///
+/// ## 测试目的
+/// 验证 `GitCommit::get_worktree_status()` 在干净仓库（无修改、无暂存、无未跟踪文件）中返回正确的状态。
+///
+/// ## 测试场景
+/// 1. 创建Git测试环境（GitTestEnv自动创建干净仓库）
+/// 2. 调用 `get_worktree_status()` 检查工作树状态
+/// 3. 验证返回的状态表示无更改
+///
+/// ## 预期结果
+/// - 返回Ok状态
+/// - modified_count、staged_count、untracked_count 都为0
+/// - 表示仓库干净，无更改
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
-fn test_has_changes_clean_repo_with_gix() -> Result<()> {
-    let (temp_dir, _original_dir) = setup_git_repo();
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+fn test_has_changes_clean_repo_with_gix_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
 
     // 干净的仓库应该没有更改
     // 使用 get_worktree_status 检查是否有变更
@@ -124,100 +103,165 @@ fn test_has_changes_clean_repo_with_gix() -> Result<()> {
     assert!(result.is_ok());
     assert!(!result?, "Clean repo should have no changes");
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
+/// 测试检查包含未跟踪文件的仓库是否有更改（使用gix）
+///
+/// ## 测试目的
+/// 验证 `GitCommit::get_worktree_status()` 能够正确检测未跟踪文件的存在。
+///
+/// ## 测试场景
+/// 1. 创建Git测试环境
+/// 2. 创建未跟踪文件（new_file.txt）
+/// 3. 调用 `get_worktree_status()` 检查工作树状态
+/// 4. 验证返回的状态表示有更改
+///
+/// ## 预期结果
+/// - 返回Ok状态
+/// - untracked_count > 0 或 modified_count > 0 或 staged_count > 0
+/// - 表示仓库有未跟踪文件，存在更改
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
-fn test_has_changes_with_untracked_files_with_gix() -> Result<()> {
-    let (temp_dir, _original_dir) = setup_git_repo();
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
+    let env = &git_repo_with_commit;
 
     // 创建未跟踪文件
-    std::fs::write(temp_dir.path().join("new_file.txt"), "New content")?;
+    std::fs::write(env.path().join("new_file.txt"), "New content")?;
 
     // 使用 get_worktree_status 检查是否有变更
     let status = GitCommit::get_worktree_status();
     let result =
         status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
     assert!(result.is_ok());
-    assert!(
-        result?,
-        "Repo with untracked files should have changes"
-    );
+    assert!(result?, "Repo with untracked files should have changes");
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
+/// 测试检查包含已修改文件的仓库是否有更改（使用gix）
+///
+/// ## 测试目的
+/// 验证 `GitCommit::get_worktree_status()` 能够正确检测已修改文件的存在。
+///
+/// ## 测试场景
+/// 1. 创建Git测试环境（GitTestEnv自动创建README.md）
+/// 2. 修改现有文件（README.md）
+/// 3. 调用 `get_worktree_status()` 检查工作树状态
+/// 4. 验证返回的状态表示有更改
+///
+/// ## 预期结果
+/// - 返回Ok状态
+/// - modified_count > 0 或 staged_count > 0 或 untracked_count > 0
+/// - 表示仓库有已修改文件，存在更改
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
-fn test_has_changes_with_modified_files_with_gix() -> Result<()> {
-    let (temp_dir, _original_dir) = setup_git_repo();
+fn test_has_changes_with_modified_files_with_gix_return_collect() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
+    let env = &git_repo_with_commit;
 
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
-
-    // 修改现有文件（README.md 在 setup 中已经创建）
-    std::fs::write(temp_dir.path().join("README.md"), "# Updated README")?;
+    // 修改现有文件（README.md 在 GitTestEnv::new() 中已经创建）
+    std::fs::write(env.path().join("README.md"), "# Updated README")?;
 
     // 使用 get_worktree_status 检查是否有变更
     let status = GitCommit::get_worktree_status();
     let result =
         status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
     assert!(result.is_ok());
-    assert!(
-        result?,
-        "Repo with modified files should have changes"
-    );
+    assert!(result?, "Repo with modified files should have changes");
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 暂存操作测试 ====================
+// ==================== Staging Operations Tests ====================
 
+/// 测试暂存所有更改（多个文件）
+///
+/// ## 测试目的
+/// 验证 `GitCommit::add_all()` 方法能够正确暂存工作树中的所有更改（包括多个文件）。
+///
+/// ## 测试场景
+/// 1. 创建Git测试环境
+/// 2. 创建多个新文件（new_file1.txt, new_file2.txt）
+/// 3. 修改现有文件（README.md）
+/// 4. 调用 `add_all()` 暂存所有更改
+/// 5. 验证所有文件都被暂存
+///
+/// ## 预期结果
+/// - `add_all()` 返回Ok
+/// - `get_worktree_status()` 显示 staged_count > 0
+/// - 所有更改的文件都被暂存
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
-fn test_stage_all_changes() -> Result<()> {
-    let (temp_dir, _original_dir) = setup_git_repo();
+fn test_stage_all_changes_with_multiple_files_stages_all_return_collect() -> Result<()> {
+    // Arrange: 准备 Git 测试环境并创建多个文件
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
+    let env = &git_repo_with_commit;
+    std::fs::write(env.path().join("new_file1.txt"), "Content 1")?;
+    std::fs::write(env.path().join("new_file2.txt"), "Content 2")?;
 
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
-
-    // 创建一些新文件
-    std::fs::write(temp_dir.path().join("new_file1.txt"), "Content 1")?;
-    std::fs::write(temp_dir.path().join("new_file2.txt"), "Content 2")?;
-
-    // 修改现有文件
-    std::fs::write(temp_dir.path().join("README.md"), "# Updated README")?;
+    // Act: 暂存所有变更
+    std::fs::write(env.path().join("README.md"), "# Updated README")?;
 
     // 暂存所有更改
     let result = GitCommit::add_all();
     assert!(result.is_ok(), "Failed to stage all changes: {:?}", result);
 
-    // 验证文件已暂存
+    // Assert: 验证文件已暂存
     let status = GitCommit::get_worktree_status()?;
     assert!(status.staged_count > 0, "Should have staged files");
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
+/// 测试暂存特定文件
+///
+/// ## 测试目的
+/// 验证 `GitCommit::add_files()` 方法能够正确暂存指定的单个文件。
+///
+/// ## 测试场景
+/// 1. 创建Git测试环境
+/// 2. 创建测试文件（specific_file.txt）
+/// 3. 调用 `add_files()` 暂存特定文件
+/// 4. 验证该文件被暂存
+///
+/// ## 预期结果
+/// - `add_files()` 返回Ok
+/// - `get_worktree_status()` 显示 staged_count > 0
+/// - 指定的文件被暂存
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
-fn test_stage_specific_file() -> Result<()> {
-    let (temp_dir, _original_dir) = setup_git_repo();
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+fn test_stage_specific_file_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
+    let env = &git_repo_with_commit;
 
     // 创建测试文件
     let test_file = "specific_file.txt";
-    std::fs::write(temp_dir.path().join(test_file), "Specific content")?;
+    std::fs::write(env.path().join(test_file), "Specific content")?;
 
     // 暂存特定文件
     let result = GitCommit::add_files(&[test_file.to_string()]);
@@ -227,28 +271,44 @@ fn test_stage_specific_file() -> Result<()> {
         result
     );
 
-    // 验证文件已暂存
+    // Assert: 验证文件已暂存
     let status = GitCommit::get_worktree_status()?;
     assert!(
         status.staged_count > 0,
         "Should have staged the specific file"
     );
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 提交创建测试 ====================
+// ==================== Commit Creation Tests ====================
 
-// ==================== 提交信息获取测试 ====================
+// ==================== Commit Info Retrieval Tests ====================
 
+/// 测试获取最新提交信息
+///
+/// ## 测试目的
+/// 验证 `GitCommit::get_last_commit_info()` 方法能够正确获取仓库中最新提交的详细信息。
+///
+/// ## 测试场景
+/// 1. 创建Git测试环境（GitTestEnv自动创建初始提交）
+/// 2. 调用 `get_last_commit_info()` 获取最新提交信息
+/// 3. 验证返回的提交信息包含所有必需字段
+///
+/// ## 预期结果
+/// - 返回Ok，包含CommitInfo结构
+/// - SHA不为空，长度为40个字符，为十六进制格式
+/// - message、author、date字段都不为空
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
-fn test_get_latest_commit_info() -> Result<()> {
-    let (temp_dir, _original_dir) = setup_git_repo();
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+fn test_get_latest_commit_info_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
 
     // 获取最新提交信息
     let commit_info = GitCommit::get_last_commit_info();
@@ -260,7 +320,7 @@ fn test_get_latest_commit_info() -> Result<()> {
 
     let info = commit_info?;
 
-    // 验证提交信息的基本字段
+    // Assert: 验证提交信息的基本字段
     assert!(!info.sha.is_empty(), "Commit SHA should not be empty");
     assert!(
         !info.message.is_empty(),
@@ -269,7 +329,7 @@ fn test_get_latest_commit_info() -> Result<()> {
     assert!(!info.author.is_empty(), "Commit author should not be empty");
     assert!(!info.date.is_empty(), "Commit date should not be empty");
 
-    // 验证 SHA 格式（应该是 40 个字符的十六进制）
+    // Assert: 验证 SHA 格式（应该是 40 个字符的十六进制）
     assert_eq!(
         info.sha.len(),
         40,
@@ -280,7 +340,7 @@ fn test_get_latest_commit_info() -> Result<()> {
         "Commit SHA should be hexadecimal"
     );
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -298,22 +358,42 @@ fn test_get_latest_commit_info() -> Result<()> {
 //     // WorktreeStatus 不支持 has_changes 方法
 // }
 
-// ==================== 边界条件测试 ====================
+// ==================== Boundary Condition Tests ====================
 
-// ==================== 错误处理测试 ====================
+// ==================== Error Handling Tests ====================
 
-// ==================== 使用 gix 重新实现的错误处理测试 ====================
-
+/// 测试在非Git仓库中执行操作（错误处理）
+///
+/// ## 测试目的
+/// 验证Git操作在非Git仓库目录中能够正确返回错误，而不是panic或产生未定义行为。
+///
+/// ## 测试场景
+/// 1. 创建临时目录（非Git仓库）
+/// 2. 切换到该目录
+/// 3. 尝试执行Git操作（如 `get_worktree_status()`）
+/// 4. 验证返回适当的错误
+///
+/// ## 预期结果
+/// - Git操作返回Err
+/// - 错误消息明确指示当前目录不是Git仓库
+/// - 不会panic或产生未定义行为
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
-#[serial] // 确保这个测试串行运行，避免并发问题
-fn test_operations_outside_git_repo_with_container() {
+#[serial_test::serial]
+fn test_operations_outside_git_repo_with_container() -> Result<()> {
+    // 注意：这里使用 tempfile::tempdir 而不是 GitTestEnv，因为我们需要测试非 Git 仓库的情况
     use tempfile::tempdir;
 
     // 在非 Git 目录中测试操作
-    let temp_dir = tempdir().expect("Failed to create temp dir");
+    // 注意：这里不使用 GitTestEnv，因为我们需要测试非 Git 仓库的情况
+    let temp_dir =
+        tempdir().map_err(|e| color_eyre::eyre::eyre!("Failed to create temp dir: {}", e))?;
 
     // 切换到非Git目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(&temp_dir).expect("Failed to change dir");
+    let _dir_guard = crate::common::helpers::CurrentDirGuard::new(&temp_dir)
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to change dir: {}", e))?;
 
     // 确保这不是一个 Git 仓库，并且父目录也不是
     assert!(
@@ -321,7 +401,7 @@ fn test_operations_outside_git_repo_with_container() {
         "Temp directory should not be a git repository"
     );
 
-    // 验证当前工作目录确实是临时目录（处理 macOS 路径规范化）
+    // Assert: 验证当前工作目录确实是临时目录（处理 macOS 路径规范化）
     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
     let current_canonical = current_dir.canonicalize().unwrap_or(current_dir);
     let temp_canonical =
@@ -337,7 +417,7 @@ fn test_operations_outside_git_repo_with_container() {
         "get_worktree_status should fail in non-git directory"
     );
 
-    // 测试 add_all 是否正确返回错误
+    // Arrange: 准备测试 add_all 是否正确返回错误
     let add_result = GitCommit::add_all();
     assert!(
         add_result.is_err(),
@@ -350,7 +430,7 @@ fn test_operations_outside_git_repo_with_container() {
         "commit should fail in non-git directory"
     );
 
-    // 测试 get_last_commit_info 是否正确返回错误
+    // Arrange: 准备测试 get_last_commit_info 是否正确返回错误
     let commit_info_result = GitCommit::get_last_commit_info();
     assert!(
         commit_info_result.is_err(),
@@ -359,8 +439,9 @@ fn test_operations_outside_git_repo_with_container() {
     );
 
     // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
-// ==================== 集成测试 ====================
+// ==================== Integration Tests ====================
 
-// ==================== 性能测试 ====================
+// ==================== Performance Tests ====================

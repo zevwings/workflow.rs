@@ -2,6 +2,7 @@
 //!
 //! 验证所有命令和子命令是否都包含在补全脚本中。
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::collections::HashSet;
 use std::fs;
@@ -118,16 +119,31 @@ const SHELL_TYPES: &[&str] = &["zsh", "bash", "fish", "powershell", "elvish"];
 //     ...
 // }
 
-/// 验证 CLI 结构包含所有顶级命令
+// ==================== CLI Command Structure Tests ====================
+
+/// 测试 CLI 包含所有顶级命令
+///
+/// ## 测试目的
+/// 验证 CLI 命令结构包含所有预期的顶级命令。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 检查所有预期的命令是否存在
+/// 3. 验证所有预期的命令都存在
+///
+/// ## 预期结果
+/// - 所有预期的顶级命令都存在
 #[test]
-fn test_cli_contains_all_top_level_commands() {
+fn test_cli_contains_all_top_level_commands_returns_true() {
+    // Arrange: 准备 CLI 命令结构
     let cmd = Cli::command();
     let subcommands: Vec<String> =
         cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
 
+    // Act: 检查所有预期的命令是否存在
     let subcommand_set: HashSet<String> = subcommands.iter().cloned().collect();
 
-    // 检查所有预期的命令都存在
+    // Assert: 验证所有预期的命令都存在
     for expected_cmd in TOP_LEVEL_COMMANDS {
         assert!(
             subcommand_set.contains(*expected_cmd),
@@ -144,20 +160,35 @@ fn test_cli_contains_all_top_level_commands() {
     );
 }
 
-/// 验证 PR 子命令完整性
+// ==================== Subcommand Completeness Tests ====================
+
+/// 测试 PR 子命令完整性
+///
+/// ## 测试目的
+/// 验证 PR 命令包含所有预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 PR 命令结构
+/// 2. 获取 PR 子命令列表
+/// 3. 验证所有预期的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有预期的 PR 子命令都存在且数量匹配
 #[test]
-fn test_pr_subcommands_completeness() {
+fn test_pr_subcommands_completeness_with_all_subcommands_returns_true() -> Result<()> {
+    // Arrange: 准备 PR 命令结构
     let cmd = Cli::command();
     let pr_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "pr")
-        .expect("pr command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("pr command should exist"))?;
 
+    // Act: 获取 PR 子命令列表
     let subcommands: Vec<String> =
         pr_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-
     let subcommand_set: HashSet<String> = subcommands.iter().cloned().collect();
 
+    // Assert: 验证所有预期的子命令都存在且数量匹配
     for expected_subcmd in PR_SUBCOMMANDS {
         assert!(
             subcommand_set.contains(*expected_subcmd),
@@ -165,33 +196,46 @@ fn test_pr_subcommands_completeness() {
             expected_subcmd
         );
     }
-
-    println!(
-        "Found {} PR subcommands: {:?}",
-        subcommands.len(),
-        subcommands
-    );
     assert_eq!(
         subcommands.len(),
         PR_SUBCOMMANDS.len(),
         "PR subcommands count mismatch"
     );
+    println!(
+        "Found {} PR subcommands: {:?}",
+        subcommands.len(),
+        subcommands
+    );
+    Ok(())
 }
 
-/// 验证 Commit 子命令完整性
+/// 测试 Commit 子命令完整性
+///
+/// ## 测试目的
+/// 验证 Commit 命令包含所有预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 Commit 命令结构
+/// 2. 获取 Commit 子命令列表
+/// 3. 验证所有预期的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有预期的 Commit 子命令都存在且数量匹配
 #[test]
-fn test_commit_subcommands_completeness() {
+fn test_commit_subcommands_completeness_with_all_subcommands_returns_true() -> Result<()> {
+    // Arrange: 准备 Commit 命令结构
     let cmd = Cli::command();
     let commit_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "commit")
-        .expect("commit command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("commit command should exist"))?;
 
+    // Act: 获取 Commit 子命令列表
     let subcommands: Vec<String> =
         commit_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-
     let subcommand_set: HashSet<String> = subcommands.iter().cloned().collect();
 
+    // Assert: 验证所有预期的子命令都存在且数量匹配
     for expected_subcmd in COMMIT_SUBCOMMANDS {
         assert!(
             subcommand_set.contains(*expected_subcmd),
@@ -199,69 +243,79 @@ fn test_commit_subcommands_completeness() {
             expected_subcmd
         );
     }
-
-    println!(
-        "Found {} Commit subcommands: {:?}",
-        subcommands.len(),
-        subcommands
-    );
     assert_eq!(
         subcommands.len(),
         COMMIT_SUBCOMMANDS.len(),
         "Commit subcommands count mismatch"
     );
+    println!(
+        "Found {} Commit subcommands: {:?}",
+        subcommands.len(),
+        subcommands
+    );
+    Ok(())
 }
 
-/// 验证补全脚本生成功能
-#[test]
-fn test_completion_generation() {
-    // 使用系统临时目录
-    let output_dir = std::env::temp_dir().join("workflow_completion_test");
-    fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+// ==================== Completion Generation Tests ====================
 
-    // 测试所有支持的 shell 类型
+/// 测试为所有 shell 类型生成补全文件
+///
+/// ## 测试目的
+/// 验证 CompletionGenerator 能够为所有支持的 shell 类型生成补全脚本文件。
+///
+/// ## 测试场景
+/// 1. 准备临时输出目录和 shell 类型列表
+/// 2. 为每个 shell 类型生成补全脚本
+/// 3. 验证文件已生成且不为空
+///
+/// ## 预期结果
+/// - 所有 shell 类型的补全文件都已生成且不为空
+#[test]
+fn test_completion_generation_with_all_shells_generates_files() -> Result<()> {
+    // Arrange: 准备临时输出目录和 shell 类型列表
+    let output_dir = std::env::temp_dir().join("workflow_completion_test");
+    fs::create_dir_all(&output_dir).map_err(|e| {
+        color_eyre::eyre::eyre!(
+            "{}: {}",
+            workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED,
+            e
+        )
+    })?;
     let shell_types = ["zsh", "bash", "fish", "powershell", "elvish"];
 
+    // Act: 为每个 shell 类型生成补全脚本
     for shell_type in &shell_types {
         let generator = CompletionGenerator::new(
             Some(shell_type.to_string()),
             Some(output_dir.to_string_lossy().to_string()),
         )
-        .expect(&format!("Failed to create generator for {}", shell_type));
+        .map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to create generator for {}: {}", shell_type, e)
+        })?;
 
-        let result = generator.generate_all();
-        assert!(
-            result.is_ok(),
-            "Failed to generate completion for {}: {:?}",
-            shell_type,
-            result.err()
-        );
+        generator.generate_all().map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to generate completion for {}: {}", shell_type, e)
+        })?;
 
-        // 验证文件已生成
-        let filename = get_completion_filename(shell_type, "workflow")
-            .expect(&format!("Failed to get filename for {}", shell_type));
+        // Assert: 验证文件已生成且不为空
+        let filename = get_completion_filename(shell_type, "workflow").map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to get filename for {}: {}", shell_type, e)
+        })?;
         let file_path = output_dir.join(&filename);
-
         assert!(
             file_path.exists(),
             "Completion file not generated for {}: {}",
             shell_type,
             file_path.display()
         );
-
-        // 验证文件不为空
-        let content = fs::read_to_string(&file_path).expect(&format!(
-            "Failed to read completion file for {}",
-            shell_type
-        ));
-
+        let content = fs::read_to_string(&file_path).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to read completion file for {}: {}", shell_type, e)
+        })?;
         assert!(
             !content.is_empty(),
             "Completion file is empty for {}",
             shell_type
         );
-
         println!(
             "Generated {} completion: {} bytes",
             shell_type,
@@ -271,72 +325,111 @@ fn test_completion_generation() {
 
     // 清理临时文件
     fs::remove_dir_all(&output_dir).ok();
+    Ok(())
 }
 
-/// 验证 zsh 补全脚本包含所有命令
+/// 测试 zsh 补全脚本包含所有命令
+///
+/// ## 测试目的
+/// 验证生成的 zsh 补全脚本包含 workflow 命令。
+///
+/// ## 测试场景
+/// 1. 生成 zsh 补全脚本
+/// 2. 读取补全脚本内容
+/// 3. 验证包含 workflow 命令
+///
+/// ## 预期结果
+/// - zsh 补全脚本包含 "workflow" 命令
 #[test]
-fn test_zsh_completion_contains_all_commands() {
-    // 使用系统临时目录
+fn test_zsh_completion_contains_all_commands_with_valid_content_returns_true() -> Result<()> {
+    // Arrange: 准备临时输出目录
     let output_dir = std::env::temp_dir().join("workflow_zsh_test");
-    fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+    fs::create_dir_all(&output_dir).map_err(|e| {
+        color_eyre::eyre::eyre!(
+            "{}: {}",
+            workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED,
+            e
+        )
+    })?;
 
+    // Act: 生成 zsh 补全脚本
     let generator = CompletionGenerator::new(
         Some("zsh".to_string()),
         Some(output_dir.to_string_lossy().to_string()),
     )
-    .expect(workflow::base::constants::errors::generator_creation::CREATE_ZSH_GENERATOR_FAILED);
+    .map_err(|e| {
+        color_eyre::eyre::eyre!(
+            "{}: {}",
+            workflow::base::constants::errors::generator_creation::CREATE_ZSH_GENERATOR_FAILED,
+            e
+        )
+    })?;
+    generator
+        .generate_all()
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to generate zsh completion: {}", e))?;
 
-    generator.generate_all().expect("Failed to generate zsh completion");
-
-    let filename = get_completion_filename("zsh", "workflow").expect("Failed to get filename");
+    // Assert: 验证补全脚本包含 workflow 命令
+    let filename = get_completion_filename("zsh", "workflow")
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to get filename: {}", e))?;
     let file_path = output_dir.join(&filename);
-    let content = fs::read_to_string(&file_path).expect("Failed to read completion file");
-
-    // 验证补全脚本包含 workflow 命令
+    let content = fs::read_to_string(&file_path)
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to read completion file: {}", e))?;
     assert!(
         content.contains("workflow"),
         "Zsh completion should contain 'workflow'"
     );
-
-    // 对于 zsh，clap 生成的补全脚本可能使用不同的格式
-    // 我们主要验证文件生成成功且包含基本内容
     println!("Zsh completion file size: {} bytes", content.len());
     println!(
         "Zsh completion contains 'workflow': {}",
         content.contains("workflow")
     );
-
-    // 清理临时文件
-    fs::remove_dir_all(&output_dir).ok();
+    Ok(())
 }
 
-/// 验证 bash 补全脚本包含所有命令
+/// 测试 bash 补全脚本包含所有命令
+///
+/// ## 测试目的
+/// 验证生成的 bash 补全脚本包含 workflow 命令。
+///
+/// ## 测试场景
+/// 1. 生成 bash 补全脚本
+/// 2. 读取补全脚本内容
+/// 3. 验证包含 workflow 命令
+///
+/// ## 预期结果
+/// - bash 补全脚本包含 "workflow" 命令
 #[test]
-fn test_bash_completion_contains_all_commands() {
-    // 使用系统临时目录
+fn test_bash_completion_contains_all_commands_with_valid_content_returns_true() -> Result<()> {
+    // Arrange: 准备临时输出目录
     let output_dir = std::env::temp_dir().join("workflow_bash_test");
-    fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+    fs::create_dir_all(&output_dir).map_err(|e| {
+        color_eyre::eyre::eyre!(
+            "{}: {}",
+            workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED,
+            e
+        )
+    })?;
 
+    // Act: 生成 bash 补全脚本
     let generator = CompletionGenerator::new(
         Some("bash".to_string()),
         Some(output_dir.to_string_lossy().to_string()),
     )
-    .expect("Failed to create bash generator");
+    .map_err(|e| color_eyre::eyre::eyre!("Failed to create bash generator: {}", e))?;
+    generator
+        .generate_all()
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to generate bash completion: {}", e))?;
 
-    generator.generate_all().expect("Failed to generate bash completion");
-
-    let filename = get_completion_filename("bash", "workflow").expect("Failed to get filename");
+    // Assert: 验证补全脚本包含 workflow 命令
+    let filename = get_completion_filename("bash", "workflow")
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to get filename: {}", e))?;
     let file_path = output_dir.join(&filename);
-    let content = fs::read_to_string(&file_path).expect("Failed to read completion file");
-
-    // 验证补全脚本包含 workflow 命令
+    let content = fs::read_to_string(&file_path)
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to read completion file: {}", e))?;
     assert!(
         content.contains("workflow"),
         "Bash completion should contain 'workflow'"
     );
-
     println!("Bash completion file size: {} bytes", content.len());
     println!(
         "Bash completion contains 'workflow': {}",
@@ -345,18 +438,32 @@ fn test_bash_completion_contains_all_commands() {
 
     // 清理临时文件
     fs::remove_dir_all(&output_dir).ok();
+    Ok(())
 }
 
-/// 验证所有子命令的完整性
+/// 测试所有子命令的完整性
+///
+/// ## 测试目的
+/// 验证所有带子命令的命令都包含预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 验证所有带子命令的命令（PR、Jira、GitHub、LLM、Branch、Commit、Proxy、Log、Completion、Stash、Repo、Alias、Tag）
+/// 3. 验证所有子命令数量匹配
+///
+/// ## 预期结果
+/// - 所有带子命令的命令都包含预期的子命令
 #[test]
-fn test_all_subcommands_completeness() {
+fn test_all_subcommands_completeness_with_all_commands_returns_true() -> Result<()> {
+    // Arrange: 准备 CLI 命令结构
     let cmd = Cli::command();
 
+    // Act & Assert: 验证所有子命令的完整性
     // 验证 PR 子命令
     let pr_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "pr")
-        .expect("pr command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("pr command should exist"))?;
     let pr_subcommands: Vec<String> =
         pr_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(pr_subcommands.len(), PR_SUBCOMMANDS.len());
@@ -365,11 +472,11 @@ fn test_all_subcommands_completeness() {
     let jira_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "jira")
-        .expect("jira command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("jira command should exist"))?;
     let jira_log_cmd = jira_cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "log")
-        .expect("jira log command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("jira log command should exist"))?;
     let log_subcommands: Vec<String> =
         jira_log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(log_subcommands.len(), LOG_SUBCOMMANDS.len());
@@ -378,7 +485,7 @@ fn test_all_subcommands_completeness() {
     let jira_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "jira")
-        .expect("jira command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("jira command should exist"))?;
     let jira_subcommands: Vec<String> =
         jira_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(jira_subcommands.len(), JIRA_SUBCOMMANDS.len());
@@ -387,7 +494,7 @@ fn test_all_subcommands_completeness() {
     let github_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "github")
-        .expect("github command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("github command should exist"))?;
     let github_subcommands: Vec<String> =
         github_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(github_subcommands.len(), GITHUB_SUBCOMMANDS.len());
@@ -396,7 +503,7 @@ fn test_all_subcommands_completeness() {
     let llm_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "llm")
-        .expect("llm command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("llm command should exist"))?;
     let llm_subcommands: Vec<String> =
         llm_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(llm_subcommands.len(), LLM_SUBCOMMANDS.len());
@@ -405,7 +512,7 @@ fn test_all_subcommands_completeness() {
     let branch_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "branch")
-        .expect("branch command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("branch command should exist"))?;
     let branch_subcommands: Vec<String> =
         branch_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(branch_subcommands.len(), BRANCH_SUBCOMMANDS.len());
@@ -414,7 +521,7 @@ fn test_all_subcommands_completeness() {
     let commit_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "commit")
-        .expect("commit command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("commit command should exist"))?;
     let commit_subcommands: Vec<String> =
         commit_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(commit_subcommands.len(), COMMIT_SUBCOMMANDS.len());
@@ -423,7 +530,7 @@ fn test_all_subcommands_completeness() {
     let proxy_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "proxy")
-        .expect("proxy command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("proxy command should exist"))?;
     let proxy_subcommands: Vec<String> =
         proxy_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(proxy_subcommands.len(), PROXY_SUBCOMMANDS.len());
@@ -432,7 +539,7 @@ fn test_all_subcommands_completeness() {
     let log_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "log")
-        .expect("log command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("log command should exist"))?;
     let log_subcommands: Vec<String> =
         log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(log_subcommands.len(), LOG_LEVEL_SUBCOMMANDS.len());
@@ -441,7 +548,7 @@ fn test_all_subcommands_completeness() {
     let completion_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "completion")
-        .expect("completion command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("completion command should exist"))?;
     let completion_subcommands: Vec<String> =
         completion_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(completion_subcommands.len(), COMPLETION_SUBCOMMANDS.len());
@@ -450,7 +557,7 @@ fn test_all_subcommands_completeness() {
     let stash_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "stash")
-        .expect("stash command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("stash command should exist"))?;
     let stash_subcommands: Vec<String> =
         stash_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(stash_subcommands.len(), STASH_SUBCOMMANDS.len());
@@ -459,7 +566,7 @@ fn test_all_subcommands_completeness() {
     let repo_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "repo")
-        .expect("repo command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("repo command should exist"))?;
     let repo_subcommands: Vec<String> =
         repo_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(repo_subcommands.len(), REPO_SUBCOMMANDS.len());
@@ -468,7 +575,7 @@ fn test_all_subcommands_completeness() {
     let alias_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "alias")
-        .expect("alias command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("alias command should exist"))?;
     let alias_subcommands: Vec<String> =
         alias_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(alias_subcommands.len(), ALIAS_SUBCOMMANDS.len());
@@ -477,17 +584,30 @@ fn test_all_subcommands_completeness() {
     let tag_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "tag")
-        .expect("tag command should exist");
+        .ok_or_else(|| color_eyre::eyre::eyre!("tag command should exist"))?;
     let tag_subcommands: Vec<String> =
         tag_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(tag_subcommands.len(), TAG_SUBCOMMANDS.len());
 
     println!("All subcommands verified successfully!");
+    Ok(())
 }
 
-/// 验证补全脚本文件命名正确
+/// 测试补全文件名生成（所有 shell 类型）
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 为所有 shell 类型生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 准备 shell 类型和预期文件名
+/// 2. 为每个 shell 类型生成文件名
+/// 3. 验证文件名正确
+///
+/// ## 预期结果
+/// - 所有 shell 类型的文件名都正确
 #[test]
-fn test_completion_filename_generation() {
+fn test_completion_filename_generation_with_all_shells_returns_correct_filenames() -> Result<()> {
+    // Arrange: 准备 shell 类型和预期文件名
     let shell_types = ["zsh", "bash", "fish", "powershell", "elvish"];
     let expected_filenames = [
         "_workflow",
@@ -497,29 +617,40 @@ fn test_completion_filename_generation() {
         "workflow.elv",
     ];
 
+    // Act & Assert: 验证每个 shell 类型的文件名生成正确
     for (shell_type, expected_filename) in shell_types.iter().zip(expected_filenames.iter()) {
-        let filename = get_completion_filename(shell_type, "workflow")
-            .expect(&format!("Failed to get filename for {}", shell_type));
+        let filename = get_completion_filename(shell_type, "workflow").map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to get filename for {}: {}", shell_type, e)
+        })?;
         assert_eq!(
             &filename, expected_filename,
             "Wrong filename for {}: expected {}, got {}",
             shell_type, expected_filename, filename
         );
     }
+    Ok(())
 }
 
-/// 验证 CLI 命令结构完整性总结
+/// 测试 CLI 结构摘要
+///
+/// ## 测试目的
+/// 验证 CLI 命令结构的完整性并输出摘要信息。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 统计所有命令和子命令
+/// 3. 验证基本完整性并输出摘要
+///
+/// ## 预期结果
+/// - CLI 结构完整，至少包含10个顶级命令和20个子命令
 #[test]
-fn test_cli_structure_summary() {
+fn test_cli_structure_summary_with_all_commands_returns_summary() {
+    // Arrange: 准备 CLI 命令结构
     let cmd = Cli::command();
+
+    // Act: 统计所有命令和子命令
     let subcommands: Vec<String> =
         cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-
-    println!("\n=== CLI Structure Summary ===");
-    println!("Total top-level commands: {}", subcommands.len());
-    println!("Commands: {:?}", subcommands);
-
-    // 统计所有子命令
     let mut total_subcommands = 0;
     for subcmd in cmd.get_subcommands() {
         let sub_subcommands: Vec<String> =
@@ -535,10 +666,12 @@ fn test_cli_structure_summary() {
         }
     }
 
+    // Assert: 验证基本完整性并输出摘要
+    println!("\n=== CLI Structure Summary ===");
+    println!("Total top-level commands: {}", subcommands.len());
+    println!("Commands: {:?}", subcommands);
     println!("Total subcommands: {}", total_subcommands);
     println!("=============================\n");
-
-    // 验证基本完整性
     assert!(
         subcommands.len() >= 10,
         "Should have at least 10 top-level commands"
@@ -549,14 +682,31 @@ fn test_cli_structure_summary() {
     );
 }
 
-/// 参数化测试：验证所有 shell 类型的补全生成
-#[test]
-fn test_all_shell_types_completion_generation() {
-    // 使用系统临时目录
-    let output_dir = std::env::temp_dir().join("workflow_all_shells_test");
-    fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+// ==================== Parameterized Shell Completion Tests ====================
 
+/// 测试所有 shell 类型的补全生成（参数化）
+///
+/// ## 测试目的
+/// 验证 CompletionGenerator 能够为所有支持的 shell 类型生成补全脚本并验证文件名和内容。
+///
+/// ## 测试场景
+/// 1. 准备临时输出目录和预期文件名
+/// 2. 为每个 shell 类型生成补全脚本
+/// 3. 验证文件名正确、文件存在、内容不为空且包含 workflow 命令
+///
+/// ## 预期结果
+/// - 所有 shell 类型的补全文件都正确生成，文件名和内容都正确
+#[test]
+fn test_all_shell_types_completion_generation_with_all_shells_generates_files() -> Result<()> {
+    // Arrange: 准备临时输出目录和 shell 类型列表
+    let output_dir = std::env::temp_dir().join("workflow_all_shells_test");
+    fs::create_dir_all(&output_dir).map_err(|e| {
+        color_eyre::eyre::eyre!(
+            "{}: {}",
+            workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED,
+            e
+        )
+    })?;
     let expected_filenames = [
         "_workflow",
         "workflow.bash",
@@ -565,6 +715,7 @@ fn test_all_shell_types_completion_generation() {
         "workflow.elv",
     ];
 
+    // Act & Assert: 为每个 shell 类型生成并验证补全脚本
     for (shell_type, expected_filename) in SHELL_TYPES.iter().zip(expected_filenames.iter()) {
         println!("Testing {} completion generation...", shell_type);
 
@@ -572,9 +723,9 @@ fn test_all_shell_types_completion_generation() {
             Some(shell_type.to_string()),
             Some(output_dir.to_string_lossy().to_string()),
         )
-        .expect(&format!("Failed to create generator for {}", shell_type));
-
-        // 生成补全脚本
+        .map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to create generator for {}: {}", shell_type, e)
+        })?;
         let result = generator.generate_all();
         assert!(
             result.is_ok(),
@@ -583,16 +734,15 @@ fn test_all_shell_types_completion_generation() {
             result.err()
         );
 
-        // 验证文件命名
-        let filename = get_completion_filename(shell_type, "workflow")
-            .expect(&format!("Failed to get filename for {}", shell_type));
+        let filename = get_completion_filename(shell_type, "workflow").map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to get filename for {}: {}", shell_type, e)
+        })?;
         assert_eq!(
             &filename, expected_filename,
             "Wrong filename for {}: expected {}, got {}",
             shell_type, expected_filename, filename
         );
 
-        // 验证文件存在
         let file_path = output_dir.join(&filename);
         assert!(
             file_path.exists(),
@@ -601,24 +751,19 @@ fn test_all_shell_types_completion_generation() {
             file_path.display()
         );
 
-        // 验证文件内容
-        let content = fs::read_to_string(&file_path).expect(&format!(
-            "Failed to read completion file for {}",
-            shell_type
-        ));
-
+        let content = fs::read_to_string(&file_path).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to read completion file for {}: {}", shell_type, e)
+        })?;
         assert!(
             !content.is_empty(),
             "Completion file is empty for {}",
             shell_type
         );
-
         assert!(
             content.contains("workflow"),
             "{} completion should contain 'workflow'",
             shell_type
         );
-
         println!(
             "✓ {} completion: {} bytes, filename: {}",
             shell_type,
@@ -629,14 +774,25 @@ fn test_all_shell_types_completion_generation() {
 
     // 清理临时文件
     fs::remove_dir_all(&output_dir).ok();
+    Ok(())
 }
 
-/// 参数化测试：验证所有带子命令的命令完整性
+/// 测试所有带子命令的命令完整性
+///
+/// ## 测试目的
+/// 验证所有带子命令的命令都包含预期的子命令且数量匹配。
+///
+/// ## 测试场景
+/// 1. 准备 CLI 命令结构和命令列表
+/// 2. 验证所有带子命令的命令
+/// 3. 验证每个命令的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有带子命令的命令都包含预期的子命令且数量匹配
 #[test]
-fn test_all_commands_with_subcommands() {
+fn test_all_commands_with_subcommands_with_all_commands_returns_true() -> Result<()> {
+    // Arrange: 准备 CLI 命令结构和命令列表
     let cmd = Cli::command();
-
-    // 定义所有带子命令的命令及其预期子命令列表
     let commands_with_subcommands = [
         ("pr", PR_SUBCOMMANDS),
         ("commit", COMMIT_SUBCOMMANDS),
@@ -653,20 +809,18 @@ fn test_all_commands_with_subcommands() {
         ("tag", TAG_SUBCOMMANDS),
     ];
 
+    // Act & Assert: 验证所有带子命令的命令完整性
     for (cmd_name, expected_subcommands) in &commands_with_subcommands {
         println!("Testing {} subcommands...", cmd_name);
 
         let subcommand = cmd
             .get_subcommands()
             .find(|sc| sc.get_name() == *cmd_name)
-            .expect(&format!("{} command should exist", cmd_name));
-
+            .ok_or_else(|| color_eyre::eyre::eyre!("{} command should exist", cmd_name))?;
         let actual_subcommands: Vec<String> =
             subcommand.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-
         let subcommand_set: HashSet<String> = actual_subcommands.iter().cloned().collect();
 
-        // 检查所有预期的子命令都存在
         for expected_subcmd in *expected_subcommands {
             assert!(
                 subcommand_set.contains(*expected_subcmd),
@@ -675,8 +829,6 @@ fn test_all_commands_with_subcommands() {
                 expected_subcmd
             );
         }
-
-        // 检查数量匹配
         assert_eq!(
             actual_subcommands.len(),
             expected_subcommands.len(),
@@ -685,7 +837,6 @@ fn test_all_commands_with_subcommands() {
             expected_subcommands,
             actual_subcommands
         );
-
         println!(
             "✓ {} has {} subcommands: {:?}",
             cmd_name,
@@ -693,27 +844,39 @@ fn test_all_commands_with_subcommands() {
             actual_subcommands
         );
     }
+    Ok(())
 }
 
-/// 参数化测试：验证嵌套子命令（如 jira log）
+/// 测试嵌套子命令完整性
+///
+/// ## 测试目的
+/// 验证嵌套子命令（Jira Log 和 Branch Ignore）都包含预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 验证 Jira Log 嵌套子命令
+/// 3. 验证 Branch Ignore 嵌套子命令
+/// 4. 验证所有预期的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有嵌套子命令都包含预期的子命令且数量匹配
 #[test]
-fn test_nested_subcommands() {
+fn test_nested_subcommands_with_jira_log_and_branch_ignore_returns_true() -> Result<()> {
+    // Arrange: 准备 CLI 命令结构
     let cmd = Cli::command();
+    const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
 
-    // 验证 Jira Log 子命令（log 是 jira 的子命令）
+    // Act & Assert: 验证 Jira Log 嵌套子命令
     let jira_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "jira")
-        .expect("jira command should exist");
-
+        .ok_or_else(|| color_eyre::eyre::eyre!("jira command should exist"))?;
     let jira_log_cmd = jira_cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "log")
-        .expect("jira log command should exist");
-
+        .ok_or_else(|| color_eyre::eyre::eyre!("jira log command should exist"))?;
     let log_subcommands: Vec<String> =
         jira_log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-
     let subcommand_set: HashSet<String> = log_subcommands.iter().cloned().collect();
 
     for expected_subcmd in LOG_SUBCOMMANDS {
@@ -723,37 +886,30 @@ fn test_nested_subcommands() {
             expected_subcmd
         );
     }
-
     assert_eq!(
         log_subcommands.len(),
         LOG_SUBCOMMANDS.len(),
         "Jira log subcommands count mismatch"
     );
-
     println!(
         "✓ jira log has {} subcommands: {:?}",
         log_subcommands.len(),
         log_subcommands
     );
 
-    // 验证 Branch Ignore 子命令（ignore 是 branch 的子命令）
+    // Act & Assert: 验证 Branch Ignore 嵌套子命令
     let branch_cmd = cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "branch")
-        .expect("branch command should exist");
-
+        .ok_or_else(|| color_eyre::eyre::eyre!("branch command should exist"))?;
     let branch_ignore_cmd = branch_cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "ignore")
-        .expect("branch ignore command should exist");
-
+        .ok_or_else(|| color_eyre::eyre::eyre!("branch ignore command should exist"))?;
     let ignore_subcommands: Vec<String> = branch_ignore_cmd
         .get_subcommands()
         .map(|sc| sc.get_name().to_string())
         .collect();
-
-    // Branch ignore 有 add, remove, list 子命令
-    const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
     let ignore_subcommand_set: HashSet<String> = ignore_subcommands.iter().cloned().collect();
 
     for expected_subcmd in BRANCH_IGNORE_SUBCOMMANDS {
@@ -763,31 +919,43 @@ fn test_nested_subcommands() {
             expected_subcmd
         );
     }
-
     assert_eq!(
         ignore_subcommands.len(),
         BRANCH_IGNORE_SUBCOMMANDS.len(),
         "Branch ignore subcommands count mismatch"
     );
-
     println!(
         "✓ branch ignore has {} subcommands: {:?}",
         ignore_subcommands.len(),
         ignore_subcommands
     );
+    Ok(())
 }
 
-/// 验证所有顶级命令在常量列表中都有定义
+/// 测试顶级命令与常量同步
+///
+/// ## 测试目的
+/// 验证 CLI 中的顶级命令与 TOP_LEVEL_COMMANDS 常量保持同步。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 获取实际命令列表
+/// 3. 验证所有命令都在常量列表中且数量匹配
+///
+/// ## 预期结果
+/// - CLI 中的顶级命令与常量列表完全同步
 #[test]
-fn test_top_level_commands_sync() {
+fn test_top_level_commands_sync_with_constants_returns_true() {
+    // Arrange: 准备 CLI 命令结构和常量列表
     let cmd = Cli::command();
+
+    // Act: 获取实际命令列表
     let actual_commands: Vec<String> =
         cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-
     let expected_set: HashSet<&str> = TOP_LEVEL_COMMANDS.iter().copied().collect();
     let actual_set: HashSet<String> = actual_commands.iter().cloned().collect();
 
-    // 检查是否有遗漏的命令
+    // Assert: 验证所有命令都在常量列表中且数量匹配
     for actual_cmd in &actual_commands {
         assert!(
             expected_set.contains(actual_cmd.as_str()),
@@ -795,8 +963,6 @@ fn test_top_level_commands_sync() {
             actual_cmd
         );
     }
-
-    // 检查是否有多余的命令
     for expected_cmd in TOP_LEVEL_COMMANDS {
         assert!(
             actual_set.contains(*expected_cmd),
@@ -804,13 +970,11 @@ fn test_top_level_commands_sync() {
             expected_cmd
         );
     }
-
     assert_eq!(
         actual_commands.len(),
         TOP_LEVEL_COMMANDS.len(),
         "Top-level commands count mismatch"
     );
-
     println!(
         "✓ All {} top-level commands are synchronized",
         actual_commands.len()

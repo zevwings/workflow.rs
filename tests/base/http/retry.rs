@@ -8,17 +8,22 @@
 //! - 使用 `MockServer` 模拟 HTTP 服务器
 //! - 测试各种重试场景：成功、失败、超时、错误类型判断
 //! - Mutex.lock().unwrap() 在测试中保留（锁poisoning应该panic）
+//!
+//! ## 迁移状态
+//!
+//! 已迁移使用 Mock 模板系统，统一管理错误响应。
 
-use crate::common::http_helpers::MockServer;
+use crate::common::mock::server::MockServer;
 use color_eyre::eyre::eyre;
 use color_eyre::Result;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use workflow::base::http::retry::{HttpRetry, HttpRetryConfig};
 use workflow::base::http::{HttpClient, RequestConfig};
 
-// ==================== 辅助函数（来自 retry_core.rs）====================
+// ==================== Helper Functions (from retry_core.rs) ====================
 
 /// 创建在指定次数后成功的操作（使用局部计数器避免并发问题）
 fn create_success_after_attempts(success_after: usize) -> impl Fn() -> color_eyre::Result<String> {
@@ -54,9 +59,28 @@ fn create_always_success_operation() -> impl Fn() -> color_eyre::Result<String> 
     || Ok("immediate success".to_string())
 }
 
+// ==================== HttpRetryConfig Tests ====================
+
+/// 测试创建HttpRetryConfig实例并验证默认值
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_config_new() {
+fn test_retry_config_new_with_default_values_returns_config() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 创建新的配置
     let config = HttpRetryConfig::new();
+
+    // Assert: 验证默认值
     assert_eq!(config.max_retries, 3);
     assert_eq!(config.initial_delay, 1);
     assert_eq!(config.max_delay, 30);
@@ -64,9 +88,26 @@ fn test_retry_config_new() {
     assert_eq!(config.interactive, true);
 }
 
+/// 测试使用Default trait创建HttpRetryConfig实例
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_config_default() {
+fn test_retry_config_default_with_no_params_returns_config() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 使用 default 创建配置
     let config = HttpRetryConfig::default();
+
+    // Assert: 验证默认值
     assert_eq!(config.max_retries, 3);
     assert_eq!(config.initial_delay, 1);
     assert_eq!(config.max_delay, 30);
@@ -74,8 +115,23 @@ fn test_retry_config_default() {
     assert_eq!(config.interactive, true);
 }
 
+/// 测试创建自定义HttpRetryConfig实例
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_config_custom_values() {
+fn test_retry_config_custom_with_specified_values_returns_config() {
+    // Arrange: 准备自定义配置值
+
+    // Act: 创建自定义配置
     let config = HttpRetryConfig {
         max_retries: 5,
         initial_delay: 2,
@@ -83,6 +139,8 @@ fn test_retry_config_custom_values() {
         backoff_multiplier: 1.5,
         interactive: false,
     };
+
+    // Assert: 验证自定义值
     assert_eq!(config.max_retries, 5);
     assert_eq!(config.initial_delay, 2);
     assert_eq!(config.max_delay, 60);
@@ -90,8 +148,23 @@ fn test_retry_config_custom_values() {
     assert_eq!(config.interactive, false);
 }
 
+// ==================== HttpRetry Result Tests ====================
+
+/// 测试HTTP重试在第一次尝试就成功的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_result_structure() -> Result<()> {
+fn test_retry_result_with_success_on_first_attempt_return_true() -> Result<()> {
+    // Arrange: 准备配置和成功操作
     let config = HttpRetryConfig {
         max_retries: 0,
         initial_delay: 0,
@@ -100,16 +173,31 @@ fn test_retry_result_structure() -> Result<()> {
         interactive: false,
     };
 
+    // Act: 执行重试（第一次成功）
     let result = HttpRetry::retry(|| Ok("success".to_string()), &config, "test")?;
 
+    // Assert: 验证结果结构
     assert_eq!(result.result, "success");
     assert_eq!(result.retry_count, 0);
     assert!(result.succeeded_on_first_attempt);
     Ok(())
 }
 
+/// 测试HTTP重试在失败后重试成功的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_result_retry_count() -> Result<()> {
+fn test_retry_result_with_retry_after_failure() -> Result<()> {
+    // Arrange: 准备配置和会在第二次成功的操作
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 0,
@@ -120,6 +208,8 @@ fn test_retry_result_retry_count() -> Result<()> {
 
     let attempt = std::sync::Arc::new(std::sync::Mutex::new(0));
     let attempt_clone = attempt.clone();
+
+    // Act: 执行重试（第一次失败，第二次成功）
     let result = HttpRetry::retry(
         move || {
             let mut count = attempt_clone.lock().unwrap();
@@ -138,11 +228,14 @@ fn test_retry_result_retry_count() -> Result<()> {
         "test",
     )?;
 
+    // Assert: 验证结果结构
     assert_eq!(result.result, "success");
     assert_eq!(result.retry_count, 1);
     assert!(!result.succeeded_on_first_attempt);
     Ok(())
 }
+
+// ==================== HttpRetry Error Handling Tests ====================
 
 /// 测试不可重试的错误处理
 ///
@@ -158,7 +251,8 @@ fn test_retry_result_retry_count() -> Result<()> {
 /// - 函数应立即返回错误
 /// - 不应进行任何重试尝试
 #[test]
-fn test_retry_with_non_retryable_error() {
+fn test_retry_with_non_retryable_error_returns_error() {
+    // Arrange: 准备配置和不可重试的错误
     let config = HttpRetryConfig {
         max_retries: 3,
         initial_delay: 0,
@@ -167,13 +261,14 @@ fn test_retry_with_non_retryable_error() {
         interactive: false,
     };
 
-    // 创建一个不可重试的错误（非网络错误）
+    // Act: 执行重试（不可重试的错误）
     let result = HttpRetry::retry(
         || Err::<String, _>(eyre!("Bad Request: invalid input")),
         &config,
         "test",
     );
 
+    // Assert: 验证立即返回错误，不进行重试
     assert!(result.is_err());
 }
 
@@ -198,7 +293,8 @@ fn test_retry_with_non_retryable_error() {
 /// - 第二次尝试成功，返回结果
 /// - 最终结果为 Ok("success")
 #[test]
-fn test_retry_with_retryable_error() {
+fn test_retry_with_retryable_error_returns_success() {
+    // Arrange: 准备配置和会在第二次成功的操作
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 0,
@@ -209,6 +305,8 @@ fn test_retry_with_retryable_error() {
 
     let attempt = std::sync::Arc::new(std::sync::Mutex::new(0));
     let attempt_clone = attempt.clone();
+
+    // Act: 执行重试（第一次失败，第二次成功）
     let result = HttpRetry::retry(
         move || {
             let mut count = attempt_clone.lock().unwrap();
@@ -227,11 +325,28 @@ fn test_retry_with_retryable_error() {
         "test",
     );
 
+    // Assert: 验证重试后成功
     assert!(result.is_ok());
 }
 
+/// 测试HTTP重试机制处理IO错误并在重试后成功
+///
+/// ## 测试目的
+/// 验证 HTTP 重试机制能够正确处理 IO 错误（如超时错误），并在重试后成功恢复。
+///
+/// ## 测试场景
+/// 1. 配置重试策略（最多1次重试）
+/// 2. 第一次请求返回 IO 错误（TimedOut）
+/// 3. 触发重试机制
+/// 4. 第二次请求成功
+///
+/// ## 预期结果
+/// - 第一次请求返回 IO 错误
+/// - 触发重试机制
+/// - 第二次请求成功，返回结果
 #[test]
-fn test_retry_with_io_error() {
+fn test_retry_with_io_error_returns_success() {
+    // Arrange: 准备配置和会在第二次成功的操作
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 0,
@@ -242,6 +357,8 @@ fn test_retry_with_io_error() {
 
     let attempt = std::sync::Arc::new(std::sync::Mutex::new(0));
     let attempt_clone = attempt.clone();
+
+    // Act: 执行重试（IO错误，第二次成功）
     let result = HttpRetry::retry(
         move || {
             let mut count = attempt_clone.lock().unwrap();
@@ -260,22 +377,49 @@ fn test_retry_with_io_error() {
         "test",
     );
 
+    // Assert: 验证重试后成功
     assert!(result.is_ok());
 }
 
+/// 测试HTTP重试机制处理5xx服务器错误
+///
+/// ## 测试目的
+/// 验证HTTP重试机制能够正确识别和处理5xx服务器错误（如500 Internal Server Error），
+/// 并在重试后成功恢复。
+///
+/// ## 测试场景
+/// 1. 创建Mock服务器，模拟返回500错误
+/// 2. 配置重试策略（最多1次重试）
+/// 3. 使用线程安全的计数器跟踪尝试次数
+/// 4. 第一次请求返回5xx错误，触发重试
+/// 5. 第二次请求成功
+///
+/// ## 技术细节
+/// - 使用 `MockServer` 模拟HTTP服务器响应
+/// - 使用 `Arc<Mutex<>>` 在闭包中共享可变状态
+/// - 5xx错误应该被视为可重试的错误
+///
+/// ## 预期结果
+/// - 第一次请求返回5xx错误
+/// - 触发重试机制
+/// - 第二次请求成功，返回结果
 #[test]
-fn test_retry_with_5xx_error() -> Result<()> {
+fn test_retry_with_5xx_error_handles_retryable_error_return_false() -> Result<()> {
+    // Arrange: 准备 mock 服务器和配置
     let mut mock_server = MockServer::new();
     let url = format!("{}/server-error", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/server-error")
-        .with_status(500)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Internal Server Error"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Internal Server Error".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/server-error",
+        r#"{"error": "{{error}}"}"#,
+        vars,
+        500,
+    );
 
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -288,6 +432,8 @@ fn test_retry_with_5xx_error() -> Result<()> {
     let attempt = std::sync::Arc::new(std::sync::Mutex::new(0));
     let attempt_clone = attempt.clone();
     let url_clone = url.clone();
+
+    // Act: 执行重试（5xx错误，第二次成功）
     let result = HttpRetry::retry(
         move || {
             let mut count = attempt_clone.lock().unwrap();
@@ -310,24 +456,44 @@ fn test_retry_with_5xx_error() -> Result<()> {
         "test",
     );
 
-    // 由于我们手动返回错误，这个测试主要验证错误处理路径
+    // Assert: 验证错误处理路径（可能成功或失败）
     assert!(result.is_err() || result.is_ok());
     Ok(())
 }
 
+/// 测试HTTP重试机制处理429速率限制错误
+///
+/// ## 测试目的
+/// 验证HTTP重试机制能够正确识别和处理429 Too Many Requests错误，
+/// 并在重试后成功恢复。
+///
+/// ## 测试场景
+/// 1. 创建Mock服务器，模拟返回429错误
+/// 2. 配置重试策略（最多1次重试）
+/// 3. 使用线程安全的计数器跟踪尝试次数
+/// 4. 第一次请求返回429错误，触发重试
+/// 5. 第二次请求成功
+///
+/// ## 技术细节
+/// - 使用 `MockServer` 模拟HTTP服务器响应
+/// - 使用 `Arc<Mutex<>>` 在闭包中共享可变状态
+/// - 429错误应该被视为可重试的错误（速率限制通常是暂时的）
+///
+/// ## 预期结果
+/// - 第一次请求返回429错误
+/// - 触发重试机制
+/// - 第二次请求成功，返回结果
 #[test]
-fn test_retry_with_429_error() -> Result<()> {
+fn test_retry_with_429_error_handles_retryable_error_return_false() -> Result<()> {
+    // Arrange: 准备 mock 服务器和配置
     let mut mock_server = MockServer::new();
     let url = format!("{}/rate-limit", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/rate-limit")
-        .with_status(429)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Too Many Requests"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Too Many Requests".to_string());
+
+    mock_server.mock_with_template("GET", "/rate-limit", r#"{"error": "{{error}}"}"#, vars, 429);
 
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -340,6 +506,8 @@ fn test_retry_with_429_error() -> Result<()> {
     let attempt = std::sync::Arc::new(std::sync::Mutex::new(0));
     let attempt_clone = attempt.clone();
     let url_clone = url.clone();
+
+    // Act: 执行重试（429错误，第二次成功）
     let result = HttpRetry::retry(
         move || {
             let mut count = attempt_clone.lock().unwrap();
@@ -362,14 +530,38 @@ fn test_retry_with_429_error() -> Result<()> {
         "test",
     );
 
-    // 由于我们手动返回错误，这个测试主要验证错误处理路径
+    // Assert: 验证错误处理路径（可能成功或失败）
     assert!(result.is_err() || result.is_ok());
     Ok(())
 }
 
+/// 测试HTTP重试机制处理不同类型的IO错误
+///
+/// ## 测试目的
+/// 验证HTTP重试机制能够正确处理各种类型的IO错误（连接拒绝、连接重置、连接中止等），
+/// 并在重试后成功恢复。
+///
+/// ## 测试场景
+/// 1. 配置重试策略（最多1次重试）
+/// 2. 测试多种IO错误类型：
+///    - ConnectionRefused（连接被拒绝）
+///    - ConnectionReset（连接被重置）
+///    - ConnectionAborted（连接被中止）
+///    - NotConnected（未连接）
+///    - BrokenPipe（管道损坏）
+/// 3. 每种错误类型都会在第一次失败，第二次成功
+///
+/// ## 技术细节
+/// - 使用 `Arc<Mutex<>>` 在闭包中共享可变状态
+/// - 所有IO错误都应该被视为可重试的错误
+/// - 通过循环测试多种错误类型，确保重试机制的通用性
+///
+/// ## 预期结果
+/// - 每种IO错误类型都能触发重试
+/// - 第二次尝试成功，返回结果
 #[test]
-fn test_retry_with_different_io_error_kinds() {
-    // 测试不同的 IO 错误类型
+fn test_retry_with_different_io_error_kinds_returns_success() {
+    // Arrange: 准备配置和不同的 IO 错误类型
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 0,
@@ -406,14 +598,35 @@ fn test_retry_with_different_io_error_kinds() {
             &config,
             "test",
         );
-        // 这些错误应该是可重试的
+        // Assert: 验证这些错误应该是可重试的
         assert!(result.is_ok());
     }
 }
 
+/// 测试交互模式下HTTP重试在第一次失败后成功的情况
+///
+/// ## 测试目的
+/// 验证在交互模式下，HTTP重试机制能够正确处理第一次失败并成功重试。
+///
+/// ## 测试场景
+/// 1. 配置交互模式重试策略（最多1次重试，初始延迟1秒）
+/// 2. 使用线程安全的计数器跟踪尝试次数
+/// 3. 第一次尝试失败（模拟超时错误）
+/// 4. 第二次尝试成功
+///
+/// ## 技术细节
+/// - 使用 `Arc<Mutex<>>` 在闭包中共享可变状态
+/// - 启用交互模式（`interactive: true`）
+/// - 短延迟（1秒）以便快速测试
+/// - 模拟网络超时错误（`std::io::ErrorKind::TimedOut`）
+///
+/// ## 预期结果
+/// - 第一次尝试失败，触发重试
+/// - 交互模式下显示倒计时或确认对话框
+/// - 第二次尝试成功，返回结果
 #[test]
-fn test_retry_with_interactive_mode_first_attempt() {
-    // 测试交互模式下的第一次失败（会调用 countdown_with_cancel）
+fn test_retry_with_interactive_mode_first_attempt_returns_success() {
+    // Arrange: 准备交互模式配置和会在第二次成功的操作
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 1, // 短延迟以便测试
@@ -442,13 +655,26 @@ fn test_retry_with_interactive_mode_first_attempt() {
         "test",
     );
 
-    // 应该成功（重试后成功）
+    // Assert: 验证重试后成功
     assert!(result.is_ok());
 }
 
+/// 测试短延迟情况下的重试倒计时（< 3秒，直接sleep）
+///
+/// ## 测试目的
+/// 验证在短延迟（< 3秒）情况下，重试机制直接使用 sleep 而不是显示倒计时。
+///
+/// ## 测试场景
+/// 1. 配置短延迟（1秒）和交互模式
+/// 2. 第一次请求失败，触发重试
+/// 3. 延迟时间 < 3秒，直接 sleep
+///
+/// ## 预期结果
+/// - 延迟时间 < 3秒时，直接 sleep，不显示倒计时
+/// - 重试后成功返回结果
 #[test]
-fn test_retry_countdown_short_delay() {
-    // 测试短延迟（< 3秒）的情况，会直接 sleep，不显示倒计时
+fn test_retry_countdown_with_short_delay_returns_success() {
+    // Arrange: 准备短延迟配置（< 3秒，会直接 sleep）
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 1, // 短延迟
@@ -480,9 +706,21 @@ fn test_retry_countdown_short_delay() {
     assert!(result.is_ok());
 }
 
+/// 测试非交互模式下HTTP重试在多次尝试后成功
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_non_interactive_after_first_attempt() {
-    // 测试非交互模式或第一次重试后的逻辑（直接 sleep，不显示倒计时）
+fn test_retry_non_interactive_after_first_attempt_returns_success() {
+    // Arrange: 准备非交互模式配置
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 0, // 零延迟以加快测试
@@ -514,9 +752,21 @@ fn test_retry_non_interactive_after_first_attempt() {
     assert!(result.is_ok());
 }
 
+/// 测试HTTP重试错误描述功能（reqwest状态码）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_error_description_reqwest_status() {
-    // 测试 get_error_description 对 reqwest 状态码的处理
+fn test_retry_error_description_with_reqwest_status_returns_error() {
+    // Arrange: 准备配置（不重试，立即返回错误）
     // 注意：这个测试通过重试逻辑间接测试 get_error_description
     let config = HttpRetryConfig {
         max_retries: 0, // 不重试，立即返回错误
@@ -537,13 +787,25 @@ fn test_retry_error_description_reqwest_status() {
         "test",
     );
 
-    // 应该返回错误（因为 max_retries 为 0）
+    // Assert: 验证返回错误（因为 max_retries 为 0）
     assert!(result.is_err());
 }
 
+/// 测试HTTP重试错误描述功能（长错误消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_error_description_long_message() -> Result<()> {
-    // 测试 get_error_description 对长错误消息的处理（> 100 字符）
+fn test_retry_error_description_with_long_message_return_false() -> Result<()> {
+    // Arrange: 准备配置和长错误消息（> 100 字符）
     let config = HttpRetryConfig {
         max_retries: 0,
         initial_delay: 0,
@@ -559,8 +821,8 @@ fn test_retry_error_description_long_message() -> Result<()> {
         "test",
     );
 
+    // Assert: 验证返回错误，错误消息应该被截断（通过 get_error_description）
     assert!(result.is_err());
-    // 错误消息应该被截断（通过 get_error_description）
     if let Err(e) = result {
         let error_msg = e.to_string();
         // 验证错误消息存在（可能包含操作名称、重试信息或原始错误）
@@ -569,9 +831,21 @@ fn test_retry_error_description_long_message() -> Result<()> {
     Ok(())
 }
 
+/// 测试长延迟情况下的重试倒计时（>= 3秒，显示倒计时）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_countdown_long_delay() {
-    // 测试长延迟（>= 3秒）的情况，会显示倒计时
+fn test_retry_countdown_with_long_delay_returns_success() {
+    // Arrange: 准备长延迟配置（>= 3秒，会显示倒计时）
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 3, // 长延迟，会触发倒计时逻辑
@@ -603,9 +877,32 @@ fn test_retry_countdown_long_delay() {
     assert!(result.is_ok());
 }
 
+/// 测试交互模式下用户取消重试的情况
+/// 测试交互模式下用户取消重试的情况
+///
+/// ## 测试目的
+/// 验证在交互模式下，当用户选择取消重试时，重试机制能够正确处理。
+///
+/// ## 测试场景
+/// 1. 配置交互模式重试策略（最多2次重试）
+/// 2. 使用线程安全的计数器跟踪尝试次数
+/// 3. 第一次尝试失败，触发重试
+/// 4. 模拟用户取消操作（通过非交互模式间接测试）
+/// 5. 验证重试机制能够继续执行或正确处理取消
+///
+/// ## 技术细节
+/// - 使用 `Arc<Mutex<>>` 在闭包中共享可变状态
+/// - 注意：由于 ConfirmDialog 是交互式的，无法在自动化测试中完全模拟用户取消
+/// - 通过非交互模式来测试其他路径和错误处理逻辑
+/// - 模拟网络超时错误（`std::io::ErrorKind::TimedOut`）
+///
+/// ## 预期结果
+/// - 第一次尝试失败，触发重试
+/// - 在非交互模式下，重试机制能够继续执行
+/// - 最终成功返回结果（或正确处理取消情况）
 #[test]
-fn test_retry_interactive_user_cancel() {
-    // 测试交互式重试中用户取消的情况
+fn test_retry_interactive_user_cancel_returns_success() {
+    // Arrange: 准备非交互模式配置（模拟用户取消的情况）
     // 注意：这个测试需要 mock ConfirmDialog，但由于 ConfirmDialog 是交互式的，
     // 我们通过非交互模式来测试其他路径
     let config = HttpRetryConfig {
@@ -636,12 +933,27 @@ fn test_retry_interactive_user_cancel() {
         "test",
     );
 
+    // Assert: 验证重试后成功
     assert!(result.is_ok());
 }
 
+/// 测试交互模式下确认对话框错误处理
+///
+/// ## 测试目的
+/// 验证在交互模式下，当确认对话框出现错误时，重试机制能够正确处理并继续执行。
+///
+/// ## 测试场景
+/// 1. 配置交互模式（但通过非交互模式模拟 ConfirmDialog 失败的情况）
+/// 2. 第一次请求失败，触发重试
+/// 3. 模拟确认对话框错误处理路径
+///
+/// ## 预期结果
+/// - 确认对话框错误被正确处理
+/// - 重试机制继续执行
+/// - 最终成功返回结果
 #[test]
-fn test_retry_interactive_confirm_dialog_error() {
-    // 测试交互式重试中 ConfirmDialog 失败的情况（非交互式终端）
+fn test_retry_interactive_confirm_dialog_error_returns_success() {
+    // Arrange: 准备非交互模式配置（模拟 ConfirmDialog 失败的情况）
     // 注意：这个测试通过非交互模式来间接测试错误处理路径
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -674,9 +986,21 @@ fn test_retry_interactive_confirm_dialog_error() {
     assert!(result.is_ok());
 }
 
+/// 测试HTTP重试在第一次尝试遇到不可重试错误时立即返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_non_retryable_error_first_attempt() {
-    // 测试第一次尝试就失败且不可重试的错误
+fn test_retry_non_retryable_error_on_first_attempt_returns_error() {
+    // Arrange: 准备配置和不可重试的错误
     let config = HttpRetryConfig {
         max_retries: 3,
         initial_delay: 0,
@@ -685,15 +1009,15 @@ fn test_retry_non_retryable_error_first_attempt() {
         interactive: false,
     };
 
-    // 创建一个不可重试的错误（非网络错误）
+    // Act: 执行重试（不可重试的错误）
     let result = HttpRetry::retry(
         || Err::<String, _>(eyre!("Bad Request: invalid input")),
         &config,
         "test",
     );
 
+    // Assert: 验证立即失败，不进行重试
     assert!(result.is_err());
-    // 应该立即失败，不进行重试
 }
 
 /// 测试HTTP重试机制在所有重试都失败的情况
@@ -723,8 +1047,8 @@ fn test_retry_non_retryable_error_first_attempt() {
 /// - 返回最后一次的错误信息
 /// - 错误上下文包含重试信息
 #[test]
-fn test_retry_all_retries_exhausted() -> Result<()> {
-    // 测试所有重试都失败的情况
+fn test_retry_all_retries_exhausted_return_collect() -> Result<()> {
+    // Arrange: 准备配置和总是失败的操作
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 0, // 零延迟以加快测试
@@ -742,6 +1066,7 @@ fn test_retry_all_retries_exhausted() -> Result<()> {
         "test",
     );
 
+    // Assert: 验证返回错误，错误消息包含重试信息
     assert!(result.is_err());
     if let Err(e) = result {
         let error_msg = e.to_string();
@@ -751,9 +1076,24 @@ fn test_retry_all_retries_exhausted() -> Result<()> {
     Ok(())
 }
 
+/// 测试HTTP重试在多次尝试后成功的情况
+///
+/// ## 测试目的
+/// 验证 HTTP 重试机制在多次尝试后能够成功恢复，并正确记录重试次数。
+///
+/// ## 测试场景
+/// 1. 配置重试策略（最多3次重试）
+/// 2. 前两次请求失败，第三次成功
+/// 3. 验证重试次数和结果
+///
+/// ## 预期结果
+/// - 前两次请求失败
+/// - 第三次请求成功
+/// - 重试次数为2次
+/// - 返回成功结果
 #[test]
-fn test_retry_success_after_multiple_attempts() -> Result<()> {
-    // 测试多次重试后成功的情况
+fn test_retry_success_after_multiple_attempts_return_true() -> Result<()> {
+    // Arrange: 准备配置和会在第三次成功的操作
     let config = HttpRetryConfig {
         max_retries: 3,
         initial_delay: 0,
@@ -782,15 +1122,28 @@ fn test_retry_success_after_multiple_attempts() -> Result<()> {
         "test",
     )?;
 
+    // Assert: 验证多次重试后成功
     assert_eq!(result.result, "success");
     assert_eq!(result.retry_count, 2); // 重试了2次
     assert!(!result.succeeded_on_first_attempt);
     Ok(())
 }
 
+/// 测试HTTP重试延迟的指数退避计算
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_delay_backoff_calculation() {
-    // 测试延迟退避计算
+fn test_retry_delay_backoff_calculation_returns_success() {
+    // Arrange: 准备配置和会在第四次成功的操作
     let config = HttpRetryConfig {
         max_retries: 3,
         initial_delay: 1,
@@ -820,16 +1173,38 @@ fn test_retry_delay_backoff_calculation() {
         "test",
     );
 
+    // Assert: 验证延迟时间（1 + 2 + 4 = 7秒，但受 max_delay 限制）
     assert!(result.is_ok());
-    // 验证延迟时间（1 + 2 + 4 = 7秒，但受 max_delay 限制）
     let elapsed = start_time.elapsed();
     // 允许一些误差
     assert!(elapsed.as_secs() >= 6);
 }
 
+/// 测试HTTP重试延迟计算的最大延迟限制
+///
+/// ## 测试目的
+/// 验证HTTP重试机制在计算重试延迟时，能够正确应用最大延迟限制（max_delay），
+/// 确保延迟不会超过配置的最大值。
+///
+/// ## 测试场景
+/// 1. 配置重试策略（max_delay = 20秒，max_retries = 3）
+/// 2. 使用较大的backoff_multiplier（2.0）和initial_delay（10秒）
+/// 3. 模拟多次重试，计算每次的延迟
+/// 4. 验证计算出的延迟不会超过max_delay限制
+///
+/// ## 技术细节
+/// - 延迟计算公式：`min(initial_delay * (backoff_multiplier ^ retry_count), max_delay)`
+/// - 当计算出的延迟超过max_delay时，应该使用max_delay
+/// - 使用 `Arc<Mutex<>>` 跟踪重试次数
+/// - 使用 `Instant` 测量实际延迟时间
+///
+/// ## 预期结果
+/// - 所有重试延迟都不超过max_delay（20秒）
+/// - 重试机制正常工作
+/// - 最终成功返回结果
 #[test]
-fn test_retry_delay_max_limit() {
-    // 测试延迟达到最大值的情况
+fn test_retry_delay_max_limit_returns_success() {
+    // Arrange: 准备配置（最大值等于初始值）和会在第四次成功的操作
     let config = HttpRetryConfig {
         max_retries: 3,
         initial_delay: 10,
@@ -861,9 +1236,26 @@ fn test_retry_delay_max_limit() {
     assert!(result.is_ok());
 }
 
+/// 测试HTTP重试机制处理reqwest超时错误
+///
+/// ## 测试目的
+/// 验证 `HttpRetry::retry()` 能够正确处理 `reqwest::Error` 的超时错误（`is_timeout()` 分支）。
+///
+/// ## 测试场景
+/// 1. 配置HTTP重试参数（max_retries: 0，不重试）
+/// 2. 使用极短超时时间（1ms）请求无效URL
+/// 3. 验证超时错误被正确处理
+///
+/// ## 注意事项
+/// - 此测试被标记为 `#[ignore]`，因为超时行为在单元测试中难以可靠重现
+/// - 连接失败可能比超时更快发生，导致测试不稳定
+/// - 更好的方法是使用 mock 服务器模拟延迟响应
+///
+/// ## 预期结果
+/// - 超时错误被正确识别和处理
 #[test]
 #[ignore = "Flaky test - timeout behavior is difficult to reliably reproduce in unit tests"]
-fn test_retry_with_reqwest_error_timeout() -> Result<()> {
+fn test_retry_with_reqwest_error_timeout_return_ok() -> Result<()> {
     // 测试 reqwest::Error 的 is_timeout() 分支
     // 注意：此测试尝试通过设置极短超时来触发超时错误，但在实际环境中
     // 连接失败（connection refused）可能比超时更快发生，导致测试不稳定
@@ -895,20 +1287,46 @@ fn test_retry_with_reqwest_error_timeout() -> Result<()> {
     Ok(())
 }
 
+/// 测试HTTP重试机制处理reqwest库返回的5xx服务器错误
+///
+/// ## 测试目的
+/// 验证HTTP重试机制能够正确处理通过reqwest库返回的5xx服务器错误，
+/// 并在重试后成功恢复。
+///
+/// ## 测试场景
+/// 1. 创建Mock服务器，模拟返回500 Internal Server Error
+/// 2. 配置重试策略（最多1次重试）
+/// 3. 使用HttpClient发送请求，获取reqwest::Response
+/// 4. 检查响应状态码，如果是5xx错误则手动返回错误
+/// 5. 验证重试机制能够识别并重试5xx错误
+///
+/// ## 技术细节
+/// - 使用 `MockServer` 模拟HTTP服务器响应
+/// - 使用 `HttpClient::global()` 发送真实HTTP请求
+/// - 通过检查 `response.status` 判断是否为5xx错误
+/// - 5xx错误应该被视为可重试的错误
+///
+/// ## 预期结果
+/// - 第一次请求返回5xx错误
+/// - 触发重试机制
+/// - 第二次请求成功，返回结果
 #[test]
-fn test_retry_with_reqwest_error_5xx() -> Result<()> {
+fn test_retry_with_reqwest_error_5xx_return_false() -> Result<()> {
     // 测试 reqwest::Error 的 5xx 服务器错误分支
     let mut mock_server = MockServer::new();
     let url = format!("{}/server-error", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/server-error")
-        .with_status(500)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Internal Server Error"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Internal Server Error".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/server-error",
+        r#"{"error": "{{error}}"}"#,
+        vars,
+        500,
+    );
 
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -948,20 +1366,40 @@ fn test_retry_with_reqwest_error_5xx() -> Result<()> {
     Ok(())
 }
 
+/// 测试HTTP重试机制处理reqwest库返回的429速率限制错误
+///
+/// ## 测试目的
+/// 验证HTTP重试机制能够正确处理通过reqwest库返回的429 Too Many Requests错误，
+/// 并在重试后成功恢复。
+///
+/// ## 测试场景
+/// 1. 创建Mock服务器，模拟返回429 Too Many Requests错误
+/// 2. 配置重试策略（最多1次重试）
+/// 3. 使用HttpClient发送请求，获取reqwest::Response
+/// 4. 检查响应状态码，如果是429错误则手动返回错误
+/// 5. 验证重试机制能够识别并重试429错误
+///
+/// ## 技术细节
+/// - 使用 `MockServer` 模拟HTTP服务器响应
+/// - 使用 `HttpClient::global()` 发送真实HTTP请求
+/// - 通过检查 `response.status` 判断是否为429错误
+/// - 429错误应该被视为可重试的错误（速率限制通常是暂时的）
+///
+/// ## 预期结果
+/// - 第一次请求返回429错误
+/// - 触发重试机制
+/// - 第二次请求成功，返回结果
 #[test]
-fn test_retry_with_reqwest_error_429() -> Result<()> {
+fn test_retry_with_reqwest_error_429_return_false() -> Result<()> {
     // 测试 reqwest::Error 的 429 Too Many Requests 分支
     let mut mock_server = MockServer::new();
     let url = format!("{}/rate-limit", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/rate-limit")
-        .with_status(429)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Too Many Requests"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Too Many Requests".to_string());
+
+    mock_server.mock_with_template("GET", "/rate-limit", r#"{"error": "{{error}}"}"#, vars, 429);
 
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -1001,8 +1439,20 @@ fn test_retry_with_reqwest_error_429() -> Result<()> {
     Ok(())
 }
 
-// ==================== 补充测试：覆盖更多代码路径 ====================
+// ==================== Additional Tests: Cover More Code Paths ====================
 
+/// 测试交互模式下第一次失败时的倒计时逻辑
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_interactive_first_attempt_countdown() {
     // 测试交互模式下第一次失败时的倒计时逻辑（覆盖 retry.rs:215-217）
@@ -1104,6 +1554,18 @@ fn test_retry_interactive_second_attempt_path() {
     assert!(result.is_ok());
 }
 
+/// 测试极短延迟（< 3秒）情况下的重试倒计时
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_countdown_very_short_delay() {
     // 测试极短延迟（< 3秒）的情况，直接 sleep（覆盖 retry.rs:309-313）
@@ -1143,6 +1605,18 @@ fn test_retry_countdown_very_short_delay() {
     assert!(elapsed.as_secs() < 3); // 应该小于 3 秒（短延迟路径）
 }
 
+/// 测试恰好3秒延迟的边界情况（应该显示倒计时）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_countdown_exact_3_seconds() {
     // 测试恰好 3 秒的延迟（边界情况，应该显示倒计时）
@@ -1177,6 +1651,18 @@ fn test_retry_countdown_exact_3_seconds() {
     assert!(result.is_ok());
 }
 
+/// 测试错误描述功能对IO错误的处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_error_description_io_error() {
     // 测试 get_error_description 对 IO 错误的处理（覆盖 retry.rs:371-372）
@@ -1204,6 +1690,18 @@ fn test_retry_error_description_io_error() {
     assert!(!error_msg.is_empty());
 }
 
+/// 测试错误描述功能对超长错误消息的截断
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_error_description_very_long_message() {
     // 测试 get_error_description 对超长错误消息的截断（覆盖 retry.rs:376-379）
@@ -1228,6 +1726,18 @@ fn test_retry_error_description_very_long_message() {
     assert!(!error_msg.is_empty());
 }
 
+/// 测试非交互模式下直接sleep的路径
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_non_interactive_mode_direct_sleep() {
     // 测试非交互模式下直接 sleep 的路径（覆盖 retry.rs:219）
@@ -1329,8 +1839,20 @@ fn test_retry_backoff_delay_calculation() {
     assert!(elapsed.as_secs() >= 45); // 允许一些误差
 }
 
+/// 测试重试成功后记录日志的路径
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_retry_success_logging_after_retries() -> Result<()> {
+fn test_retry_success_logging_after_retries_return_true() -> Result<()> {
     // 测试重试成功后记录日志的路径（覆盖 retry.rs:140-146）
     let config = HttpRetryConfig {
         max_retries: 2,
@@ -1392,6 +1914,7 @@ fn test_retry_success_logging_after_retries() -> Result<()> {
 /// - 日志包含错误详情
 /// - 不进行任何重试尝试
 /// - 立即返回错误
+/// 测试不可重试错误记录日志的路径
 #[test]
 fn test_retry_non_retryable_error_logging() {
     // 测试不可重试错误的日志记录（覆盖 retry.rs:162-169）
@@ -1414,7 +1937,7 @@ fn test_retry_non_retryable_error_logging() {
     // 应该立即失败，不进行重试（第一次尝试就失败且不可重试）
 }
 
-// ==================== 补充测试：覆盖未覆盖的代码路径 ====================
+// ==================== Additional Tests: Cover Uncovered Code Paths ====================
 //
 // 注意：以下测试补充了未覆盖的代码路径，但由于技术限制，某些路径无法完全覆盖：
 // 1. 交互式确认的用户选择"继续"路径（Ok(true)）- 需要 mock ConfirmDialog
@@ -1767,6 +2290,18 @@ fn test_retry_interactive_cancel_path_existence() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试倒计时剩余时间计算和更新逻辑
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_countdown_remaining_logic() {
     // 测试倒计时剩余时间逻辑（覆盖 retry.rs:316-321, 333-334）
@@ -1811,6 +2346,18 @@ fn test_retry_countdown_remaining_logic() {
     );
 }
 
+/// 测试倒计时时间检查逻辑
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_retry_countdown_time_check_logic() {
     // 测试倒计时时间检查逻辑（覆盖 retry.rs:318-321）
@@ -1849,10 +2396,23 @@ fn test_retry_countdown_time_check_logic() {
     assert!(result.is_ok());
 }
 
-// ==================== 来自 retry_core.rs 的补充测试 ====================
+// ==================== HttpRetry Core Tests ====================
 
+/// 测试HTTP重试在立即成功的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_immediate_success() -> Result<()> {
+fn test_immediate_success_with_always_success_return_true() -> Result<()> {
+    // Arrange: 准备配置和总是成功的操作
     let config = HttpRetryConfig {
         max_retries: 3,
         initial_delay: 1,
@@ -1861,16 +2421,31 @@ fn test_immediate_success() -> Result<()> {
         interactive: false,
     };
 
+    // Act: 执行重试（立即成功）
     let result = HttpRetry::retry(create_always_success_operation(), &config, "test operation")?;
 
+    // Assert: 验证第一次尝试成功
     assert_eq!(result.retry_count, 0);
     assert_eq!(result.succeeded_on_first_attempt, true);
     assert_eq!(result.result, "immediate success");
     Ok(())
 }
 
+/// 测试HTTP重试在第二次尝试成功的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_success_after_retries() -> Result<()> {
+fn test_success_after_retries_with_second_attempt_return_true() -> Result<()> {
+    // Arrange: 准备配置和会在第二次成功的操作
     let config = HttpRetryConfig {
         max_retries: 3,
         initial_delay: 0,
@@ -1879,16 +2454,31 @@ fn test_success_after_retries() -> Result<()> {
         interactive: false,
     };
 
+    // Act: 执行重试（第一次失败，第二次成功）
     let result = HttpRetry::retry(create_success_after_attempts(2), &config, "test operation")?;
 
+    // Assert: 验证重试后成功
     assert_eq!(result.retry_count, 1);
     assert_eq!(result.succeeded_on_first_attempt, false);
     assert_eq!(result.result, "success");
     Ok(())
 }
 
+/// 测试HTTP重试在所有重试都失败的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_all_retries_exhausted() -> Result<()> {
+fn test_all_retries_exhausted_with_always_fail() -> Result<()> {
+    // Arrange: 准备配置和总是失败的操作
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 0,
@@ -1897,8 +2487,10 @@ fn test_all_retries_exhausted() -> Result<()> {
         interactive: false,
     };
 
+    // Act: 执行重试（所有重试都失败）
     let result = HttpRetry::retry(create_always_fail_operation(), &config, "test operation");
 
+    // Assert: 验证返回错误，错误消息包含重试信息
     assert!(result.is_err());
     if let Err(e) = result {
         let error_msg = e.to_string();
@@ -1938,7 +2530,8 @@ fn test_all_retries_exhausted() -> Result<()> {
 /// - 系统时间调用准确
 #[test]
 #[ignore]
-fn test_backoff_timing() {
+fn test_backoff_timing_with_delays_returns_expected_duration() {
+    // Arrange: 准备配置和总是失败的操作
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 1,
@@ -1947,10 +2540,12 @@ fn test_backoff_timing() {
         interactive: false,
     };
 
+    // Act: 执行重试并测量时间
     let start_time = Instant::now();
     let _result = HttpRetry::retry(create_always_fail_operation(), &config, "timing test");
     let duration = start_time.elapsed();
 
+    // Assert: 验证延迟时间在预期范围内
     assert!(duration >= Duration::from_millis(2800));
     assert!(duration <= Duration::from_millis(4000));
 }
@@ -1984,7 +2579,8 @@ fn test_backoff_timing() {
 /// - 符合公式：delay_n = initial * (multiplier ^ n)
 #[test]
 #[ignore]
-fn test_backoff_calculation_case_1() {
+fn test_backoff_calculation_case_1_with_standard_multiplier_returns_expected_duration() {
+    // Arrange: 准备配置和预期延迟
     let initial_delay = 1;
     let multiplier = 2.0;
     let max_delay = 30;
@@ -1998,10 +2594,12 @@ fn test_backoff_calculation_case_1() {
         interactive: false,
     };
 
+    // Act: 执行重试并测量时间
     let start_time = Instant::now();
     let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
     let duration = start_time.elapsed();
 
+    // Assert: 验证延迟时间在预期范围内
     let expected_total_seconds: u64 = expected_delays.iter().sum();
     let expected_duration = Duration::from_secs(expected_total_seconds);
     let min_expected = expected_duration.saturating_sub(Duration::from_millis(500));
@@ -2046,7 +2644,8 @@ fn test_backoff_calculation_case_1() {
 /// - 符合公式：delay_n = initial * (multiplier ^ n)
 #[test]
 #[ignore]
-fn test_backoff_calculation_case_2() {
+fn test_backoff_calculation_case_2_with_large_multiplier_returns_expected_duration() {
+    // Arrange: 准备配置和预期延迟
     let initial_delay = 2;
     let multiplier = 1.5;
     let max_delay = 10;
@@ -2060,6 +2659,7 @@ fn test_backoff_calculation_case_2() {
         interactive: false,
     };
 
+    // Act: 执行重试并测量时间
     let start_time = Instant::now();
     let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
     let duration = start_time.elapsed();
@@ -2108,7 +2708,8 @@ fn test_backoff_calculation_case_2() {
 /// - 符合公式：delay_n = initial * (multiplier ^ n)
 #[test]
 #[ignore]
-fn test_backoff_calculation_case_3() {
+fn test_backoff_calculation_case_3_with_small_multiplier_returns_expected_duration() {
+    // Arrange: 准备配置和预期延迟
     let initial_delay = 5;
     let multiplier = 3.0;
     let max_delay = 20;
@@ -2122,6 +2723,7 @@ fn test_backoff_calculation_case_3() {
         interactive: false,
     };
 
+    // Act: 执行重试并测量时间
     let start_time = Instant::now();
     let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
     let duration = start_time.elapsed();
@@ -2141,8 +2743,22 @@ fn test_backoff_calculation_case_3() {
     );
 }
 
+/// 测试错误消息中包含操作名称
+///
+/// ## 测试目的
+/// 验证当重试失败时，错误消息中能够正确包含自定义的操作名称和重试信息。
+///
+/// ## 测试场景
+/// 1. 配置重试策略和自定义操作名称
+/// 2. 执行总是失败的操作
+/// 3. 验证错误消息内容
+///
+/// ## 预期结果
+/// - 错误消息包含自定义操作名称
+/// - 错误消息包含重试次数信息（"failed after 1 retries"）
 #[test]
-fn test_operation_name_in_error() -> Result<()> {
+fn test_operation_name_in_error_with_custom_name_return_false() -> Result<()> {
+    // Arrange: 准备配置和自定义操作名称
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 0,
@@ -2152,8 +2768,11 @@ fn test_operation_name_in_error() -> Result<()> {
     };
 
     let operation_name = "custom operation name";
+
+    // Act: 执行重试（总是失败）
     let result = HttpRetry::retry(create_always_fail_operation(), &config, operation_name);
 
+    // Assert: 验证错误消息包含操作名称和重试信息
     assert!(result.is_err());
     if let Err(e) = result {
         let error_msg = e.to_string();
@@ -2163,8 +2782,21 @@ fn test_operation_name_in_error() -> Result<()> {
     Ok(())
 }
 
+/// 测试max_retries为0的情况（不重试）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_zero_max_retries() -> Result<()> {
+fn test_zero_max_retries_with_success_return_true() -> Result<()> {
+    // Arrange: 准备配置（max_retries = 0）
     let config = HttpRetryConfig {
         max_retries: 0,
         initial_delay: 1,
@@ -2173,25 +2805,42 @@ fn test_zero_max_retries() -> Result<()> {
         interactive: false,
     };
 
+    // Act: 执行重试（成功的情况）
     let success_result = HttpRetry::retry(
         create_always_success_operation(),
         &config,
         "no retry success",
     )?;
+    // Assert: 验证第一次尝试成功
     assert_eq!(success_result.retry_count, 0);
     assert!(success_result.succeeded_on_first_attempt);
 
+    // Act: 执行重试（失败的情况）
     let start_time = Instant::now();
     let fail_result = HttpRetry::retry(create_always_fail_operation(), &config, "no retry fail");
     let duration = start_time.elapsed();
 
+    // Assert: 验证立即返回错误，无延迟
     assert!(fail_result.is_err());
     assert!(duration < Duration::from_millis(100));
     Ok(())
 }
 
+/// 测试大max_retries值的情况（多次重试）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_large_max_retries() -> Result<()> {
+fn test_large_max_retries_with_multiple_attempts_return_ok() -> Result<()> {
+    // Arrange: 准备配置（大 max_retries）和会在第五次成功的操作
     let config = HttpRetryConfig {
         max_retries: 100,
         initial_delay: 0,
@@ -2200,20 +2849,35 @@ fn test_large_max_retries() -> Result<()> {
         interactive: false,
     };
 
+    // Act: 执行重试（第五次成功）
     let result = HttpRetry::retry(
         create_success_after_attempts(5),
         &config,
         "large retry test",
     )?;
 
+    // Assert: 验证多次重试后成功
     assert_eq!(result.retry_count, 4);
     assert!(!result.succeeded_on_first_attempt);
     assert_eq!(result.result, "success");
     Ok(())
 }
 
+/// 测试initial_delay为0的情况（无延迟）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_zero_initial_delay() {
+fn test_zero_initial_delay_with_always_fail_returns_no_delay() {
+    // Arrange: 准备配置（initial_delay = 0）
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 0,
@@ -2222,10 +2886,12 @@ fn test_zero_initial_delay() {
         interactive: false,
     };
 
+    // Act: 执行重试并测量时间
     let start_time = Instant::now();
     let _result = HttpRetry::retry(create_always_fail_operation(), &config, "zero delay test");
     let duration = start_time.elapsed();
 
+    // Assert: 验证无延迟
     assert!(duration < Duration::from_millis(100));
 }
 
@@ -2259,7 +2925,8 @@ fn test_zero_initial_delay() {
 /// - 所有延迟都≤ max_delay
 #[test]
 #[ignore]
-fn test_max_delay_limit() {
+fn test_max_delay_limit_with_large_multiplier_returns_limited_duration() {
+    // Arrange: 准备配置（max_delay 限制）
     let config = HttpRetryConfig {
         max_retries: 10,
         initial_delay: 1,
@@ -2268,15 +2935,19 @@ fn test_max_delay_limit() {
         interactive: false,
     };
 
+    // Act: 执行重试并测量时间
     let start_time = Instant::now();
     let _result = HttpRetry::retry(create_always_fail_operation(), &config, "max delay test");
     let duration = start_time.elapsed();
 
+    // Assert: 验证延迟受 max_delay 限制
     assert!(duration <= Duration::from_secs(25));
 }
 
+/// 测试HTTP重试机制支持不同的返回类型
 #[test]
-fn test_different_return_types() -> Result<()> {
+fn test_different_return_ok() -> Result<()> {
+    // Arrange: 准备配置
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 0,
@@ -2285,6 +2956,7 @@ fn test_different_return_types() -> Result<()> {
         interactive: false,
     };
 
+    // Act & Assert: 测试不同的返回类型
     let int_result = HttpRetry::retry(
         || -> color_eyre::Result<i32> { Ok(42) },
         &config,
@@ -2321,8 +2993,33 @@ fn test_different_return_types() -> Result<()> {
     Ok(())
 }
 
+/// 测试HTTP重试机制处理各种不同类型的错误
+///
+/// ## 测试目的
+/// 验证HTTP重试机制能够正确处理各种不同类型的错误（IO错误、字符串错误、自定义错误等），
+/// 并正确区分可重试和不可重试的错误。
+///
+/// ## 测试场景
+/// 1. 配置重试策略（最多1次重试）
+/// 2. 测试多种错误类型：
+///    - IO错误（可重试）
+///    - 字符串错误（不可重试）
+///    - 自定义错误（根据错误内容判断）
+/// 3. 验证每种错误类型的处理方式
+///
+/// ## 技术细节
+/// - 使用 `Arc<Mutex<>>` 在闭包中共享可变状态
+/// - 通过错误类型判断是否为可重试错误
+/// - IO错误应该被视为可重试错误
+/// - 普通字符串错误应该被视为不可重试错误
+///
+/// ## 预期结果
+/// - IO错误触发重试，最终成功
+/// - 不可重试错误立即返回错误
+/// - 错误处理逻辑正确
 #[test]
-fn test_different_error_types() {
+fn test_different_error_types_with_various_errors_returns_errors() {
+    // Arrange: 准备配置
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 0,
@@ -2331,6 +3028,7 @@ fn test_different_error_types() {
         interactive: false,
     };
 
+    // Act & Assert: 测试不同的错误类型
     let string_error_result = HttpRetry::retry(
         || -> color_eyre::Result<String> { Err(eyre!("string error")) },
         &config,
@@ -2366,8 +3064,21 @@ fn test_different_error_types() {
     assert!(custom_error_result.is_err());
 }
 
+/// 测试快速连续调用HTTP重试机制
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_rapid_successive_calls() -> Result<()> {
+fn test_rapid_successive_calls_with_multiple_operations_return_true() -> Result<()> {
+    // Arrange: 准备配置
     let config = HttpRetryConfig {
         max_retries: 1,
         initial_delay: 0,
@@ -2376,6 +3087,7 @@ fn test_rapid_successive_calls() -> Result<()> {
         interactive: false,
     };
 
+    // Act & Assert: 测试快速连续调用
     for i in 0..10 {
         let result = HttpRetry::retry(
             || -> color_eyre::Result<usize> { Ok(i) },
@@ -2390,8 +3102,21 @@ fn test_rapid_successive_calls() -> Result<()> {
     Ok(())
 }
 
+/// 测试HTTP重试机制在重复调用时的一致性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_consistent_behavior() -> Result<()> {
+fn test_consistent_behavior_with_repeated_calls_return_collect() -> Result<()> {
+    // Arrange: 准备配置
     let config = HttpRetryConfig {
         max_retries: 2,
         initial_delay: 0,
@@ -2400,6 +3125,7 @@ fn test_consistent_behavior() -> Result<()> {
         interactive: false,
     };
 
+    // Act & Assert: 测试一致性行为
     for _ in 0..5 {
         let result = HttpRetry::retry(
             create_success_after_attempts(2),

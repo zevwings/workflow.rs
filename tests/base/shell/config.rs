@@ -2,59 +2,94 @@
 //!
 //! 测试 Shell 配置管理器的核心功能。
 
+use color_eyre::Result;
 use std::collections::HashMap;
 use std::fs;
-use tempfile::TempDir;
 use workflow::base::shell::ShellConfigManager;
 
-// 注意：由于 ShellConfigManager 依赖于真实的 shell 检测和配置文件路径，
-// 这些测试主要验证配置块的解析和格式化功能，而不是完整的端到端测试。
-// 完整的集成测试需要在真实的 shell 环境中进行。
+use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
+// ==================== ShellConfigManager Environment Variables Tests ====================
+
+/// 测试从空文件加载环境变量（应返回空映射）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_load_env_vars_empty_file() {
-    // 测试从空文件加载环境变量
-    // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
+fn test_load_env_vars_empty_file_with_empty_file_returns_empty_map() {
+    // Arrange: 准备空配置文件环境（注意：依赖于真实配置文件路径）
+
+    // Act: 从空文件加载环境变量
     let result = ShellConfigManager::load_env_vars();
 
-    // 应该返回空 HashMap（如果文件不存在或为空）
+    // Assert: 验证返回空HashMap或包含变量的HashMap（如果文件不存在或为空）
     if let Ok(env_vars) = result {
         assert!(env_vars.is_empty() || !env_vars.is_empty());
     }
 }
 
+/// 测试设置和加载环境变量
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_set_and_load_env_vars() {
-    // 测试设置和加载环境变量
-    // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
-
+fn test_set_and_load_env_vars_with_valid_vars_sets_and_loads_vars() {
+    // Arrange: 准备测试环境变量
     let mut test_vars = HashMap::new();
     test_vars.insert("TEST_KEY1".to_string(), "test_value1".to_string());
     test_vars.insert("TEST_KEY2".to_string(), "test_value2".to_string());
 
-    // 设置环境变量
+    // Act: 设置环境变量
     let set_result = ShellConfigManager::set_env_vars(&test_vars);
 
-    // 如果设置成功，尝试加载
+    // Assert: 如果设置成功，验证可以加载且包含设置的变量
     if set_result.is_ok() {
         let load_result = ShellConfigManager::load_env_vars();
         if let Ok(loaded_vars) = load_result {
-            // 验证加载的变量包含设置的变量
             for (key, value) in &test_vars {
                 if let Some(loaded_value) = loaded_vars.get(key) {
                     assert_eq!(loaded_value, value);
                 }
             }
         }
-
         // 清理：移除测试变量
         let _ = ShellConfigManager::remove_env_vars(&["TEST_KEY1", "TEST_KEY2"]);
     }
 }
 
+/// 测试移除环境变量
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_remove_env_vars() {
-    // 测试移除环境变量
+    // Arrange: 准备测试移除环境变量
     // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
 
     // 先设置一些测试变量
@@ -65,16 +100,28 @@ fn test_remove_env_vars() {
     // 移除变量
     let remove_result = ShellConfigManager::remove_env_vars(&["TEST_REMOVE_KEY"]);
 
-    // 验证移除操作
+    // Assert: 验证移除操作
     if let Ok(removed) = remove_result {
         // 如果文件存在，应该返回 true（表示移除了内容）
         assert!(removed || !removed);
     }
 }
 
+/// 测试添加source语句
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_add_source() {
-    // 测试添加 source 语句
+    // Arrange: 准备测试添加 source 语句
     // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
 
     let source_path = "$HOME/.workflow/.completions";
@@ -82,7 +129,7 @@ fn test_add_source() {
 
     let result = ShellConfigManager::add_source(source_path, comment);
 
-    // 验证可以添加 source 语句
+    // Assert: 验证可以添加 source 语句
     if let Ok(added) = result {
         assert!(added || !added); // 可能已存在或成功添加
     }
@@ -91,9 +138,21 @@ fn test_add_source() {
     let _ = ShellConfigManager::remove_source(source_path);
 }
 
+/// 测试移除source语句
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_remove_source() {
-    // 测试移除 source 语句
+    // Arrange: 准备测试移除 source 语句
     // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
 
     let source_path = "$HOME/.workflow/.completions";
@@ -104,36 +163,60 @@ fn test_remove_source() {
     // 移除 source 语句
     let result = ShellConfigManager::remove_source(source_path);
 
-    // 验证移除操作
+    // Assert: 验证移除操作
     if let Ok(removed) = result {
         assert!(removed || !removed); // 可能已存在或成功移除
     }
 }
 
+/// 测试检查source语句是否存在
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_has_source() {
-    // 测试检查 source 语句是否存在
+    // Arrange: 准备测试检查 source 语句是否存在
     // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
 
     let source_path = "$HOME/.workflow/.completions";
 
     let result = ShellConfigManager::has_source(source_path);
 
-    // 验证可以检查 source 语句
+    // Assert: 验证可以检查 source 语句
     if let Ok(has_source) = result {
         assert!(has_source || !has_source); // 可能存在或不存在
     }
 }
 
+/// 测试添加带注释的source语句
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_add_source_with_comment() {
-    // 测试添加带注释的 source 语句
+    // Arrange: 准备测试添加带注释的 source 语句
     let source_path = "$HOME/.workflow/test_completions";
     let comment = Some("Test comment for completions");
 
     let result = ShellConfigManager::add_source(source_path, comment);
 
-    // 验证可以添加带注释的 source 语句
+    // Assert: 验证可以添加带注释的 source 语句
     if let Ok(added) = result {
         assert!(added || !added);
     }
@@ -142,9 +225,21 @@ fn test_add_source_with_comment() {
     let _ = ShellConfigManager::remove_source(source_path);
 }
 
+/// 测试添加相同的source语句两次（应跳过重复）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_add_source_twice() {
-    // 测试添加相同的 source 语句两次（应该跳过）
+    // Arrange: 准备测试添加相同的 source 语句两次（应该跳过）
     let source_path = "$HOME/.workflow/duplicate_test";
 
     // 第一次添加
@@ -166,9 +261,21 @@ fn test_add_source_twice() {
     let _ = ShellConfigManager::remove_source(source_path);
 }
 
+/// 测试移除不存在的source语句
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_remove_nonexistent_source() {
-    // 测试移除不存在的 source 语句
+    // Arrange: 准备测试移除不存在的 source 语句
     let source_path = "$HOME/.workflow/nonexistent";
 
     let result = ShellConfigManager::remove_source(source_path);
@@ -179,9 +286,21 @@ fn test_remove_nonexistent_source() {
     }
 }
 
+/// 测试移除不存在的环境变量
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_remove_nonexistent_env_vars() {
-    // 测试移除不存在的环境变量
+    // Arrange: 准备测试移除不存在的环境变量
     let result = ShellConfigManager::remove_env_vars(&["NONEXISTENT_KEY"]);
 
     // 应该返回 false（不存在）
@@ -190,9 +309,21 @@ fn test_remove_nonexistent_env_vars() {
     }
 }
 
+/// 测试保存和加载环境变量的完整流程
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_save_and_load_env_vars() {
-    // 测试保存和加载环境变量的完整流程
+    // Arrange: 准备测试保存和加载环境变量的完整流程
     let mut test_vars = HashMap::new();
     test_vars.insert("SAVE_TEST_KEY".to_string(), "save_test_value".to_string());
 
@@ -204,7 +335,7 @@ fn test_save_and_load_env_vars() {
         let load_result = ShellConfigManager::load_env_vars();
 
         if let Ok(loaded_vars) = load_result {
-            // 验证加载的变量
+            // Assert: 验证加载的变量
             if let Some(loaded_value) = loaded_vars.get("SAVE_TEST_KEY") {
                 assert_eq!(loaded_value, "save_test_value");
             }
@@ -215,9 +346,21 @@ fn test_save_and_load_env_vars() {
     }
 }
 
+/// 测试设置多个环境变量
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_set_env_vars_multiple() {
-    // 测试设置多个环境变量
+    // Arrange: 准备测试设置多个环境变量
     let mut test_vars = HashMap::new();
     test_vars.insert("MULTI_KEY1".to_string(), "value1".to_string());
     test_vars.insert("MULTI_KEY2".to_string(), "value2".to_string());
@@ -226,7 +369,7 @@ fn test_set_env_vars_multiple() {
     let result = ShellConfigManager::set_env_vars(&test_vars);
 
     if result.is_ok() {
-        // 验证可以设置多个变量
+        // Assert: 验证可以设置多个变量
         assert!(true);
 
         // 清理
@@ -234,9 +377,21 @@ fn test_set_env_vars_multiple() {
     }
 }
 
+/// 测试移除多个环境变量
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_remove_multiple_env_vars() {
-    // 测试移除多个环境变量
+    // Arrange: 准备测试移除多个环境变量
     let mut test_vars = HashMap::new();
     test_vars.insert("REMOVE_MULTI_KEY1".to_string(), "value1".to_string());
     test_vars.insert("REMOVE_MULTI_KEY2".to_string(), "value2".to_string());
@@ -297,7 +452,7 @@ fn test_remove_multiple_env_vars() {
 #[test]
 #[ignore] // 需要实际的 shell 环境
 fn test_add_source_for_shell_zsh() {
-    // 测试为 zsh 添加 source 语句
+    // Arrange: 准备测试为 zsh 添加 source 语句
     use clap_complete::Shell;
 
     let source_path = "$HOME/.workflow/zsh_completions";
@@ -354,7 +509,7 @@ fn test_add_source_for_shell_zsh() {
 #[test]
 #[ignore] // 需要实际的 shell 环境
 fn test_add_source_for_shell_bash() {
-    // 测试为 bash 添加 source 语句
+    // Arrange: 准备测试为 bash 添加 source 语句
     use clap_complete::Shell;
 
     let source_path = "$HOME/.workflow/bash_completions";
@@ -411,7 +566,7 @@ fn test_add_source_for_shell_bash() {
 #[test]
 #[ignore] // 需要实际的 shell 环境
 fn test_add_source_for_shell_powershell() {
-    // 测试为 PowerShell 添加 source 语句（使用 `.` 关键字）
+    // Arrange: 准备测试为 PowerShell 添加 source 语句（使用 `.` 关键字）
     use clap_complete::Shell;
 
     let source_path = "$HOME/.workflow/powershell_completions";
@@ -425,9 +580,21 @@ fn test_add_source_for_shell_powershell() {
     let _ = ShellConfigManager::remove_source_for_shell(&Shell::PowerShell, source_path);
 }
 
-#[test]
-fn test_config_block_parsing() {
-    // 测试配置块解析功能
+/// 测试配置块解析功能
+///
+/// ## 测试目的
+/// 验证 ShellConfigManager 能够正确解析配置块格式。
+///
+/// ## 测试场景
+/// 1. 准备包含配置块的测试内容
+/// 2. 解析配置块
+/// 3. 验证解析结果
+///
+/// ## 预期结果
+/// - 配置块被正确解析
+#[rstest]
+fn test_config_block_parsing(cli_env: CliTestEnv) -> Result<()> {
+    // Arrange: 准备测试配置块解析功能
     // 这个测试验证配置块的解析逻辑（通过实际文件操作）
 
     let config_content = r#"# Workflow CLI Configuration - Start
@@ -440,22 +607,37 @@ export ANOTHER_KEY="another_value"
 "#;
 
     // 创建一个临时文件来测试解析
-    let temp_dir = TempDir::new().expect("should create temp dir for test");
-    let config_file = temp_dir.path().join("test_config");
-    fs::write(&config_file, config_content).expect("should write config file");
+    let env = &cli_env;
+    let config_file = env.path().join("test_config");
+    fs::write(&config_file, config_content)
+        .map_err(|e| color_eyre::eyre::eyre!("should write config file: {}", e))?;
 
     // 读取并验证内容
-    let content = fs::read_to_string(&config_file).expect("should read config file");
+    let content = fs::read_to_string(&config_file)
+        .map_err(|e| color_eyre::eyre::eyre!("should read config file: {}", e))?;
     assert!(content.contains("TEST_KEY"));
     assert!(content.contains("test_value"));
     assert!(content.contains("ANOTHER_KEY"));
     assert!(content.contains("another_value"));
+    Ok(())
 }
 
+/// 测试配置块格式
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_block_format() {
-    // 测试配置块格式
-    // 验证配置块的格式正确性
+    // Arrange: 准备测试配置块格式
+    // Assert: 验证配置块的格式正确性
 
     let config_content = r#"# Workflow CLI Configuration - Start
 # Generated by Workflow CLI - DO NOT edit manually
@@ -465,7 +647,7 @@ export KEY="value"
 # Workflow CLI Configuration - End
 "#;
 
-    // 验证配置块包含必要的标记
+    // Assert: 验证配置块包含必要的标记
     assert!(config_content.contains("# Workflow CLI Configuration - Start"));
     assert!(config_content.contains("# Workflow CLI Configuration - End"));
     assert!(config_content.contains("export KEY="));

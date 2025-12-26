@@ -12,12 +12,12 @@ This directory contains rule files that are automatically loaded by Cursor IDE. 
 
 ## 📂 Rule Files
 
-| File | Description |
-|------|-------------|
-| `document.md` | Rules for document generation, classification, and storage |
-| `overview.md` | Project overview, architecture, modification rules, document index/deletion rules, and general notes |
-| `development.md` | Development standards and guidelines |
-| `sync.md` | Rules for keeping English and Chinese versions synchronized |
+| File | Description | Type |
+|------|-------------|------|
+| `document.mdc` | Rules for document generation, classification, and storage | `always` |
+| `overview.mdc` | Project overview, architecture, modification rules, document index/deletion rules, and general notes | `always` |
+| `development.mdc` | Development standards and guidelines | `always` |
+| `sync.mdc` | Rules for keeping English and Chinese versions synchronized | `always` |
 
 ## 🔄 Synchronization
 
@@ -29,11 +29,19 @@ This directory contains rule files that are automatically loaded by Cursor IDE. 
 - When modifying any file in `docs/cursorrules/`, immediately update the corresponding file in `.cursor/rules/`
 - Keep chapter structure, content, and timestamps consistent between versions
 
-For detailed synchronization rules, see `sync.md`.
+For detailed synchronization rules, see `sync.mdc`.
 
 ## 📖 Usage
 
-Cursor IDE automatically loads all `.md` files in this directory. No additional configuration is needed.
+Cursor IDE automatically loads all `.mdc` files in this directory. These files use the MDC (Markdown Component) format with YAML front matter metadata to define rule types and behavior.
+
+**Rule Types**:
+- `always`: Always included in model context (default for core rules)
+- `auto-attach`: Automatically attached when files matching glob patterns are referenced
+- `agent-request`: Available for AI to include when needed (requires description)
+- `manual`: Only included when explicitly referenced with `@ruleName`
+
+**Note**: This project uses `.mdc` format (recommended by Cursor) instead of the legacy `.cursorrules` file format.
 
 ## 📚 Related Documents
 

@@ -7,6 +7,7 @@
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use regex::Regex;
+use std::path::Path;
 
 use super::types::RepoType;
 use super::GitCommand;
@@ -89,7 +90,29 @@ impl GitRepo {
     ///
     /// 如果无法获取远程 URL，返回相应的错误信息。
     pub fn get_remote_url() -> Result<String> {
+        Self::get_remote_url_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
+    }
+
+    /// 获取远程仓库 URL（指定仓库路径）
+    ///
+    /// 使用 `git remote get-url origin` 获取指定仓库的远程 URL。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # 返回
+    ///
+    /// 返回远程仓库的 URL 字符串（去除首尾空白）。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法获取远程 URL，返回相应的错误信息。
+    pub fn get_remote_url_in(repo_path: impl AsRef<std::path::Path>) -> Result<String> {
         GitCommand::new(["remote", "get-url", "origin"])
+            .with_cwd(repo_path.as_ref())
             .read()
             .wrap_err("Failed to get remote URL")
     }
@@ -150,7 +173,29 @@ impl GitRepo {
     ///
     /// 如果无法从 URL 中提取仓库名，返回相应的错误信息。
     pub fn extract_repo_name() -> Result<String> {
-        let url = Self::get_remote_url()?;
+        Self::extract_repo_name_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
+    }
+
+    /// 从 Git remote URL 提取仓库名（指定仓库路径）
+    ///
+    /// 支持 GitHub 平台：
+    /// - GitHub: git@github.com:owner/repo.git → owner/repo
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # 返回
+    ///
+    /// 返回 `owner/repo` 格式的仓库名。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法从 URL 中提取仓库名，返回相应的错误信息。
+    pub fn extract_repo_name_in(repo_path: impl AsRef<Path>) -> Result<String> {
+        let url = Self::get_remote_url_in(repo_path)?;
         Self::extract_repo_name_from_url(&url)
     }
 

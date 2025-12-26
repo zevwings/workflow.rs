@@ -9,162 +9,365 @@
 //! - 测试路径访问、目录创建和安全读取功能
 
 use std::fs;
-use tempfile::TempDir;
 use workflow::base::fs::path::PathAccess;
 
+use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
+
+// ==================== PathAccess Creation Tests ====================
+
+/// 测试使用字符串路径创建 PathAccess
+///
+/// ## 测试目的
+/// 验证 PathAccess::new() 能够使用字符串路径创建实例。
+///
+/// ## 测试场景
+/// 1. 使用字符串路径创建 PathAccess 实例
+/// 2. 验证创建成功
+///
+/// ## 预期结果
+/// - PathAccess 实例创建成功
 #[test]
-fn test_path_access_new() {
+fn test_path_access_new_with_string_path_creates_instance() {
+    // Arrange: 准备字符串路径
+
+    // Act: 创建 PathAccess 实例
     let _path_access = PathAccess::new("test/path");
-    // 验证可以创建 PathAccess
+
+    // Assert: 验证可以创建 PathAccess（不会panic）
+    assert!(true);
 }
 
+/// 测试使用 PathBuf 创建 PathAccess
+///
+/// ## 测试目的
+/// 验证 PathAccess::new() 能够使用 PathBuf 创建实例。
+///
+/// ## 测试场景
+/// 1. 使用 PathBuf 路径创建 PathAccess 实例
+/// 2. 验证创建成功
+///
+/// ## 预期结果
+/// - PathAccess 实例创建成功
 #[test]
-fn test_path_access_new_pathbuf() {
+fn test_path_access_new_with_pathbuf_creates_instance() {
+    // Arrange: 准备 PathBuf 路径
     let path = std::path::PathBuf::from("test/path");
+
+    // Act: 创建 PathAccess 实例
     let _path_access = PathAccess::new(path);
-    // 验证可以创建 PathAccess
+
+    // Assert: 验证可以创建 PathAccess（不会panic）
+    assert!(true);
 }
 
-#[test]
-fn test_path_access_exists() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let existing_path = temp_dir.path().join("existing.txt");
+// ==================== Path Existence Tests ====================
+
+/// 测试检查路径是否存在
+///
+/// ## 测试目的
+/// 验证 PathAccess::exists() 能够正确检查路径是否存在。
+///
+/// ## 测试场景
+/// 1. 准备存在的和不存在的路径
+/// 2. 检查路径是否存在
+/// 3. 验证存在性检查正确
+///
+/// ## 预期结果
+/// - 存在的路径返回 true，不存在的路径返回 false
+#[rstest]
+fn test_path_access_exists_with_existing_and_nonexisting_paths_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备存在的和不存在的路径
+    let existing_path = cli_env.path().join("existing.txt");
     fs::write(&existing_path, "test")?;
+    let non_existing_path = cli_env.path().join("non_existing.txt");
 
-    let path_access = PathAccess::new(&existing_path);
-    assert!(path_access.exists());
+    // Act: 检查路径是否存在
+    let existing_access = PathAccess::new(&existing_path);
+    let non_existing_access = PathAccess::new(&non_existing_path);
 
-    let non_existing_path = temp_dir.path().join("non_existing.txt");
-    let path_access = PathAccess::new(&non_existing_path);
-    assert!(!path_access.exists());
+    // Assert: 验证存在性检查正确
+    assert!(existing_access.exists());
+    assert!(!non_existing_access.exists());
 
     Ok(())
 }
 
-#[test]
-fn test_path_access_is_file() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let file_path = temp_dir.path().join("test.txt");
+/// 测试检查是否为文件
+///
+/// ## 测试目的
+/// 验证 PathAccess::is_file() 能够正确检查路径是否为文件。
+///
+/// ## 测试场景
+/// 1. 准备文件和目录路径
+/// 2. 检查是否为文件
+/// 3. 验证文件检查正确
+///
+/// ## 预期结果
+/// - 文件路径返回 true，目录路径返回 false
+#[rstest]
+fn test_path_access_is_file_with_file_and_dir_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备文件和目录路径
+    let file_path = cli_env.path().join("test.txt");
+    fs::write(&file_path, "test")?;
+    let dir_path = cli_env.path().join("subdir");
+    fs::create_dir(&dir_path)?;
+
+    // Act: 检查是否为文件
+    let file_access = PathAccess::new(&file_path);
+    let dir_access = PathAccess::new(&dir_path);
+
+    // Assert: 验证文件检查正确
+    assert!(file_access.is_file());
+    assert!(!dir_access.is_file());
+
+    Ok(())
+}
+
+/// 测试检查是否为目录
+///
+/// ## 测试目的
+/// 验证 PathAccess::is_dir() 能够正确检查路径是否为目录。
+///
+/// ## 测试场景
+/// 1. 准备目录和文件路径
+/// 2. 检查是否为目录
+/// 3. 验证目录检查正确
+///
+/// ## 预期结果
+/// - 目录路径返回 true，文件路径返回 false
+#[rstest]
+fn test_path_access_is_dir_with_dir_and_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备目录和文件路径
+    let dir_path = cli_env.path().join("subdir");
+    fs::create_dir(&dir_path)?;
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "test")?;
 
-    let path_access = PathAccess::new(&file_path);
-    assert!(path_access.is_file());
+    // Act: 检查是否为目录
+    let dir_access = PathAccess::new(&dir_path);
+    let file_access = PathAccess::new(&file_path);
 
-    let dir_path = temp_dir.path().join("subdir");
-    fs::create_dir(&dir_path)?;
-    let path_access = PathAccess::new(&dir_path);
-    assert!(!path_access.is_file());
-
-    Ok(())
-}
-
-#[test]
-fn test_path_access_is_dir() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let dir_path = temp_dir.path().join("subdir");
-    fs::create_dir(&dir_path)?;
-
-    let path_access = PathAccess::new(&dir_path);
-    assert!(path_access.is_dir());
-
-    let file_path = temp_dir.path().join("test.txt");
-    fs::write(&file_path, "test")?;
-    let path_access = PathAccess::new(&file_path);
-    assert!(!path_access.is_dir());
+    // Assert: 验证目录检查正确
+    assert!(dir_access.is_dir());
+    assert!(!file_access.is_dir());
 
     Ok(())
 }
 
-#[test]
-fn test_path_access_ensure_dir_exists() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let new_dir = temp_dir.path().join("new/dir/path");
+// ==================== Directory Creation Tests ====================
 
+/// 测试确保目录存在（新路径）
+///
+/// ## 测试目的
+/// 验证 PathAccess::ensure_dir_exists() 能够为新路径创建目录。
+///
+/// ## 测试场景
+/// 1. 准备新目录路径
+/// 2. 调用 ensure_dir_exists() 确保目录存在
+/// 3. 验证目录已创建
+///
+/// ## 预期结果
+/// - 目录被创建且存在
+#[rstest]
+fn test_path_access_ensure_dir_exists_with_new_path_creates_directory(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备新目录路径
+    let new_dir = cli_env.path().join("new/dir/path");
+
+    // Act: 确保目录存在
     let path_access = PathAccess::new(&new_dir);
     path_access.ensure_dir_exists()?;
+
+    // Assert: 验证目录已创建
     assert!(new_dir.exists());
     assert!(new_dir.is_dir());
 
     Ok(())
 }
 
-#[test]
-fn test_path_access_ensure_dir_exists_existing() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let existing_dir = temp_dir.path().join("existing");
+/// 测试确保目录存在（已存在的目录）
+///
+/// ## 测试目的
+/// 验证 PathAccess::ensure_dir_exists() 对已存在的目录不会失败。
+///
+/// ## 测试场景
+/// 1. 准备已存在的目录
+/// 2. 调用 ensure_dir_exists() 确保目录存在
+/// 3. 验证目录仍然存在
+///
+/// ## 预期结果
+/// - 目录仍然存在，操作成功
+#[rstest]
+fn test_path_access_ensure_dir_exists_with_existing_dir_succeeds(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备已存在的目录
+    let existing_dir = cli_env.path().join("existing");
     fs::create_dir_all(&existing_dir)?;
 
+    // Act: 确保目录存在（目录已存在）
     let path_access = PathAccess::new(&existing_dir);
-    // 应该不会失败，即使目录已存在
     path_access.ensure_dir_exists()?;
+
+    // Assert: 验证目录仍然存在
     assert!(existing_dir.exists());
 
     Ok(())
 }
 
-#[test]
-fn test_path_access_ensure_parent_exists() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let file_path = temp_dir.path().join("parent/dir/file.txt");
+/// 测试确保父目录存在（文件路径）
+///
+/// ## 测试目的
+/// 验证 PathAccess::ensure_parent_exists() 能够为文件路径创建父目录。
+///
+/// ## 测试场景
+/// 1. 准备文件路径（父目录不存在）
+/// 2. 调用 ensure_parent_exists() 确保父目录存在
+/// 3. 验证父目录已创建
+///
+/// ## 预期结果
+/// - 父目录被创建且存在
+#[rstest]
+fn test_path_access_ensure_parent_exists_with_file_path_creates_parent_directory(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备文件路径（父目录不存在）
+    let file_path = cli_env.path().join("parent/dir/file.txt");
 
+    // Act: 确保父目录存在
     let path_access = PathAccess::new(&file_path);
     path_access.ensure_parent_exists()?;
-    let parent = file_path.parent().expect("File path should have a parent directory");
+
+    // Assert: 验证父目录已创建
+    let parent = file_path
+        .parent()
+        .ok_or_else(|| color_eyre::eyre::eyre!("File path should have a parent directory"))?;
     assert!(parent.exists());
     assert!(parent.is_dir());
 
     Ok(())
 }
 
-#[test]
-fn test_path_access_ensure_parent_exists_no_parent() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    // 根路径没有父目录
-    let root_path = temp_dir.path();
+/// 测试确保父目录存在（根路径）
+///
+/// ## 测试目的
+/// 验证 PathAccess::ensure_parent_exists() 对根路径（没有父目录）不会失败。
+///
+/// ## 测试场景
+/// 1. 准备根路径（没有父目录）
+/// 2. 调用 ensure_parent_exists() 确保父目录存在
+/// 3. 验证不会失败
+///
+/// ## 预期结果
+/// - 操作成功，即使没有父目录也不会失败
+#[rstest]
+fn test_path_access_ensure_parent_exists_with_root_path_succeeds(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备根路径（没有父目录）
+    let root_path = cli_env.path();
 
+    // Act: 确保父目录存在（根路径没有父目录）
     let path_access = PathAccess::new(root_path);
-    // 应该不会失败，即使没有父目录
     path_access.ensure_parent_exists()?;
 
+    // Assert: 验证不会失败（即使没有父目录）
     Ok(())
 }
 
-#[test]
-fn test_path_access_read_dir_safe() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let dir_path = temp_dir.path().join("test_dir");
-    fs::create_dir(&dir_path)?;
+// ==================== Directory Reading Tests ====================
 
-    // 创建一些文件
+/// 测试安全读取目录（有效目录）
+///
+/// ## 测试目的
+/// 验证 PathAccess::read_dir_safe() 能够安全读取有效目录并返回条目。
+///
+/// ## 测试场景
+/// 1. 准备包含文件和子目录的目录
+/// 2. 调用 read_dir_safe() 安全读取目录
+/// 3. 验证返回至少3个条目（2个文件 + 1个目录）
+///
+/// ## 预期结果
+/// - 返回目录条目列表，至少包含3个条目
+#[rstest]
+fn test_path_access_read_dir_safe_with_valid_directory_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备包含文件和子目录的目录
+    let dir_path = cli_env.path().join("test_dir");
+    fs::create_dir(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
     fs::create_dir(dir_path.join("subdir"))?;
 
+    // Act: 安全读取目录
     let path_access = PathAccess::new(&dir_path);
     let entries = path_access.read_dir_safe()?;
 
-    // 应该包含至少3个条目（2个文件 + 1个目录）
+    // Assert: 验证返回至少3个条目（2个文件 + 1个目录）
     assert!(entries.len() >= 3);
 
     Ok(())
 }
 
+/// 测试安全读取目录（不存在的路径）
+///
+/// ## 测试目的
+/// 验证 PathAccess::read_dir_safe() 对不存在的路径返回错误。
+///
+/// ## 测试场景
+/// 1. 准备不存在的路径
+/// 2. 尝试读取目录
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误
 #[test]
-fn test_path_access_read_dir_safe_nonexistent() {
+fn test_path_access_read_dir_safe_with_nonexistent_path_returns_error() {
+    // Arrange: 准备不存在的路径
     let path_access = PathAccess::new("/nonexistent/path/that/does/not/exist");
+
+    // Act: 尝试读取目录
     let result = path_access.read_dir_safe();
+
+    // Assert: 验证返回错误
     assert!(result.is_err());
 }
 
-#[test]
-fn test_path_access_read_dir_safe_file() -> color_eyre::Result<()> {
-    let temp_dir = TempDir::new()?;
-    let file_path = temp_dir.path().join("test.txt");
+/// 测试安全读取目录（文件路径）
+///
+/// ## 测试目的
+/// 验证 PathAccess::read_dir_safe() 对文件路径（不是目录）返回错误。
+///
+/// ## 测试场景
+/// 1. 准备文件路径（不是目录）
+/// 2. 尝试读取文件作为目录
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误
+#[rstest]
+fn test_path_access_read_dir_safe_with_file_path_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备文件路径（不是目录）
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "test")?;
 
+    // Act: 尝试读取文件作为目录
     let path_access = PathAccess::new(&file_path);
     let result = path_access.read_dir_safe();
-    // 尝试读取文件作为目录应该失败
+
+    // Assert: 验证返回错误
     assert!(result.is_err());
 
     Ok(())

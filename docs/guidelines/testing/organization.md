@@ -141,37 +141,175 @@ src/lib/completion/config.rs  → tests/completion/config.rs
 
 ## 🛠️ 共享测试工具
 
-### 使用 common 模块
+### tests/common 目录结构
 
-共享的测试工具应放在 `tests/common/` 目录：
+共享的测试工具应放在 `tests/common/` 目录。该目录采用模块化组织，按功能分类：
+
+```
+tests/common/
+├── environments/          # 测试环境封装
+│   ├── cli_test_env.rs   # CLI 测试环境
+│   └── git_test_env.rs   # Git 测试环境
+├── guards/               # 守卫模式实现
+│   ├── env_guard.rs      # 环境变量守卫
+│   └── git_config_guard.rs # Git 配置守卫
+├── mock/                 # Mock 相关模块
+│   ├── server.rs         # MockServer 核心实现
+│   ├── templates.rs      # Mock 模板系统
+│   ├── validators.rs     # Mock 请求验证器
+│   └── scenarios.rs      # Mock 场景预设库
+├── test_data/            # 测试数据管理模块
+│   ├── factory.rs        # TestDataFactory 核心
+│   ├── cache.rs          # 测试数据缓存
+│   ├── cleanup.rs        # 测试数据清理
+│   └── version.rs        # 测试数据版本管理
+├── isolation.rs          # 测试隔离管理器（TestIsolation）
+├── fixtures.rs           # 测试 Fixtures
+├── helpers.rs            # 通用辅助函数
+├── cli_helpers.rs        # CLI 辅助函数
+├── macros.rs             # 测试辅助宏
+├── validators.rs         # 数据验证器
+├── cache.rs              # 缓存工具
+├── performance.rs        # 性能测量工具
+├── reporter.rs           # 测试报告生成器
+├── snapshot.rs           # 测试环境快照
+└── integration_examples.rs # 集成示例
+```
+
+### 核心模块说明
+
+#### 1. 测试环境模块 (`environments/`)
+
+提供测试环境的封装：
+
+- **`CliTestEnv`**: CLI 测试环境，提供 CLI 命令测试辅助
+- **`GitTestEnv`**: Git 测试环境，自动初始化 Git 仓库，提供分支和提交操作
+
+#### 2. Mock 模块 (`mock/`)
+
+提供 HTTP Mock 功能：
+
+- **`MockServer`**: HTTP Mock 服务器核心实现，支持 GitHub/Jira API Mock
+- **`templates`**: Mock 响应模板系统，支持变量替换和路径参数
+- **`scenarios`**: Mock 场景预设库，支持从文件加载预设场景
+- **`validators`**: Mock 请求验证器，验证请求参数和格式
+
+#### 3. 测试数据模块 (`test_data/`)
+
+提供测试数据生成和管理：
+
+- **`TestDataFactory`**: 测试数据工厂，使用 Builder 模式生成测试数据
+- **`cache`**: 测试数据缓存，提高测试性能
+- **`cleanup`**: 测试数据清理，自动清理测试数据
+- **`version`**: 测试数据版本管理，管理测试数据版本
+
+#### 4. 测试隔离 (`isolation.rs`)
+
+**`TestIsolation`**: 统一测试隔离管理器，提供：
+- 独立工作目录（使用绝对路径，避免竞态条件）
+- 环境变量隔离（EnvGuard）
+- Git 配置隔离（GitConfigGuard）
+- Mock 服务器集成
+- RAII 模式自动清理
+
+### 使用示例
+
+#### 使用 TestIsolation
 
 ```rust
-// tests/common/mod.rs
-pub mod helpers;
+use tests::common::TestIsolation;
 
-// tests/common/helpers.rs
-pub fn setup_test_env() {
-    // 设置测试环境
-}
+#[test]
+fn test_with_isolation() -> color_eyre::Result<()> {
+    let isolation = TestIsolation::new()?
+        .with_git_config()?
+        .with_mock_server()?;
 
-pub fn create_test_client() -> HttpClient {
-    // 创建测试客户端
+    let work_dir = isolation.work_dir(); // 绝对路径
+    // 测试代码...
+    Ok(())
+    // 自动清理
 }
 ```
 
-### 在测试中使用
+#### 使用 MockServer
 
 ```rust
-// tests/base/http.rs
-mod common;
-use common::helpers::{setup_test_env, create_test_client};
+use tests::common::mock::MockServer;
+use std::collections::HashMap;
 
 #[test]
-fn test_http_client() {
-    setup_test_env();
-    let client = create_test_client();
-    // ...
+fn test_mock_server() -> Result<()> {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    let mut vars = HashMap::new();
+    vars.insert("pr_number".to_string(), "123".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/repos/{owner}/repo/pulls/{pr_number}",
+        r#"{"number": {{pr_number}}}"#,
+        vars,
+        200,
+    );
+    // 测试代码...
+    Ok(())
 }
+```
+
+#### 使用 TestDataFactory
+
+```rust
+use tests::common::test_data::TestDataFactory;
+
+#[test]
+fn test_data_factory() -> Result<()> {
+    let factory = TestDataFactory::new();
+    let pr = factory.github_pr()
+        .number(123)
+        .title("Test PR")
+        .build()?;
+    // 测试代码...
+    Ok(())
+}
+```
+
+#### 使用 GitTestEnv
+
+```rust
+use tests::common::environments::GitTestEnv;
+
+#[test]
+fn test_git_env() -> Result<()> {
+    let env = GitTestEnv::new()?;
+    env.create_file("test.txt", "content")?;
+    env.git_add("test.txt")?;
+    env.git_commit("Initial commit")?;
+    // 测试代码...
+    Ok(())
+}
+```
+
+### 模块导入路径
+
+拆分后的模块导入路径：
+
+```rust
+// Mock 相关
+use tests::common::mock::MockServer;
+
+// 测试数据相关
+use tests::common::test_data::TestDataFactory;
+
+// 测试环境相关
+use tests::common::environments::{CliTestEnv, GitTestEnv};
+
+// 测试隔离
+use tests::common::TestIsolation;
+
+// 其他工具
+use tests::common::{helpers, fixtures, macros};
 ```
 
 ---
@@ -273,6 +411,7 @@ pub mod util_platform;
 - **总体覆盖率**：> 80%
 - **关键业务逻辑**：> 90%
 - **工具函数**：> 70%
+- **CLI 命令层**：> 75%
 
 ### 覆盖率检查
 

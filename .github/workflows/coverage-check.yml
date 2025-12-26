@@ -14,6 +14,7 @@ jobs:
   coverage-check:
     name: 📊 Coverage Check
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -73,6 +74,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: 📊 Generate coverage report
+        timeout-minutes: 50
         run: cargo tarpaulin --out Html --output-dir coverage --tests
 
       - name: 📋 Check coverage threshold
@@ -223,6 +225,56 @@ jobs:
           path: coverage/
           retention-days: 30
 
+      - name: 📊 Analyze coverage trends
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "📊 Analyzing coverage trends..."
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping trend analysis"
+            exit 0
+          fi
+
+          # 生成当前覆盖率 JSON（如果还没有）
+          if [ ! -f "coverage/coverage.json" ]; then
+            cargo tarpaulin --out Json --output-dir coverage --tests > coverage/coverage.json 2>/dev/null || true
+          fi
+
+          # 复制为当前覆盖率文件
+          cp coverage/coverage.json coverage/current-coverage.json 2>/dev/null || true
+
+          # 尝试加载基准覆盖率（从 Artifacts 或上次运行）
+          BASELINE_FILE="coverage/baseline-coverage.json"
+
+          # 尝试从 Artifacts 下载基准（如果存在）
+          if [ ! -f "$BASELINE_FILE" ]; then
+            # 首次运行，使用当前作为基准
+            cp coverage/current-coverage.json "$BASELINE_FILE" 2>/dev/null || true
+          fi
+
+          # 分析趋势
+          if [ -f "coverage/current-coverage.json" ] && [ -f "$BASELINE_FILE" ]; then
+            python3 scripts/dev/analyze-coverage-trends.py \
+              --current coverage/current-coverage.json \
+              --baseline "$BASELINE_FILE" \
+              --output coverage/coverage-change-report.md \
+              --threshold 1.0 || {
+              echo "⚠️  Coverage regression detected, but continuing..."
+            }
+          fi
+
+          # 更新基准（如果当前覆盖率更高）
+          if [ -f "coverage/current-coverage.json" ] && [ -f "$BASELINE_FILE" ]; then
+            CURRENT_COV=$(python3 -c "import json; print(json.load(open('coverage/current-coverage.json')).get('coverage_percent', 0))" 2>/dev/null || echo "0")
+            BASELINE_COV=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE')).get('coverage_percent', 0))" 2>/dev/null || echo "0")
+
+            if awk "BEGIN {exit !($CURRENT_COV >= $BASELINE_COV)}"; then
+              cp coverage/current-coverage.json "$BASELINE_FILE"
+              echo "✅ Baseline updated"
+            fi
+          fi
+
       - name: 📤 Upload to Codecov
         if: always()
         uses: codecov/codecov-action@v3
@@ -233,6 +285,15 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
         continue-on-error: true
+
+      - name: 📤 Upload coverage change report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-change-report
+          path: coverage/coverage-change-report.md
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: 📤 Upload check report
         if: always()

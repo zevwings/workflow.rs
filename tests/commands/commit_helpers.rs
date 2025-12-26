@@ -1,26 +1,48 @@
 //! Commit 命令辅助函数测试
 //!
-//! 测试 Commit 命令的辅助函数，包括分支检查、force push 处理等。
+//! 测试 Commit 命令的辅助函数，包括提交存在性检查、默认分支检查等。
 
-use crate::common::cli_helpers::CliTestEnv;
-use serial_test::serial;
-use workflow::commands::commit::helpers::check_has_last_commit;
+use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env_with_git;
+use rstest::rstest;
+// Removed serial_test::serial - tests can run in parallel with CliTestEnv isolation
+use workflow::commands::commit::helpers::{
+    check_has_last_commit, check_has_last_commit_in, check_not_on_default_branch,
+    check_not_on_default_branch_in,
+};
 
+// ==================== Commit Existence Check Tests ====================
+
+/// 测试在非Git仓库中检查是否有最后提交
+///
+/// ## 测试目的
+/// 验证 `check_has_last_commit()` 在非Git仓库目录中能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 在非Git仓库目录中调用 `check_has_last_commit()`
+/// 2. 验证返回错误或成功（取决于当前目录）
+///
+/// ## 注意事项
+/// - 如果当前目录恰好是Git仓库且有commit，返回成功是可以接受的
+/// - 如果当前目录不是Git仓库，应返回错误
+///
+/// ## 预期结果
+/// - 在非Git仓库中返回Err
+/// - 错误消息包含 "No commits"、"git" 或 "repository" 等关键词
 #[test]
-fn test_check_has_last_commit_without_git_repo() {
-    // 测试非 Git 仓库的情况
+fn test_check_has_last_commit_without_git_repo_returns_error() {
+    // Arrange: 准备非 Git 仓库环境
     // 注意：check_has_last_commit() 使用当前工作目录的 Git 仓库
-    // 在测试环境中，如果没有 Git 仓库，应该返回错误
+
+    // Act: 检查是否有最后的提交
     let result = check_has_last_commit();
 
-    // 验证函数返回错误（非 Git 仓库或无 commit）
-    // 这个测试可能在不同环境下表现不同，主要验证函数不会 panic
+    // Assert: 验证返回错误且错误消息包含相关信息（成功或失败都是可以接受的）
     match result {
         Ok(_) => {
             // 如果当前目录恰好是 Git 仓库且有 commit，这是可以接受的
         }
         Err(e) => {
-            // 验证错误消息包含相关信息
             let error_msg = e.to_string();
             assert!(
                 error_msg.contains("No commits")
@@ -45,22 +67,16 @@ fn test_check_has_last_commit_without_git_repo() {
 /// 4. 验证返回错误且错误消息包含"No commits"
 ///
 /// ## 技术细节
-/// - 使用`#[serial]`确保测试串行执行（避免目录切换冲突）
-/// - 使用`TempDir`自动清理临时目录
-/// - 自动恢复原始工作目录
-#[test]
-#[serial]
-fn test_check_has_last_commit_with_empty_git_repo() {
-    use crate::common::helpers::CurrentDirGuard;
+/// - 使用`cli_env_with_git` fixture自动清理临时目录和环境（支持并行执行）
+/// - 自动恢复原始工作目录和环境变量
+#[rstest]
+fn test_check_has_last_commit_with_empty_git_repo_return_empty(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // cli_env_with_git 已经初始化了 Git 仓库，但不创建任何 commit
 
-    let env = CliTestEnv::new();
-    env.init_git_repo();
-    // 不创建任何 commit
-
-    // 切换到测试目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
-
-    let result = check_has_last_commit();
+    // 使用路径参数版本，避免切换全局工作目录
+    let result = check_has_last_commit_in(cli_env_with_git.path());
 
     // 验证函数返回错误（无 commit）
     assert!(
@@ -76,7 +92,8 @@ fn test_check_has_last_commit_with_empty_git_repo() {
         error_msg
     );
 
-    // 目录会在函数结束时自动恢复
+    // cli_env_with_git fixture 会在函数结束时自动恢复目录和环境
+    Ok(())
 }
 
 /// 测试有commit的Git仓库的情况
@@ -91,22 +108,18 @@ fn test_check_has_last_commit_with_empty_git_repo() {
 /// 4. 验证返回成功
 ///
 /// ## 技术细节
-/// - 使用`#[serial]`确保测试串行执行
-/// - 自动创建和清理临时Git仓库
-#[test]
-#[serial]
-fn test_check_has_last_commit_with_commits() {
-    use crate::common::helpers::CurrentDirGuard;
+/// - 使用`cli_env_with_git` fixture自动创建和清理临时Git仓库（支持并行执行）
+#[rstest]
+fn test_check_has_last_commit_with_commits_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
+        .create_file("test.txt", "test content")?
+        .create_commit("Initial commit")?;
 
-    let env = CliTestEnv::new();
-    env.init_git_repo()
-        .create_file("test.txt", "test content")
-        .create_commit("Initial commit");
-
-    // 切换到测试目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
-
-    let result = check_has_last_commit();
+    // 使用路径参数版本，避免切换全局工作目录
+    let result = check_has_last_commit_in(cli_env_with_git.path());
 
     // 验证函数返回成功（有 commit）
     assert!(
@@ -114,5 +127,157 @@ fn test_check_has_last_commit_with_commits() {
         "check_has_last_commit should succeed when there are commits"
     );
 
-    // 目录会在函数结束时自动恢复
+    // cli_env_with_git fixture 会在函数结束时自动恢复目录和环境
+    Ok(())
+}
+
+// ==================== Default Branch Check Tests ====================
+
+/// 测试在main分支上的默认分支检查
+///
+/// ## 测试目的
+/// 验证`check_not_on_default_branch()`在main分支上正确返回错误，防止在保护分支上执行危险操作。
+///
+/// ## 测试场景
+/// 1. 创建临时Git仓库并初始化
+/// 2. 创建文件并提交
+/// 3. 切换到main分支
+/// 4. 调用`check_not_on_default_branch()`
+/// 5. 验证返回错误且错误消息包含"protected"或"default branch"
+///
+/// ## 技术细节
+/// - 使用`cli_env_with_git` fixture创建和管理临时Git仓库（支持并行执行）
+/// - 自动恢复原始工作目录
+#[rstest]
+fn test_check_not_on_default_branch_on_main_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备临时Git仓库并在main分支上
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
+        .create_file("test.txt", "test")?
+        .create_commit("Initial commit")?;
+
+    // 设置假的远程引用，让get_default_branch()能正常工作
+    cli_env_with_git.setup_fake_remote_refs()?;
+
+    // Act: 使用路径参数版本，避免切换全局工作目录
+    let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");
+
+    // Assert: 验证返回错误且错误消息包含保护分支信息
+    assert!(
+        result.is_err(),
+        "check_not_on_default_branch should fail on default branch"
+    );
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("protected")
+            || error_msg.contains("default branch")
+            || error_msg.contains("Cannot"),
+        "Error message should indicate protected branch: {}",
+        error_msg
+    );
+
+    Ok(())
+}
+
+/// 测试在feature分支上的默认分支检查
+///
+/// ## 测试目的
+/// 验证 `check_not_on_default_branch()` 在feature分支上正确返回成功，允许执行操作。
+///
+/// ## 测试场景
+/// 1. 创建临时Git仓库并初始化
+/// 2. 创建文件并提交
+/// 3. 创建并切换到feature分支（feature/test）
+/// 4. 调用 `check_not_on_default_branch()`
+/// 5. 验证返回成功并包含正确的分支信息
+///
+/// ## 预期结果
+/// - 返回Ok，包含当前分支和默认分支的元组
+/// - 当前分支为 "feature/test"
+/// - 默认分支为 "main"
+#[rstest]
+fn test_check_not_on_default_branch_on_feature_branch_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // Arrange: 准备临时Git仓库并切换到feature分支
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
+        .create_file("test.txt", "test")?
+        .create_commit("Initial commit")?;
+
+    // 设置假的远程引用，让get_default_branch()能正常工作
+    cli_env_with_git.setup_fake_remote_refs()?;
+
+    // 创建并切换到 feature 分支
+    let output = std::process::Command::new("git")
+        .args(["checkout", "-b", "feature/test"])
+        .current_dir(cli_env_with_git.path())
+        .output()
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to create feature branch: {}", e))?;
+    if !output.status.success() {
+        return Err(color_eyre::eyre::eyre!(
+            "Failed to create feature branch: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    // Act: 使用路径参数版本，避免切换全局工作目录
+    let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");
+
+    // Assert: 验证返回成功且分支信息正确
+    assert!(
+        result.is_ok(),
+        "check_not_on_default_branch should succeed on feature branch, error: {:?}",
+        result.as_ref().err()
+    );
+    if let Ok((current, default)) = result {
+        assert_eq!(current, "feature/test");
+        assert_eq!(default, "main");
+    }
+
+    Ok(())
+}
+
+/// 测试在非Git仓库中检查默认分支的错误消息格式
+///
+/// ## 测试目的
+/// 验证 `check_not_on_default_branch()` 在非Git仓库目录中能够返回格式良好的错误消息。
+///
+/// ## 测试场景
+/// 1. 在非Git仓库目录中调用 `check_not_on_default_branch()`
+/// 2. 验证返回错误或成功（取决于当前目录）
+///
+/// ## 注意事项
+/// - 如果当前目录恰好是Git仓库，返回成功是可以接受的
+/// - 如果当前目录不是Git仓库，应返回错误
+///
+/// ## 预期结果
+/// - 在非Git仓库中返回Err
+/// - 错误消息包含 "branch"、"git" 或 "Failed" 等关键词
+/// - 错误消息格式清晰，便于调试
+#[test]
+fn test_check_not_on_default_branch_error_message_format_with_non_git_repo_returns_error() {
+    // Arrange: 准备非Git仓库环境
+
+    // Act: 在非Git仓库中检查是否允许操作
+    let result = check_not_on_default_branch("amend");
+
+    // Assert: 验证返回错误且错误消息包含相关信息
+    match result {
+        Ok(_) => {
+            // 如果当前目录恰好是Git仓库，这是可以接受的
+        }
+        Err(e) => {
+            let error_msg = e.to_string();
+            assert!(
+                error_msg.contains("branch")
+                    || error_msg.contains("git")
+                    || error_msg.contains("Failed"),
+                "Error message should be informative: {}",
+                error_msg
+            );
+        }
+    }
 }

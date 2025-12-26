@@ -8,10 +8,11 @@ on:
   # 允许手动触发 CI（用于测试或特殊情况）
   workflow_dispatch:
 
-# 配置工作流权限，允许读取 PR 信息
+# 配置工作流权限，允许读取 PR 信息和写入评论
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write  # 需要写入权限以添加 PR 评论
+  issues: write         # PR 评论使用 issues API
 
 env:
   CARGO_TERM_COLOR: always
@@ -143,10 +144,11 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
 
-  # 运行单元测试和集成测试（跨平台并行执行）
+  # 运行单元测试和集成测试（跨平台并行执行，分层测试策略）
   tests:
-    name: 🧪 Run Tests (${{ matrix.platform }})
+    name: 🧪 Run Tests (${{ matrix.test_type }}) (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     needs: check-skip-ci
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
@@ -154,12 +156,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # 单元测试
           - os: ubuntu-latest
             platform: Linux-x86_64
+            test_type: unit
+            test_timeout: 20
+            test_command: cargo test --lib --verbose
           - os: macos-latest
             platform: macOS
+            test_type: unit
+            test_timeout: 25
+            test_command: cargo test --lib --verbose
           - os: windows-latest
             platform: Windows-x86_64
+            test_type: unit
+            test_timeout: 25
+            test_command: cargo test --lib --verbose
+          # 集成测试
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+            test_type: integration
+            test_timeout: 25
+            test_command: cargo test --test integration_test --verbose
+          - os: macos-latest
+            platform: macOS
+            test_type: integration
+            test_timeout: 35
+            test_command: cargo test --test integration_test --verbose
+          - os: windows-latest
+            platform: Windows-x86_64
+            test_type: integration
+            test_timeout: 30
+            test_command: cargo test --test integration_test --verbose
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -218,16 +246,184 @@ jobs:
           # 基本验证
           python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
 
-      - name: 🧪 Run unit and integration tests
-        run: cargo test --verbose
+      - name: 🧪 Run ${{ matrix.test_type }} tests
+        timeout-minutes: ${{ matrix.test_timeout }}
+        id: test_run
+        shell: bash
+        run: |
+          echo "🧪 Running ${{ matrix.test_type }} tests on ${{ matrix.platform }}..."
+          # 记录测试开始时间（Unix 时间戳）
+          START_TIME=$(date +%s 2>/dev/null || echo "0")
+          # 运行测试并记录输出到文件（用于性能分析和报告生成）
+          # 使用 --message-format=json 以便生成测试报告
+          ${{ matrix.test_command }} --message-format=json 2>&1 | tee test-output.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          # 记录测试结束时间并计算持续时间
+          END_TIME=$(date +%s 2>/dev/null || echo "0")
+          if [ "$START_TIME" != "0" ] && [ "$END_TIME" != "0" ]; then
+            DURATION=$((END_TIME - START_TIME))
+            echo "⏱️  Test duration: ${DURATION} seconds"
+            echo "duration=${DURATION}" >> $GITHUB_OUTPUT
+          else
+            echo "⏱️  Test duration: Unable to calculate (platform: ${{ runner.os }})"
+            echo "duration=0" >> $GITHUB_OUTPUT
+          fi
+          # 检查是否有慢测试（超过50秒的测试）
+          if grep -E "test.*took.*[5-9][0-9]\.|test.*took.*[0-9]{3,}\." test-output.log 2>/dev/null; then
+            echo "⚠️  Warning: Found slow tests (>50 seconds)"
+            echo "slow_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "slow_tests=false" >> $GITHUB_OUTPUT
+          fi
+          exit $TEST_EXIT_CODE
+
+      - name: ⚠️  Report slow tests
+        if: steps.test_run.outputs.slow_tests == 'true'
+        run: |
+          echo "::warning::Found slow tests in ${{ matrix.test_type }} tests"
+          echo "Test duration: ${{ steps.test_run.outputs.duration }} seconds"
+          echo "Please review slow tests and consider optimization"
+
+      - name: 📊 Generate test report
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "📊 Generating test report..."
+          # 检查 Python 是否可用
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping test report generation"
+            exit 0
+          fi
+          # 从 test-output.log 中提取 JSON 格式的测试输出并生成报告
+          REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.html"
+          JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+          grep '^{' test-output.log 2>/dev/null | \
+            python3 scripts/dev/generate-test-report.py \
+              --format html \
+              --output "$REPORT_FILE" || {
+            echo "⚠️  Failed to generate test report, continuing..."
+            exit 0
+          }
+          # 同时生成 JSON 报告用于 PR 评论
+          grep '^{' test-output.log 2>/dev/null | \
+            python3 scripts/dev/generate-test-report.py \
+              --format json \
+              --output "$JSON_REPORT_FILE" || {
+            echo "⚠️  Failed to generate JSON report, continuing..."
+          }
+          echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+          echo "json_report_file=$JSON_REPORT_FILE" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload test report
+        if: always() && steps.test_run.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: test-report-*.html
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 📤 Upload JSON test report
+        if: always() && steps.test_run.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-json-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: test-report-*.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 📊 Collect test metrics
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "📊 Collecting test metrics..."
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping metrics collection"
+            exit 0
+          fi
+
+          # 收集指标
+          METRICS_DIR="test-metrics"
+          mkdir -p "$METRICS_DIR"
+
+          JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+          if [ -f "$JSON_REPORT_FILE" ]; then
+            python3 scripts/dev/collect-test-metrics.py \
+              --report "$JSON_REPORT_FILE" \
+              --output "$METRICS_DIR/metrics-${{ matrix.test_type }}-${{ matrix.platform }}-${{ github.run_id }}.json" \
+              --test-type "${{ matrix.test_type }}" \
+              --platform "${{ matrix.platform }}"
+          fi
+
+          echo "metrics_dir=$METRICS_DIR" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload test metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-metrics-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: test-metrics/*.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: ⚡ Analyze performance regression
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "⚡ Analyzing performance regression..."
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping performance analysis"
+            exit 0
+          fi
+
+          JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+          if [ ! -f "$JSON_REPORT_FILE" ]; then
+            echo "⚠️  Test report not found, skipping"
+            exit 0
+          fi
+
+          # 基准文件路径（从 Artifacts 下载或使用当前作为基准）
+          BASELINE_FILE="performance-baseline-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+
+          # 分析性能回归
+          python3 scripts/dev/analyze-performance-regression.py \
+            --current "$JSON_REPORT_FILE" \
+            --baseline "$BASELINE_FILE" \
+            --output "performance-regression-report.md" \
+            --threshold 0.2 || {
+            echo "⚠️  Performance regression detected, but continuing..."
+          }
+
+          # 更新基准（如果当前性能更好或首次运行）
+          if [ ! -f "$BASELINE_FILE" ] || [ "${{ steps.test_run.outcome }}" == "success" ]; then
+            cp "$JSON_REPORT_FILE" "$BASELINE_FILE"
+            echo "✅ Performance baseline updated"
+          fi
+
+      - name: 📤 Upload performance baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-baseline-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: performance-baseline-*.json
+          retention-days: 90
+          if-no-files-found: ignore
 
       - name: ✅ Run completion completeness tests
-        run: cargo test --test completeness
+        if: matrix.test_type == 'unit'
+        timeout-minutes: ${{ matrix.test_timeout }}
+        run: cargo test --test completeness --verbose
 
   # 运行文档测试（与单元测试并行执行，跨平台并行执行）
   doctests:
     name: 📝 Run Doctests (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     needs: check-skip-ci
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
@@ -300,8 +496,11 @@ jobs:
           python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
 
       - name: 📝 Run doctests
+        timeout-minutes: 12
         run: cargo test --doc --verbose
 
+  # 注意：测试覆盖率检查已移至 coverage-check.yml workflow（定时运行）
+  # 注意：被忽略的测试需要交互，不适合在 CI 中运行
   # 注意：文档检查（check-docs 和 check-links）已移至 doc-consistency-check.yml workflow
   # 该 workflow 支持 PR 触发和定期检查，功能更完整
 
@@ -309,7 +508,7 @@ jobs:
   build:
     name: 🔨 Build (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
-    needs: check-skip-ci
+    needs: [check-skip-ci, tests, doctests]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     strategy:
@@ -517,6 +716,177 @@ jobs:
 
           echo "✅ Build verification passed for ${{ matrix.platform }}"
 
+  # 生成 PR 评论（汇总所有测试结果）
+  # 这个 job 在所有测试完成后运行，汇总结果并添加 PR 评论
+  pr-comment:
+    name: 💬 Comment Test Results on PR
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: github.event_name == 'pull_request' && always()
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📥 Download all test reports
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: test-report-json-*
+          merge-multiple: false
+
+      - name: 📊 Generate PR comment
+        id: generate_comment
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "📊 Generating PR comment..."
+
+          # 检查 Python 是否可用
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping PR comment generation"
+            exit 0
+          fi
+
+          # 查找所有 JSON 报告文件
+          JSON_FILES=$(find . -name "test-report-*.json" -type f 2>/dev/null)
+
+          if [ -z "$JSON_FILES" ]; then
+            echo "⚠️  No JSON test reports found, skipping PR comment"
+            exit 0
+          fi
+
+          # 合并所有报告（支持多平台）
+          echo "Found JSON reports:"
+          echo "$JSON_FILES"
+
+          # 生成 PR 评论内容（合并所有报告）
+          COMMENT_FILE="pr-comment.md"
+          python3 scripts/dev/generate-pr-comment.py \
+            --report $JSON_FILES \
+            --output "$COMMENT_FILE" || {
+            echo "⚠️  Failed to generate PR comment, continuing..."
+            exit 0
+          }
+
+          # 将评论内容保存到输出（用于后续步骤）
+          echo "comment_file=$COMMENT_FILE" >> $GITHUB_OUTPUT
+          echo "✅ PR comment generated"
+
+      - name: 💬 Comment on PR
+        if: steps.generate_comment.outputs.comment_file != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const commentFile = '${{ steps.generate_comment.outputs.comment_file }}';
+
+            if (!fs.existsSync(commentFile)) {
+              console.log('⚠️  Comment file not found, skipping');
+              return;
+            }
+
+            const commentBody = fs.readFileSync(commentFile, 'utf8');
+            const prNumber = context.issue.number;
+
+            console.log(`📝 Posting comment on PR #${prNumber}`);
+
+            // 查找是否已有测试结果评论
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            // 查找由 bot 创建的测试结果评论
+            const botComment = comments.data.find(
+              comment =>
+                comment.user.type === 'Bot' &&
+                comment.body.includes('Test Results Summary')
+            );
+
+            if (botComment) {
+              // 更新现有评论
+              console.log(`🔄 Updating existing comment #${botComment.id}`);
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody,
+              });
+              console.log('✅ Comment updated');
+            } else {
+              // 创建新评论
+              console.log('✨ Creating new comment');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody,
+              });
+              console.log('✅ Comment created');
+            }
+
+  # 测试趋势分析（在所有测试完成后运行）
+  test-trends:
+    name: 📈 Analyze Test Trends
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: always()
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📥 Download test metrics
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: test-metrics-*
+          merge-multiple: false
+
+      - name: 📊 Analyze trends
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "📊 Analyzing test trends..."
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping trend analysis"
+            exit 0
+          fi
+
+          # 收集所有指标文件
+          METRICS_DIR="all-metrics"
+          mkdir -p "$METRICS_DIR"
+          find . -name "metrics-*.json" -type f -exec cp {} "$METRICS_DIR/" \; 2>/dev/null || true
+
+          if [ -z "$(ls -A $METRICS_DIR 2>/dev/null)" ]; then
+            echo "⚠️  No metrics found, skipping analysis"
+            exit 0
+          fi
+
+          # 分析趋势
+          python3 scripts/dev/analyze-test-trends.py \
+            --metrics-dir "$METRICS_DIR" \
+            --output "test-trends-report.md" || {
+            echo "⚠️  Failed to generate trend report, continuing..."
+            exit 0
+          }
+
+          echo "trend_report=test-trends-report.md" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload trend report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-trends-report
+          path: test-trends-report.md
+          retention-days: 30
+          if-no-files-found: ignore
+
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
   # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
@@ -552,6 +922,7 @@ jobs:
           echo "  tests: $TEST_RESULT"
           echo "  doctests: $DOCTEST_RESULT"
           echo "  build: $BUILD_RESULT"
+          echo "  Note: Coverage checks are handled by coverage-check.yml workflow"
           echo "  Note: Document checks are handled by doc-consistency-check.yml workflow"
 
           # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
@@ -617,6 +988,7 @@ jobs:
           fi
 
           # 如果 check-lint、tests、doctests 和 build 都成功或被跳过，则通过
+          # 注意：覆盖率检查由 coverage-check.yml workflow 处理（定时运行）
           # 注意：文档检查已移至 doc-consistency-check.yml workflow
           if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
