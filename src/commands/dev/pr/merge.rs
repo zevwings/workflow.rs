@@ -218,7 +218,6 @@ impl PrMergeCommand {
 
     /// 获取首选的合并方法
     fn get_preferred_merge_method(owner: &str, repo_name: &str) -> Result<String> {
-        use crate::pr::github::platform::GitHub;
         use crate::base::http::{HttpClient, RequestConfig};
         use crate::pr::github::responses::RepositoryInfo;
         use crate::pr::github::errors::handle_github_error;

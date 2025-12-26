@@ -49,6 +49,43 @@ jobs:
             ${{ runner.os }}-cargo-deps-
           enableCrossOsArchive: false
 
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 基本验证
+          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
         with:
@@ -220,23 +257,6 @@ jobs:
           # 优化 Windows 上的缓存性能
           enableCrossOsArchive: false
 
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
-
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -273,6 +293,23 @@ jobs:
             libxkbcommon-x11-dev
           # 基本验证
           python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
 
       - name: 🧪 Run ${{ matrix.test_type }} tests
         timeout-minutes: ${{ matrix.test_timeout }}
@@ -773,6 +810,43 @@ jobs:
             ${{ runner.os }}-cargo-deps-
           enableCrossOsArchive: false
 
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 基本验证
+          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
         with:
@@ -918,6 +992,43 @@ jobs:
             ${{ runner.os }}-cargo-deps-
           enableCrossOsArchive: false
 
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 基本验证
+          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
         with:
@@ -1013,6 +1124,43 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-deps-
           enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 基本验证
+          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
