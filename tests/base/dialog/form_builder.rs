@@ -225,6 +225,7 @@ fn test_form_builder_validate_with_empty_step_handles_gracefully() {
 /// - 如果用户取消则返回错误
 #[test]
 #[ignore] // 需要用户交互
+#[cfg(feature = "interactive-tests")]
 fn test_form_builder_run() {
     // Arrange: 准备测试运行表单（覆盖 builder.rs:173-229）
     let builder = FormBuilder::new().add_group(

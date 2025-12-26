@@ -191,7 +191,7 @@ fn test_jira_logs_ensure_log_file_exists_nonexistent(
 fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) -> Result<()> {
     // Arrange: 准备测试确保日志文件存在（使用临时文件）
     let _ = jira_logs; // 使用 fixture，即使不直接使用也保持一致性
-    let test_dir = create_temp_test_dir("jira_logs_test");
+    let test_dir = create_temp_test_dir("jira_logs_test")?;
 
     // 创建测试目录结构
     let jira_id = "TEST-123";
@@ -202,7 +202,7 @@ fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) -> 
 
     // 创建日志文件
     let log_file = logs_dir.join("flutter-api.log");
-    create_test_file(&logs_dir, "flutter-api.log", "Test log content");
+    create_test_file(&logs_dir, "flutter-api.log", "Test log content")?;
 
     // 注意：由于 JiraLogs 使用配置的基础目录，这个测试主要验证逻辑
     // 实际文件路径可能不同，但我们可以测试错误处理

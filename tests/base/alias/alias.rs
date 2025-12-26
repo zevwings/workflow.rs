@@ -10,8 +10,10 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::common::performance::measure_test_time_with_threshold;
 use color_eyre::Result;
 use rstest::rstest;
+use std::time::Duration;
 
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env;
@@ -943,8 +945,6 @@ mod tests {
     /// - 性能表现良好
     #[test]
     fn test_performance_with_large_alias_map_return_ok() -> Result<()> {
-        use std::time::Instant;
-
         let mut aliases = HashMap::new();
 
         // 创建大量别名
@@ -952,21 +952,19 @@ mod tests {
             aliases.insert(format!("alias{}", i), format!("command{} --arg{}", i, i));
         }
 
-        let start = Instant::now();
-
-        // 测试查找性能
-        for i in 0..100 {
-            let mut visited = HashSet::new();
-            let alias_name = format!("alias{}", i);
-            let _result = mock_expand_alias(&alias_name, &aliases, &mut visited, 0)?;
-        }
-
-        let duration = start.elapsed();
-
-        // 100次查找应该很快完成
-        assert!(duration.as_millis() < 100);
-
-        Ok(())
+        // 测试查找性能（100次查找应该很快完成，< 100ms）
+        measure_test_time_with_threshold(
+            "test_performance_with_large_alias_map_return_ok",
+            Duration::from_millis(100),
+            || {
+                for i in 0..100 {
+                    let mut visited = HashSet::new();
+                    let alias_name = format!("alias{}", i);
+                    let _result = mock_expand_alias(&alias_name, &aliases, &mut visited, 0)?;
+                }
+                Ok(())
+            },
+        )
     }
 
     // ==================== 实际 AliasManager 方法测试 ====================

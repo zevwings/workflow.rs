@@ -87,12 +87,6 @@ token = "test_token"
     }
 }
 
-// 注意：以下宏已废弃，请使用新版 environments::CliTestEnv
-// #[macro_export]
-// macro_rules! with_cli_env { ... }
-// #[macro_export]
-// macro_rules! cli_integration_test { ... }
-
 /// 辅助函数：检查输出是否包含错误消息
 pub fn contains_error(output: &str) -> bool {
     output.contains("❌") || output.contains("错误") || output.contains("Error")

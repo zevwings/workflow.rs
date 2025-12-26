@@ -19,8 +19,8 @@ use color_eyre::Result;
 use rstest::fixture;
 
 use crate::common::environments::{CliTestEnv, GitTestEnv};
-use crate::common::http_helpers::MockServer;
 use crate::common::isolation::TestIsolation;
+use crate::common::mock::server::MockServer;
 
 /// Git 仓库 Fixture（带初始提交）
 ///

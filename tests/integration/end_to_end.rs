@@ -6,6 +6,8 @@
 
 use crate::common::cli_helpers::CliCommandBuilder;
 use crate::common::environments::CliTestEnv;
+use crate::common::mock::server::MockServer;
+use crate::common::test_data::TestDataFactory;
 use color_eyre::Result;
 
 // ==================== PR 工作流测试 ====================
@@ -66,24 +68,57 @@ fn test_pr_creation_workflow() -> Result<()> {
 /// 验证包含Jira ticket的完整工作流程。
 ///
 /// ## 测试场景
-/// 1. 初始化Git仓库和配置
-/// 2. 创建关联Jira ticket的分支
-/// 3. 创建文件并提交（包含Jira ticket ID）
-/// 4. 创建PR（dry-run模式）
+/// 1. 设置Mock Jira API服务器
+/// 2. 初始化Git仓库和配置
+/// 3. 创建关联Jira ticket的分支
+/// 4. 创建文件并提交（包含Jira ticket ID）
+/// 5. 创建PR（dry-run模式）
 ///
 /// ## 预期结果
 /// - 所有步骤成功执行
 /// - PR描述中包含Jira ticket信息（如果支持）
+/// - 使用Mock API，不会阻塞
 #[test]
-#[ignore] // 需要Mock Jira API或实际配置
 fn test_pr_creation_with_jira_workflow() -> Result<()> {
+    // 设置Mock Jira API
+    let mut mock_server = MockServer::new();
+    mock_server.setup_jira_base_url();
+
+    // Mock Jira Issue API响应（使用 TestDataFactory）
+    let factory = TestDataFactory::new();
+    let issue_data = factory
+        .jira_issue()
+        .key("PROJ-123")
+        .summary("Test Issue")
+        .description("Test description")
+        .status("In Progress")
+        .build()?;
+
+    let response_body = serde_json::to_string(&issue_data)?;
+    mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/rest/api/3/issue/PROJ-123")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(&response_body)
+        .create();
+
+    // Mock GitHub API（用于PR创建）
+    mock_server.setup_github_base_url();
+    let _mock_github =
+        mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
+
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?.create_config(
+    env.init_git_repo()?.create_config(&format!(
         r#"
 [jira]
-url = "https://test.atlassian.net"
+url = "{}"
+username = "test@example.com"
+token = "test_token"
 "#,
-    )?;
+        mock_server.base_url()
+    ))?;
 
     // 1. 创建初始提交
     env.create_file("README.md", "# Test Project")?

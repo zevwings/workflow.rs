@@ -7,11 +7,16 @@
 //! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
 //! - 使用 `MockServer` 模拟 HTTP 服务器
 //! - 测试各种响应场景：成功、错误、不同内容类型
+//!
+//! ## 迁移状态
+//!
+//! 已迁移使用 Mock 模板系统，减少硬编码 JSON 响应。
 
-use crate::common::http_helpers::{setup_mock_server, MockServer};
+use crate::common::mock::{setup_mock_server, MockServer};
 use color_eyre::Result;
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::HashMap;
 use workflow::base::http::{HttpClient, RequestConfig};
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -38,18 +43,14 @@ struct TestData {
 /// - status 为 200
 #[test]
 fn test_response_is_success_with_200_status_return_true() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和成功响应
+    // Arrange: 准备 Mock 服务器和成功响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/success", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/success")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"status": "ok"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("status".to_string(), "ok".to_string());
+
+    mock_server.mock_with_template("GET", "/success", r#"{"status": "{{status}}"}"#, vars, 200);
 
     // Act: 发送请求并获取响应
     let client = HttpClient::global()?;
@@ -60,7 +61,7 @@ fn test_response_is_success_with_200_status_return_true() -> Result<()> {
     assert!(response.is_success());
     assert!(!response.is_error());
     assert_eq!(response.status, 200);
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -80,18 +81,14 @@ fn test_response_is_success_with_200_status_return_true() -> Result<()> {
 /// - status 为 404
 #[test]
 fn test_response_is_error_with_404_status_return_false() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和错误响应
+    // Arrange: 准备 Mock 服务器和错误响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/error")
-        .with_status(404)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Not Found"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Not Found".to_string());
+
+    mock_server.mock_with_template("GET", "/error", r#"{"error": "{{error}}"}"#, vars, 404);
 
     // Act: 发送请求并获取响应
     let client = HttpClient::global()?;
@@ -102,7 +99,7 @@ fn test_response_is_error_with_404_status_return_false() -> Result<()> {
     assert!(!response.is_success());
     assert!(response.is_error());
     assert_eq!(response.status, 404);
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -123,18 +120,21 @@ fn test_response_is_error_with_404_status_return_false() -> Result<()> {
 /// - 结构体字段值正确
 #[test]
 fn test_response_as_json_with_valid_json_return_ok() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和 JSON 响应
+    // Arrange: 准备 Mock 服务器和 JSON 响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/json", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/json")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"id": 1, "name": "test"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("id".to_string(), "1".to_string());
+    vars.insert("name".to_string(), "test".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/json",
+        r#"{"id": {{id}}, "name": "{{name}}"}"#,
+        vars,
+        200,
+    );
 
     // Act: 发送请求并解析 JSON
     let client = HttpClient::global()?;
@@ -145,7 +145,7 @@ fn test_response_as_json_with_valid_json_return_ok() -> Result<()> {
     // Assert: 验证 JSON 解析结果正确
     assert_eq!(data.id, 1);
     assert_eq!(data.name, "test");
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -164,18 +164,21 @@ fn test_response_as_json_with_valid_json_return_ok() -> Result<()> {
 /// - Value 内容正确
 #[test]
 fn test_response_as_json_value_with_valid_json_return_ok() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和 JSON 响应
+    // Arrange: 准备 Mock 服务器和 JSON 响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/json-value", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/json-value")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"key": "value", "number": 42}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("key".to_string(), "value".to_string());
+    vars.insert("number".to_string(), "42".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/json-value",
+        r#"{"key": "{{key}}", "number": {{number}}}"#,
+        vars,
+        200,
+    );
 
     // Act: 发送请求并解析 JSON Value
     let client = HttpClient::global()?;
@@ -186,7 +189,7 @@ fn test_response_as_json_value_with_valid_json_return_ok() -> Result<()> {
     // Assert: 验证 JSON Value 内容正确
     assert_eq!(json["key"], "value");
     assert_eq!(json["number"], 42);
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -285,18 +288,14 @@ fn test_response_as_bytes_with_binary_response_return_ok() -> Result<()> {
 /// - ensure_success() 返回 Ok
 #[test]
 fn test_response_ensure_success_with_success_response_return_true() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和成功响应
+    // Arrange: 准备 Mock 服务器和成功响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/success", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/success")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"status": "ok"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("status".to_string(), "ok".to_string());
+
+    mock_server.mock_with_template("GET", "/success", r#"{"status": "{{status}}"}"#, vars, 200);
 
     // Act: 发送请求并验证成功
     let client = HttpClient::global()?;
@@ -306,7 +305,7 @@ fn test_response_ensure_success_with_success_response_return_true() -> Result<()
 
     // Assert: 验证返回 Ok
     assert!(result.is_ok());
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -373,18 +372,14 @@ fn test_response_ensure_success_with_error_response_return_true() -> Result<()> 
 /// - ensure_success_with() 返回 Ok
 #[test]
 fn test_response_ensure_success_with_custom_error_handler_return_true() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和成功响应
+    // Arrange: 准备 Mock 服务器和成功响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/success", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/success")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"status": "ok"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("status".to_string(), "ok".to_string());
+
+    mock_server.mock_with_template("GET", "/success", r#"{"status": "{{status}}"}"#, vars, 200);
 
     // Act: 发送请求并使用自定义错误处理器验证成功
     let client = HttpClient::global()?;
@@ -395,7 +390,7 @@ fn test_response_ensure_success_with_custom_error_handler_return_true() -> Resul
 
     // Assert: 验证返回 Ok
     assert!(result.is_ok());
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -414,18 +409,14 @@ fn test_response_ensure_success_with_custom_error_handler_return_true() -> Resul
 /// - 错误消息包含状态码（由自定义处理器生成）
 #[test]
 fn test_response_ensure_success_with_custom_error_handler_on_error_return_true() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和错误响应
+    // Arrange: 准备 Mock 服务器和错误响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/error")
-        .with_status(403)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Forbidden"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Forbidden".to_string());
+
+    mock_server.mock_with_template("GET", "/error", r#"{"error": "{{error}}"}"#, vars, 403);
 
     // Act: 发送请求并使用自定义错误处理器验证成功（应该失败）
     let client = HttpClient::global()?;
@@ -440,7 +431,7 @@ fn test_response_ensure_success_with_custom_error_handler_on_error_return_true()
         let error_msg = e.to_string();
         assert!(error_msg.contains("403"));
     }
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -461,18 +452,21 @@ fn test_response_ensure_success_with_custom_error_handler_on_error_return_true()
 /// - 消息包含预期的错误内容
 #[test]
 fn test_response_extract_error_message_with_json_error_return_false() -> Result<()> {
-    // Arrange: 准备 Mock 服务器和 JSON 错误响应
+    // Arrange: 准备 Mock 服务器和 JSON 错误响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error-json", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/error-json")
-        .with_status(400)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": {"message": "Invalid input"}, "code": 400}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("message".to_string(), "Invalid input".to_string());
+    vars.insert("code".to_string(), "400".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/error-json",
+        r#"{"error": {"message": "{{message}}"}, "code": {{code}}}"#,
+        vars,
+        400,
+    );
 
     // Act: 发送请求并提取错误消息
     let client = HttpClient::global()?;
@@ -482,7 +476,7 @@ fn test_response_extract_error_message_with_json_error_return_false() -> Result<
 
     // Assert: 验证错误消息包含预期内容
     assert!(error_msg.contains("Invalid input"));
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -640,18 +634,21 @@ fn test_response_status_text_with_201_status_return_ok() -> Result<()> {
 #[test]
 fn test_response_multiple_parses_with_same_response_allows_multiple_parses_return_collect(
 ) -> Result<()> {
-    // Arrange: 准备 Mock 服务器和 JSON 响应
+    // Arrange: 准备 Mock 服务器和 JSON 响应（使用模板系统）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/multi-parse", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/multi-parse")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"id": 42, "name": "test"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("id".to_string(), "42".to_string());
+    vars.insert("name".to_string(), "test".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/multi-parse",
+        r#"{"id": {{id}}, "name": "{{name}}"}"#,
+        vars,
+        200,
+    );
 
     // Act: 发送请求并多次解析响应体
     let client = HttpClient::global()?;
@@ -665,7 +662,7 @@ fn test_response_multiple_parses_with_same_response_allows_multiple_parses_retur
     assert_eq!(json1["id"], 42);
     assert_eq!(json2["id"], 42);
     assert!(text.contains("42"));
-    _mock.assert();
+    mock_server.assert_all_called();
     Ok(())
 }
 
@@ -734,16 +731,13 @@ fn test_response_ensure_success_with_invalid_utf8_body_return_true() -> Result<(
 /// - status 为 201
 #[test]
 fn test_http_response_is_success_with_201_status_return_true() -> color_eyre::Result<()> {
-    // Arrange: 准备 Mock 服务器和 201 响应
+    // Arrange: 准备 Mock 服务器和 201 响应（使用模板系统）
     let mut manager = MockServer::new();
 
-    let mock = manager
-        .server()
-        .mock("POST", "/test")
-        .with_status(201)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"created": true}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("created".to_string(), "true".to_string());
+
+    manager.mock_with_template("POST", "/test", r#"{"created": {{created}}}"#, vars, 201);
 
     // Act: 发送 POST 请求并获取响应
     let client = HttpClient::global()?;
@@ -755,7 +749,7 @@ fn test_http_response_is_success_with_201_status_return_true() -> color_eyre::Re
     assert_eq!(response.status, 201);
     assert!(response.is_success());
 
-    mock.assert();
+    manager.assert_all_called();
     manager.cleanup();
     Ok(())
 }
@@ -775,16 +769,13 @@ fn test_http_response_is_success_with_201_status_return_true() -> color_eyre::Re
 /// - status 为 299
 #[test]
 fn test_http_response_is_success_with_299_status_return_true() -> color_eyre::Result<()> {
-    // Arrange: 准备 Mock 服务器和 299 响应
+    // Arrange: 准备 Mock 服务器和 299 响应（使用模板系统）
     let mut manager = MockServer::new();
 
-    let mock = manager
-        .server()
-        .mock("GET", "/test")
-        .with_status(299)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"status": "success"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("status".to_string(), "success".to_string());
+
+    manager.mock_with_template("GET", "/test", r#"{"status": "{{status}}"}"#, vars, 299);
 
     // Act: 发送 GET 请求并获取响应
     let client = HttpClient::global()?;
@@ -796,7 +787,7 @@ fn test_http_response_is_success_with_299_status_return_true() -> color_eyre::Re
     assert_eq!(response.status, 299);
     assert!(response.is_success());
 
-    mock.assert();
+    manager.assert_all_called();
     manager.cleanup();
     Ok(())
 }
@@ -815,16 +806,13 @@ fn test_http_response_is_success_with_299_status_return_true() -> color_eyre::Re
 /// - Debug 字符串包含状态码或消息
 #[test]
 fn test_http_response_debug_with_valid_response_return_ok() -> color_eyre::Result<()> {
-    // Arrange: 准备 Mock 服务器和响应
+    // Arrange: 准备 Mock 服务器和响应（使用模板系统）
     let mut manager = MockServer::new();
 
-    let mock = manager
-        .server()
-        .mock("GET", "/test")
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"message": "OK"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("message".to_string(), "OK".to_string());
+
+    manager.mock_with_template("GET", "/test", r#"{"message": "{{message}}"}"#, vars, 200);
 
     // Act: 发送请求并格式化 Debug 输出
     let client = HttpClient::global()?;
@@ -836,7 +824,7 @@ fn test_http_response_debug_with_valid_response_return_ok() -> color_eyre::Resul
     // Assert: 验证 Debug 字符串包含状态码或消息
     assert!(debug_str.contains("200") || debug_str.contains("OK"));
 
-    mock.assert();
+    manager.assert_all_called();
     manager.cleanup();
     Ok(())
 }
@@ -857,16 +845,13 @@ fn test_http_response_debug_with_valid_response_return_ok() -> color_eyre::Resul
 #[test]
 fn test_http_response_extract_error_message_with_message_field_return_false(
 ) -> color_eyre::Result<()> {
-    // Arrange: 准备 Mock 服务器和包含 message 字段的错误响应
+    // Arrange: 准备 Mock 服务器和包含 message 字段的错误响应（使用模板系统）
     let mut manager = MockServer::new();
 
-    let mock = manager
-        .server()
-        .mock("GET", "/test")
-        .with_status(400)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"message": "Simple error message"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("message".to_string(), "Simple error message".to_string());
+
+    manager.mock_with_template("GET", "/test", r#"{"message": "{{message}}"}"#, vars, 400);
 
     // Act: 发送请求并提取错误消息
     let client = HttpClient::global()?;
@@ -878,7 +863,7 @@ fn test_http_response_extract_error_message_with_message_field_return_false(
     // Assert: 验证错误消息包含 message 字段或消息内容
     assert!(error_msg.contains("message") || error_msg.contains("Simple error message"));
 
-    mock.assert();
+    manager.assert_all_called();
     manager.cleanup();
     Ok(())
 }
@@ -898,16 +883,20 @@ fn test_http_response_extract_error_message_with_message_field_return_false(
 #[test]
 fn test_http_response_extract_error_message_without_error_field_return_false(
 ) -> color_eyre::Result<()> {
-    // Arrange: 准备 Mock 服务器和没有 error/message 字段的错误响应
+    // Arrange: 准备 Mock 服务器和没有 error/message 字段的错误响应（使用模板系统）
     let mut manager = MockServer::new();
 
-    let mock = manager
-        .server()
-        .mock("GET", "/test")
-        .with_status(400)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"data": {"key": "value"}, "status": "error"}"#)
-        .create();
+    let mut vars = HashMap::new();
+    vars.insert("key".to_string(), "value".to_string());
+    vars.insert("status".to_string(), "error".to_string());
+
+    manager.mock_with_template(
+        "GET",
+        "/test",
+        r#"{"data": {"key": "{{key}}"}, "status": "{{status}}"}"#,
+        vars,
+        400,
+    );
 
     // Act: 发送请求并提取错误消息
     let client = HttpClient::global()?;
@@ -919,7 +908,7 @@ fn test_http_response_extract_error_message_without_error_field_return_false(
     // Assert: 验证返回完整的 JSON 字符串（因为没有 error/message 字段）
     assert!(error_msg.contains("data") || error_msg.contains("status"));
 
-    mock.assert();
+    manager.assert_all_called();
     manager.cleanup();
     Ok(())
 }

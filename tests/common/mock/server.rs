@@ -4,6 +4,7 @@
 
 use mockito::{Matcher, Mock, Server};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -286,6 +287,70 @@ impl MockServer {
         self
     }
 
+    /// 使用模板创建 Mock 端点
+    ///
+    /// 支持变量替换的模板系统，模板中使用 `{{variable}}` 格式的占位符。
+    ///
+    /// # 参数
+    ///
+    /// * `method` - HTTP 方法
+    /// * `path` - 请求路径（支持路径参数，如 `/repos/{owner}/{repo}/pulls/{pr_number}`）
+    /// * `template` - 响应模板字符串，支持 `{{variable}}` 格式的变量占位符
+    /// * `variables` - 变量映射表
+    /// * `status` - HTTP 状态码
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use std::collections::HashMap;
+    ///
+    /// let mut vars = HashMap::new();
+    /// vars.insert("pr_number".to_string(), "123".to_string());
+    /// vars.insert("owner".to_string(), "test-owner".to_string());
+    /// mock_server.mock_with_template(
+    ///     "GET",
+    ///     "/repos/{owner}/repo/pulls/{pr_number}",
+    ///     r#"{"number": {{pr_number}}, "owner": "{{owner}}"}"#,
+    ///     vars,
+    ///     200,
+    /// );
+    /// ```
+    pub fn mock_with_template(
+        &mut self,
+        method: &str,
+        path: &str,
+        template: &str,
+        variables: HashMap<String, String>,
+        status: u16,
+    ) -> &mut Self {
+        // 替换模板中的变量
+        let mut response_body = template.to_string();
+        for (key, value) in &variables {
+            let placeholder = format!("{{{{{}}}}}", key);
+            response_body = response_body.replace(&placeholder, value);
+        }
+
+        // 创建通用的 Mock 端点
+        let mock_index = self.mocks.len();
+        let mock = self
+            .server
+            .as_mut()
+            .mock(method, path)
+            .with_status(status as usize)
+            .with_header("content-type", "application/json")
+            .with_body(&response_body)
+            .create();
+
+        self.mocks.push(mock);
+        self.expectations.push(MockExpectation {
+            method: method.to_string(),
+            path: path.to_string(),
+            status,
+            mock_index,
+        });
+        self
+    }
+
     /// 验证所有 Mock 是否被调用
     ///
     /// 如果验证失败，会输出详细的错误信息，包括每个未调用的 Mock 的期望信息。
@@ -350,6 +415,100 @@ impl MockServer {
         env::remove_var("JIRA_API_URL");
     }
 
+    /// 重置 Mock 服务器
+    ///
+    /// 清除所有 Mock 端点、期望信息和请求历史，但保留服务器实例。
+    /// 用于在同一个测试中重新配置 Mock。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let mut mock_server = MockServer::new();
+    /// mock_server.setup_github_api();
+    /// mock_server.mock_github_pr("GET", "/test", r#"{"ok": true}"#, 200);
+    ///
+    /// // 执行测试...
+    ///
+    /// // 重置并重新配置
+    /// mock_server.reset();
+    /// mock_server.mock_github_pr("POST", "/test", r#"{"ok": false}"#, 400);
+    /// ```
+    #[allow(dead_code)]
+    pub fn reset(&mut self) {
+        self.mocks.clear();
+        self.expectations.clear();
+        // 注意：不清理环境变量，因为可能还需要使用
+    }
+
+    /// 验证所有 Mock 端点都被调用（返回 Result）
+    ///
+    /// 与 `assert_all_called()` 类似，但返回 `Result` 而不是 panic。
+    /// 适用于需要优雅处理验证失败的场景。
+    ///
+    /// # 返回
+    ///
+    /// 如果所有 Mock 都被调用，返回 `Ok(())`；否则返回包含详细错误信息的 `Err`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// match mock_server.verify_all_called() {
+    ///     Ok(_) => println!("All mocks called"),
+    ///     Err(e) => eprintln!("Some mocks not called: {}", e),
+    /// }
+    /// ```
+    #[allow(dead_code)]
+    pub fn verify_all_called(&self) -> color_eyre::Result<()> {
+        use color_eyre::eyre::Context;
+
+        let mut errors = Vec::new();
+
+        // 先输出所有 Mock 的期望信息
+        if !self.expectations.is_empty() {
+            eprintln!("\n📋 Mock 期望信息 (共 {} 个):", self.expectations.len());
+            for (idx, exp) in self.expectations.iter().enumerate() {
+                eprintln!(
+                    "   Mock #{}: {} {} -> 状态码 {}",
+                    idx + 1,
+                    exp.method,
+                    exp.path,
+                    exp.status
+                );
+            }
+            eprintln!("");
+        }
+
+        // 尝试验证所有 Mock，收集错误
+        for (index, mock) in self.mocks.iter().enumerate() {
+            if let Some(expectation) = self.expectations.iter().find(|e| e.mock_index == index) {
+                // 使用 catch_unwind 捕获 assert() 的 panic
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    mock.assert();
+                }));
+
+                if result.is_err() {
+                    errors.push(format!(
+                        "Mock #{}: {} {} -> 状态码 {}",
+                        index + 1,
+                        expectation.method,
+                        expectation.path,
+                        expectation.status
+                    ));
+                }
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(color_eyre::eyre::eyre!(
+                "{} mock(s) were not called",
+                errors.len()
+            ))
+            .context(format!("Failed mocks:\n{}", errors.join("\n")))
+        }
+    }
+
     /// 获取 Mock 期望信息（用于调试）
     ///
     /// 返回所有 Mock 端点的期望信息，包括方法、路径和状态码。
@@ -401,21 +560,39 @@ impl MockServer {
 /// GitHub API Mock 预设
 impl MockServer {
     /// 设置 GitHub 创建 PR 成功响应
+    ///
+    /// 使用 TestDataFactory 生成 PR 数据，提供类型安全的数据生成。
     pub fn setup_github_create_pr_success(
         &mut self,
         owner: &str,
         repo: &str,
         pr_number: u64,
     ) -> &mut Self {
-        let response_body = format!(
-            r#"{{
-            "number": {},
-            "title": "Test PR",
-            "html_url": "https://github.com/{}/{}/pull/{}",
-            "state": "open"
-        }}"#,
-            pr_number, owner, repo, pr_number
-        );
+        use crate::common::test_data::TestDataFactory;
+        use serde_json::json;
+
+        // 使用 TestDataFactory 生成 PR 数据
+        let factory = TestDataFactory::new();
+        let mut pr_data = factory
+            .github_pr()
+            .number(pr_number)
+            .title("Test PR")
+            .state("open")
+            .build()
+            .unwrap_or_else(|_| json!({"number": pr_number}));
+
+        // 设置 html_url
+        pr_data["html_url"] = json!(format!(
+            "https://github.com/{}/{}/pull/{}",
+            owner, repo, pr_number
+        ));
+
+        let response_body = serde_json::to_string(&pr_data).unwrap_or_else(|_| {
+            format!(
+                r#"{{"number": {}, "html_url": "https://github.com/{}/{}/pull/{}"}}"#,
+                pr_number, owner, repo, pr_number
+            )
+        });
 
         self.mock_github_pr(
             "POST",
@@ -427,16 +604,39 @@ impl MockServer {
     }
 
     /// 设置 GitHub 获取 PR 信息响应
+    ///
+    /// 如果提供了 `pr_data`，使用提供的数据；否则使用 TestDataFactory 生成默认数据。
     #[allow(dead_code)]
     pub fn setup_github_get_pr(
         &mut self,
         owner: &str,
         repo: &str,
         pr_number: u64,
-        pr_data: &Value,
+        pr_data: Option<&Value>,
     ) -> &mut Self {
-        let response_body = serde_json::to_string(pr_data)
-            .unwrap_or_else(|e| panic!("operation should succeed: {}", e));
+        use crate::common::test_data::TestDataFactory;
+        use serde_json::json;
+
+        let response_body = if let Some(data) = pr_data {
+            serde_json::to_string(data)
+                .unwrap_or_else(|e| panic!("operation should succeed: {}", e))
+        } else {
+            // 使用 TestDataFactory 生成默认 PR 数据
+            let factory = TestDataFactory::new();
+            let mut pr_data = factory
+                .github_pr()
+                .number(pr_number)
+                .build()
+                .unwrap_or_else(|_| json!({"number": pr_number}));
+
+            pr_data["html_url"] = json!(format!(
+                "https://github.com/{}/{}/pull/{}",
+                owner, repo, pr_number
+            ));
+            serde_json::to_string(&pr_data)
+                .unwrap_or_else(|e| panic!("operation should succeed: {}", e))
+        };
+
         self.mock_github_pr(
             "GET",
             &format!("/repos/{}/{}/pulls/{}", owner, repo, pr_number),
@@ -457,13 +657,31 @@ impl MockServer {
 /// Jira API Mock 预设
 impl MockServer {
     /// 设置 Jira 获取 Issue 成功响应
+    ///
+    /// 如果提供了 `issue_data`，使用提供的数据；否则使用 TestDataFactory 生成默认数据。
     pub fn setup_jira_get_issue_success(
         &mut self,
         issue_key: &str,
-        issue_data: &Value,
+        issue_data: Option<&Value>,
     ) -> &mut Self {
-        let response_body = serde_json::to_string(issue_data)
-            .unwrap_or_else(|e| panic!("operation should succeed: {}", e));
+        use crate::common::test_data::TestDataFactory;
+
+        let response_body = if let Some(data) = issue_data {
+            serde_json::to_string(data)
+                .unwrap_or_else(|e| panic!("operation should succeed: {}", e))
+        } else {
+            // 使用 TestDataFactory 生成默认 Issue 数据
+            let factory = TestDataFactory::new();
+            let issue_data = factory
+                .jira_issue()
+                .key(issue_key)
+                .build()
+                .unwrap_or_else(|_| serde_json::json!({"key": issue_key}));
+
+            serde_json::to_string(&issue_data)
+                .unwrap_or_else(|e| panic!("operation should succeed: {}", e))
+        };
+
         self.mock_jira_issue(
             "GET",
             &format!("/rest/api/3/issue/{}", issue_key),
@@ -564,7 +782,7 @@ pub fn setup_mock_server() -> MockServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::test_data_factory::TestDataFactory;
+    use crate::common::test_data::factory::TestDataFactory;
 
     /// 测试MockServer创建
     ///
@@ -669,7 +887,7 @@ mod tests {
 
         let mut server = MockServer::new();
         server.setup_jira_api();
-        server.setup_jira_get_issue_success("PROJ-123", &issue_data);
+        server.setup_jira_get_issue_success("PROJ-123", Some(&issue_data));
 
         assert_eq!(server.mocks.len(), 1);
         Ok(())

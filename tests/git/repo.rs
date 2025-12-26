@@ -12,9 +12,11 @@
 //! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
 //! - 测试各种 URL 格式、边界情况和性能场景
 
+use crate::common::performance::measure_test_time_with_threshold;
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
+use std::time::Duration;
 
 use workflow::git::{GitRepo, RepoType};
 
@@ -35,7 +37,10 @@ use workflow::git::{GitRepo, RepoType};
 #[case("https://codeup.aliyun.com/owner/repo.git", "owner/repo")]
 #[case("https://codeup.aliyun.com/owner/repo", "owner/repo")]
 #[case("http://codeup.aliyun.com/owner/repo", "owner/repo")]
-fn test_extract_repo_name_from_url_valid_cases_return_ok(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_valid_cases_return_ok(
+    #[case] url: &str,
+    #[case] expected: &str,
+) -> Result<()> {
     // Arrange: 准备测试各种有效 URL 格式的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -54,7 +59,10 @@ fn test_extract_repo_name_from_url_valid_cases_return_ok(#[case] url: &str, #[ca
     "https://codeup.aliyun.com/group/subgroup/project.git",
     "group/subgroup/project"
 )]
-fn test_extract_repo_name_from_url_nested_paths_return_ok(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_nested_paths_return_ok(
+    #[case] url: &str,
+    #[case] expected: &str,
+) -> Result<()> {
     // Arrange: 准备测试嵌套路径的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -71,7 +79,10 @@ fn test_extract_repo_name_from_url_nested_paths_return_ok(#[case] url: &str, #[c
 #[case("git@github.com:owner/repo.with.dots.git", "owner/repo.with.dots")]
 #[case("https://github.com/owner/repo123", "owner/repo123")]
 #[case("git@codeup.aliyun.com:中文用户/中文仓库.git", "中文用户/中文仓库")]
-fn test_extract_repo_name_from_url_special_characters_return_ok(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_special_characters_return_ok(
+    #[case] url: &str,
+    #[case] expected: &str,
+) -> Result<()> {
     // Arrange: 准备测试包含特殊字符的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -475,7 +486,7 @@ fn test_url_with_query_parameters() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_performance_with_many_urls() {
+fn test_performance_with_many_urls() -> Result<()> {
     // Arrange: 准备测试大量 URL 处理的性能
     let base_urls = vec![
         "git@github.com:owner{}/repo{}.git",
@@ -484,24 +495,21 @@ fn test_performance_with_many_urls() {
         "https://codeup.aliyun.com/owner{}/repo{}",
     ];
 
-    let start = std::time::Instant::now();
-
-    for i in 0..1000 {
-        for base_url in &base_urls {
-            let url = base_url.replace("{}", &i.to_string());
-            let _ = GitRepo::extract_repo_name_from_url(&url);
-            let _ = mock_parse_repo_type_from_url(&url);
-        }
-    }
-
-    let duration = start.elapsed();
-
     // 性能基准：4000个URL应该在合理时间内完成（放宽到30秒，考虑到CI环境的性能差异）
-    assert!(
-        duration.as_secs() < 30,
-        "Performance test took too long: {:?}",
-        duration
-    );
+    measure_test_time_with_threshold(
+        "test_performance_with_many_urls",
+        Duration::from_secs(30),
+        || {
+            for i in 0..1000 {
+                for base_url in &base_urls {
+                    let url = base_url.replace("{}", &i.to_string());
+                    let _ = GitRepo::extract_repo_name_from_url(&url);
+                    let _ = mock_parse_repo_type_from_url(&url);
+                }
+            }
+            Ok(())
+        },
+    )
 }
 
 // ==================== Integration Test Helpers ====================
@@ -522,8 +530,18 @@ fn test_performance_with_many_urls() {
 /// - 类型检测结果与预期一致
 #[rstest]
 #[case("git@github.com:owner/repo.git", "owner/repo", RepoType::GitHub, true)]
-#[case("https://codeup.aliyun.com/owner/repo", "owner/repo", RepoType::Codeup, true)]
-#[case("git@gitlab.com:owner/repo.git", "owner/repo", RepoType::Unknown, false)]
+#[case(
+    "https://codeup.aliyun.com/owner/repo",
+    "owner/repo",
+    RepoType::Codeup,
+    true
+)]
+#[case(
+    "git@gitlab.com:owner/repo.git",
+    "owner/repo",
+    RepoType::Unknown,
+    false
+)]
 fn test_extract_and_detect_integration_return_ok(
     #[case] url: &str,
     #[case] expected_name: &str,

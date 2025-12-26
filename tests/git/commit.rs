@@ -10,14 +10,13 @@
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use rstest::fixture;
+use serial_test::serial;
 // Removed serial_test::serial - tests can run in parallel with GitTestEnv isolation
-use std::fs;
+// But tests using CurrentDirGuard need serial execution
 use workflow::git::GitCommit;
 
-use crate::common::environments::GitTestEnv;
 use crate::common::fixtures::git_repo_with_commit;
-use rstest::rstest;
+use crate::common::helpers::CurrentDirGuard;
 
 // ==================== Worktree Status Check Tests ====================
 
@@ -46,11 +45,15 @@ use rstest::rstest;
 /// - `untracked_count == 0`：无未跟踪文件
 /// - `modified_count == 0`：无修改文件
 /// - `staged_count == 0`：无暂存文件
-#[rstest]
-fn test_worktree_status_clean_with_gix_return_ok(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_worktree_status_clean_with_gix_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
 
     // Arrange: 准备测试干净的工作树状态
     let status = GitCommit::get_worktree_status()?;
@@ -82,11 +85,15 @@ fn test_worktree_status_clean_with_gix_return_ok(
 /// - 返回Ok状态
 /// - modified_count、staged_count、untracked_count 都为0
 /// - 表示仓库干净，无更改
-#[rstest]
-fn test_has_changes_clean_repo_with_gix_return_ok(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_has_changes_clean_repo_with_gix_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
 
     // 干净的仓库应该没有更改
     // 使用 get_worktree_status 检查是否有变更
@@ -115,11 +122,15 @@ fn test_has_changes_clean_repo_with_gix_return_ok(
 /// - 返回Ok状态
 /// - untracked_count > 0 或 modified_count > 0 或 staged_count > 0
 /// - 表示仓库有未跟踪文件，存在更改
-#[rstest]
-fn test_has_changes_with_untracked_files_with_gix_return_collect(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let env = &git_repo_with_commit;
 
     // 创建未跟踪文件
@@ -130,10 +141,7 @@ fn test_has_changes_with_untracked_files_with_gix_return_collect(
     let result =
         status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
     assert!(result.is_ok());
-    assert!(
-        result?,
-        "Repo with untracked files should have changes"
-    );
+    assert!(result?, "Repo with untracked files should have changes");
 
     // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
@@ -154,11 +162,15 @@ fn test_has_changes_with_untracked_files_with_gix_return_collect(
 /// - 返回Ok状态
 /// - modified_count > 0 或 staged_count > 0 或 untracked_count > 0
 /// - 表示仓库有已修改文件，存在更改
-#[rstest]
-fn test_has_changes_with_modified_files_with_gix_return_collect(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_has_changes_with_modified_files_with_gix_return_collect() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let env = &git_repo_with_commit;
 
     // 修改现有文件（README.md 在 GitTestEnv::new() 中已经创建）
@@ -169,10 +181,7 @@ fn test_has_changes_with_modified_files_with_gix_return_collect(
     let result =
         status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
     assert!(result.is_ok());
-    assert!(
-        result?,
-        "Repo with modified files should have changes"
-    );
+    assert!(result?, "Repo with modified files should have changes");
 
     // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
@@ -196,11 +205,15 @@ fn test_has_changes_with_modified_files_with_gix_return_collect(
 /// - `add_all()` 返回Ok
 /// - `get_worktree_status()` 显示 staged_count > 0
 /// - 所有更改的文件都被暂存
-#[rstest]
-fn test_stage_all_changes_with_multiple_files_stages_all_return_collect(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_stage_all_changes_with_multiple_files_stages_all_return_collect() -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建多个文件
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let env = &git_repo_with_commit;
     std::fs::write(env.path().join("new_file1.txt"), "Content 1")?;
     std::fs::write(env.path().join("new_file2.txt"), "Content 2")?;
@@ -235,11 +248,15 @@ fn test_stage_all_changes_with_multiple_files_stages_all_return_collect(
 /// - `add_files()` 返回Ok
 /// - `get_worktree_status()` 显示 staged_count > 0
 /// - 指定的文件被暂存
-#[rstest]
-fn test_stage_specific_file_return_ok(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_stage_specific_file_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let env = &git_repo_with_commit;
 
     // 创建测试文件
@@ -283,11 +300,15 @@ fn test_stage_specific_file_return_ok(
 /// - 返回Ok，包含CommitInfo结构
 /// - SHA不为空，长度为40个字符，为十六进制格式
 /// - message、author、date字段都不为空
-#[rstest]
-fn test_get_latest_commit_info_return_ok(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_get_latest_commit_info_return_ok() -> Result<()> {
+    // 切换到测试仓库目录
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
 
     // 获取最新提交信息
     let commit_info = GitCommit::get_last_commit_info();
@@ -367,8 +388,8 @@ fn test_operations_outside_git_repo_with_container() -> Result<()> {
 
     // 在非 Git 目录中测试操作
     // 注意：这里不使用 GitTestEnv，因为我们需要测试非 Git 仓库的情况
-    let temp_dir = tempdir()
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to create temp dir: {}", e))?;
+    let temp_dir =
+        tempdir().map_err(|e| color_eyre::eyre::eyre!("Failed to create temp dir: {}", e))?;
 
     // 切换到非Git目录（使用RAII确保恢复）
     let _dir_guard = crate::common::helpers::CurrentDirGuard::new(&temp_dir)

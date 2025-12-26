@@ -376,6 +376,340 @@ fn test_custom_git_command() -> color_eyre::Result<()> {
 
 ## 4. 迁移指南
 
+### 迁移到使用标准 Fixture
+
+#### 迁移原则
+
+**何时应该迁移**：
+
+✅ **适合迁移**:
+- 测试只需要基础环境（不需要特殊配置）
+- 测试可以并行执行
+- 测试重复创建相同的环境
+
+❌ **不适合迁移**:
+- 测试需要特殊的环境配置
+- 测试需要动态创建不同的环境
+- 测试需要访问环境变量的可变引用
+
+#### 迁移优先级
+
+1. **高优先级**: 高频使用的测试文件（使用 `CliTestEnv::new()` 或 `GitTestEnv::new()` 超过 5 次）
+2. **中优先级**: 中等频率使用的测试文件（3-5 次）
+3. **低优先级**: 低频使用的测试文件（1-2 次）
+
+#### 迁移步骤
+
+**步骤 1: 添加必要的导入**
+
+```rust
+// 添加 rstest 导入
+use rstest::rstest;
+
+// 导入需要的 Fixture
+use crate::common::fixtures::{cli_env, cli_env_with_git, git_repo_with_commit};
+```
+
+**步骤 2: 将 `#[test]` 改为 `#[rstest]`**
+
+```rust
+// 之前
+#[test]
+fn test_something() -> Result<()> {
+    let env = CliTestEnv::new()?;
+    // ...
+}
+
+// 之后
+#[rstest]
+fn test_something(cli_env: CliTestEnv) -> Result<()> {
+    // cli_env 已经创建好了
+    // ...
+}
+```
+
+**步骤 3: 移除手动创建环境的代码**
+
+```rust
+// 之前
+let env = CliTestEnv::new()?;
+env.init_git_repo()?;
+
+// 之后（使用 cli_env_with_git fixture）
+// 不需要手动创建，fixture 已经初始化了 Git 仓库
+```
+
+**步骤 4: 更新函数签名**
+
+```rust
+// 之前
+fn test_something() -> Result<()> {
+    // ...
+}
+
+// 之后
+fn test_something(cli_env: CliTestEnv) -> Result<()> {
+    // ...
+}
+```
+
+#### 迁移示例
+
+**示例 1: 基础 CLI 环境测试**
+
+**之前**:
+```rust
+#[test]
+fn test_path_exists() -> color_eyre::Result<()> {
+    let env = CliTestEnv::new()?;
+    let file_path = env.path().join("test.txt");
+    fs::write(&file_path, "test")?;
+
+    let access = PathAccess::new(&file_path);
+    assert!(access.exists());
+
+    Ok(())
+}
+```
+
+**之后**:
+```rust
+use rstest::rstest;
+use crate::common::fixtures::cli_env;
+
+#[rstest]
+fn test_path_exists(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+    let file_path = cli_env.path().join("test.txt");
+    fs::write(&file_path, "test")?;
+
+    let access = PathAccess::new(&file_path);
+    assert!(access.exists());
+
+    Ok(())
+}
+```
+
+**优势**:
+- ✅ 减少代码行数
+- ✅ 环境自动创建和清理
+- ✅ 支持并行执行
+
+**示例 2: Git 仓库测试**
+
+**之前**:
+```rust
+#[test]
+fn test_branch_exists() -> Result<()> {
+    let _env = GitTestEnv::new()?;
+
+    let current_branch = GitBranch::current_branch()?;
+    let exists = GitBranch::has_local_branch(&current_branch).unwrap_or(false);
+
+    assert!(exists);
+    Ok(())
+}
+```
+
+**之后**:
+```rust
+use rstest::rstest;
+use crate::common::fixtures::git_repo_with_commit;
+
+#[rstest]
+fn test_branch_exists(git_repo_with_commit: GitTestEnv) -> Result<()> {
+    let current_branch = GitBranch::current_branch()?;
+    let exists = GitBranch::has_local_branch(&current_branch).unwrap_or(false);
+
+    assert!(exists);
+    Ok(())
+}
+```
+
+**优势**:
+- ✅ Git 仓库已初始化
+- ✅ 已有初始提交
+- ✅ 代码更简洁
+
+**示例 3: CLI 环境 + Git 仓库测试**
+
+**之前**:
+```rust
+#[test]
+fn test_check_has_last_commit() -> color_eyre::Result<()> {
+    let env = CliTestEnv::new()?;
+    env.init_git_repo()?
+        .create_file("test.txt", "test")?
+        .create_commit("Initial commit")?;
+
+    let _guard = CurrentDirGuard::new(env.path())?;
+    let result = check_has_last_commit();
+
+    assert!(result.is_ok());
+    Ok(())
+}
+```
+
+**之后**:
+```rust
+use rstest::rstest;
+use crate::common::fixtures::cli_env_with_git;
+
+#[rstest]
+fn test_check_has_last_commit(cli_env_with_git: CliTestEnv) -> color_eyre::Result<()> {
+    // cli_env_with_git 已经初始化了 Git 仓库
+    // 但还没有 commit，需要手动创建
+    cli_env_with_git
+        .create_file("test.txt", "test")?
+        .create_commit("Initial commit")?;
+
+    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
+    let result = check_has_last_commit();
+
+    assert!(result.is_ok());
+    Ok(())
+}
+```
+
+#### 常见场景
+
+**场景 1: 需要空 Git 仓库（无 commit）**
+
+**解决方案**: 使用 `cli_env_with_git` fixture，它只初始化 Git 仓库，不创建 commit。
+
+```rust
+#[rstest]
+fn test_empty_git_repo(cli_env_with_git: CliTestEnv) -> Result<()> {
+    // Git 仓库已初始化，但没有 commit
+    // 可以直接测试空仓库场景
+    Ok(())
+}
+```
+
+**场景 2: 需要带 commit 的 Git 仓库**
+
+**解决方案**: 使用 `git_repo_with_commit` fixture。
+
+```rust
+#[rstest]
+fn test_with_commits(git_repo_with_commit: GitTestEnv) -> Result<()> {
+    // Git 仓库已初始化，且有初始 commit
+    // 可以直接测试有 commit 的场景
+    Ok(())
+}
+```
+
+**场景 3: 需要多个环境**
+
+**解决方案**: 可以在一个测试中使用多个 fixture。
+
+```rust
+#[rstest]
+fn test_multiple_envs(
+    cli_env: CliTestEnv,
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
+    // 可以使用多个环境
+    Ok(())
+}
+```
+
+**场景 4: 需要特殊配置**
+
+**解决方案**: 如果 fixture 不满足需求，可以继续使用手动创建，或创建自定义 fixture。
+
+```rust
+// 选项 1: 继续手动创建（如果配置复杂）
+#[test]
+fn test_special_config() -> Result<()> {
+    let mut env = CliTestEnv::new()?;
+    env.env_guard().set("SPECIAL_VAR", "value");
+    // ...
+}
+
+// 选项 2: 创建自定义 fixture（如果经常使用）
+#[fixture]
+fn cli_env_with_special_config() -> CliTestEnv {
+    let mut env = CliTestEnv::new().expect("Failed to create env");
+    env.env_guard().set("SPECIAL_VAR", "value");
+    env
+}
+```
+
+#### 迁移注意事项
+
+**1. 错误处理**
+
+Fixture 使用 `expect()`:
+- Fixture 创建失败应该 panic（测试环境问题）
+- 测试逻辑中的错误仍使用 `Result<()>`
+
+```rust
+#[rstest]
+fn test_something(cli_env: CliTestEnv) -> Result<()> {
+    // cli_env 创建失败会 panic（这是期望的）
+    // 但测试逻辑中的错误应该返回 Result
+    let file = fs::read_to_string("missing.txt")?; // 使用 ?
+    Ok(())
+}
+```
+
+**2. 并行执行**
+
+Fixture 支持并行执行:
+- 所有标准 Fixture 都使用隔离的环境
+- 可以安全地并行执行
+
+```rust
+// 这些测试可以并行执行
+#[rstest]
+fn test_1(cli_env: CliTestEnv) -> Result<()> { Ok(()) }
+
+#[rstest]
+fn test_2(cli_env: CliTestEnv) -> Result<()> { Ok(()) }
+```
+
+**3. 环境变量访问**
+
+如果需要设置环境变量:
+- 使用 `env.env_guard().set()` 方法
+- 注意需要可变引用
+
+```rust
+#[rstest]
+fn test_with_env(mut cli_env: CliTestEnv) -> Result<()> {
+    cli_env.env_guard().set("TEST_VAR", "value");
+    // ...
+    Ok(())
+}
+```
+
+**4. 工作目录切换**
+
+如果需要切换工作目录:
+- 使用 `CurrentDirGuard`（如果测试需要）
+- 或者使用绝对路径（推荐）
+
+```rust
+#[rstest]
+fn test_with_dir_switch(cli_env: CliTestEnv) -> Result<()> {
+    let _guard = CurrentDirGuard::new(cli_env.path())?;
+    // 当前工作目录已切换到 cli_env.path()
+    Ok(())
+}
+```
+
+#### 迁移检查清单
+
+迁移测试时，请检查：
+
+- [ ] 添加了 `use rstest::rstest;`
+- [ ] 导入了需要的 Fixture
+- [ ] 将 `#[test]` 改为 `#[rstest]`
+- [ ] 移除了手动创建环境的代码
+- [ ] 更新了函数签名（添加 fixture 参数）
+- [ ] 测试仍然通过
+- [ ] 代码更简洁
+
 ### 从旧版 CliTestEnv 迁移
 
 **旧版代码**：
@@ -566,6 +900,71 @@ fn test_example() {
 }
 ```
 
+### 6. 测试隔离性
+
+#### 文件锁保护
+
+避免并发测试写入同一个配置文件：
+
+```rust
+// ✅ 生产代码已实现文件锁保护
+// 测试代码无需额外处理，但应了解原理
+
+// 文件锁确保并发安全
+let file = OpenOptions::new()
+    .read(true)
+    .write(true)
+    .create(true)
+    .open(&config_path)?;
+file.lock_exclusive()?;
+// ... 读写操作 ...
+file.unlock()?;
+```
+
+#### 环境变量隔离
+
+每个测试应使用独立的环境变量：
+
+```rust
+// ✅ 推荐：每个测试独立环境
+#[test]
+fn test_1() -> color_eyre::Result<()> {
+    let mut env = CliTestEnv::new()?;
+    env.env_guard().set("TEST_VAR", "value1");
+    // ...
+    Ok(())
+}
+
+#[test]
+fn test_2() -> color_eyre::Result<()> {
+    let mut env = CliTestEnv::new()?;
+    env.env_guard().set("TEST_VAR", "value2");  // 独立环境
+    // ...
+    Ok(())
+}
+
+// ❌ 不推荐：共享环境变量
+static mut TEST_VAR: Option<String> = None;
+```
+
+#### 测试隔离性检查清单
+
+- [ ] 每个测试使用独立的测试环境（`CliTestEnv` 或 `GitTestEnv`）
+- [ ] 测试之间不共享状态（全局变量、静态变量等）
+- [ ] 测试可以并行运行（使用 `cargo test -- --test-threads=4`）
+- [ ] 测试结束后自动清理资源（依赖RAII）
+- [ ] 文件操作使用文件锁保护（生产代码）
+
+#### 并发测试建议
+
+**对于 CI/CD**：
+- 可以使用 `--test-threads=1` 确保稳定性（如果遇到并发问题）
+- 大多数情况下，并行运行是安全的
+
+**对于本地开发**：
+- 可以并行运行以加快速度（默认行为）
+- 如果遇到并发问题，检查测试隔离性
+
 ---
 
 ## 相关文档
@@ -577,5 +976,5 @@ fn test_example() {
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-01-27
 

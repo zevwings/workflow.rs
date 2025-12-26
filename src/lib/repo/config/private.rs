@@ -249,6 +249,7 @@ impl PrivateRepoConfig {
             .read(true)
             .write(true)
             .create(true)
+            .truncate(false)
             .open(&config_path)
             .wrap_err_with(|| format!("Failed to open config file: {:?}", config_path))?;
 

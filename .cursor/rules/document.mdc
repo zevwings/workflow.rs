@@ -1,3 +1,8 @@
+---
+description: Rules for document generation, classification, and storage. Mandatory rules for when and how to generate documents.
+type: always
+---
+
 # Document Generation Rules
 
 > **⚠️ Synchronization Note**: This file must be kept in sync with its Chinese version at `docs/cursorrules/document.md`. When modifying this file, you must immediately update the corresponding Chinese version.
@@ -340,4 +345,3 @@ Refer to the **Document Classification Table** above for document type classific
 ---
 
 **Last Updated**: 2025-12-25
-

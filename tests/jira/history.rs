@@ -62,9 +62,9 @@ fn test_read_work_history_nonexistent_file_return_ok(unique_repo: String) -> Res
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_read_work_history_existing_entry() {
+fn test_read_work_history_existing_entry() -> color_eyre::Result<()> {
     // Arrange: 准备测试读取存在的工作历史记录条目
-    let test_dir = create_temp_test_dir("work_history");
+    let test_dir = create_temp_test_dir("work_history")?;
     let repo_url = "github.com-test-repo";
 
     // 创建测试历史文件
@@ -78,7 +78,7 @@ fn test_read_work_history_existing_entry() {
     "branch": "feature/PROJ-123-add-feature"
   }
 }"#;
-    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content);
+    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content)?;
 
     // 由于我们无法直接设置工作历史目录，这个测试主要验证函数不会 panic
     // 实际的文件路径由 Paths::work_history_dir() 决定
@@ -100,6 +100,7 @@ fn test_read_work_history_existing_entry() {
     }
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试读取不存在的工作历史记录条目
@@ -115,9 +116,9 @@ fn test_read_work_history_existing_entry() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_read_work_history_nonexistent_entry() {
+fn test_read_work_history_nonexistent_entry() -> color_eyre::Result<()> {
     // Arrange: 准备测试读取不存在的工作历史记录条目
-    let test_dir = create_temp_test_dir("work_history");
+    let test_dir = create_temp_test_dir("work_history")?;
     let repo_url = "github.com-test-repo";
 
     // 创建测试历史文件（包含其他条目）
@@ -131,7 +132,7 @@ fn test_read_work_history_nonexistent_entry() {
     "branch": "feature/PROJ-456-other-feature"
   }
 }"#;
-    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content);
+    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content)?;
 
     let result = JiraWorkHistory::read_work_history("123", Some("github.com/test/repo"));
 
@@ -151,6 +152,7 @@ fn test_read_work_history_nonexistent_entry() {
     }
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试在不存在文件中根据分支名查找PR ID
@@ -177,9 +179,9 @@ fn test_find_pr_id_by_branch_nonexistent_file_return_ok(unique_repo: String) -> 
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_find_pr_id_by_branch_existing_branch() {
+fn test_find_pr_id_by_branch_existing_branch() -> color_eyre::Result<()> {
     // Arrange: 准备测试根据分支名查找存在的 PR ID
-    let test_dir = create_temp_test_dir("work_history");
+    let test_dir = create_temp_test_dir("work_history")?;
     let repo_url = "github.com-test-repo";
 
     // 创建测试历史文件
@@ -193,7 +195,7 @@ fn test_find_pr_id_by_branch_existing_branch() {
     "branch": "feature/PROJ-123-add-feature"
   }
 }"#;
-    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content);
+    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content)?;
 
     let result = JiraWorkHistory::find_pr_id_by_branch(
         "feature/PROJ-123-add-feature",
@@ -216,6 +218,7 @@ fn test_find_pr_id_by_branch_existing_branch() {
     }
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试根据分支名查找不存在的PR ID
@@ -231,9 +234,9 @@ fn test_find_pr_id_by_branch_existing_branch() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_find_pr_id_by_branch_nonexistent_branch() {
+fn test_find_pr_id_by_branch_nonexistent_branch() -> color_eyre::Result<()> {
     // Arrange: 准备测试根据分支名查找不存在的 PR ID
-    let test_dir = create_temp_test_dir("work_history");
+    let test_dir = create_temp_test_dir("work_history")?;
     let repo_url = "github.com-test-repo";
 
     // 创建测试历史文件（包含其他分支）
@@ -247,7 +250,7 @@ fn test_find_pr_id_by_branch_nonexistent_branch() {
     "branch": "feature/PROJ-123-add-feature"
   }
 }"#;
-    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content);
+    create_test_file(&test_dir, &format!("{}.json", repo_url), history_content)?;
 
     let result = JiraWorkHistory::find_pr_id_by_branch(
         "feature/nonexistent-branch",
@@ -270,6 +273,7 @@ fn test_find_pr_id_by_branch_nonexistent_branch() {
     }
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试在没有提供仓库地址时查找PR ID（应返回错误）

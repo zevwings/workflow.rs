@@ -2,10 +2,13 @@
 //!
 //! 提供Jira ticket创建、更新、状态同步等场景的测试辅助函数。
 
+#![allow(dead_code)]
+
 use crate::common::environments::CliTestEnv;
 use color_eyre::Result;
 
 /// Jira集成场景构建器
+#[allow(dead_code)]
 pub struct JiraIntegrationScenario {
     /// CLI测试环境
     pub env: CliTestEnv,
@@ -15,6 +18,7 @@ pub struct JiraIntegrationScenario {
     pub branch_name: String,
 }
 
+#[allow(dead_code)]
 impl JiraIntegrationScenario {
     /// 创建新的Jira集成场景
     ///
@@ -79,6 +83,7 @@ username = "{}"
 }
 
 /// Jira状态同步场景构建器
+#[allow(dead_code)]
 pub struct JiraStatusSyncScenario {
     /// CLI测试环境
     pub env: CliTestEnv,

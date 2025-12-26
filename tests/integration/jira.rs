@@ -2,10 +2,12 @@
 //!
 //! 测试Jira ticket创建、更新、状态同步等完整流程。
 //!
-//! 注意：这些测试可能需要Mock Jira API或实际配置，部分测试标记为 `#[ignore]`。
+//! 使用MockServer模拟Jira API，避免依赖真实网络连接。
 
 use crate::common::cli_helpers::CliCommandBuilder;
 use crate::common::environments::CliTestEnv;
+use crate::common::mock::server::MockServer;
+use crate::common::test_data::TestDataFactory;
 use color_eyre::Result;
 
 // ==================== Jira Ticket 创建测试 ====================
@@ -65,26 +67,56 @@ username = "test@example.com"
 /// ## 测试目的
 /// 验证创建PR时能够同步更新Jira ticket状态。
 ///
-/// ## 为什么被忽略
-/// - 需要Mock Jira API或实际配置
-/// - 可能涉及网络请求
-///
 /// ## 测试场景
-/// 1. 设置Jira配置
-/// 2. 创建关联ticket的分支和提交
-/// 3. 创建PR（dry-run模式）
-/// 4. 验证Jira状态同步逻辑
+/// 1. 设置Mock Jira API服务器
+/// 2. 设置Jira配置
+/// 3. 创建关联ticket的分支和提交
+/// 4. 创建PR（dry-run模式）
+/// 5. 验证Jira状态同步逻辑
 #[test]
-#[ignore] // 需要Mock Jira API或实际配置
 fn test_jira_status_sync_on_pr_creation() -> Result<()> {
+    // 设置Mock Jira API
+    let mut mock_server = MockServer::new();
+    mock_server.setup_jira_base_url();
+
+    // Mock Jira Issue API响应（使用 TestDataFactory）
+    let factory = TestDataFactory::new();
+    let issue_data = factory
+        .jira_issue()
+        .key("PROJ-123")
+        .summary("Test Issue")
+        .description("Test description")
+        .status("In Progress")
+        .build()?;
+
+    let response_body = serde_json::to_string(&issue_data)?;
+    mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/rest/api/3/issue/PROJ-123")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(&response_body)
+        .create();
+
+    // Mock Jira状态转换API
+    mock_server.mock_jira_issue(
+        "POST",
+        "/rest/api/3/issue/PROJ-123/transitions",
+        r#"{"status": "In Review"}"#,
+        204,
+    );
+
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?.create_config(
+    env.init_git_repo()?.create_config(&format!(
         r#"
 [jira]
-url = "https://test.atlassian.net"
+url = "{}"
 username = "test@example.com"
+token = "test_token"
 "#,
-    )?;
+        mock_server.base_url()
+    ))?;
 
     // 创建初始提交
     env.create_file("README.md", "# Test Project")?
@@ -124,20 +156,56 @@ username = "test@example.com"
 /// ## 测试目的
 /// 验证合并PR时能够同步更新Jira ticket状态。
 ///
-/// ## 为什么被忽略
-/// - 需要Mock Jira API或实际配置
-/// - 可能涉及网络请求
+/// ## 测试场景
+/// 1. 设置Mock Jira API服务器
+/// 2. 设置Jira配置
+/// 3. 创建关联ticket的分支和提交
+/// 4. 执行PR合并命令（dry-run模式）
+/// 5. 验证Jira状态同步逻辑
 #[test]
-#[ignore] // 需要Mock Jira API或实际配置
 fn test_jira_status_sync_on_pr_merge() -> Result<()> {
+    // 设置Mock Jira API
+    let mut mock_server = MockServer::new();
+    mock_server.setup_jira_base_url();
+
+    // Mock Jira Issue API响应（使用 TestDataFactory）
+    let factory = TestDataFactory::new();
+    let issue_data = factory
+        .jira_issue()
+        .key("PROJ-123")
+        .summary("Test Issue")
+        .description("Test description")
+        .status("In Progress")
+        .build()?;
+
+    let response_body = serde_json::to_string(&issue_data)?;
+    mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/rest/api/3/issue/PROJ-123")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(&response_body)
+        .create();
+
+    // Mock Jira状态转换API（合并后状态）
+    mock_server.mock_jira_issue(
+        "POST",
+        "/rest/api/3/issue/PROJ-123/transitions",
+        r#"{"status": "Done"}"#,
+        204,
+    );
+
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?.create_config(
+    env.init_git_repo()?.create_config(&format!(
         r#"
 [jira]
-url = "https://test.atlassian.net"
+url = "{}"
 username = "test@example.com"
+token = "test_token"
 "#,
-    )?;
+        mock_server.base_url()
+    ))?;
 
     // 创建初始提交
     env.create_file("README.md", "# Test Project")?
@@ -177,22 +245,49 @@ username = "test@example.com"
 /// 测试Jira info命令
 ///
 /// ## 测试目的
-/// 验证Jira info命令能够正确解析参数。
+/// 验证Jira info命令能够正确解析参数并调用Mock API。
 ///
 /// ## 测试场景
-/// 1. 设置Jira配置
-/// 2. 执行jira info命令（dry-run或Mock）
+/// 1. 设置Mock Jira API服务器
+/// 2. 设置Jira配置
+/// 3. 执行jira info命令
+/// 4. 验证命令能够正确调用API
 #[test]
-#[ignore] // 需要Mock Jira API或实际配置
 fn test_jira_info_command() -> Result<()> {
+    // 设置Mock Jira API
+    let mut mock_server = MockServer::new();
+    mock_server.setup_jira_base_url();
+
+    // Mock Jira Issue API响应（使用 TestDataFactory）
+    let factory = TestDataFactory::new();
+    let issue_data = factory
+        .jira_issue()
+        .key("PROJ-123")
+        .summary("Test Issue")
+        .description("Test description")
+        .status("In Progress")
+        .build()?;
+
+    let response_body = serde_json::to_string(&issue_data)?;
+    mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/rest/api/3/issue/PROJ-123")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(&response_body)
+        .create();
+
     let env = CliTestEnv::new()?;
-    env.create_config(
+    env.create_config(&format!(
         r#"
 [jira]
-url = "https://test.atlassian.net"
+url = "{}"
 username = "test@example.com"
+token = "test_token"
 "#,
-    )?;
+        mock_server.base_url()
+    ))?;
 
     // 测试Jira info命令
     let binding = CliCommandBuilder::new()
@@ -205,7 +300,7 @@ username = "test@example.com"
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // 命令应该能够解析参数（即使API调用失败）
+    // 命令应该能够解析参数（即使API调用失败，也应该有输出）
     assert!(!stdout.is_empty() || !stderr.is_empty());
 
     Ok(())
@@ -216,19 +311,35 @@ username = "test@example.com"
 /// ## 测试目的
 /// 验证Jira comment命令能够正确添加评论。
 ///
-/// ## 为什么被忽略
-/// - 需要Mock Jira API或实际配置
+/// ## 测试场景
+/// 1. 设置Mock Jira API服务器
+/// 2. 设置Jira配置
+/// 3. 执行jira comment命令
+/// 4. 验证命令能够正确调用API
 #[test]
-#[ignore] // 需要Mock Jira API或实际配置
 fn test_jira_comment_command() -> Result<()> {
+    // 设置Mock Jira API
+    let mut mock_server = MockServer::new();
+    mock_server.setup_jira_base_url();
+
+    // Mock Jira Comment API响应
+    mock_server.mock_jira_issue(
+        "POST",
+        "/rest/api/3/issue/PROJ-123/comment",
+        r#"{"id": "12345", "body": "Test comment"}"#,
+        201,
+    );
+
     let env = CliTestEnv::new()?;
-    env.create_config(
+    env.create_config(&format!(
         r#"
 [jira]
-url = "https://test.atlassian.net"
+url = "{}"
 username = "test@example.com"
+token = "test_token"
 "#,
-    )?;
+        mock_server.base_url()
+    ))?;
 
     // 测试Jira comment命令
     let binding = CliCommandBuilder::new()

@@ -2,10 +2,13 @@
 //!
 //! 提供提交创建、历史管理等场景的测试辅助函数。
 
+#![allow(dead_code)]
+
 use crate::common::environments::CliTestEnv;
 use color_eyre::Result;
 
 /// 提交创建场景构建器
+#[allow(dead_code)]
 pub struct CommitCreationScenario {
     /// CLI测试环境
     pub env: CliTestEnv,
@@ -13,6 +16,7 @@ pub struct CommitCreationScenario {
     pub commits: Vec<(String, String, String)>,
 }
 
+#[allow(dead_code)]
 impl CommitCreationScenario {
     /// 创建新的提交创建场景
     pub fn new() -> Result<Self> {
@@ -62,6 +66,7 @@ impl CommitCreationScenario {
 }
 
 /// 提交历史场景构建器
+#[allow(dead_code)]
 pub struct CommitHistoryScenario {
     /// CLI测试环境
     pub env: CliTestEnv,

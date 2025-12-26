@@ -36,7 +36,7 @@ fn test_completion_generator_new_with_shell_creates_generator(
     #[case] shell: &str,
 ) -> color_eyre::Result<()> {
     // Arrange: 准备临时测试目录
-    let test_dir = create_temp_test_dir("completion_gen");
+    let test_dir = create_temp_test_dir("completion_gen")?;
 
     // Act: 使用指定 shell 创建 CompletionGenerator
     let result = CompletionGenerator::new(
@@ -70,9 +70,9 @@ fn test_completion_generator_new_with_shell_creates_generator(
 /// - 返回Err
 /// - 错误消息明确指示shell类型不支持
 #[test]
-fn test_completion_generator_new_with_unsupported_shell_returns_error() {
+fn test_completion_generator_new_with_unsupported_shell_returns_error() -> color_eyre::Result<()> {
     // Arrange: 准备临时测试目录和不支持的 shell 类型
-    let test_dir = create_temp_test_dir("completion_gen");
+    let test_dir = create_temp_test_dir("completion_gen")?;
 
     // Act: 使用不支持的 shell 类型创建 CompletionGenerator
     let result = CompletionGenerator::new(
@@ -87,6 +87,7 @@ fn test_completion_generator_new_with_unsupported_shell_returns_error() {
     );
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试自动检测shell类型创建CompletionGenerator
@@ -103,9 +104,9 @@ fn test_completion_generator_new_with_unsupported_shell_returns_error() {
 /// - 自动检测shell类型成功
 /// - 返回Ok结果
 #[test]
-fn test_completion_generator_new_auto_detect_creates_generator() {
+fn test_completion_generator_new_auto_detect_creates_generator() -> color_eyre::Result<()> {
     // Arrange: 准备临时测试目录
-    let test_dir = create_temp_test_dir("completion_gen");
+    let test_dir = create_temp_test_dir("completion_gen")?;
 
     // Act: 自动检测 shell 类型创建 CompletionGenerator
     let result = CompletionGenerator::new(None, Some(test_dir.to_string_lossy().to_string()));
@@ -117,6 +118,7 @@ fn test_completion_generator_new_auto_detect_creates_generator() {
     );
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试使用默认输出目录创建CompletionGenerator
@@ -175,7 +177,7 @@ fn test_completion_generator_generate_all_with_shell_generates_files(
     #[case] shell: &str,
 ) -> color_eyre::Result<()> {
     // Arrange: 准备临时测试目录和生成器
-    let test_dir = create_temp_test_dir("completion_gen");
+    let test_dir = create_temp_test_dir("completion_gen")?;
     let generator = CompletionGenerator::new(
         Some(shell.to_string()),
         Some(test_dir.to_string_lossy().to_string()),
@@ -290,9 +292,9 @@ fn test_generate_result_empty_messages_with_no_messages_creates_result() {
 /// - 返回Err
 /// - 错误消息明确指示shell类型无效
 #[test]
-fn test_completion_generator_new_with_empty_shell_returns_error() {
+fn test_completion_generator_new_with_empty_shell_returns_error() -> color_eyre::Result<()> {
     // Arrange: 准备临时测试目录和空 shell 字符串
-    let test_dir = create_temp_test_dir("completion_gen");
+    let test_dir = create_temp_test_dir("completion_gen")?;
 
     // Act: 使用空字符串创建 CompletionGenerator
     let result = CompletionGenerator::new(
@@ -304,6 +306,7 @@ fn test_completion_generator_new_with_empty_shell_returns_error() {
     assert!(result.is_err(), "Should return error for empty shell type");
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试使用无效输出目录创建CompletionGenerator

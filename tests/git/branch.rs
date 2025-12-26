@@ -2,15 +2,18 @@
 //!
 //! 测试 Git 分支的创建、切换、合并、删除等操作。
 
-use pretty_assertions::assert_eq;
 use color_eyre::Result;
+use pretty_assertions::assert_eq;
 use rstest::rstest;
+use serial_test::serial;
 // Removed serial_test::serial - tests can run in parallel with GitTestEnv isolation
+// But tests using CurrentDirGuard need serial execution
 use workflow::git::{GitBranch, MergeStrategy};
 
 use crate::common::environments::GitTestEnv;
 use crate::common::fixtures::git_repo_with_commit;
 use crate::common::guards::EnvGuard;
+use crate::common::helpers::CurrentDirGuard;
 
 // ==================== Branch Prefix Processing Tests ====================
 
@@ -50,9 +53,15 @@ fn test_remove_branch_prefix_with_slash_handles_prefix_return_ok() -> Result<()>
 ///
 /// ## 预期结果
 /// - 当前分支存在
-#[rstest]
-fn test_exists_main_branch_with_default_branch_return_ok(git_repo_with_commit: GitTestEnv) -> Result<()> {
-    // Arrange: 准备 Git 测试环境（使用 fixture）
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_exists_main_branch_with_default_branch_return_ok() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
 
     // Act: 获取当前分支并检查是否存在
     let current_branch = GitBranch::current_branch()?;
@@ -81,7 +90,9 @@ fn test_exists_main_branch_with_default_branch_return_ok(git_repo_with_commit: G
 /// ## 预期结果
 /// - 不存在的分支返回 false
 #[rstest]
-fn test_exists_nonexistent_branch_with_invalid_name_return_ok(git_repo_with_commit: GitTestEnv) -> Result<()> {
+fn test_exists_nonexistent_branch_with_invalid_name_return_ok(
+    _git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // Arrange: 准备 Git 测试环境和不存在的分支名（使用 fixture）
     let nonexistent_branch = "nonexistent-branch-12345";
 
@@ -89,11 +100,7 @@ fn test_exists_nonexistent_branch_with_invalid_name_return_ok(git_repo_with_comm
     let exists = GitBranch::has_local_branch(nonexistent_branch).unwrap_or(true);
 
     // Assert: 验证分支不存在
-    assert!(
-        !exists,
-        "Branch '{}' should not exist",
-        nonexistent_branch
-    );
+    assert!(!exists, "Branch '{}' should not exist", nonexistent_branch);
 
     Ok(())
 }
@@ -112,11 +119,15 @@ fn test_exists_nonexistent_branch_with_invalid_name_return_ok(git_repo_with_comm
 ///
 /// ## 预期结果
 /// - 分支创建成功，存在且已切换
-#[rstest]
-fn test_create_simple_branch_with_valid_name_succeeds(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // Arrange: 准备 Git 测试环境和分支名（使用 fixture）
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
+    // Arrange: 准备 Git 测试环境和分支名
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let branch_name = "feature/test-branch";
 
     // Act: 创建并切换到新分支
@@ -143,11 +154,15 @@ fn test_create_simple_branch_with_valid_name_succeeds(
 ///
 /// ## 预期结果
 /// - 带前缀的分支创建成功，存在且已切换
-#[rstest]
-fn test_create_branch_with_prefix_and_valid_name_succeeds(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // Arrange: 准备 Git 测试环境和带前缀的分支名（使用 fixture）
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
+    // Arrange: 准备 Git 测试环境和带前缀的分支名
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let branch_name = "feature/user-authentication";
 
     // Act: 创建并切换到新分支
@@ -177,11 +192,15 @@ fn test_create_branch_with_prefix_and_valid_name_succeeds(
 ///
 /// ## 预期结果
 /// - 分支被成功删除
-#[rstest]
-fn test_delete_existing_branch_with_valid_name_succeeds(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // Arrange: 准备 Git 测试环境并创建分支（使用 fixture）
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
+    // Arrange: 准备 Git 测试环境并创建分支
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let branch_name = "feature/to-delete";
 
     // 创建分支
@@ -192,7 +211,8 @@ fn test_delete_existing_branch_with_valid_name_succeeds(
     let main_branch = GitBranch::current_branch()?;
     if main_branch == branch_name {
         GitBranch::checkout_branch("main")
-            .unwrap_or_else(|_| GitBranch::checkout_branch("master")?);
+            .or_else(|_| GitBranch::checkout_branch("master"))
+            .expect("Failed to checkout main or master branch");
     }
 
     // 确认分支存在
@@ -233,11 +253,15 @@ fn test_delete_existing_branch_with_valid_name_succeeds(
 ///
 /// ## 预期结果
 /// - 分支数量增加，所有测试分支都在列表中
-#[rstest]
-fn test_list_branches_with_multiple_branches_return_collect(
-    git_repo_with_commit: GitTestEnv,
-) -> Result<()> {
-    // Arrange: 准备 Git 测试环境并获取初始分支列表（使用 fixture）
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
+#[test]
+#[serial]
+fn test_list_branches_with_multiple_branches_return_collect() -> Result<()> {
+    // Arrange: 准备 Git 测试环境并获取初始分支列表
+    let git_repo_with_commit = git_repo_with_commit();
+    let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
     let initial_branches = GitBranch::get_local_branches()?;
     let initial_count = initial_branches.len();
     let test_branches = vec!["feature/branch1", "feature/branch2", "hotfix/fix1"];
@@ -316,7 +340,7 @@ fn test_merge_strategy_enum_with_all_variants_return_collect() -> Result<()> {
 /// - 创建失败，空分支名不存在
 #[rstest]
 fn test_empty_branch_name_with_empty_string_return_empty(
-    git_repo_with_commit: GitTestEnv,
+    _git_repo_with_commit: GitTestEnv,
 ) -> Result<()> {
     // Arrange: 准备 Git 测试环境（使用 fixture）
 

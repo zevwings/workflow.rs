@@ -2,9 +2,11 @@
 //!
 //! 测试分支类型定义、转换和验证功能。
 
+use crate::common::performance::measure_test_time_with_threshold;
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
+use std::time::Duration;
 use workflow::branch::BranchType;
 
 // ==================== BranchType 枚举测试 ====================
@@ -408,26 +410,24 @@ fn test_branch_type_copy_with_valid_type_copies_value() {
 /// ## 预期结果
 /// - 1000次转换在100毫秒内完成
 #[test]
-fn test_branch_type_conversion_performance_with_multiple_conversions_completes_quickly() {
+fn test_branch_type_conversion_performance_with_multiple_conversions_completes_quickly(
+) -> Result<()> {
     // Arrange: 准备测试字符串
-    use std::time::Instant;
     let test_strings = vec!["feature", "bugfix", "refactoring", "hotfix", "chore"];
 
-    // Act: 多次转换并测量时间
-    let start = Instant::now();
-    for _ in 0..1000 {
-        for s in &test_strings {
-            let _ = BranchType::from_str(s);
-        }
-    }
-    let duration = start.elapsed();
-
-    // Assert: 验证转换速度（应该很快）
-    assert!(
-        duration.as_millis() < 100,
-        "Branch type conversion too slow: {:?}",
-        duration
-    );
+    // Act & Assert: 多次转换并测量时间（应该很快，< 100ms）
+    measure_test_time_with_threshold(
+        "test_branch_type_conversion_performance_with_multiple_conversions_completes_quickly",
+        Duration::from_millis(100),
+        || {
+            for _ in 0..1000 {
+                for s in &test_strings {
+                    let _ = BranchType::from_str(s);
+                }
+            }
+            Ok(())
+        },
+    )
 }
 
 /// 测试分支类型显示性能
@@ -442,29 +442,26 @@ fn test_branch_type_conversion_performance_with_multiple_conversions_completes_q
 /// ## 预期结果
 /// - 1000次显示转换在50毫秒内完成
 #[test]
-fn test_branch_type_display_performance_with_multiple_displays_completes_quickly() {
+fn test_branch_type_display_performance_with_multiple_displays_completes_quickly() -> Result<()> {
     // Arrange: 准备所有分支类型
-    use std::time::Instant;
     let types = BranchType::all();
 
-    // Act: 多次显示转换并测量时间
-    let start = Instant::now();
-    for _ in 0..1000 {
-        for branch_type in &types {
-            let _ = branch_type.to_string();
-            let _ = branch_type.as_str();
-            let _ = branch_type.display_name();
-            let _ = branch_type.to_commit_type();
-        }
-    }
-    let duration = start.elapsed();
-
-    // Assert: 验证显示转换速度（应该很快）
-    assert!(
-        duration.as_millis() < 50,
-        "Branch type display too slow: {:?}",
-        duration
-    );
+    // Act & Assert: 多次显示转换并测量时间（应该很快，< 50ms）
+    measure_test_time_with_threshold(
+        "test_branch_type_display_performance_with_multiple_displays_completes_quickly",
+        Duration::from_millis(50),
+        || {
+            for _ in 0..1000 {
+                for branch_type in &types {
+                    let _ = branch_type.to_string();
+                    let _ = branch_type.as_str();
+                    let _ = branch_type.display_name();
+                    let _ = branch_type.to_commit_type();
+                }
+            }
+            Ok(())
+        },
+    )
 }
 
 // ==================== Integration Tests ====================
@@ -651,6 +648,7 @@ fn test_branch_type_template_selection_with_feature_type_returns_template_path()
 /// - 选择的分支类型在BranchType::all()列表中
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
+#[cfg(feature = "interactive-tests")]
 fn test_branch_type_prompt_selection() {
     // Arrange: 准备测试交互式选择分支类型
     // 注意：这个测试需要用户交互，在 CI 环境中会卡住
@@ -705,6 +703,7 @@ fn test_branch_type_prompt_selection() {
 /// - 配置文件解析正确
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
+#[cfg(feature = "interactive-tests")]
 fn test_branch_type_resolve_with_repo_prefix_with_prefix() {
     // Arrange: 准备测试有 repository prefix 的情况
     // 注意：这个测试依赖于实际的仓库配置，可能在不同环境中表现不同
@@ -759,6 +758,7 @@ fn test_branch_type_resolve_with_repo_prefix_with_prefix() {
 /// - 整个流程无panic或hang
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
+#[cfg(feature = "interactive-tests")]
 fn test_branch_type_resolve_with_repo_prefix_without_prefix() {
     // Arrange: 准备测试没有 repository prefix 的情况（会调用 prompt_selection）
     // 注意：这个测试需要用户交互，在 CI 环境中会卡住

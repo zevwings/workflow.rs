@@ -5,14 +5,17 @@
 //! 注意：这些测试默认被忽略，只在性能测试时运行。
 //! 使用 `cargo test -- --ignored` 来运行这些测试。
 
-use crate::common::cli_helpers::CliCommandBuilder;
-use crate::common::environments::CliTestEnv;
-use color_eyre::Result;
 use std::time::Duration;
+#[cfg(feature = "performance-tests")]
+use {
+    crate::common::cli_helpers::CliCommandBuilder, crate::common::environments::CliTestEnv,
+    crate::common::performance::measure_test_time_with_threshold, color_eyre::Result,
+};
 
 /// 性能测试配置
 ///
 /// 定义各个操作的超时时间阈值。
+#[allow(dead_code)]
 pub struct PerformanceConfig {
     /// PR创建超时时间
     pub pr_creation_timeout: Duration,
@@ -82,36 +85,33 @@ impl Default for PerformanceConfig {
 /// ```
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_pr_creation_performance() -> Result<()> {
     let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
 
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_file("README.md", "# Test")?
-        .create_commit("Initial commit")?
-        .create_branch("feature/test")?
-        .checkout("feature/test")?
-        .create_file("test.txt", "content")?
-        .create_commit("feat: add test")?;
+    measure_test_time_with_threshold(
+        "test_pr_creation_performance",
+        config.pr_creation_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.init_git_repo()?
+                .create_file("README.md", "# Test")?
+                .create_commit("Initial commit")?
+                .create_branch("feature/test")?
+                .checkout("feature/test")?
+                .create_file("test.txt", "content")?
+                .create_commit("feat: add test")?;
 
-    // 执行PR创建（dry-run模式）
-    let _output = CliCommandBuilder::new()
-        .args(["pr", "create", "--dry-run"])
-        .current_dir(env.path())
-        .assert()
-        .get_output();
+            // 执行PR创建（dry-run模式）
+            let _output = CliCommandBuilder::new()
+                .args(["pr", "create", "--dry-run"])
+                .current_dir(env.path())
+                .assert()
+                .get_output();
 
-    let duration = start.elapsed();
-
-    assert!(
-        duration < config.pr_creation_timeout,
-        "PR creation took {:?}, expected < {:?}",
-        duration,
-        config.pr_creation_timeout
-    );
-
-    Ok(())
+            Ok(())
+        },
+    )
 }
 
 // ==================== 分支操作性能测试 ====================
@@ -122,26 +122,23 @@ fn test_pr_creation_performance() -> Result<()> {
 /// 验证分支创建操作的性能。
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_branch_creation_performance() -> Result<()> {
     let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
 
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_file("README.md", "# Test")?
-        .create_commit("Initial commit")?
-        .create_branch("feature/test")?;
+    measure_test_time_with_threshold(
+        "test_branch_creation_performance",
+        config.branch_creation_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.init_git_repo()?
+                .create_file("README.md", "# Test")?
+                .create_commit("Initial commit")?
+                .create_branch("feature/test")?;
 
-    let duration = start.elapsed();
-
-    assert!(
-        duration < config.branch_creation_timeout,
-        "Branch creation took {:?}, expected < {:?}",
-        duration,
-        config.branch_creation_timeout
-    );
-
-    Ok(())
+            Ok(())
+        },
+    )
 }
 
 /// 测试分支切换性能
@@ -150,27 +147,24 @@ fn test_branch_creation_performance() -> Result<()> {
 /// 验证分支切换操作的性能。
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_branch_checkout_performance() -> Result<()> {
     let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
 
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_file("README.md", "# Test")?
-        .create_commit("Initial commit")?
-        .create_branch("feature/test")?
-        .checkout("feature/test")?;
+    measure_test_time_with_threshold(
+        "test_branch_checkout_performance",
+        config.git_operation_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.init_git_repo()?
+                .create_file("README.md", "# Test")?
+                .create_commit("Initial commit")?
+                .create_branch("feature/test")?
+                .checkout("feature/test")?;
 
-    let duration = start.elapsed();
-
-    assert!(
-        duration < config.git_operation_timeout,
-        "Branch checkout took {:?}, expected < {:?}",
-        duration,
-        config.git_operation_timeout
-    );
-
-    Ok(())
+            Ok(())
+        },
+    )
 }
 
 // ==================== 提交操作性能测试 ====================
@@ -181,25 +175,22 @@ fn test_branch_checkout_performance() -> Result<()> {
 /// 验证提交创建操作的性能。
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_commit_creation_performance() -> Result<()> {
     let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
 
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_file("test.txt", "content")?
-        .create_commit("feat: add test")?;
+    measure_test_time_with_threshold(
+        "test_commit_creation_performance",
+        config.commit_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.init_git_repo()?
+                .create_file("test.txt", "content")?
+                .create_commit("feat: add test")?;
 
-    let duration = start.elapsed();
-
-    assert!(
-        duration < config.commit_timeout,
-        "Commit creation took {:?}, expected < {:?}",
-        duration,
-        config.commit_timeout
-    );
-
-    Ok(())
+            Ok(())
+        },
+    )
 }
 
 /// 测试多个提交的性能
@@ -208,31 +199,27 @@ fn test_commit_creation_performance() -> Result<()> {
 /// 验证创建多个提交时的性能。
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_multiple_commits_performance() -> Result<()> {
-    let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
-
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
-
-    // 创建10个提交
-    for i in 1..=10 {
-        env.create_file(&format!("file{}.txt", i), &format!("content {}", i))?
-            .create_commit(&format!("feat: add file {}", i))?;
-    }
-
-    let duration = start.elapsed();
-
     // 10个提交应该在合理时间内完成（每个提交约1秒）
     let expected_timeout = Duration::from_secs(15);
-    assert!(
-        duration < expected_timeout,
-        "10 commits took {:?}, expected < {:?}",
-        duration,
-        expected_timeout
-    );
 
-    Ok(())
+    measure_test_time_with_threshold(
+        "test_multiple_commits_performance",
+        expected_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.init_git_repo()?;
+
+            // 创建10个提交
+            for i in 1..=10 {
+                env.create_file(&format!("file{}.txt", i), &format!("content {}", i))?
+                    .create_commit(&format!("feat: add file {}", i))?;
+            }
+
+            Ok(())
+        },
+    )
 }
 
 // ==================== 配置操作性能测试 ====================
@@ -243,35 +230,31 @@ fn test_multiple_commits_performance() -> Result<()> {
 /// 验证配置文件加载的性能。
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_config_load_performance() -> Result<()> {
-    let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
+    let config = PerformanceConfig::default(); // 用于获取超时配置
 
-    let env = CliTestEnv::new()?;
-    env.create_config(
-        r#"
+    measure_test_time_with_threshold(
+        "test_config_load_performance",
+        config.config_load_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.create_config(
+                r#"
 [jira]
 url = "https://test.atlassian.net"
 username = "test@example.com"
 "#,
-    )?;
+            )?;
 
-    // 验证配置文件存在
-    let env_path = env.path();
-    let config_path = env_path.join(".workflow").join("workflow.toml");
-    assert!(config_path.exists());
+            // 验证配置文件存在
+            let env_path = env.path();
+            let config_path = env_path.join(".workflow").join("workflow.toml");
+            assert!(config_path.exists());
 
-    let duration = start.elapsed();
-    let config = PerformanceConfig::default();
-
-    assert!(
-        duration < config.config_load_timeout,
-        "Config load took {:?}, expected < {:?}",
-        duration,
-        config.config_load_timeout
-    );
-
-    Ok(())
+            Ok(())
+        },
+    )
 }
 
 // ==================== Git 操作性能测试 ====================
@@ -282,24 +265,20 @@ username = "test@example.com"
 /// 验证Git仓库初始化的性能。
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_git_init_performance() -> Result<()> {
-    let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
+    let config = PerformanceConfig::default(); // 用于获取超时配置
 
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
+    measure_test_time_with_threshold(
+        "test_git_init_performance",
+        config.git_operation_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.init_git_repo()?;
 
-    let duration = start.elapsed();
-    let config = PerformanceConfig::default();
-
-    assert!(
-        duration < config.git_operation_timeout,
-        "Git init took {:?}, expected < {:?}",
-        duration,
-        config.git_operation_timeout
-    );
-
-    Ok(())
+            Ok(())
+        },
+    )
 }
 
 /// 测试完整工作流性能
@@ -314,36 +293,32 @@ fn test_git_init_performance() -> Result<()> {
 /// 4. 创建PR（dry-run）
 #[test]
 #[ignore] // 只在性能测试时运行
+#[cfg(feature = "performance-tests")]
 fn test_complete_workflow_performance() -> Result<()> {
-    let config = PerformanceConfig::default();
-    let start = std::time::Instant::now();
-
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_file("README.md", "# Test")?
-        .create_commit("Initial commit")?
-        .create_branch("feature/test")?
-        .checkout("feature/test")?
-        .create_file("test.txt", "content")?
-        .create_commit("feat: add test")?;
-
-    // PR创建（dry-run）
-    let binding = CliCommandBuilder::new()
-        .args(["pr", "create", "--dry-run"])
-        .current_dir(env.path())
-        .assert();
-    let _output = binding.get_output();
-
-    let duration = start.elapsed();
-
     // 完整工作流应该在合理时间内完成
     let expected_timeout = Duration::from_secs(10);
-    assert!(
-        duration < expected_timeout,
-        "Complete workflow took {:?}, expected < {:?}",
-        duration,
-        expected_timeout
-    );
 
-    Ok(())
+    measure_test_time_with_threshold(
+        "test_complete_workflow_performance",
+        expected_timeout,
+        || {
+            let env = CliTestEnv::new()?;
+            env.init_git_repo()?
+                .create_file("README.md", "# Test")?
+                .create_commit("Initial commit")?
+                .create_branch("feature/test")?
+                .checkout("feature/test")?
+                .create_file("test.txt", "content")?
+                .create_commit("feat: add test")?;
+
+            // PR创建（dry-run）
+            let binding = CliCommandBuilder::new()
+                .args(["pr", "create", "--dry-run"])
+                .current_dir(env.path())
+                .assert();
+            let _output = binding.get_output();
+
+            Ok(())
+        },
+    )
 }

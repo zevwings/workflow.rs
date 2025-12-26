@@ -565,6 +565,7 @@ fn test_extract_content_with_finish_reason_stop_return_ok() -> Result<()> {
 /// - 正确处理API的各种错误码
 #[test]
 #[ignore] // 需要网络请求，默认忽略
+#[cfg(feature = "network-tests")]
 fn test_llm_client_call_with_openai_provider() {
     // Arrange: 准备测试 call() 方法 - OpenAI provider（覆盖 client.rs:77-134, build_url:148, build_model:189-190）
     // 注意：这个测试需要有效的 OpenAI API key 和网络连接
@@ -693,6 +694,7 @@ fn test_llm_client_call_with_deepseek_provider() {
 /// - 支持自定义模型名称
 #[test]
 #[ignore] // 需要网络请求，默认忽略
+#[cfg(feature = "network-tests")]
 fn test_llm_client_call_with_proxy_provider() {
     // Arrange: 准备测试 call() 方法 - Proxy provider（覆盖 client.rs:150-156, build_model:192）
     use workflow::base::llm::types::LLMRequestParams;

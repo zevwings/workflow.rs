@@ -1,13 +1,19 @@
 //! 基础 CLI 测试
 //!
 //! 使用新的测试工具进行基础 CLI 功能测试。
+//!
+//! ## 迁移状态
+//!
+//! 已迁移使用 Mock 模板系统，减少硬编码 JSON 响应。
 
 use crate::common::cli_helpers::{
     contains_error, is_json_format, CliCommandBuilder, TestDataGenerator,
 };
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::{cli_env, cli_env_with_git};
+use crate::common::mock::server::MockServer;
 use rstest::rstest;
+use std::collections::HashMap;
 
 // ==================== Basic Command Tests ====================
 
@@ -82,23 +88,12 @@ fn test_pr_help() {
 /// ## 测试目的
 /// 验证当不在Git仓库中时，PR命令能够正确检测并返回清晰的错误消息。
 ///
-/// ## 为什么被忽略
-/// - **可能初始化客户端**: 即使在非Git仓库中，可能仍尝试初始化Jira/GitHub客户端
-/// - **长时间阻塞**: 客户端初始化可能导致测试阻塞
-/// - **平台限制**: Windows上已通过cfg跳过
-/// - **CI时间考虑**: 避免在CI中长时间阻塞
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_pr_without_git_repo -- --ignored
-/// ```
-/// 注意：此测试在非Windows平台上运行
-///
 /// ## 测试场景
-/// 1. 创建临时目录（非Git仓库）
-/// 2. 在该目录中执行`pr create --dry-run`命令
-/// 3. 命令应该失败
-/// 4. 验证错误消息提示"没有Git仓库"
+/// 1. 设置Mock服务器（避免初始化真实客户端）
+/// 2. 创建临时目录（非Git仓库）
+/// 3. 在该目录中执行`pr create --dry-run`命令
+/// 4. 命令应该失败
+/// 5. 验证错误消息提示"没有Git仓库"
 ///
 /// ## 预期行为
 /// - 命令执行失败（非零退出码）
@@ -107,11 +102,17 @@ fn test_pr_help() {
 /// - 不会尝试创建PR或调用远程API
 #[rstest]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：可能尝试初始化服务，导致长时间阻塞
-#[ignore] // 忽略：可能尝试初始化 Jira/GitHub 客户端，导致长时间阻塞
 fn test_pr_without_git_repo_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
-    // 注意：此测试执行 pr create 命令，即使没有 Git 仓库也可能尝试初始化服务
-    // Windows 上已通过 #[cfg] 跳过，因为可能尝试初始化 Jira/GitHub 客户端，导致阻塞
-    // 如果需要运行此测试，请使用: cargo test -- --ignored
+    // 设置Mock服务器，避免初始化真实客户端导致阻塞
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+    mock_server.setup_jira_base_url();
+
+    // Mock GitHub和Jira的基础端点（即使不会调用，也设置以避免意外连接）
+    let _mock_github =
+        mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
+    let _mock_jira = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
+
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
         .current_dir(cli_env.path())
@@ -129,41 +130,43 @@ fn test_pr_without_git_repo_return_ok(cli_env: CliTestEnv) -> color_eyre::Result
 /// ## 测试目的
 /// 验证在有效的Git仓库中，PR命令能够正确执行（dry-run模式）。
 ///
-/// ## 为什么被忽略
-/// - **需要网络连接**: 可能需要访问GitHub/GitLab API
-/// - **可能调用LLM**: 可能需要LLM服务生成PR描述
-/// - **初始化客户端**: 可能初始化Jira/GitHub客户端导致阻塞
-/// - **平台限制**: Windows上Git命令和路径处理可能有差异
-/// - **集成测试**: 这是一个端到端的集成测试
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_pr_with_git_repo -- --ignored --nocapture
-/// ```
-/// **警告**: 此测试需要在有效的Git仓库中运行，非Windows平台
-///
 /// ## 测试场景
-/// 1. 创建临时Git仓库
-/// 2. 初始化Git仓库（git init）
-/// 3. 创建至少一个commit
+/// 1. 设置Mock服务器（避免真实网络请求）
+/// 2. 创建临时Git仓库
+/// 3. 初始化Git仓库并创建初始commit
 /// 4. 执行`pr create --dry-run`命令
-/// 5. 验证命令执行（可能调用API或LLM）
+/// 5. 验证命令执行（使用Mock API）
 ///
 /// ## 预期行为
 /// - 命令能够识别Git仓库
 /// - dry-run模式不会实际创建PR
 /// - 可能显示将要创建的PR信息
-/// - 如果需要API/LLM，应该有合适的错误消息
+/// - 使用Mock API，不会阻塞
 #[rstest]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：Git 命令和路径处理可能有问题
-#[ignore] // 忽略：可能涉及网络请求或 LLM 调用，导致长时间阻塞
 fn test_pr_with_git_repo_return_ok(cli_env_with_git: CliTestEnv) -> color_eyre::Result<()> {
-    // 注意：此测试可能尝试初始化 Jira/GitHub 客户端或调用 LLM，导致阻塞
-    // Windows 上已通过 #[cfg] 跳过，因为：
-    // - Git 命令路径或行为差异
-    // - 路径分隔符处理（虽然 Rust Path 应该处理，但某些情况下可能仍有问题）
-    // - 临时目录路径格式差异
-    // 如果需要运行此测试，请使用: cargo test -- --ignored
+    // 设置Mock服务器，避免真实网络请求
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+    mock_server.setup_jira_base_url();
+
+    // Mock GitHub API端点（用于PR创建）
+    let _mock_github =
+        mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
+
+    // 使用模板系统创建 GitHub Repo Mock
+    let mut vars = HashMap::new();
+    vars.insert("name".to_string(), "test".to_string());
+    vars.insert("full_name".to_string(), "test/test".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/repos/{owner}/{repo}",
+        r#"{"name": "{{name}}", "full_name": "{{full_name}}"}"#,
+        vars,
+        200,
+    );
+
     // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
     cli_env_with_git
         .create_file("README.md", "# Test")?
@@ -464,21 +467,19 @@ fn test_environment_variables_return_ok(cli_env: CliTestEnv) -> color_eyre::Resu
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_help_command_performance() {
-    use std::time::Instant;
-
-    let start = Instant::now();
-
-    let _output = CliCommandBuilder::new().arg("--help").assert_success().get_output();
-
-    let duration = start.elapsed();
+fn test_help_command_performance() -> color_eyre::Result<()> {
+    use crate::common::performance::measure_test_time_with_threshold;
+    use std::time::Duration;
 
     // 帮助命令应该很快（< 5秒）
-    assert!(
-        duration.as_secs() < 5,
-        "Help command too slow: {:?}",
-        duration
-    );
+    measure_test_time_with_threshold(
+        "test_help_command_performance",
+        Duration::from_secs(5),
+        || {
+            let _output = CliCommandBuilder::new().arg("--help").assert_success().get_output();
+            Ok(())
+        },
+    )
 }
 
 // ==================== Integration Tests ====================

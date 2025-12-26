@@ -12,7 +12,10 @@
 - [预设Mock端点](#4-预设mock端点)
 - [模拟错误情况](#5-模拟错误情况)
 - [验证Mock调用](#6-验证mock调用)
-- [Mock服务器最佳实践](#7-mock服务器最佳实践)
+- [动态响应生成（模板系统）](#7-动态响应生成模板系统)
+- [请求验证](#8-请求验证)
+- [Mock场景预设库](#9-mock场景预设库)
+- [Mock服务器最佳实践](#10-mock服务器最佳实践)
 
 ---
 
@@ -409,7 +412,280 @@ fn test_verify_mock() {
 
 ---
 
-## 7. Mock服务器最佳实践
+## 7. 动态响应生成（模板系统）
+
+`MockServer` 支持使用模板创建动态响应，避免硬编码JSON字符串。
+
+### 使用模板创建Mock
+
+```rust
+use crate::common::http_helpers::MockServer;
+use std::collections::HashMap;
+
+#[test]
+fn test_pr_with_template() -> color_eyre::Result<()> {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建变量映射
+    let mut vars = HashMap::new();
+    vars.insert("pr_number".to_string(), "123".to_string());
+    vars.insert("owner".to_string(), "test-owner".to_string());
+    vars.insert("repo".to_string(), "test-repo".to_string());
+
+    // 使用模板创建Mock端点
+    mock_server.mock_with_template(
+        "GET",
+        "/repos/{owner}/{repo}/pulls/{pr_number}",
+        r#"{
+            "number": {{pr_number}},
+            "title": "Test PR",
+            "owner": "{{owner}}",
+            "repo": "{{repo}}",
+            "html_url": "https://github.com/{{owner}}/{{repo}}/pull/{{pr_number}}"
+        }"#,
+        vars,
+        200,
+    );
+
+    // 执行测试...
+    // let response = client.get_pr("test-owner", "test-repo", 123)?;
+    // assert_eq!(response.number, 123);
+
+    Ok(())
+}
+```
+
+### 模板语法
+
+- `{{variable_name}}` - 变量替换
+- 支持JSON格式
+- 支持嵌套对象和数组
+
+### 使用响应生成器（高级）
+
+```rust
+use crate::common::mock_templates::{ResponseGenerator, TemplateResponseGenerator, MockRequest};
+use std::collections::HashMap;
+
+#[test]
+fn test_with_response_generator() -> color_eyre::Result<()> {
+    let mut vars = HashMap::new();
+    vars.insert("status".to_string(), "success".to_string());
+
+    let generator: Box<dyn ResponseGenerator> = Box::new(
+        TemplateResponseGenerator::new(
+            r#"{"status": "{{status}}"}"#.to_string(),
+            vars,
+        )
+    );
+
+    let request = MockRequest::new("GET".to_string(), "/api/test".to_string());
+    let response = generator.generate(&request)?;
+
+    assert!(response.contains("success"));
+    Ok(())
+}
+```
+
+---
+
+## 8. 请求验证
+
+`MockServer` 提供了请求验证功能，确保Mock端点接收到正确的请求。
+
+### 验证请求头和请求体
+
+```rust
+use crate::common::http_helpers::MockServer;
+use crate::common::mock_validators::RequestValidator;
+use std::collections::HashMap;
+
+#[test]
+fn test_with_validation() -> color_eyre::Result<()> {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建请求验证器
+    let validator = RequestValidator::new()
+        .require_header("authorization", r"token .+")
+        .require_header("accept", "application/vnd.github.v3+json")
+        .require_body_json(r#"{"title": ".+", "head": ".+", "base": ".+"}"#)
+        .require_query_param("draft", "false");
+
+    // 创建带验证的Mock端点
+    // 注意：mockito 本身不支持请求验证，验证需要在测试代码中手动进行
+    mock_server.mock_with_template(
+        "POST",
+        "/repos/owner/repo/pulls",
+        r#"{"number": 123, "title": "Test PR"}"#,
+        HashMap::new(),
+        201,
+    );
+
+    // 在测试中手动验证请求
+    // let request = build_request(...);
+    // let validation_result = validator.validate(&request);
+    // assert!(validation_result.is_valid());
+
+    Ok(())
+}
+```
+
+### 验证路径参数和查询参数
+
+```rust
+use crate::common::mock_validators::RequestValidator;
+use crate::common::mock_templates::MockRequest;
+
+#[test]
+fn test_param_validation() -> color_eyre::Result<()> {
+    let validator = RequestValidator::new()
+        .require_path_param("pr_number", "123")
+        .require_query_param("state", "open");
+
+    let mut request = MockRequest::new("GET".to_string(), "/pulls/123".to_string());
+    request.path_params.insert("pr_number".to_string(), "123".to_string());
+    request.query_params.insert("state".to_string(), "open".to_string());
+
+    let result = validator.validate(&request);
+    assert!(result.is_valid());
+    Ok(())
+}
+```
+
+---
+
+## 9. Mock场景预设库
+
+`MockServer` 提供了预设场景库，可以快速设置常见的Mock场景。
+
+### 加载和使用场景
+
+```rust
+use crate::common::http_helpers::MockServer;
+use std::path::PathBuf;
+
+#[test]
+fn test_with_scenario() -> color_eyre::Result<()> {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 加载预设场景
+    let scenario_path = PathBuf::from("tests/fixtures/mock_scenarios/github/pr_workflow.json");
+    mock_server.load_scenario(&scenario_path)?;
+
+    // 现在所有场景中定义的Mock端点都已配置好
+    // 执行测试...
+    // let pr = client.create_pr(...)?;
+    // let pr_info = client.get_pr(...)?;
+
+    Ok(())
+}
+```
+
+### 使用场景管理器（高级）
+
+```rust
+use crate::common::mock_scenarios::MockScenarioManager;
+use crate::common::http_helpers::MockServer;
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+#[test]
+fn test_with_scenario_manager() -> color_eyre::Result<()> {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    let mut manager = MockScenarioManager::new(
+        PathBuf::from("tests/fixtures")
+    );
+
+    // 加载场景
+    let scenario_path = PathBuf::from("tests/fixtures/mock_scenarios/github/pr_workflow.json");
+    manager.load_scenario(&scenario_path)?;
+
+    // 设置变量
+    let mut vars = HashMap::new();
+    vars.insert("owner".to_string(), "test-owner".to_string());
+    vars.insert("repo".to_string(), "test-repo".to_string());
+    vars.insert("pr_number".to_string(), "123".to_string());
+    vars.insert("title".to_string(), "Test PR".to_string());
+
+    // 应用场景
+    manager.apply_scenario(&mut mock_server, "github_pr_workflow", Some(&vars))?;
+
+    // 执行测试...
+    Ok(())
+}
+```
+
+### 创建自定义场景
+
+创建 `tests/fixtures/mock_scenarios/custom/my_scenario.json`:
+
+```json
+{
+  "name": "my_custom_scenario",
+  "description": "自定义测试场景",
+  "mocks": [
+    {
+      "method": "GET",
+      "path": "/api/test/{id}",
+      "response": {
+        "template": "{\"id\": {{id}}, \"status\": \"ok\"}",
+        "status": 200
+      },
+      "validation": {
+        "required_headers": ["authorization"],
+        "required_query_params": ["format"]
+      }
+    }
+  ]
+}
+```
+
+### 完整示例：使用模板和验证
+
+```rust
+use crate::common::http_helpers::MockServer;
+use crate::common::mock_validators::RequestValidator;
+use std::collections::HashMap;
+
+#[test]
+fn test_with_template_and_validation() -> color_eyre::Result<()> {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建验证器
+    let validator = RequestValidator::new()
+        .require_header("authorization", r"token .+")
+        .require_body_json(r#"{"title": ".+"}"#);
+
+    // 使用模板创建Mock
+    let mut vars = HashMap::new();
+    vars.insert("pr_number".to_string(), "456".to_string());
+
+    mock_server.mock_with_template(
+        "POST",
+        "/repos/owner/repo/pulls",
+        r#"{"number": {{pr_number}}, "title": "New PR"}"#,
+        vars,
+        201,
+    );
+
+    // 在测试中验证请求
+    // let request = build_request(...);
+    // let result = validator.validate(&request);
+    // assert!(result.is_valid(), "{}", result.to_report());
+
+    Ok(())
+}
+```
+
+---
+
+## 10. Mock服务器最佳实践
 
 ### 每个测试独立 Mock
 
@@ -441,6 +717,24 @@ fn test_with_auto_cleanup() {
 }
 ```
 
+### Mock使用建议
+
+- **优先使用场景预设库**：对于常见的工作流程，使用预设场景比手动创建Mock更高效
+- **使用模板系统**：当需要动态数据时，使用模板系统而不是硬编码响应
+- **验证请求**：对于重要的API调用，使用请求验证确保测试的正确性
+
+### 模板系统使用建议
+
+- **使用模板变量**：对于需要动态数据的场景，使用模板变量而不是硬编码值
+- **合理组织变量**：将相关的变量组织在一起，使用有意义的变量名
+- **验证模板语法**：确保模板语法正确，避免运行时错误
+
+### 场景预设库使用建议
+
+- **优先使用预设场景**：对于常见的工作流程，优先使用预设场景
+- **创建自定义场景**：对于项目特定的工作流程，创建自定义场景
+- **场景版本管理**：为场景文件添加版本号，便于追踪和更新
+
 ---
 
 ## 相关文档
@@ -450,4 +744,4 @@ fn test_with_auto_cleanup() {
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-01-27

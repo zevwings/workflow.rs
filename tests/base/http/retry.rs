@@ -8,11 +8,16 @@
 //! - 使用 `MockServer` 模拟 HTTP 服务器
 //! - 测试各种重试场景：成功、失败、超时、错误类型判断
 //! - Mutex.lock().unwrap() 在测试中保留（锁poisoning应该panic）
+//!
+//! ## 迁移状态
+//!
+//! 已迁移使用 Mock 模板系统，统一管理错误响应。
 
-use crate::common::http_helpers::MockServer;
+use crate::common::mock::server::MockServer;
 use color_eyre::eyre::eyre;
 use color_eyre::Result;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use workflow::base::http::retry::{HttpRetry, HttpRetryConfig};
@@ -404,14 +409,17 @@ fn test_retry_with_5xx_error_handles_retryable_error_return_false() -> Result<()
     let mut mock_server = MockServer::new();
     let url = format!("{}/server-error", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/server-error")
-        .with_status(500)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Internal Server Error"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Internal Server Error".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/server-error",
+        r#"{"error": "{{error}}"}"#,
+        vars,
+        500,
+    );
 
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -481,14 +489,11 @@ fn test_retry_with_429_error_handles_retryable_error_return_false() -> Result<()
     let mut mock_server = MockServer::new();
     let url = format!("{}/rate-limit", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/rate-limit")
-        .with_status(429)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Too Many Requests"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Too Many Requests".to_string());
+
+    mock_server.mock_with_template("GET", "/rate-limit", r#"{"error": "{{error}}"}"#, vars, 429);
 
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -1311,14 +1316,17 @@ fn test_retry_with_reqwest_error_5xx_return_false() -> Result<()> {
     let mut mock_server = MockServer::new();
     let url = format!("{}/server-error", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/server-error")
-        .with_status(500)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Internal Server Error"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Internal Server Error".to_string());
+
+    mock_server.mock_with_template(
+        "GET",
+        "/server-error",
+        r#"{"error": "{{error}}"}"#,
+        vars,
+        500,
+    );
 
     let config = HttpRetryConfig {
         max_retries: 1,
@@ -1387,14 +1395,11 @@ fn test_retry_with_reqwest_error_429_return_false() -> Result<()> {
     let mut mock_server = MockServer::new();
     let url = format!("{}/rate-limit", mock_server.base_url);
 
-    let _mock = mock_server
-        .server
-        .as_mut()
-        .mock("GET", "/rate-limit")
-        .with_status(429)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"error": "Too Many Requests"}"#)
-        .create();
+    // 使用模板系统创建错误响应
+    let mut vars = HashMap::new();
+    vars.insert("error".to_string(), "Too Many Requests".to_string());
+
+    mock_server.mock_with_template("GET", "/rate-limit", r#"{"error": "{{error}}"}"#, vars, 429);
 
     let config = HttpRetryConfig {
         max_retries: 1,

@@ -1,3 +1,8 @@
+---
+description: Rules for keeping English and Chinese versions of rule files synchronized
+type: always
+---
+
 # File Synchronization Rules
 
 > **⚠️ Synchronization Note**: This file must be kept in sync with its Chinese version at `docs/cursorrules/sync.md`. When modifying this file, you must immediately update the corresponding Chinese version.
@@ -14,8 +19,8 @@
 
 ### Synchronization Direction
 
-- **Modifying `.cursor/rules/{filename}.md` (English version)** → Must immediately synchronize and update `docs/cursorrules/{filename}.md` (Chinese version)
-- **Modifying `docs/cursorrules/{filename}.md` (Chinese version)** → Must immediately synchronize and update `.cursor/rules/{filename}.md` (English version)
+- **Modifying `.cursor/rules/{filename}.mdc` (English version)** → Must immediately synchronize and update `docs/cursorrules/{filename}.mdc` (Chinese version)
+- **Modifying `docs/cursorrules/{filename}.mdc` (Chinese version)** → Must immediately synchronize and update `.cursor/rules/{filename}.mdc` (English version)
 
 ### Verification Methods
 
@@ -39,4 +44,3 @@
 ---
 
 **Last Updated**: 2025-12-25
-

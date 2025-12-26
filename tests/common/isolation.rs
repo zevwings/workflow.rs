@@ -26,7 +26,7 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 
 use crate::common::guards::{EnvGuard, GitConfigGuard};
-use crate::common::http_helpers::MockServer;
+use crate::common::mock::server::MockServer;
 
 /// 统一测试隔离管理器
 ///

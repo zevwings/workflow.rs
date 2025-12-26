@@ -34,7 +34,7 @@
 | | [测试环境工具指南](./references/environments.md) | TestIsolation、CliTestEnv、GitTestEnv |
 | | [测试辅助工具指南](./references/helpers.md) | CliCommandBuilder、TestDataGenerator |
 | | [Mock服务器使用指南](./references/mock-server.md) | MockServer 使用、端点配置、错误模拟 |
-| | [测试数据工厂指南](./references/data-factory.md) | Builder模式、数据生成、模板扩展 |
+| | [TestDataFactory 使用指南](./references/test-data-factory.md) | 测试数据生成、迁移指南、最佳实践 |
 | | [被忽略测试规范](./references/ignored-tests.md) | 文档格式、测试类型模板、最佳实践 |
 | | [覆盖率测试指南](./references/coverage.md) | 覆盖率工具、报告生成、提升技巧 |
 | | [性能测试指南](./references/performance.md) | 基准测试、性能要求、优化建议 |
@@ -149,16 +149,16 @@ make coverage
 - 验证 Mock 调用
 - Mock 最佳实践
 
-### [测试数据工厂指南](./references/data-factory.md)
+### [TestDataFactory 使用指南](./references/test-data-factory.md)
 
-介绍测试数据工厂的使用和扩展。
+详细介绍 TestDataFactory 的使用方法和迁移指南。
 
 **关键内容**：
-- Builder 模式架构
-- 支持的数据类型（Git Commit、GitHub PR、Jira Issue、Config）
-- 使用示例和最佳实践
-- 模板文件管理
-- 扩展 Builder
+- 快速开始和基本使用
+- 支持的构建器（GitHub PR、Jira Issue、Git Commit、Branch、User、Config）
+- 应用场景（替换硬编码JSON、与MockServer结合、批量生成）
+- 迁移步骤和实际迁移示例
+- 最佳实践和常见问题
 
 ### [被忽略测试规范](./references/ignored-tests.md)
 
@@ -250,9 +250,9 @@ make coverage
 3. **深入学习**（按需）
    - 需要隔离的测试环境 → 阅读 [测试环境工具指南](./references/environments.md)
    - 需要 CLI 命令测试辅助 → 阅读 [测试辅助工具指南](./references/helpers.md)
-   - 需要 Mock 外部 API → 阅读 [Mock服务器使用指南](./references/mock-server.md)
-   - 需要生成测试数据 → 阅读 [测试数据工厂指南](./references/data-factory.md)
-   - 需要提升覆盖率 → 阅读 [覆盖率测试指南](./references/coverage.md)
+  - 需要 Mock 外部 API → 阅读 [Mock服务器使用指南](./references/mock-server.md)
+  - 需要生成测试数据 → 阅读 [TestDataFactory 使用指南](./references/test-data-factory.md)
+  - 需要提升覆盖率 → 阅读 [覆盖率测试指南](./references/coverage.md)
 
 ### 快速检查清单
 
@@ -309,16 +309,9 @@ make coverage-open
 
 ---
 
-## 测试覆盖率目标
-
-- **总体覆盖率**：> 80%
-- **关键业务逻辑**：> 90%
-- **工具函数**：> 70%
-- **CLI 命令层**：> 75%
-
----
-
 ## ✅ 测试质量标准
+
+> **测试覆盖率目标**：详见 [测试组织规范 - 测试覆盖率](./organization.md#-测试覆盖率)
 
 一个高质量的测试应该满足：
 
@@ -331,11 +324,15 @@ make coverage-open
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-01-XX
 
 ---
 
 ## 📝 变更历史
+
+### 2025-01-XX
+- **优化文档结构**：移除 `README.md` 中重复的测试覆盖率目标，改为链接到 `organization.md`
+- **统一覆盖率目标**：在 `organization.md` 中补充 CLI 命令层覆盖率目标（> 75%）
 
 ### 2025-12-25
 - **新增测试文档模板**：添加 `documentation-template.md`，提供标准化的测试文档模板

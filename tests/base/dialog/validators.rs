@@ -10,8 +10,10 @@
 
 use std::sync::Arc;
 
+use crate::common::performance::measure_test_time_with_threshold;
 use color_eyre::Result;
 use rstest::rstest;
+use std::time::Duration;
 
 // 由于 ValidatorFn 是私有类型，我们在测试中自定义类型别名
 type ValidatorFn = std::sync::Arc<dyn Fn(&str) -> Result<(), String> + Send + Sync>;
@@ -862,20 +864,21 @@ mod tests {
     /// ## 预期结果
     /// - 1000次验证在100毫秒内完成
     #[test]
-    fn test_validator_performance() {
-        use std::time::Instant;
-
+    fn test_validator_performance() -> Result<()> {
         let validator = create_email_validator();
         let test_input = "user@example.com";
 
-        let start = Instant::now();
-        for _ in 0..1000 {
-            let _ = validator(test_input);
-        }
-        let duration = start.elapsed();
-
-        // 1000次验证应该很快完成
-        assert!(duration.as_millis() < 100);
+        // 1000次验证应该很快完成（< 100ms）
+        measure_test_time_with_threshold(
+            "test_validator_performance",
+            Duration::from_millis(100),
+            || {
+                for _ in 0..1000 {
+                    let _ = validator(test_input);
+                }
+                Ok(())
+            },
+        )
     }
 
     /// 测试验证器一致性

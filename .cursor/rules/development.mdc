@@ -1,3 +1,8 @@
+---
+description: Development standards and guidelines, including code style, error handling, testing standards, Git workflow, and code review
+type: always
+---
+
 # Development Standards and Guidelines
 
 > **⚠️ Synchronization Note**: This file must be kept in sync with its Chinese version at `docs/cursorrules/development.md`. When modifying this file, you must immediately update the corresponding Chinese version.
@@ -113,4 +118,3 @@ Install development tools: `make setup`
 ---
 
 **Last Updated**: 2025-12-25
-

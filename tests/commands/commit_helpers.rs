@@ -158,31 +158,8 @@ fn test_check_not_on_default_branch_on_main_return_ok(
         .create_file("test.txt", "test")?
         .create_commit("Initial commit")?;
 
-    // 创建一个假的远程分支引用，让get_default_branch()能正常工作
-    // 1. 创建 origin/main 引用
-    std::process::Command::new("git")
-        .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
-        .current_dir(cli_env_with_git.path())
-        .output()
-        .ok();
-
-    // 2. 删除可能存在的 origin/master 引用（如果存在）
-    std::process::Command::new("git")
-        .args(["update-ref", "-d", "refs/remotes/origin/master"])
-        .current_dir(cli_env_with_git.path())
-        .output()
-        .ok(); // 允许失败，因为可能不存在
-
-    // 3. 设置远程 HEAD 引用指向 main（让 git remote show origin 能工作）
-    std::process::Command::new("git")
-        .args([
-            "symbolic-ref",
-            "refs/remotes/origin/HEAD",
-            "refs/remotes/origin/main",
-        ])
-        .current_dir(cli_env_with_git.path())
-        .output()
-        .ok(); // 允许失败
+    // 设置假的远程引用，让get_default_branch()能正常工作
+    cli_env_with_git.setup_fake_remote_refs()?;
 
     // Act: 使用路径参数版本，避免切换全局工作目录
     let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");
@@ -230,31 +207,8 @@ fn test_check_not_on_default_branch_on_feature_branch_return_ok(
         .create_file("test.txt", "test")?
         .create_commit("Initial commit")?;
 
-    // 创建一个假的远程分支引用，让get_default_branch()能正常工作
-    // 1. 创建 origin/main 引用
-    std::process::Command::new("git")
-        .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
-        .current_dir(cli_env_with_git.path())
-        .output()
-        .ok();
-
-    // 2. 删除可能存在的 origin/master 引用（如果存在）
-    std::process::Command::new("git")
-        .args(["update-ref", "-d", "refs/remotes/origin/master"])
-        .current_dir(cli_env_with_git.path())
-        .output()
-        .ok(); // 允许失败，因为可能不存在
-
-    // 3. 设置远程 HEAD 引用指向 main（让 git remote show origin 能工作）
-    std::process::Command::new("git")
-        .args([
-            "symbolic-ref",
-            "refs/remotes/origin/HEAD",
-            "refs/remotes/origin/main",
-        ])
-        .current_dir(cli_env_with_git.path())
-        .output()
-        .ok(); // 允许失败
+    // 设置假的远程引用，让get_default_branch()能正常工作
+    cli_env_with_git.setup_fake_remote_refs()?;
 
     // 创建并切换到 feature 分支
     let output = std::process::Command::new("git")

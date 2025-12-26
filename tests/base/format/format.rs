@@ -11,8 +11,10 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 
+use crate::common::performance::measure_test_time_with_threshold;
 use color_eyre::Result;
 use rstest::rstest;
+use std::time::Duration;
 
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env;
@@ -1078,19 +1080,18 @@ mod integration_tests {
     /// - 性能表现良好
     #[test]
     fn test_performance_characteristics_return_ok() -> Result<()> {
-        use std::time::Instant;
-
         // 测试格式化函数的性能特征（应该很快）
-        let start = Instant::now();
-        for i in 0..1000 {
-            let _ = DisplayFormatter::size(i * 1024);
-            let _ = format!("key_{}", i).mask();
-        }
-        let duration = start.elapsed();
-
-        // 1000次格式化操作应该在很短时间内完成
-        assert!(duration.as_millis() < 100);
-
-        Ok(())
+        // 1000次格式化操作应该在很短时间内完成（< 100ms）
+        measure_test_time_with_threshold(
+            "test_performance_characteristics_return_ok",
+            Duration::from_millis(100),
+            || {
+                for i in 0..1000 {
+                    let _ = DisplayFormatter::size(i * 1024);
+                    let _ = format!("key_{}", i).mask();
+                }
+                Ok(())
+            },
+        )
     }
 }

@@ -231,7 +231,7 @@ impl GitCommitValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::test_data_factory::TestDataFactory;
+    use crate::common::test_data::factory::TestDataFactory;
 
     /// 测试 TestDataValidator trait 的基本验证
     #[test]

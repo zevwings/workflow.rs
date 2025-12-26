@@ -73,6 +73,7 @@ jobs:
   tests:
     name: 🧪 Run Tests (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
@@ -82,10 +83,13 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: Linux-x86_64
+            test_timeout: 25
           - os: macos-latest
             platform: macOS
+            test_timeout: 35
           - os: windows-latest
             platform: Windows-x86_64
+            test_timeout: 30
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -141,6 +145,7 @@ jobs:
             libxkbcommon-x11-dev
 
       - name: 🧪 Run tests
+        timeout-minutes: ${{ matrix.test_timeout }}
         run: cargo test --verbose
 
   # 性能基准测试

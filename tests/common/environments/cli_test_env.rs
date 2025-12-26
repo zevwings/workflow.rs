@@ -209,8 +209,44 @@ impl CliTestEnv {
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote origin: {}", e))?;
 
-        // 设置远程HEAD引用（模拟远程默认分支为main）
-        // 这样get_default_branch()就能正确工作
+        // 创建假的远程分支引用（让get_default_branch()等函数能正常工作）
+        self.setup_fake_remote_refs()?;
+
+        Ok(self)
+    }
+
+    /// 设置假的远程引用（用于测试需要远程分支的功能）
+    ///
+    /// 创建假的远程引用，让 `get_default_branch()` 等函数能正常工作，
+    /// 但不进行真实的网络连接。
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回`&Self`以支持链式调用，失败时返回错误
+    ///
+    /// # 功能
+    ///
+    /// 1. 创建假的远程分支引用（`refs/remotes/origin/main`）
+    /// 2. 删除可能存在的旧引用（如`origin/master`）
+    /// 3. 设置远程HEAD引用（`refs/remotes/origin/HEAD`）
+    pub fn setup_fake_remote_refs(&self) -> Result<&Self> {
+        let work_dir = &self.project_path;
+
+        // 1. 创建假的远程分支引用（指向当前HEAD）
+        std::process::Command::new("git")
+            .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
+            .current_dir(&work_dir)
+            .output()
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to create remote ref: {}", e))?;
+
+        // 2. 删除可能存在的旧引用（如origin/master）
+        std::process::Command::new("git")
+            .args(["update-ref", "-d", "refs/remotes/origin/master"])
+            .current_dir(&work_dir)
+            .output()
+            .ok(); // 允许失败，因为可能不存在
+
+        // 3. 设置远程HEAD引用指向main（让 git remote show origin 能工作）
         std::process::Command::new("git")
             .args([
                 "symbolic-ref",
@@ -219,7 +255,7 @@ impl CliTestEnv {
             ])
             .current_dir(&work_dir)
             .output()
-            .ok(); // 允许失败，因为可能remote branch还不存在
+            .ok(); // 允许失败，某些Git版本可能不支持
 
         Ok(self)
     }

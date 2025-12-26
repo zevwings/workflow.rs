@@ -361,9 +361,9 @@ fn test_generate_all_completions_auto_detect() {
 /// ## 预期结果
 /// - 如果目录创建成功，应该能生成；否则返回错误
 #[test]
-fn test_generate_all_completions_with_output_dir() {
+fn test_generate_all_completions_with_output_dir() -> color_eyre::Result<()> {
     // Arrange: 准备测试使用指定输出目录生成所有 completion
-    let test_dir = create_temp_test_dir("completion_test");
+    let test_dir = create_temp_test_dir("completion_test")?;
     let result = Completion::generate_all_completions(
         Some("zsh".to_string()),
         Some(test_dir.to_string_lossy().to_string()),
@@ -381,4 +381,5 @@ fn test_generate_all_completions_with_output_dir() {
     }
 
     crate::common::helpers::cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }

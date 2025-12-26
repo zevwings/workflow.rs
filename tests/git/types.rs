@@ -7,8 +7,10 @@
 //! - 合并策略枚举
 //! - 分支名称处理逻辑
 
+use crate::common::performance::measure_test_time_with_threshold;
 use color_eyre::Result;
 use rstest::rstest;
+use std::time::Duration;
 
 use workflow::git::{CommitInfo, MergeStrategy, RepoType, WorktreeStatus};
 
@@ -606,7 +608,11 @@ mod tests {
         // Act & Assert: 验证所有无效输出都返回None
         for output in invalid_outputs {
             let result = mock_parse_commit_info(output);
-            assert!(result.is_none(), "Should return None for invalid output: {:?}", output);
+            assert!(
+                result.is_none(),
+                "Should return None for invalid output: {:?}",
+                output
+            );
         }
     }
 
@@ -885,20 +891,19 @@ mod tests {
     /// ## 预期结果
     /// - 1000次解析操作在100毫秒内完成
     #[test]
-    fn test_performance_characteristics() {
-        use std::time::Instant;
-
-        let start = Instant::now();
-
-        // 测试大量URL解析的性能
-        for i in 0..1000 {
-            let url = format!("https://github.com/user{}/repo{}.git", i, i);
-            let _ = mock_parse_repo_type_from_url(&url);
-        }
-
-        let duration = start.elapsed();
-        // 1000次URL解析应该很快完成
-        assert!(duration.as_millis() < 100);
+    fn test_performance_characteristics() -> Result<()> {
+        // 测试大量URL解析的性能（1000次URL解析应该很快完成，< 100ms）
+        measure_test_time_with_threshold(
+            "test_performance_characteristics",
+            Duration::from_millis(100),
+            || {
+                for i in 0..1000 {
+                    let url = format!("https://github.com/user{}/repo{}.git", i, i);
+                    let _ = mock_parse_repo_type_from_url(&url);
+                }
+                Ok(())
+            },
+        )
     }
 
     /// 测试多次调用的一致性

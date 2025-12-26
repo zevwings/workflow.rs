@@ -8,6 +8,16 @@
 
 - [测试编写规范](#-测试编写规范)
 - [编写测试最佳实践](#-编写测试最佳实践)
+  - [1. 测试命名规范](#1-测试命名规范)
+  - [2. 测试结构（AAA 模式）](#2-测试结构aaa-模式)
+  - [3. 测试独立性](#3-测试独立性)
+  - [4. 测试覆盖原则](#4-测试覆盖原则)
+  - [5. 测试数据管理](#5-测试数据管理)
+  - [6. Mock 使用原则](#6-mock-使用原则)
+  - [7. 断言最佳实践](#7-断言最佳实践)
+  - [8. 参数化测试](#8-参数化测试)
+  - [9. 测试迁移](#9-测试迁移)
+  - [10. 测试文档](#10-测试文档)
 - [被忽略测试文档规范](#-被忽略测试文档规范)
 
 ---
@@ -45,6 +55,101 @@ fn test_parse_ticket_id_invalid() {
     assert_eq!(parse_ticket_id("invalid"), None);
     assert_eq!(parse_ticket_id(""), None);
 }
+```
+
+### 错误处理最佳实践
+
+#### 使用 `Result<()>` 返回类型
+
+```rust
+// ✅ 推荐：使用 Result<()> 返回类型
+#[test]
+fn test_example() -> color_eyre::Result<()> {
+    let env = CliTestEnv::new()?;
+    env.create_file("test.txt", "content")?;
+    Ok(())
+}
+
+// ❌ 不推荐：使用 () 返回类型和 expect()
+#[test]
+fn test_example() {
+    let env = CliTestEnv::new().expect("Failed to create env");
+    env.create_file("test.txt", "content").expect("Failed to create file");
+}
+```
+
+#### 使用 `?` 操作符
+
+```rust
+// ✅ 推荐：使用 ? 操作符
+let result = function_that_may_fail()?;
+
+// ❌ 不推荐：使用 unwrap/expect
+let result = function_that_may_fail().unwrap();
+```
+
+**优势**：
+- ✅ 错误传播清晰
+- ✅ 代码简洁
+- ✅ 符合 Rust 最佳实践
+- ✅ 自动传播错误上下文，提供更多信息
+
+#### Fixture函数中的错误处理
+
+```rust
+// ✅ 推荐：Fixture 失败应该 panic，但错误信息要详细
+#[fixture]
+pub fn git_repo_with_commit() -> GitTestEnv {
+    GitTestEnv::new()
+        .unwrap_or_else(|e| panic!("Failed to create git test env: {}", e))
+}
+
+// 注意：Fixture 创建失败应该 panic（测试环境问题）
+// 但测试逻辑中的错误仍使用 Result<()>
+#[rstest]
+fn test_something(git_repo_with_commit: GitTestEnv) -> Result<()> {
+    // git_repo_with_commit 创建失败会 panic（这是期望的）
+    // 但测试逻辑中的错误应该返回 Result
+    let file = fs::read_to_string("missing.txt")?; // 使用 ?
+    Ok(())
+}
+```
+
+#### 测试辅助函数中的错误处理
+
+```rust
+// ✅ 推荐：返回 Result
+pub fn load_fixture(name: &str) -> color_eyre::Result<String> {
+    let fixture_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join(name);
+
+    fs::read_to_string(&fixture_path)
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to load fixture {}: {}", name, e))
+}
+
+// ❌ 不推荐：使用unwrap/expect
+pub fn load_fixture(name: &str) -> String {
+    fs::read_to_string(&fixture_path)
+        .unwrap_or_else(|e| panic!("Failed to load fixture {}: {}", name, e))
+}
+```
+
+#### Option 类型处理
+
+对于 `Option` 类型，如果确实不应该为 `None`，使用 `expect()` 也是合理的。但应该：
+- 提供详细的错误信息
+- 考虑是否可以返回 `Result` 让调用者处理
+
+```rust
+// ✅ 可以接受：提供详细错误信息
+let parent = file_path.parent()
+    .expect("File path should have a parent directory");
+
+// ✅ 更好的方式：返回 Result
+let parent = file_path.parent()
+    .ok_or_else(|| color_eyre::eyre::eyre!("File path should have a parent directory"))?;
 ```
 
 ### 3. 边界条件测试
@@ -229,7 +334,157 @@ use pretty_assertions::assert_eq;  // 显示彩色 diff
 assert!(result.is_some());  // 不够清晰
 ```
 
-### 8. 测试文档
+### 8. 参数化测试
+
+参数化测试允许你使用不同的输入值运行同一个测试函数，从而减少重复代码并提高测试覆盖率。
+
+#### 何时使用参数化测试
+
+✅ **适合使用参数化测试的场景**：
+- 多个相似测试函数（测试相同的功能，只是输入不同）
+- 表格驱动测试（需要测试多种输入组合）
+- 边界值测试（测试多个边界值和正常值）
+- 枚举值测试（测试枚举的所有变体）
+
+❌ **不适合使用参数化测试的场景**：
+- 测试不同的错误场景（不同的错误需要不同的断言和验证逻辑）
+- 需要不同设置的测试（每个测试需要不同的环境设置或fixture配置）
+- 测试执行顺序重要（测试之间有依赖关系）
+
+#### 基本用法
+
+```rust
+use rstest::rstest;
+
+#[rstest]
+#[case("input1", "expected1")]
+#[case("input2", "expected2")]
+#[case("input3", "expected3")]
+fn test_function_with_various_inputs(
+    #[case] input: &str,
+    #[case] expected: &str,
+) {
+    let result = function_under_test(input);
+    assert_eq!(result, expected);
+}
+```
+
+#### 使用 `#[values]` 进行简单参数化
+
+```rust
+#[rstest]
+fn test_with_multiple_values(
+    #[values(1, 2, 3, 4, 5)] value: i32,
+) {
+    assert!(value > 0);
+}
+```
+
+#### 组合 Fixture 和参数
+
+```rust
+use rstest::rstest;
+use crate::common::fixtures::cli_env;
+
+#[rstest]
+fn test_cli_with_different_configs(
+    cli_env: CliTestEnv,
+    #[values(
+        "[jira]\nurl = \"test1\"",
+        "[jira]\nurl = \"test2\""
+    )] config: &str,
+) -> Result<()> {
+    cli_env.create_config(config)?;
+    // 测试代码
+    Ok(())
+}
+```
+
+#### 参数化测试最佳实践
+
+**1. 测试函数命名**：
+```rust
+// ✅ 好的命名
+#[rstest]
+fn test_http_method_from_str_with_valid_methods_parses_correctly(...)
+
+// ❌ 不好的命名
+#[rstest]
+fn test_http(...)
+```
+
+**2. 文档注释**：
+```rust
+/// 测试 HTTP 方法解析（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 HttpMethod::from_str() 能够正确解析所有有效的 HTTP 方法字符串。
+///
+/// ## 测试场景
+/// 测试所有标准 HTTP 方法：GET, POST, PUT, DELETE, PATCH
+#[rstest]
+#[case("GET", HttpMethod::Get)]
+// ...
+```
+
+**3. Case 注释**：
+```rust
+#[rstest]
+#[case("hello", true)]  // 有效输入
+#[case("  world  ", true)]  // 带空格的有效输入
+#[case("", false)]  // 空字符串
+#[case("   ", false)]  // 只有空格
+fn test_validator(...)
+```
+
+**4. 保持测试独立**：
+```rust
+// ✅ 好的做法：每个 case 独立
+#[rstest]
+#[case("input1", "expected1")]
+#[case("input2", "expected2")]
+fn test_independent_cases(...)
+
+// ❌ 不好的做法：case 之间有依赖
+#[rstest]
+#[case("input1", "expected1")]  // 这个 case 修改了全局状态
+#[case("input2", "expected2")]  // 这个 case 依赖上面的状态
+fn test_dependent_cases(...)
+```
+
+#### 常见模式
+
+**验证器测试**：
+```rust
+#[rstest]
+#[case("valid", true)]
+#[case("invalid", false)]
+#[case("", false)]
+fn test_validator(
+    #[case] input: &str,
+    #[case] should_be_valid: bool,
+) {
+    let validator = create_validator();
+    let result = validator(input);
+    assert_eq!(result.is_ok(), should_be_valid);
+}
+```
+
+**枚举值测试**：
+```rust
+#[rstest]
+#[case(HttpMethod::Get, "GET")]
+#[case(HttpMethod::Post, "POST")]
+#[case(HttpMethod::Put, "PUT")]
+fn test_enum_display(
+    #[case] method: HttpMethod,
+    #[case] expected: &str,
+) {
+    assert_eq!(format!("{}", method), expected);
+}
+```
+
+### 9. 测试文档
 
 **为复杂测试添加注释**：
 ```rust
@@ -321,5 +576,5 @@ fn test_function_name() {
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-01-27
 

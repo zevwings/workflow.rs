@@ -1,8 +1,12 @@
 //! Jira API HTTP 测试
 //!
 //! 使用 mockito 测试 Jira API 的实际 HTTP 调用。
+//!
+//! 已迁移使用 TestDataFactory 生成测试数据，减少文件依赖。
 
-use crate::common::http_helpers::MockServer;
+use crate::common::mock::server::MockServer;
+use crate::common::test_data::TestDataFactory;
+use color_eyre::Result;
 
 /// 设置测试环境
 ///
@@ -33,27 +37,33 @@ fn setup_mock_server() -> MockServer {
 /// - Mock设置成功
 /// - 请求格式正确
 #[test]
-fn test_get_issue_success_with_valid_issue_key_returns_issue() {
-    // Arrange: 准备Mock服务器
+fn test_get_issue_success_with_valid_issue_key_returns_issue() -> Result<()> {
+    // Arrange: 准备Mock服务器和TestDataFactory
     let mut mock_server = setup_mock_server();
+    let factory = TestDataFactory::new();
 
-    // Act: 创建Mock响应（使用响应文件）
-    use std::path::PathBuf;
-    let response_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("fixtures")
-        .join("mock_responses")
-        .join("jira")
-        .join("issue.json");
+    // Act: 使用 TestDataFactory 生成 Issue 数据
+    let issue_data = factory
+        .jira_issue()
+        .key("PROJ-123")
+        .summary("Test Issue")
+        .description("Test description")
+        .status("In Progress")
+        .build()?;
 
-    // 使用 mock_jira_issue_from_file 方法从文件加载响应
-    mock_server.mock_jira_issue_from_file("GET", "/rest/api/3/issue/PROJ-123", &response_file, 200);
-
-    // 注意：mock_jira_issue_from_file 已经创建了 Mock，不需要额外的 create()
-    // 如果需要验证，可以使用 mock_server.assert_all_called()
+    let response_body = serde_json::to_string(&issue_data)?;
+    mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/rest/api/3/issue/PROJ-123")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(&response_body)
+        .create();
 
     // Assert: 注意：实际测试需要设置认证信息
-    // 验证Mock被调用: _mock.assert();
+    // 验证Mock被调用: mock_server.assert_all_called();
+    Ok(())
 }
 
 /// 测试获取Jira Issue未找到错误（使用Mock服务器）
@@ -79,7 +89,7 @@ fn test_get_issue_not_found_with_invalid_issue_key_returns_error() {
     // Arrange: 准备Mock服务器
     let mut mock_server = setup_mock_server();
 
-    // Act: 创建错误响应的Mock（使用响应文件）
+    // Act: 创建错误响应的Mock（错误响应保持使用文件方式，因为结构简单且固定）
     use std::path::PathBuf;
     let response_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
@@ -91,7 +101,7 @@ fn test_get_issue_not_found_with_invalid_issue_key_returns_error() {
     // 使用 mock_jira_issue_from_file 方法从文件加载响应
     mock_server.mock_jira_issue_from_file("GET", "/rest/api/3/issue/PROJ-999", &response_file, 404);
 
-    // 注意：mock_jira_issue_from_file 已经创建了 Mock，不需要额外的 create()
+    // 注意：错误响应保持文件方式，因为错误结构简单且固定
     // 如果需要验证，可以使用 mock_server.assert_all_called()
 
     // Assert: 注意：实际测试需要设置认证信息
@@ -117,29 +127,35 @@ fn test_get_issue_not_found_with_invalid_issue_key_returns_error() {
 /// - Mock设置成功
 /// - Issues列表能够正确解析
 #[test]
-fn test_search_issues_with_valid_query_returns_issues() {
-    // Arrange: 准备Mock服务器
+fn test_search_issues_with_valid_query_returns_issues() -> Result<()> {
+    // Arrange: 准备Mock服务器和TestDataFactory
     let mut mock_server = setup_mock_server();
+    let factory = TestDataFactory::new();
 
-    // Act: 创建Mock响应（使用响应文件）
-    use std::path::PathBuf;
-    let response_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("fixtures")
-        .join("mock_responses")
-        .join("jira")
-        .join("search_issues.json");
+    // Act: 使用 TestDataFactory 批量生成 Issue 数据
+    let issues = factory.build_batch(2, |f| f.jira_issue().build());
 
-    // 使用 mock_jira_issue_from_file 方法从文件加载响应
-    mock_server.mock_jira_issue_from_file("POST", "/rest/api/3/search", &response_file, 200);
+    // 构建搜索响应结构
+    let search_response = serde_json::json!({
+        "issues": issues,
+        "total": issues.len()
+    });
 
-    // 注意：mock_jira_issue_from_file 已经创建了 Mock，不需要额外的 create()
-    // 如果需要验证，可以使用 mock_server.assert_all_called()
+    let response_body = serde_json::to_string(&search_response)?;
+    mock_server
+        .server
+        .as_mut()
+        .mock("POST", "/rest/api/3/search")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(&response_body)
+        .create();
 
     // 测试搜索 Issues
     // let jira = JiraClient::new(...);
     // let issues = jira.search_issues("project = PROJ")?;
     // assert_eq!(issues.len(), 2);
 
-    // _mock.assert();
+    // mock_server.assert_all_called();
+    Ok(())
 }

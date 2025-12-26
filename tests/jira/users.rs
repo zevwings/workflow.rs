@@ -531,7 +531,7 @@ fn test_jira_users_get_without_local_cache() {
 #[test]
 fn test_jira_user_api_get_current_user_mock_setup() {
     // Arrange: 准备测试使用 Mock 服务器设置 JiraUserApi::get_current_user() 的 Mock
-    use crate::common::http_helpers::MockServer;
+    use crate::common::mock::server::MockServer;
     use serde_json::json;
 
     let mut manager = MockServer::new();
@@ -565,7 +565,7 @@ fn test_jira_user_api_get_current_user_mock_setup() {
 #[test]
 fn test_jira_user_api_get_current_user_mock_error() {
     // Arrange: 准备测试 Mock JiraUserApi::get_current_user() 的错误响应
-    use crate::common::http_helpers::MockServer;
+    use crate::common::mock::server::MockServer;
 
     let mut manager = MockServer::new();
     manager.setup_jira_api();
@@ -591,7 +591,7 @@ fn test_jira_user_api_get_current_user_mock_error() {
 #[test]
 fn test_jira_user_api_get_current_user_mock_empty_account_id() {
     // Arrange: 准备测试 Mock 返回空 accountId 的情况（覆盖 users.rs:69-70）
-    use crate::common::http_helpers::MockServer;
+    use crate::common::mock::server::MockServer;
     use serde_json::json;
 
     let mut manager = MockServer::new();

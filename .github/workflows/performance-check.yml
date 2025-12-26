@@ -23,6 +23,7 @@ jobs:
   performance:
     name: ⚡ Performance Benchmarks
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -75,6 +76,7 @@ jobs:
             libxkbcommon-x11-dev
 
       - name: ⚡ Run performance benchmarks
+        timeout-minutes: 40
         run: |
           cargo bench --bench cli_performance \
             --bench core_operations \

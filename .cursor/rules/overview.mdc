@@ -1,3 +1,8 @@
+---
+description: Project overview, architecture, modification rules, document index/deletion rules, and general notes
+type: always
+---
+
 # Overview
 
 > **⚠️ Synchronization Note**: This file must be kept in sync with its Chinese version at `docs/cursorrules/overview.md`. When modifying this file, you must immediately update the corresponding Chinese version.
@@ -61,4 +66,3 @@ For detailed module architecture information, refer to `docs/architecture/archit
 ---
 
 **Last Updated**: 2025-12-25
-

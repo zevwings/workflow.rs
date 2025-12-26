@@ -51,6 +51,19 @@ serial_test = "3.2.0"
 gix = "0.66"            # 现代 Git 操作库 (仅用于测试)
 criterion = { version = "0.5", features = ["html_reports"] }
 
+# 测试分类features（用于分类管理被忽略的测试）
+# 这些features允许选择性运行特定类型的测试
+[features]
+default = []
+# 网络测试：需要真实网络连接的测试（如LLM API、GitHub API等）
+network-tests = []
+# 交互式测试：需要用户交互的测试（如dialog、form_builder等）
+interactive-tests = []
+# 性能测试：性能基准测试
+performance-tests = []
+# 权限测试：需要特殊权限的测试（如修改系统配置等）
+permission-tests = []
+
 # clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用（避免 XCB 依赖问题）
 # Linux ARM64 交叉编译时，XCB 库在 Ubuntu 源中不可用，因此禁用 clipboard 功能
 [target.'cfg(all(not(target_env = "musl"), not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))))'.dependencies]

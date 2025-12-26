@@ -42,10 +42,11 @@ pub fn cleanup_test_env() {
 /// ```no_run
 /// use tests::common::helpers::create_temp_test_dir;
 ///
-/// let test_dir = create_temp_test_dir("my_test");
+/// let test_dir = create_temp_test_dir("my_test")?;
 /// // 使用 test_dir 进行测试
 /// ```
-pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
+pub fn create_temp_test_dir(prefix: &str) -> color_eyre::Result<PathBuf> {
+    use color_eyre::eyre::Context;
     let temp_dir = std::env::temp_dir();
     let timestamp = workflow::base::util::date::get_unix_timestamp_nanos();
     let random_suffix = random_string(8);
@@ -60,8 +61,9 @@ pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
     }
 
     // 创建目录
-    fs::create_dir_all(&test_dir).expect("Failed to create test directory");
-    test_dir
+    fs::create_dir_all(&test_dir)
+        .wrap_err_with(|| format!("Failed to create test directory: {}", test_dir.display()))?;
+    Ok(test_dir)
 }
 
 /// 清理临时测试目录
@@ -137,10 +139,12 @@ pub fn fixture_path(name: &str) -> PathBuf {
 /// # 返回
 ///
 /// 返回创建的文件路径。
-pub fn create_test_file(dir: &Path, filename: &str, content: &str) -> PathBuf {
+pub fn create_test_file(dir: &Path, filename: &str, content: &str) -> color_eyre::Result<PathBuf> {
+    use color_eyre::eyre::Context;
     let file_path = dir.join(filename);
-    fs::write(&file_path, content).expect("Failed to write test file");
-    file_path
+    fs::write(&file_path, content)
+        .wrap_err_with(|| format!("Failed to write test file: {}", file_path.display()))?;
+    Ok(file_path)
 }
 
 /// 断言文件存在

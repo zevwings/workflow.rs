@@ -11,17 +11,30 @@
 //! let pr = factory.github_pr().number(123).title("Test PR").build();
 //! ```
 
+use crate::common::test_data::cache::{CacheConfig, TestDataCache};
+use crate::common::test_data::cleanup::{CleanupStrategy, TestDataCleanupManager};
+use crate::common::test_data::version::TestDataVersionManager;
+use chrono::{DateTime, Utc};
 use color_eyre::Result;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// 测试数据工厂
 ///
 /// 提供统一的测试数据生成接口，支持从模板文件生成测试数据。
+/// 集成了缓存、清理和版本管理功能。
 pub struct TestDataFactory {
     templates_dir: PathBuf,
+    /// 缓存系统（可选）
+    cache: Option<Arc<Mutex<TestDataCache>>>,
+    /// 清理管理器（可选）
+    cleanup_manager: Option<Arc<Mutex<TestDataCleanupManager>>>,
+    /// 版本管理器（可选）
+    version_manager: Option<Arc<Mutex<TestDataVersionManager>>>,
 }
 
 impl TestDataFactory {
@@ -32,7 +45,92 @@ impl TestDataFactory {
             .join("fixtures")
             .join("templates");
 
-        Self { templates_dir }
+        Self {
+            templates_dir,
+            cache: None,
+            cleanup_manager: None,
+            version_manager: None,
+        }
+    }
+
+    /// 启用缓存
+    pub fn enable_cache(&mut self, config: CacheConfig) {
+        let cache = TestDataCache::new(config);
+        self.cache = Some(Arc::new(Mutex::new(cache)));
+    }
+
+    /// 禁用缓存
+    #[allow(dead_code)]
+    pub fn disable_cache(&mut self) {
+        self.cache = None;
+    }
+
+    /// 获取缓存统计信息
+    pub fn cache_stats(&self) -> Option<crate::common::test_data::cache::CacheStats> {
+        self.cache
+            .as_ref()
+            .and_then(|c| c.lock().ok())
+            .map(|cache| cache.get_stats().clone())
+    }
+
+    /// 设置清理策略
+    pub fn set_cleanup_strategy(&mut self, strategy: CleanupStrategy) {
+        let manager = TestDataCleanupManager::new(strategy);
+        self.cleanup_manager = Some(Arc::new(Mutex::new(manager)));
+    }
+
+    /// 执行清理
+    pub fn cleanup(&mut self) -> Result<()> {
+        if let Some(ref manager) = self.cleanup_manager {
+            let mut mgr = manager.lock().unwrap();
+            let items = vec![]; // 实际应该从缓存中获取需要清理的项目
+            let retain = vec![]; // 实际应该从配置中获取需要保留的项目
+            let _result = mgr.cleanup(&items, &retain);
+        }
+        Ok(())
+    }
+
+    /// 重置到初始状态
+    #[allow(dead_code)]
+    pub fn reset(&mut self) -> Result<()> {
+        if let Some(ref manager) = self.cleanup_manager {
+            let mut mgr = manager.lock().unwrap();
+            mgr.reset()?;
+        }
+        if let Some(ref cache) = self.cache {
+            let mut c = cache.lock().unwrap();
+            c.clear();
+        }
+        Ok(())
+    }
+
+    /// 设置版本
+    pub fn with_version(&mut self, version: &str) -> &mut Self {
+        let manager = TestDataVersionManager::new(version.to_string());
+        self.version_manager = Some(Arc::new(Mutex::new(manager)));
+        self
+    }
+
+    /// 获取当前版本
+    pub fn get_version(&self) -> Option<String> {
+        self.version_manager
+            .as_ref()
+            .and_then(|m| m.lock().ok())
+            .map(|mgr| mgr.get_current_version().to_string())
+    }
+
+    /// 批量生成测试数据
+    pub fn build_batch<F>(&self, count: usize, builder_fn: F) -> Vec<Value>
+    where
+        F: Fn(&Self) -> Result<Value>,
+    {
+        let mut results = Vec::with_capacity(count);
+        for _ in 0..count {
+            if let Ok(value) = builder_fn(self) {
+                results.push(value);
+            }
+        }
+        results
     }
 
     /// 创建 GitHub PR 数据构建器
@@ -63,6 +161,36 @@ impl TestDataFactory {
     /// 创建用户数据构建器
     pub fn user(&self) -> UserBuilder {
         UserBuilder::new()
+    }
+
+    /// 创建日期时间数据构建器
+    ///
+    /// 用于生成测试用的日期时间字符串。
+    ///
+    /// ## 示例
+    ///
+    /// ```rust
+    /// let factory = TestDataFactory::new();
+    /// let dt = factory.date_time().build();
+    /// // 返回 ISO 8601 格式的日期时间字符串，如 "2024-01-01T10:00:00Z"
+    /// ```
+    pub fn date_time(&self) -> DateTimeBuilder {
+        DateTimeBuilder::new()
+    }
+
+    /// 创建 UUID 数据构建器
+    ///
+    /// 用于生成测试用的 UUID 字符串。
+    ///
+    /// ## 示例
+    ///
+    /// ```rust
+    /// let factory = TestDataFactory::new();
+    /// let uuid = factory.uuid().build();
+    /// // 返回 UUID v4 格式的字符串，如 "550e8400-e29b-41d4-a716-446655440000"
+    /// ```
+    pub fn uuid(&self) -> UuidBuilder {
+        UuidBuilder::new()
     }
 
     /// 从模板文件加载并替换变量
@@ -208,6 +336,9 @@ impl GitHubPRBuilder {
     pub fn build(&self) -> Result<Value> {
         let factory = TestDataFactory {
             templates_dir: self.templates_dir.clone(),
+            cache: None,
+            cleanup_manager: None,
+            version_manager: None,
         };
         factory.load_template("github_pr.json", &self.vars)
     }
@@ -220,6 +351,7 @@ impl GitHubPRBuilder {
     /// ```
     ///
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
         Ok(serde_json::to_string_pretty(&self.build()?)?)
@@ -325,6 +457,9 @@ impl JiraIssueBuilder {
     pub fn build(&self) -> Result<Value> {
         let factory = TestDataFactory {
             templates_dir: self.templates_dir.clone(),
+            cache: None,
+            cleanup_manager: None,
+            version_manager: None,
         };
         factory.load_template("jira_issue.json", &self.vars)
     }
@@ -337,6 +472,7 @@ impl JiraIssueBuilder {
     /// ```
     ///
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
         Ok(serde_json::to_string_pretty(&self.build()?)?)
@@ -485,6 +621,9 @@ impl GitCommitBuilder {
     pub fn build(&self) -> Result<Value> {
         let factory = TestDataFactory {
             templates_dir: self.templates_dir.clone(),
+            cache: None,
+            cleanup_manager: None,
+            version_manager: None,
         };
         factory.load_template("git_commit.json", &self.vars)
     }
@@ -497,6 +636,7 @@ impl GitCommitBuilder {
     /// ```
     ///
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
         Ok(serde_json::to_string_pretty(&self.build()?)?)
@@ -574,6 +714,7 @@ impl ConfigBuilder {
     /// 构建为 JSON 字符串
     ///
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
         Ok(serde_json::to_string_pretty(&self.build())
@@ -658,6 +799,7 @@ impl BranchBuilder {
     }
 
     /// 构建为 JSON 字符串
+    #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
         Ok(serde_json::to_string_pretty(&self.build())
             .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
@@ -793,6 +935,7 @@ impl UserBuilder {
     }
 
     /// 构建为 JSON 字符串
+    #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
         Ok(serde_json::to_string_pretty(&self.build())
             .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
@@ -1160,5 +1303,247 @@ mod tests {
         assert_eq!(user["accountId"], "test-account-id-123");
         assert_eq!(user["displayName"], "Test User");
         assert_eq!(user["emailAddress"], "test@example.com");
+    }
+
+    /// 测试DateTimeBuilder生成日期时间
+    ///
+    /// ## 测试目的
+    /// 验证 `DateTimeBuilder` 能够成功生成日期时间字符串。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用默认值生成日期时间
+    /// 3. 验证生成的日期时间格式正确
+    ///
+    /// ## 预期结果
+    /// - 生成成功
+    /// - 日期时间格式为 ISO 8601 格式
+    #[test]
+    fn test_date_time_builder_default() {
+        let factory = TestDataFactory::new();
+        let dt = factory.date_time().build();
+
+        // 验证格式为 ISO 8601
+        assert!(dt.contains('T'));
+        assert!(dt.ends_with('Z') || dt.contains('+') || dt.contains('-'));
+    }
+
+    /// 测试DateTimeBuilder使用自定义日期时间
+    ///
+    /// ## 测试目的
+    /// 验证 `DateTimeBuilder` 使用自定义日期时间能够成功生成。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 设置自定义日期时间
+    /// 3. 验证生成的日期时间正确
+    ///
+    /// ## 预期结果
+    /// - 生成成功
+    /// - 日期时间与设置的值一致
+    #[test]
+    fn test_date_time_builder_custom() {
+        let factory = TestDataFactory::new();
+        let custom_dt = DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let dt = factory.date_time().datetime(custom_dt).build();
+
+        assert_eq!(dt, "2024-06-01T12:00:00Z");
+    }
+
+    /// 测试UuidBuilder生成UUID
+    ///
+    /// ## 测试目的
+    /// 验证 `UuidBuilder` 能够成功生成UUID字符串。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 生成UUID
+    /// 3. 验证UUID格式正确
+    ///
+    /// ## 预期结果
+    /// - 生成成功
+    /// - UUID格式为标准的UUID v4格式
+    #[test]
+    fn test_uuid_builder_default() {
+        let factory = TestDataFactory::new();
+        let uuid = factory.uuid().build();
+
+        // 验证UUID格式: 8-4-4-4-12
+        let parts: Vec<&str> = uuid.split('-').collect();
+        assert_eq!(parts.len(), 5);
+        assert_eq!(parts[0].len(), 8);
+        assert_eq!(parts[1].len(), 4);
+        assert_eq!(parts[2].len(), 4);
+        assert_eq!(parts[3].len(), 4);
+        assert_eq!(parts[4].len(), 12);
+    }
+
+    /// 测试UuidBuilder使用自定义UUID
+    ///
+    /// ## 测试目的
+    /// 验证 `UuidBuilder` 使用自定义UUID能够成功生成。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 设置自定义UUID
+    /// 3. 验证生成的UUID正确
+    ///
+    /// ## 预期结果
+    /// - 生成成功
+    /// - UUID与设置的值一致
+    #[test]
+    fn test_uuid_builder_custom() {
+        let factory = TestDataFactory::new();
+        let custom_uuid = "550e8400-e29b-41d4-a716-446655440000";
+        let uuid = factory.uuid().uuid(custom_uuid).build();
+
+        assert_eq!(uuid, custom_uuid);
+    }
+}
+
+/// 日期时间数据构建器
+///
+/// 用于生成测试用的日期时间字符串（ISO 8601 格式）。
+///
+/// ## 使用示例
+///
+/// ```rust
+/// let factory = TestDataFactory::new();
+///
+/// // 使用默认值（当前时间）
+/// let dt = factory.date_time().build();
+///
+/// // 使用自定义日期时间
+/// let custom_dt = DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+///     .unwrap()
+///     .with_timezone(&Utc);
+/// let dt = factory.date_time().datetime(custom_dt).build();
+/// ```
+pub struct DateTimeBuilder {
+    datetime: Option<DateTime<Utc>>,
+}
+
+impl DateTimeBuilder {
+    fn new() -> Self {
+        Self { datetime: None }
+    }
+
+    /// 设置日期时间
+    ///
+    /// # 参数
+    ///
+    /// * `datetime` - UTC 日期时间
+    pub fn datetime(mut self, datetime: DateTime<Utc>) -> Self {
+        self.datetime = Some(datetime);
+        self
+    }
+
+    /// 设置日期时间（从字符串解析）
+    ///
+    /// # 参数
+    ///
+    /// * `s` - RFC 3339 格式的日期时间字符串
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let dt = factory.date_time().from_str("2024-06-01T12:00:00Z").build();
+    /// ```
+    #[allow(dead_code)]
+    pub fn from_str<S: AsRef<str>>(mut self, s: S) -> Self {
+        if let Ok(dt) = DateTime::parse_from_rfc3339(s.as_ref()) {
+            self.datetime = Some(dt.with_timezone(&Utc));
+        }
+        self
+    }
+
+    /// 构建日期时间字符串
+    ///
+    /// 返回 ISO 8601 格式的日期时间字符串（如 "2024-01-01T10:00:00Z"）。
+    pub fn build(&self) -> String {
+        let dt = self.datetime.unwrap_or_else(|| Utc::now());
+        dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    }
+}
+
+impl Default for DateTimeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// UUID 数据构建器
+///
+/// 用于生成测试用的 UUID 字符串。
+///
+/// ## 使用示例
+///
+/// ```rust
+/// let factory = TestDataFactory::new();
+///
+/// // 使用默认值（随机生成）
+/// let uuid = factory.uuid().build();
+///
+/// // 使用自定义UUID
+/// let uuid = factory.uuid().uuid("550e8400-e29b-41d4-a716-446655440000").build();
+/// ```
+pub struct UuidBuilder {
+    uuid: Option<String>,
+}
+
+impl UuidBuilder {
+    fn new() -> Self {
+        Self { uuid: None }
+    }
+
+    /// 设置 UUID
+    ///
+    /// # 参数
+    ///
+    /// * `uuid` - UUID 字符串
+    pub fn uuid<S: Into<String>>(mut self, uuid: S) -> Self {
+        self.uuid = Some(uuid.into());
+        self
+    }
+
+    /// 构建 UUID 字符串
+    ///
+    /// 如果没有设置自定义 UUID，则生成一个随机的 UUID v4。
+    pub fn build(&self) -> String {
+        self.uuid.clone().unwrap_or_else(|| {
+            // 生成简单的UUID v4格式字符串（用于测试）
+            // 注意：这不是真正的UUID生成，只是格式匹配
+            // 如果需要真正的UUID，可以使用uuid crate
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            std::sync::atomic::AtomicU64::fetch_add(
+                &std::sync::atomic::AtomicU64::new(0),
+                1,
+                std::sync::atomic::Ordering::Relaxed,
+            )
+            .hash(&mut hasher);
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                .hash(&mut hasher);
+            let hash = hasher.finish();
+
+            format!(
+                "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+                (hash >> 32) as u32,
+                (hash >> 16) as u16,
+                ((hash >> 16) as u16) | 0x4000,          // version 4
+                ((hash >> 16) as u16) & 0x3fff | 0x8000, // variant
+                hash & 0xffffffffffff,
+            )
+        })
+    }
+}
+
+impl Default for UuidBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }

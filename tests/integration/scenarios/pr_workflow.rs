@@ -2,12 +2,15 @@
 //!
 //! 提供PR创建、更新、合并等场景的测试辅助函数。
 
+#![allow(dead_code)]
+
 use crate::common::environments::CliTestEnv;
 use color_eyre::Result;
 
 /// PR创建场景构建器
 ///
 /// 用于构建和设置PR创建测试场景。
+#[allow(dead_code)]
 pub struct PRCreationScenario {
     /// CLI测试环境
     pub env: CliTestEnv,
@@ -21,6 +24,7 @@ pub struct PRCreationScenario {
     pub file_content: String,
 }
 
+#[allow(dead_code)]
 impl PRCreationScenario {
     /// 创建新的PR创建场景
     ///
@@ -88,6 +92,7 @@ impl PRCreationScenario {
 }
 
 /// PR合并场景构建器
+#[allow(dead_code)]
 pub struct PRMergeScenario {
     /// CLI测试环境
     pub env: CliTestEnv,

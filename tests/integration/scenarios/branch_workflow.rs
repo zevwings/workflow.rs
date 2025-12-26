@@ -2,10 +2,13 @@
 //!
 //! 提供分支创建、切换、管理等场景的测试辅助函数。
 
+#![allow(dead_code)]
+
 use crate::common::environments::CliTestEnv;
 use color_eyre::Result;
 
 /// 分支创建场景构建器
+#[allow(dead_code)]
 pub struct BranchCreationScenario {
     /// CLI测试环境
     pub env: CliTestEnv,
@@ -13,6 +16,7 @@ pub struct BranchCreationScenario {
     pub branch_name: String,
 }
 
+#[allow(dead_code)]
 impl BranchCreationScenario {
     /// 创建新的分支创建场景
     pub fn new() -> Result<Self> {
@@ -51,6 +55,7 @@ impl BranchCreationScenario {
 }
 
 /// 多分支场景构建器
+#[allow(dead_code)]
 pub struct MultiBranchScenario {
     /// CLI测试环境
     pub env: CliTestEnv,
@@ -58,6 +63,7 @@ pub struct MultiBranchScenario {
     pub branches: Vec<String>,
 }
 
+#[allow(dead_code)]
 impl MultiBranchScenario {
     /// 创建新的多分支场景
     pub fn new() -> Result<Self> {
