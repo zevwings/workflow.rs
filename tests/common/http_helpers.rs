@@ -48,8 +48,11 @@ impl MockServer {
     }
 
     /// 设置 GitHub API Mock 环境
+    ///
+    /// 同时设置 `GITHUB_API_URL`（用于 API 调用）和 `GITHUB_BASE_URL`（用于网络检查）
     pub fn setup_github_base_url(&self) {
         env::set_var("GITHUB_API_URL", self.base_url.clone());
+        env::set_var("GITHUB_BASE_URL", self.base_url.clone());
     }
 
     /// 设置 Jira API Mock 环境

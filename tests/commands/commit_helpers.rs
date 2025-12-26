@@ -4,10 +4,12 @@
 
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env_with_git;
-use crate::common::helpers::CurrentDirGuard;
 use rstest::rstest;
 // Removed serial_test::serial - tests can run in parallel with CliTestEnv isolation
-use workflow::commands::commit::helpers::{check_has_last_commit, check_not_on_default_branch};
+use workflow::commands::commit::helpers::{
+    check_has_last_commit, check_has_last_commit_in, check_not_on_default_branch,
+    check_not_on_default_branch_in,
+};
 
 // ==================== Commit Existence Check Tests ====================
 
@@ -73,9 +75,8 @@ fn test_check_has_last_commit_with_empty_git_repo_return_empty(
 ) -> color_eyre::Result<()> {
     // cli_env_with_git 已经初始化了 Git 仓库，但不创建任何 commit
 
-    // 切换到测试目录，让 Git 操作能找到仓库
-    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
-    let result = check_has_last_commit();
+    // 使用路径参数版本，避免切换全局工作目录
+    let result = check_has_last_commit_in(cli_env_with_git.path());
 
     // 验证函数返回错误（无 commit）
     assert!(
@@ -117,9 +118,8 @@ fn test_check_has_last_commit_with_commits_return_ok(
         .create_file("test.txt", "test content")?
         .create_commit("Initial commit")?;
 
-    // 切换到测试目录，让 Git 操作能找到仓库
-    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
-    let result = check_has_last_commit();
+    // 使用路径参数版本，避免切换全局工作目录
+    let result = check_has_last_commit_in(cli_env_with_git.path());
 
     // 验证函数返回成功（有 commit）
     assert!(
@@ -159,15 +159,33 @@ fn test_check_not_on_default_branch_on_main_return_ok(
         .create_commit("Initial commit")?;
 
     // 创建一个假的远程分支引用，让get_default_branch()能正常工作
+    // 1. 创建 origin/main 引用
     std::process::Command::new("git")
         .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
         .current_dir(cli_env_with_git.path())
         .output()
         .ok();
 
-    // Act: 切换到测试目录，然后在main分支上检查是否允许操作
-    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
-    let result = check_not_on_default_branch("amend");
+    // 2. 删除可能存在的 origin/master 引用（如果存在）
+    std::process::Command::new("git")
+        .args(["update-ref", "-d", "refs/remotes/origin/master"])
+        .current_dir(cli_env_with_git.path())
+        .output()
+        .ok(); // 允许失败，因为可能不存在
+
+    // 3. 设置远程 HEAD 引用指向 main（让 git remote show origin 能工作）
+    std::process::Command::new("git")
+        .args([
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/main",
+        ])
+        .current_dir(cli_env_with_git.path())
+        .output()
+        .ok(); // 允许失败
+
+    // Act: 使用路径参数版本，避免切换全局工作目录
+    let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");
 
     // Assert: 验证返回错误且错误消息包含保护分支信息
     assert!(
@@ -213,11 +231,30 @@ fn test_check_not_on_default_branch_on_feature_branch_return_ok(
         .create_commit("Initial commit")?;
 
     // 创建一个假的远程分支引用，让get_default_branch()能正常工作
+    // 1. 创建 origin/main 引用
     std::process::Command::new("git")
         .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
         .current_dir(cli_env_with_git.path())
         .output()
         .ok();
+
+    // 2. 删除可能存在的 origin/master 引用（如果存在）
+    std::process::Command::new("git")
+        .args(["update-ref", "-d", "refs/remotes/origin/master"])
+        .current_dir(cli_env_with_git.path())
+        .output()
+        .ok(); // 允许失败，因为可能不存在
+
+    // 3. 设置远程 HEAD 引用指向 main（让 git remote show origin 能工作）
+    std::process::Command::new("git")
+        .args([
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/main",
+        ])
+        .current_dir(cli_env_with_git.path())
+        .output()
+        .ok(); // 允许失败
 
     // 创建并切换到 feature 分支
     std::process::Command::new("git")
@@ -226,9 +263,8 @@ fn test_check_not_on_default_branch_on_feature_branch_return_ok(
         .output()
         .expect("Failed to create feature branch");
 
-    // Act: 切换到测试目录，然后检查是否允许操作
-    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
-    let result = check_not_on_default_branch("amend");
+    // Act: 使用路径参数版本，避免切换全局工作目录
+    let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");
 
     // Assert: 验证返回成功且分支信息正确
     assert!(

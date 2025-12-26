@@ -356,7 +356,11 @@ fn test_get_latest_commit_info_return_ok(
 /// - Git操作返回Err
 /// - 错误消息明确指示当前目录不是Git仓库
 /// - 不会panic或产生未定义行为
+///
+/// ## 注意事项
+/// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
+#[serial_test::serial]
 fn test_operations_outside_git_repo_with_container() {
     // 注意：这里使用 tempfile::tempdir 而不是 GitTestEnv，因为我们需要测试非 Git 仓库的情况
     use tempfile::tempdir;

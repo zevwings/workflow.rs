@@ -259,6 +259,24 @@ impl GitCommit {
         Ok(GitCommand::new(["log", "-1", "--oneline"]).quiet_success())
     }
 
+    /// 检查是否有最后一次 commit（指定仓库路径）
+    ///
+    /// 使用 `git log -1` 检查指定仓库是否有 commit 历史。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 如果有 commit
+    /// - `Ok(false)` - 如果没有 commit
+    pub fn has_last_commit_in(repo_path: impl AsRef<std::path::Path>) -> Result<bool> {
+        Ok(GitCommand::new(["log", "-1", "--oneline"])
+            .with_cwd(repo_path.as_ref())
+            .quiet_success())
+    }
+
     /// 获取最后一次 commit 信息
     ///
     /// # 返回

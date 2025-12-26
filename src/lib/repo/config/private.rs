@@ -8,8 +8,10 @@ use crate::base::util::file::{FileReader, FileWriter};
 use crate::base::util::path::PathAccess;
 use crate::git::GitRepo;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fs::OpenOptions;
 use std::path::Path;
 use toml::map::Map;
 use toml::Value;
@@ -118,21 +120,24 @@ impl PrivateRepoConfig {
     /// Loads personal preference configuration for the current repository
     /// from `~/.workflow/config/repository.toml`.
     pub fn load() -> Result<Self> {
-        Self::load_from(std::env::current_dir().wrap_err("Failed to get current directory")?)
+        let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
+        let home = Paths::home_dir().wrap_err("Failed to get home directory")?;
+        Self::load_from(repo_path, home)
     }
 
-    /// Load personal preference configuration (specified repository path)
+    /// Load personal preference configuration (specified repository path and home directory)
     ///
     /// Loads personal preference configuration for the specified repository
-    /// from `~/.workflow/config/repository.toml`.
+    /// using the specified home directory, avoiding dependency on global environment variables.
     ///
     /// # 参数
     ///
     /// * `repo_path` - 仓库根目录路径
-    pub fn load_from(repo_path: impl AsRef<Path>) -> Result<Self> {
+    /// * `home` - 用户主目录路径
+    pub fn load_from(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<Self> {
         let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
         let config_path =
-            Paths::repository_config().wrap_err("Failed to get repository config path")?;
+            Paths::repository_config_in(home).wrap_err("Failed to get repository config path")?;
 
         // If file doesn't exist, return default configuration
         if !config_path.exists() {
@@ -211,33 +216,40 @@ impl PrivateRepoConfig {
         Ok(config)
     }
 
-    /// Save personal preference configuration for current repository
-    ///
-    /// Saves personal preference configuration for the current repository
-    /// to `~/.workflow/config/repository.toml`.
-    /// Supports configuration merging, won't overwrite other repositories' configurations.
-    pub fn save(&self) -> Result<()> {
-        self.save_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
-    }
-
-    /// Save personal preference configuration (specified repository path)
+    /// Save personal preference configuration (specified repository path and home directory)
     ///
     /// Saves personal preference configuration for the specified repository
-    /// to `~/.workflow/config/repository.toml`.
+    /// using the specified home directory, avoiding dependency on global environment variables.
     /// Supports configuration merging, won't overwrite other repositories' configurations.
     ///
     /// # 参数
     ///
     /// * `repo_path` - 仓库根目录路径
-    pub fn save_in(&self, repo_path: impl AsRef<Path>) -> Result<()> {
+    /// * `home` - 用户主目录路径
+    pub fn save_in(&self, repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<()> {
         let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
         let config_path =
-            Paths::repository_config().wrap_err("Failed to get repository config path")?;
+            Paths::repository_config_in(home).wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
         PathAccess::new(&config_path).ensure_parent_exists()?;
 
+        // Open file and acquire exclusive lock to prevent concurrent writes
+        // This ensures that multiple tests or processes don't overwrite each other's changes
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&config_path)
+            .wrap_err_with(|| format!("Failed to open config file: {:?}", config_path))?;
+
+        // Acquire exclusive lock (blocks until lock is available)
+        // This prevents race conditions when multiple tests write to the same file concurrently
+        file.lock_exclusive()
+            .wrap_err_with(|| format!("Failed to lock config file: {:?}", config_path))?;
+
         // Read existing configuration (if exists)
+        // Note: We read after acquiring the lock to ensure we have the latest data
         let mut existing_value: Value = if config_path.exists() {
             FileReader::new(&config_path).toml()?
         } else {
@@ -296,7 +308,13 @@ impl PrivateRepoConfig {
         }
 
         // Write to file
+        // Lock is automatically released when file is dropped
         FileWriter::new(&config_path).write_toml(&existing_value)?;
+
+        // Explicitly unlock (though it will be unlocked when file is dropped)
+        // This makes the lock release timing explicit
+        file.unlock()
+            .wrap_err_with(|| format!("Failed to unlock config file: {:?}", config_path))?;
 
         Ok(())
     }

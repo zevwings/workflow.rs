@@ -17,9 +17,30 @@ use color_eyre::{eyre::WrapErr, Result};
 ///
 /// 如果在默认分支上，返回错误；否则返回当前分支名和默认分支名
 pub fn check_not_on_default_branch(operation_name: &str) -> Result<(String, String)> {
-    let current_branch = GitBranch::current_branch().wrap_err("Failed to get current branch")?;
-    let default_branch =
-        GitBranch::get_default_branch().wrap_err("Failed to get default branch")?;
+    check_not_on_default_branch_in(
+        std::env::current_dir().wrap_err("Failed to get current directory")?,
+        operation_name,
+    )
+}
+
+/// 检查是否在默认分支上（保护分支不允许修改提交历史，指定仓库路径）
+///
+/// # 参数
+///
+/// * `repo_path` - 仓库根目录路径
+/// * `operation_name` - 操作名称（用于错误消息，如 "amend" 或 "reword"）
+///
+/// # 返回
+///
+/// 如果在默认分支上，返回错误；否则返回当前分支名和默认分支名
+pub fn check_not_on_default_branch_in(
+    repo_path: impl AsRef<std::path::Path>,
+    operation_name: &str,
+) -> Result<(String, String)> {
+    let current_branch = GitBranch::current_branch_in(repo_path.as_ref())
+        .wrap_err("Failed to get current branch")?;
+    let default_branch = GitBranch::get_default_branch_in(repo_path.as_ref())
+        .wrap_err("Failed to get default branch")?;
 
     if current_branch == default_branch {
         color_eyre::eyre::bail!(
@@ -86,7 +107,20 @@ where
 ///
 /// 如果没有 commit，返回错误；否则返回 `Ok(())`
 pub fn check_has_last_commit() -> Result<()> {
-    if !GitCommit::has_last_commit()? {
+    check_has_last_commit_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+}
+
+/// 检查是否有最后一次 commit（指定仓库路径）
+///
+/// # 参数
+///
+/// * `repo_path` - 仓库根目录路径
+///
+/// # 返回
+///
+/// 如果没有 commit，返回错误；否则返回 `Ok(())`
+pub fn check_has_last_commit_in(repo_path: impl AsRef<std::path::Path>) -> Result<()> {
+    if !GitCommit::has_last_commit_in(repo_path)? {
         color_eyre::eyre::bail!(
             "❌ Error: No commits found in current branch\n\nCannot perform operation because the current branch has no commit history.\nPlease create a commit first."
         );

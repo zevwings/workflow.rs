@@ -19,7 +19,7 @@
 
 use color_eyre::Result;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::common::isolation::TestIsolation;
 
@@ -30,6 +30,7 @@ use crate::common::isolation::TestIsolation;
 /// - 隔离的环境变量
 /// - 独立的Git配置（可选）
 /// - 便捷的文件和配置管理
+/// - 统一的项目路径和用户路径管理
 ///
 /// # 功能特性
 ///
@@ -37,9 +38,15 @@ use crate::common::isolation::TestIsolation;
 /// - ✅ 支持Git仓库初始化
 /// - ✅ 便捷的文件和配置管理
 /// - ✅ RAII模式自动清理
+/// - ✅ 统一的项目路径和用户路径（HOME）管理
+/// - ✅ 自动禁用 iCloud，使用临时目录
 pub struct CliTestEnv {
     /// 测试隔离管理器
     isolation: TestIsolation,
+    /// 项目路径（仓库根目录，用于项目级配置）
+    project_path: PathBuf,
+    /// 用户路径（HOME 目录，用于用户级配置）
+    home_path: PathBuf,
 }
 
 impl CliTestEnv {
@@ -63,8 +70,29 @@ impl CliTestEnv {
     /// let env = CliTestEnv::new()?;
     /// ```
     pub fn new() -> Result<Self> {
-        let isolation = TestIsolation::new()?;
-        Ok(Self { isolation })
+        let mut isolation = TestIsolation::new()?;
+
+        // 创建两个独立的路径
+        // - project_path: 用于项目级配置（仓库根目录）
+        // - home_path: 用于用户级配置（HOME 目录）
+        let project_path = isolation.work_dir().join("repo");
+        let home_path = isolation.work_dir().join("home");
+        fs::create_dir_all(&project_path)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to create project path: {}", e))?;
+        fs::create_dir_all(&home_path)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to create home path: {}", e))?;
+
+        // 统一设置环境变量
+        // - HOME: 指向临时目录下的 home 目录
+        // - WORKFLOW_DISABLE_ICLOUD: 禁用 iCloud，确保使用临时目录
+        isolation.env_guard().set("HOME", &home_path.to_string_lossy());
+        isolation.env_guard().set("WORKFLOW_DISABLE_ICLOUD", "1");
+
+        Ok(Self {
+            isolation,
+            project_path,
+            home_path,
+        })
     }
 
     /// 初始化Git仓库
@@ -88,8 +116,48 @@ impl CliTestEnv {
     /// let env = CliTestEnv::new()?;
     /// env.init_git_repo()?;
     /// ```
+    /// 获取项目路径（用于项目级配置）
+    ///
+    /// 返回项目临时路径，用于项目级配置文件（如 `.workflow/config.toml`）。
+    ///
+    /// # 返回
+    ///
+    /// 返回项目路径的引用
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::environments::CliTestEnv;
+    ///
+    /// let env = CliTestEnv::new()?;
+    /// let project_path = env.project_path();
+    /// ```
+    pub fn project_path(&self) -> &Path {
+        &self.project_path
+    }
+
+    /// 获取用户路径（用于用户级配置）
+    ///
+    /// 返回用户临时路径（HOME），用于用户级配置文件（如 `~/.workflow/config/repository.toml`）。
+    ///
+    /// # 返回
+    ///
+    /// 返回用户路径的引用
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::environments::CliTestEnv;
+    ///
+    /// let env = CliTestEnv::new()?;
+    /// let home_path = env.home_path();
+    /// ```
+    pub fn home_path(&self) -> &Path {
+        &self.home_path
+    }
+
     pub fn init_git_repo(&self) -> Result<&Self> {
-        let work_dir = self.isolation.work_dir();
+        let work_dir = &self.project_path;
 
         // 确保.git目录不存在（如果存在则删除）
         let git_dir = work_dir.join(".git");
@@ -116,6 +184,14 @@ impl CliTestEnv {
             .current_dir(&work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user email: {}", e))?;
+
+        // 禁用网络连接，避免测试超时
+        // 设置 GIT_TERMINAL_PROMPT=0 和 url.insteadOf 来避免网络请求
+        std::process::Command::new("git")
+            .args(["config", "url.insteadOf", "https://github.com/test/test-repo.git"])
+            .current_dir(&work_dir)
+            .output()
+            .ok(); // 允许失败
 
         // 添加remote origin（用于测试需要remote的功能）
         std::process::Command::new("git")
@@ -164,8 +240,7 @@ impl CliTestEnv {
     /// env.create_file("test.txt", "content")?;
     /// ```
     pub fn create_file(&self, path: &str, content: &str) -> Result<&Self> {
-        let work_dir = self.isolation.work_dir();
-        let full_path = work_dir.join(path);
+        let full_path = self.project_path.join(path);
 
         if let Some(parent) = full_path.parent() {
             fs::create_dir_all(parent)
@@ -199,17 +274,15 @@ impl CliTestEnv {
     /// env.create_commit("Initial commit")?;
     /// ```
     pub fn create_commit(&self, message: &str) -> Result<&Self> {
-        let work_dir = self.isolation.work_dir();
-
         std::process::Command::new("git")
             .args(["add", "."])
-            .current_dir(&work_dir)
+            .current_dir(&self.project_path)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to add files: {}", e))?;
 
         std::process::Command::new("git")
             .args(["commit", "-m", message])
-            .current_dir(&work_dir)
+            .current_dir(&self.project_path)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to commit: {}", e))?;
 
@@ -239,8 +312,7 @@ impl CliTestEnv {
     /// "#)?;
     /// ```
     pub fn create_config(&self, content: &str) -> Result<&Self> {
-        let work_dir = self.isolation.work_dir();
-        let config_dir = work_dir.join(".workflow");
+        let config_dir = self.project_path.join(".workflow");
 
         fs::create_dir_all(&config_dir)
             .map_err(|e| color_eyre::eyre::eyre!("Failed to create config directory: {}", e))?;
@@ -252,11 +324,17 @@ impl CliTestEnv {
         Ok(self)
     }
 
-    /// 获取临时目录路径
+    /// 创建项目级配置文件
+    ///
+    /// 在项目路径下创建 `.workflow/config.toml` 配置文件（项目级配置）。
+    ///
+    /// # 参数
+    ///
+    /// * `content` - 配置文件内容
     ///
     /// # 返回
     ///
-    /// 返回工作目录的路径
+    /// 返回创建的配置文件路径
     ///
     /// # 示例
     ///
@@ -264,10 +342,75 @@ impl CliTestEnv {
     /// use tests::common::environments::CliTestEnv;
     ///
     /// let env = CliTestEnv::new()?;
-    /// let path = env.path();
+    /// let config_path = env.create_project_config(r#"[template.commit]
+    /// type = "conventional"
+    /// "#)?;
+    /// ```
+    pub fn create_project_config(&self, content: &str) -> Result<PathBuf> {
+        let config_dir = self.project_path.join(".workflow");
+        fs::create_dir_all(&config_dir)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to create project config directory: {}", e))?;
+
+        let config_file = config_dir.join("config.toml");
+        fs::write(&config_file, content)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to write project config file: {}", e))?;
+
+        Ok(config_file)
+    }
+
+    /// 创建用户级配置文件
+    ///
+    /// 在用户路径（HOME）下创建 `.workflow/config/repository.toml` 配置文件（用户级配置）。
+    ///
+    /// # 参数
+    ///
+    /// * `content` - 配置文件内容
+    ///
+    /// # 返回
+    ///
+    /// 返回创建的配置文件路径
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::environments::CliTestEnv;
+    ///
+    /// let env = CliTestEnv::new()?;
+    /// let config_path = env.create_home_config(r#"[repo_id]
+    /// configured = true
+    /// "#)?;
+    /// ```
+    pub fn create_home_config(&self, content: &str) -> Result<PathBuf> {
+        let config_dir = self.home_path.join(".workflow").join("config");
+        fs::create_dir_all(&config_dir)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to create home config directory: {}", e))?;
+
+        let config_file = config_dir.join("repository.toml");
+        fs::write(&config_file, content)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to write home config file: {}", e))?;
+
+        Ok(config_file)
+    }
+
+    /// 获取临时目录路径（向后兼容）
+    ///
+    /// 返回项目路径（仓库根目录），用于向后兼容。
+    /// 新代码应该使用 `project_path()` 方法。
+    ///
+    /// # 返回
+    ///
+    /// 返回项目路径
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::environments::CliTestEnv;
+    ///
+    /// let env = CliTestEnv::new()?;
+    /// let path = env.path();  // 返回 project_path
     /// ```
     pub fn path(&self) -> PathBuf {
-        self.isolation.work_dir().to_path_buf()
+        self.project_path.to_path_buf()
     }
 
     /// 获取环境变量守卫的可变引用（用于设置环境变量）

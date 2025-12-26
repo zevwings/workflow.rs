@@ -11,6 +11,7 @@
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
+use serial_test::serial;
 use workflow::commands::branch::helpers::sort_branches_with_priority;
 
 use crate::common::fixtures::cli_env;
@@ -228,12 +229,14 @@ fn test_sort_branches_with_prefix_priority_return_ok() -> Result<()> {
 /// - 此测试需要在非 Git 仓库环境中运行，以确保所有优先级4的分支都按字母顺序排序
 /// - 如果当前分支有前缀（如 feature/xxx），feature/test 会被提升到优先级3
 #[rstest]
+#[serial] // 需要串行执行，因为使用 CurrentDirGuard 切换全局工作目录
 fn test_sort_branches_all_priority_levels_return_collect(cli_env: crate::common::environments::CliTestEnv) -> Result<()> {
     use crate::common::helpers::CurrentDirGuard;
 
     // Arrange: 创建非 Git 仓库环境，确保排序不受当前分支影响
-    let env = &cli_env;
     // 注意：不调用 init_git_repo()，确保不在 Git 仓库中
+    // 注意：sort_branches_with_priority 会尝试获取当前分支，但在非 Git 仓库中会失败，
+    // 然后会尝试从配置获取前缀，最终所有分支都会按优先级和字母顺序排序
 
     let branches = vec![
         "zebra".to_string(),        // Priority 4
@@ -245,7 +248,8 @@ fn test_sort_branches_all_priority_levels_return_collect(cli_env: crate::common:
     ];
 
     // 切换到非 Git 仓库目录，确保排序不受当前分支影响
-    let _guard = CurrentDirGuard::new(env.path())?;
+    // 使用 #[serial] 标记避免并行测试时的竞态条件
+    let _guard = CurrentDirGuard::new(cli_env.path())?;
     let sorted = sort_branches_with_priority(branches)?;
 
     // Assert: 验证排序顺序

@@ -6,24 +6,12 @@ use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use std::fs;
-use std::path::PathBuf;
 use toml::map::Map;
 use toml::Value;
 use workflow::repo::config::public::PublicRepoConfig;
 
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env_with_git;
-
-// ==================== Test Helper Functions ====================
-
-/// 创建公共配置文件（.workflow/config.toml）
-fn create_public_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
-    let config_dir = env.path().join(".workflow");
-    fs::create_dir_all(&config_dir)?;
-    let config_file = config_dir.join("config.toml");
-    fs::write(&config_file, content)?;
-    Ok(config_file)
-}
 
 // ==================== PublicRepoConfig Load 测试 ====================
 
@@ -738,10 +726,10 @@ scope_required = true
 prefix = "feature"
 separator = "/"
 "#;
-    create_public_config(&cli_env_with_git, config_content)?;
+    cli_env_with_git.create_project_config(config_content)?;
 
     // Act: 使用新的 load_from() 方法，不再需要切换目录
-    let config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
+    let config = PublicRepoConfig::load_from(cli_env_with_git.project_path())?;
 
     // Assert: 验证配置正确加载
     assert_eq!(config.template_commit.len(), 2);
@@ -779,7 +767,7 @@ fn test_load_from_non_existing_file_return_ok(cli_env_with_git: CliTestEnv) -> R
     // Arrange: 创建没有配置文件的临时 Git 仓库（使用 fixture）
 
     // Act: 使用新的 load_from() 方法，不再需要切换目录
-    let config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
+    let config = PublicRepoConfig::load_from(cli_env_with_git.project_path())?;
 
     // Assert: 验证返回默认配置
     assert!(config.template_commit.is_empty());
@@ -816,10 +804,10 @@ fn test_save_to_new_file_with_config_creates_file(cli_env_with_git: CliTestEnv) 
         .insert("prefix".to_string(), Value::String("feature".to_string()));
 
     // Act: 保存配置
-    config.save_in(cli_env_with_git.path())?;
+    config.save_in(cli_env_with_git.project_path())?;
 
     // Assert: 验证文件创建成功，内容正确
-    let config_path = cli_env_with_git.path().join(".workflow/config.toml");
+    let config_path = cli_env_with_git.project_path().join(".workflow/config.toml");
     assert!(config_path.exists());
 
     let content = fs::read_to_string(&config_path)?;
@@ -856,7 +844,7 @@ key2 = "value2"
 [template.commit]
 type = "old_type"
 "#;
-    create_public_config(&cli_env_with_git, config_content)?;
+    cli_env_with_git.create_project_config(config_content)?;
 
     // 创建新配置
     let mut config = PublicRepoConfig::default();
@@ -869,10 +857,10 @@ type = "old_type"
         .insert("scope_required".to_string(), Value::Boolean(true));
 
     // Act: 保存配置
-    config.save_in(cli_env_with_git.path())?;
+    config.save_in(cli_env_with_git.project_path())?;
 
     // Assert: 验证其他配置部分未被覆盖，模板配置已更新
-    let content = fs::read_to_string(cli_env_with_git.path().join(".workflow/config.toml"))?;
+    let content = fs::read_to_string(cli_env_with_git.project_path().join(".workflow/config.toml"))?;
     assert!(content.contains("[other_section]"));
     assert!(content.contains(r#"key1 = "value1""#));
     assert!(content.contains(r#"key2 = "value2""#));
@@ -915,15 +903,15 @@ separator = "/"
 auto_merge = false
 require_review = true
 "#;
-    create_public_config(&cli_env_with_git, config_content)?;
+    cli_env_with_git.create_project_config(config_content)?;
 
     // Act: 加载 → 修改 → 保存 → 重新加载
     let mut config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
     config.template_commit.insert("max_length".to_string(), Value::Integer(72));
     config.template_branch.insert("use_jira_key".to_string(), Value::Boolean(true));
-    config.save_in(cli_env_with_git.path())?;
+    config.save_in(cli_env_with_git.project_path())?;
 
-    let reloaded_config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
+    let reloaded_config = PublicRepoConfig::load_from(cli_env_with_git.project_path())?;
 
     // Assert: 验证数据一致性
     assert_eq!(
@@ -973,10 +961,10 @@ fn test_load_corrupted_toml_file_with_invalid_toml_return_ok(
 [template.commit
 type = "invalid  # 缺少闭合引号和括号
 "#;
-    create_public_config(&cli_env_with_git, invalid_toml)?;
+    cli_env_with_git.create_project_config(invalid_toml)?;
 
     // Act: 尝试加载配置
-    let result = PublicRepoConfig::load_from(cli_env_with_git.path());
+    let result = PublicRepoConfig::load_from(cli_env_with_git.project_path());
 
     // Assert: 验证返回错误
     assert!(result.is_err());
@@ -1004,7 +992,7 @@ fn test_save_to_readonly_directory_with_config_return_ok(
     use std::os::unix::fs::PermissionsExt;
 
     // Arrange: 创建只读的 .workflow 目录（使用 fixture）
-    let workflow_dir = cli_env_with_git.path().join(".workflow");
+    let workflow_dir = cli_env_with_git.project_path().join(".workflow");
     fs::create_dir_all(&workflow_dir)?;
 
     // 设置目录为只读
@@ -1020,7 +1008,7 @@ fn test_save_to_readonly_directory_with_config_return_ok(
     );
 
     // Act: 尝试保存配置
-    let result = config.save_in(cli_env_with_git.path());
+    let result = config.save_in(cli_env_with_git.project_path());
 
     // Assert: 验证返回权限错误
     assert!(result.is_err());
