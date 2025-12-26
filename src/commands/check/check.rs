@@ -21,7 +21,6 @@ impl CheckCommand {
         log_message!("Running environment checks...");
         log_break!();
 
-        // 1. 检查 Git 状态
         log_message!("[1/2] Checking Git repository status...");
         if !GitRepo::is_git_repo() {
             log_error!("Not in a Git repository");
@@ -37,7 +36,6 @@ impl CheckCommand {
 
         log_break!();
 
-        // 2. 检查网络连接
         log_message!("[2/2] Checking network connection to GitHub...");
         let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
         let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));

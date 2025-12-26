@@ -3,6 +3,7 @@
 //! 测试 Repo CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use workflow::cli::RepoSubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -29,20 +30,20 @@ struct TestRepoCli {
 /// - 所有子命令都能正确解析
 /// - 命令类型匹配预期
 #[test]
-fn test_repo_command_with_all_subcommands_parses_successfully() {
+fn test_repo_command_with_all_subcommands_parses_successfully() -> Result<()> {
     // Arrange: 准备所有子命令的输入
     let setup_args = &["test-repo", "setup"];
     let show_args = &["test-repo", "show"];
 
     // Act: 解析所有子命令
-    let setup_cli = TestRepoCli::try_parse_from(setup_args)
-        .expect("CLI args should parse successfully");
-    let show_cli = TestRepoCli::try_parse_from(show_args)
-        .expect("CLI args should parse successfully");
+    let setup_cli = TestRepoCli::try_parse_from(setup_args)?;
+    let show_cli = TestRepoCli::try_parse_from(show_args)?;
 
     // Assert: 验证所有子命令都可以正确解析
     assert!(matches!(setup_cli.command, RepoSubcommand::Setup));
     assert!(matches!(show_cli.command, RepoSubcommand::Show));
+
+    Ok(())
 }
 
 // ==================== Error Handling Tests ====================
@@ -61,7 +62,7 @@ fn test_repo_command_with_all_subcommands_parses_successfully() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示无效子命令
 #[test]
-fn test_repo_command_with_invalid_subcommand_returns_error() {
+fn test_repo_command_with_invalid_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备无效子命令的输入
     let args = &["test-repo", "invalid"];
 
@@ -70,6 +71,8 @@ fn test_repo_command_with_invalid_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail on invalid subcommand");
+
+    Ok(())
 }
 
 /// 测试Repo命令缺少子命令返回错误
@@ -86,7 +89,7 @@ fn test_repo_command_with_invalid_subcommand_returns_error() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示缺少子命令
 #[test]
-fn test_repo_command_with_missing_subcommand_returns_error() {
+fn test_repo_command_with_missing_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备缺少子命令的输入
     let args = &["test-repo"];
 
@@ -95,6 +98,8 @@ fn test_repo_command_with_missing_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail when subcommand is missing");
+
+    Ok(())
 }
 
 /// 测试Repo所有命令使用额外参数返回错误
@@ -111,7 +116,7 @@ fn test_repo_command_with_missing_subcommand_returns_error() {
 /// - 所有命令在使用额外参数时都返回错误
 /// - 错误消息明确指示不接受额外参数
 #[test]
-fn test_repo_all_commands_with_extra_arguments_return_error() {
+fn test_repo_all_commands_with_extra_arguments_return_error() -> Result<()> {
     // Arrange: 准备所有命令和额外参数
     let commands = ["setup", "show"];
 
@@ -125,4 +130,6 @@ fn test_repo_all_commands_with_extra_arguments_return_error() {
             cmd
         );
     }
+
+    Ok(())
 }

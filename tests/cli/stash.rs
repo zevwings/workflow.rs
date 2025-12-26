@@ -3,6 +3,7 @@
 //! 测试 Stash CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use workflow::cli::StashSubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -29,21 +30,22 @@ struct TestStashCli {
 /// - 解析成功
 /// - stat为true
 #[test]
-fn test_stash_list_command_with_stat_flag_parses_correctly() {
+fn test_stash_list_command_with_stat_flag_parses_correctly() -> Result<()> {
     // Arrange: 准备带 --stat 参数的 List 命令输入
     let args = &["test-stash", "list", "--stat"];
 
     // Act: 解析命令行参数
-    let cli = TestStashCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(args)?;
 
     // Assert: 验证 --stat 参数解析正确
     match cli.command {
         StashSubcommand::List { stat } => {
             assert!(stat, "stat should be true");
         }
-        _ => panic!("Expected List command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected List command")),
     }
+
+    Ok(())
 }
 
 /// 测试Stash list命令解析最小参数
@@ -60,21 +62,22 @@ fn test_stash_list_command_with_stat_flag_parses_correctly() {
 /// - 解析成功
 /// - stat为false（默认值）
 #[test]
-fn test_stash_list_command_with_minimal_args_parses_correctly() {
+fn test_stash_list_command_with_minimal_args_parses_correctly() -> Result<()> {
     // Arrange: 准备最小参数的 List 命令输入
     let args = &["test-stash", "list"];
 
     // Act: 解析命令行参数
-    let cli = TestStashCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(args)?;
 
     // Assert: 验证默认值正确
     match cli.command {
         StashSubcommand::List { stat } => {
             assert!(!stat, "stat should be false by default");
         }
-        _ => panic!("Expected List command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected List command")),
     }
+
+    Ok(())
 }
 
 // ==================== Command Parsing Tests ====================
@@ -93,7 +96,7 @@ fn test_stash_list_command_with_minimal_args_parses_correctly() {
 /// - 所有子命令都能正确解析
 /// - 命令类型匹配预期
 #[test]
-fn test_stash_command_with_all_subcommands_parses_successfully() {
+fn test_stash_command_with_all_subcommands_parses_successfully() -> Result<()> {
     // Arrange: 准备所有子命令的输入
     let list_args = &["test-stash", "list"];
     let apply_args = &["test-stash", "apply"];
@@ -102,16 +105,11 @@ fn test_stash_command_with_all_subcommands_parses_successfully() {
     let push_args = &["test-stash", "push"];
 
     // Act: 解析所有子命令
-    let list_cli = TestStashCli::try_parse_from(list_args)
-        .expect("CLI args should parse successfully");
-    let apply_cli = TestStashCli::try_parse_from(apply_args)
-        .expect("CLI args should parse successfully");
-    let drop_cli = TestStashCli::try_parse_from(drop_args)
-        .expect("CLI args should parse successfully");
-    let pop_cli = TestStashCli::try_parse_from(pop_args)
-        .expect("CLI args should parse successfully");
-    let push_cli = TestStashCli::try_parse_from(push_args)
-        .expect("CLI args should parse successfully");
+    let list_cli = TestStashCli::try_parse_from(list_args)?;
+    let apply_cli = TestStashCli::try_parse_from(apply_args)?;
+    let drop_cli = TestStashCli::try_parse_from(drop_args)?;
+    let pop_cli = TestStashCli::try_parse_from(pop_args)?;
+    let push_cli = TestStashCli::try_parse_from(push_args)?;
 
     // Assert: 验证所有子命令都可以正确解析
     assert!(matches!(list_cli.command, StashSubcommand::List { .. }));
@@ -119,6 +117,8 @@ fn test_stash_command_with_all_subcommands_parses_successfully() {
     assert!(matches!(drop_cli.command, StashSubcommand::Drop));
     assert!(matches!(pop_cli.command, StashSubcommand::Pop));
     assert!(matches!(push_cli.command, StashSubcommand::Push));
+
+    Ok(())
 }
 
 // ==================== Error Handling Tests ====================
@@ -137,7 +137,7 @@ fn test_stash_command_with_all_subcommands_parses_successfully() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示无效子命令
 #[test]
-fn test_stash_command_with_invalid_subcommand_returns_error() {
+fn test_stash_command_with_invalid_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备无效子命令的输入
     let args = &["test-stash", "invalid"];
 
@@ -146,6 +146,8 @@ fn test_stash_command_with_invalid_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail on invalid subcommand");
+
+    Ok(())
 }
 
 /// 测试Stash命令缺少子命令返回错误
@@ -162,7 +164,7 @@ fn test_stash_command_with_invalid_subcommand_returns_error() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示缺少子命令
 #[test]
-fn test_stash_command_with_missing_subcommand_returns_error() {
+fn test_stash_command_with_missing_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备缺少子命令的输入
     let args = &["test-stash"];
 
@@ -171,4 +173,6 @@ fn test_stash_command_with_missing_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail when subcommand is missing");
+
+    Ok(())
 }

@@ -3,6 +3,7 @@
 //! 测试 Branch CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::cli::BranchSubcommand;
 
@@ -30,7 +31,7 @@ struct TestBranchCli {
 /// - 解析成功
 /// - JIRA ID、from_default、dry_run 都正确设置
 #[test]
-fn test_branch_create_command_with_all_options_parses_correctly() {
+fn test_branch_create_command_with_all_options_parses_correctly() -> Result<()> {
     // Arrange: 准备包含所有参数的 Create 命令输入
     let args = &[
         "test-branch",
@@ -41,8 +42,7 @@ fn test_branch_create_command_with_all_options_parses_correctly() {
     ];
 
     // Act: 解析命令行参数
-    let cli = TestBranchCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(args)?;
 
     // Assert: 验证所有参数解析正确
     match cli.command {
@@ -55,8 +55,10 @@ fn test_branch_create_command_with_all_options_parses_correctly() {
             assert!(from_default);
             assert!(dry_run.is_dry_run());
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }
 
 /// 测试分支创建命令解析最小参数
@@ -73,13 +75,12 @@ fn test_branch_create_command_with_all_options_parses_correctly() {
 /// - 解析成功
 /// - JIRA ID为None，from_default为false，dry_run为false
 #[test]
-fn test_branch_create_command_with_minimal_args_parses_correctly() {
+fn test_branch_create_command_with_minimal_args_parses_correctly() -> Result<()> {
     // Arrange: 准备最小参数的 Create 命令输入
     let args = &["test-branch", "create"];
 
     // Act: 解析命令行参数
-    let cli = TestBranchCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(args)?;
 
     // Assert: 验证最小参数解析正确
     match cli.command {
@@ -92,8 +93,10 @@ fn test_branch_create_command_with_minimal_args_parses_correctly() {
             assert!(!from_default);
             assert!(!dry_run.is_dry_run());
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }
 
 /// 测试分支创建命令解析仅JIRA ticket参数
@@ -110,13 +113,12 @@ fn test_branch_create_command_with_minimal_args_parses_correctly() {
 /// - 解析成功
 /// - JIRA ID正确设置，from_default和dry_run为默认值
 #[test]
-fn test_branch_create_command_with_jira_ticket_only_parses_correctly() {
+fn test_branch_create_command_with_jira_ticket_only_parses_correctly() -> Result<()> {
     // Arrange: 准备只带 JIRA ticket 的 Create 命令输入
     let args = &["test-branch", "create", "PROJ-456"];
 
     // Act: 解析命令行参数
-    let cli = TestBranchCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(args)?;
 
     // Assert: 验证 JIRA ticket 解析正确
     match cli.command {
@@ -129,8 +131,10 @@ fn test_branch_create_command_with_jira_ticket_only_parses_correctly() {
             assert!(!from_default);
             assert!(!dry_run.is_dry_run());
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }
 
 /// 测试分支创建命令解析--from-default标志
@@ -147,13 +151,12 @@ fn test_branch_create_command_with_jira_ticket_only_parses_correctly() {
 /// - 解析成功
 /// - from_default为true，其他参数使用默认值
 #[test]
-fn test_branch_create_command_with_from_default_flag_parses_correctly() {
+fn test_branch_create_command_with_from_default_flag_parses_correctly() -> Result<()> {
     // Arrange: 准备带 --from-default 参数的 Create 命令输入
     let args = &["test-branch", "create", "--from-default"];
 
     // Act: 解析命令行参数
-    let cli = TestBranchCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(args)?;
 
     // Assert: 验证 --from-default 参数解析正确
     match cli.command {
@@ -166,8 +169,10 @@ fn test_branch_create_command_with_from_default_flag_parses_correctly() {
             assert!(from_default);
             assert!(!dry_run.is_dry_run());
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }
 
 /// 测试分支创建命令解析--dry-run标志
@@ -184,13 +189,12 @@ fn test_branch_create_command_with_from_default_flag_parses_correctly() {
 /// - 解析成功
 /// - dry_run为true，其他参数使用默认值
 #[test]
-fn test_branch_create_command_with_dry_run_flag_parses_correctly() {
+fn test_branch_create_command_with_dry_run_flag_parses_correctly() -> Result<()> {
     // Arrange: 准备带 --dry-run 参数的 Create 命令输入
     let args = &["test-branch", "create", "--dry-run"];
 
     // Act: 解析命令行参数
-    let cli = TestBranchCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(args)?;
 
     // Assert: 验证 --dry-run 参数解析正确
     match cli.command {
@@ -203,8 +207,10 @@ fn test_branch_create_command_with_dry_run_flag_parses_correctly() {
             assert!(!from_default);
             assert!(dry_run.dry_run);
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }
 
 // ==================== Boundary Condition Tests ====================
@@ -223,7 +229,7 @@ fn test_branch_create_command_with_dry_run_flag_parses_correctly() {
 /// - 解析失败，返回错误
 /// - 错误消息包含 "JIRA ID"、"empty"、"Invalid" 或 "validation" 等关键词
 #[test]
-fn test_branch_create_command_with_empty_jira_id_returns_error() {
+fn test_branch_create_command_with_empty_jira_id_returns_error() -> Result<()> {
     // Arrange: 准备空字符串 JIRA ID 的输入
     // 注意：这是正确的行为，JIRA ID 验证器不允许空字符串
     let args = &["test-branch", "create", ""];
@@ -233,7 +239,7 @@ fn test_branch_create_command_with_empty_jira_id_returns_error() {
 
     // Assert: 验证解析失败（空字符串被验证器拒绝）
     match result {
-        Ok(_) => panic!("Empty JIRA ID should be rejected by validator"),
+        Ok(_) => return Err(color_eyre::eyre::eyre!("Empty JIRA ID should be rejected by validator")),
         Err(e) => {
             // 验证错误消息包含验证信息
             let error_msg = e.to_string();
@@ -247,6 +253,8 @@ fn test_branch_create_command_with_empty_jira_id_returns_error() {
             );
         }
     }
+
+    Ok(())
 }
 
 /// 测试分支创建命令解析超长JIRA ID（边界情况）
@@ -263,22 +271,23 @@ fn test_branch_create_command_with_empty_jira_id_returns_error() {
 /// - 解析成功
 /// - JIRA ID正确存储（即使很长）
 #[test]
-fn test_branch_create_command_with_very_long_jira_id_parses_correctly() {
+fn test_branch_create_command_with_very_long_jira_id_parses_correctly() -> Result<()> {
     // Arrange: 准备超长 JIRA ID（边界情况）
     let long_jira_id = "PROJ-".to_string() + &"1".repeat(100);
     let args = &["test-branch", "create", &long_jira_id];
 
     // Act: 解析命令行参数
-    let cli = TestBranchCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(args)?;
 
     // Assert: 验证超长 JIRA ID 解析正确
     match cli.command {
         BranchSubcommand::Create { jira_id, .. } => {
             assert_eq!(jira_id.into_option(), Some(long_jira_id));
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }
 
 /// 测试分支创建命令解析包含特殊字符的JIRA ID（边界情况）
@@ -299,21 +308,22 @@ fn test_branch_create_command_with_very_long_jira_id_parses_correctly() {
 /// - 解析成功
 /// - JIRA ID正确存储（包含特殊字符）
 #[test]
-fn test_branch_create_command_with_special_characters_in_jira_id_parses_correctly() {
+fn test_branch_create_command_with_special_characters_in_jira_id_parses_correctly() -> Result<()> {
     // Arrange: 准备包含特殊字符的 JIRA ID（边界情况）
     // 注意：实际业务逻辑可能会验证 JIRA ID 格式，但 CLI 解析应该接受任何字符串
     let special_jira_id = "PROJ-123_test@example.com";
     let args = &["test-branch", "create", special_jira_id];
 
     // Act: 解析命令行参数
-    let cli = TestBranchCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(args)?;
 
     // Assert: 验证特殊字符 JIRA ID 解析正确
     match cli.command {
         BranchSubcommand::Create { jira_id, .. } => {
             assert_eq!(jira_id.into_option(), Some(special_jira_id.to_string()));
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }

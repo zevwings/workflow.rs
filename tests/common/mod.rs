@@ -5,7 +5,6 @@
 pub mod cli_helpers;
 pub mod environments;
 pub mod fixtures;
-pub mod git_helpers;
 pub mod guards;
 pub mod helpers;
 pub mod http_helpers;

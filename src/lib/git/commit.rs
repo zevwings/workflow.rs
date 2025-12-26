@@ -136,10 +136,8 @@ impl GitCommit {
     ///
     /// 返回 `CommitResult`，包含提交状态和消息。
     pub fn commit(message: &str, no_verify: bool) -> Result<CommitResult> {
-        // 1. 使用 git diff --quiet 检查是否有更改（更高效）
         let has_changes = Self::has_commit()?;
 
-        // 2. 如果没有更改，直接返回
         if !has_changes {
             return Ok(CommitResult {
                 committed: false,
@@ -147,12 +145,10 @@ impl GitCommit {
             });
         }
 
-        // 3. 暂存所有已修改的文件
         // 注意：即使文件已经在暂存区，执行 add_all() 也是安全的，不会造成问题
         // 这样可以确保所有更改都被暂存，包括未暂存和已暂存的更改
         Self::add_all().wrap_err("Failed to stage changes")?;
 
-        // 6. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
         let should_skip_hook = if !no_verify && GitPreCommit::has_pre_commit() {
             GitPreCommit::run_pre_commit()?;
             true // 已经通过 Rust 代码执行了检查，hook 脚本应该跳过
@@ -160,7 +156,6 @@ impl GitCommit {
             false
         };
 
-        // 7. 执行提交
         let mut args = vec!["commit", "-m", message];
         if no_verify {
             args.push("--no-verify");

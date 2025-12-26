@@ -3,6 +3,7 @@
 //! 测试 Commit CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::cli::CommitSubcommand;
@@ -43,7 +44,7 @@ fn test_commit_amend_command_with_various_options_parses_correctly(
     #[case] message: Option<&str>,
     #[case] no_edit: bool,
     #[case] no_verify: bool,
-) {
+) -> Result<()> {
     // Arrange: 准备命令行参数
     let mut args = vec!["test-commit", "amend"];
     if let Some(m) = message {
@@ -58,7 +59,7 @@ fn test_commit_amend_command_with_various_options_parses_correctly(
     }
 
     // Act: 解析命令行参数
-    let cli = TestCommitCli::try_parse_from(&args).expect("CLI args should parse successfully");
+    let cli = TestCommitCli::try_parse_from(&args)?;
 
     // Assert: 验证参数解析正确
     match cli.command {
@@ -71,8 +72,10 @@ fn test_commit_amend_command_with_various_options_parses_correctly(
             assert_eq!(ne, no_edit);
             assert_eq!(nv, no_verify);
         }
-        _ => panic!("Expected Amend command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Amend command")),
     }
+
+    Ok(())
 }
 
 // ==================== Reword Command Tests ====================
@@ -101,7 +104,7 @@ fn test_commit_amend_command_with_various_options_parses_correctly(
 #[case(Some("abcdef1234567890abcdef1234567890abcdef12"))]
 fn test_commit_reword_command_with_various_commit_ids_parses_correctly(
     #[case] commit_id: Option<&str>,
-) {
+) -> Result<()> {
     // Arrange: 准备命令行参数
     let mut args = vec!["test-commit", "reword"];
     if let Some(id) = commit_id {
@@ -109,15 +112,17 @@ fn test_commit_reword_command_with_various_commit_ids_parses_correctly(
     }
 
     // Act: 解析命令行参数
-    let cli = TestCommitCli::try_parse_from(&args).expect("CLI args should parse successfully");
+    let cli = TestCommitCli::try_parse_from(&args)?;
 
     // Assert: 验证参数解析正确
     match cli.command {
         CommitSubcommand::Reword { commit_id: id } => {
             assert_eq!(id, commit_id.map(|s| s.to_string()));
         }
-        _ => panic!("Expected Reword command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Reword command")),
     }
+
+    Ok(())
 }
 
 // ==================== Subcommand Enum Tests ====================
@@ -135,25 +140,25 @@ fn test_commit_reword_command_with_various_commit_ids_parses_correctly(
 /// - 所有子命令都能正确解析
 /// - 枚举类型匹配预期
 #[test]
-fn test_commit_subcommand_enum_contains_all_subcommands() {
+fn test_commit_subcommand_enum_contains_all_subcommands() -> Result<()> {
     // Arrange: 准备所有子命令的输入
     let amend_args = &["test-commit", "amend"];
     let reword_args = &["test-commit", "reword"];
 
     // Act: 解析所有子命令
-    let amend_cli = TestCommitCli::try_parse_from(amend_args)
-        .expect("CLI args should parse successfully");
-    let reword_cli = TestCommitCli::try_parse_from(reword_args)
-        .expect("CLI args should parse successfully");
+    let amend_cli = TestCommitCli::try_parse_from(amend_args)?;
+    let reword_cli = TestCommitCli::try_parse_from(reword_args)?;
 
     // Assert: 验证 CommitSubcommand 枚举包含所有子命令
     match amend_cli.command {
         CommitSubcommand::Amend { .. } => {}
-        _ => panic!("Expected Amend command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Amend command")),
     }
 
     match reword_cli.command {
         CommitSubcommand::Reword { .. } => {}
-        _ => panic!("Expected Reword command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Reword command")),
     }
+
+    Ok(())
 }

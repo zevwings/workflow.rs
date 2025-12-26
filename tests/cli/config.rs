@@ -3,6 +3,7 @@
 //! 测试 Config CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::cli::ConfigSubcommand;
@@ -30,21 +31,22 @@ struct TestConfigCli {
 /// ## 预期结果
 /// - Show 命令正确解析（没有参数）
 #[test]
-fn test_config_show_command_with_valid_input_parses_successfully() {
+fn test_config_show_command_with_valid_input_parses_successfully() -> Result<()> {
     // Arrange: 准备有效的 Show 命令输入
     let args = &["test-config", "show"];
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(args)?;
 
     // Assert: 验证 Show 命令可以正确解析（没有参数）
     match cli.command {
         ConfigSubcommand::Show => {
             assert!(true);
         }
-        _ => panic!("Expected Show command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Show command")),
     }
+
+    Ok(())
 }
 
 /// 测试 Config Show 命令解析（不带额外参数）
@@ -60,17 +62,18 @@ fn test_config_show_command_with_valid_input_parses_successfully() {
 /// ## 预期结果
 /// - Show 命令正确解析
 #[test]
-fn test_config_show_command_with_no_arguments_parses_successfully() {
+fn test_config_show_command_with_no_arguments_parses_successfully() -> Result<()> {
     // Arrange: 准备不带额外参数的 Show 命令输入
     // 注意：clap 可能会接受额外的参数，这取决于配置
     let args = &["test-config", "show"];
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(args)?;
 
     // Assert: 验证命令可以正确解析
     assert!(matches!(cli.command, ConfigSubcommand::Show));
+
+    Ok(())
 }
 
 // ==================== Validate Command Tests ====================
@@ -97,7 +100,7 @@ fn test_config_validate_command_with_various_options_parses_correctly(
     #[case] config_path: Option<&str>,
     #[case] fix: bool,
     #[case] strict: bool,
-) {
+) -> Result<()> {
     // Arrange: 准备命令行参数
     let mut args = vec!["test-config", "validate"];
     if let Some(path) = config_path {
@@ -111,7 +114,7 @@ fn test_config_validate_command_with_various_options_parses_correctly(
     }
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(&args)?;
 
     // Assert: 验证参数解析正确
     match cli.command {
@@ -124,8 +127,10 @@ fn test_config_validate_command_with_various_options_parses_correctly(
             assert_eq!(f, fix);
             assert_eq!(s, strict);
         }
-        _ => panic!("Expected Validate command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Validate command")),
     }
+
+    Ok(())
 }
 
 // ==================== Export Command Tests ====================
@@ -143,13 +148,12 @@ fn test_config_validate_command_with_various_options_parses_correctly(
 /// ## 预期结果
 /// - Export 命令基本结构解析正确，默认值正确
 #[test]
-fn test_config_export_command_with_basic_structure_parses_correctly() {
+fn test_config_export_command_with_basic_structure_parses_correctly() -> Result<()> {
     // Arrange: 准备基本的 Export 命令输入
     let args = &["test-config", "export", "output.toml"];
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(args)?;
 
     // Assert: 验证基本结构解析正确
     match cli.command {
@@ -168,8 +172,10 @@ fn test_config_export_command_with_basic_structure_parses_correctly() {
             assert!(!json);
             assert!(!yaml);
         }
-        _ => panic!("Expected Export command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Export command")),
     }
+
+    Ok(())
 }
 
 /// 测试 Config Export 命令解析（各种选项）
@@ -200,7 +206,7 @@ fn test_config_export_command_with_various_options_parses_correctly(
     #[case] toml: bool,
     #[case] json: bool,
     #[case] yaml: bool,
-) {
+) -> Result<()> {
     // Arrange: 准备命令行参数
     let mut args = vec!["test-config", "export", output_path];
     if let Some(s) = section {
@@ -221,7 +227,7 @@ fn test_config_export_command_with_various_options_parses_correctly(
     }
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(&args)?;
 
     // Assert: 验证参数解析正确
     match cli.command {
@@ -240,8 +246,10 @@ fn test_config_export_command_with_various_options_parses_correctly(
             assert_eq!(j, json);
             assert_eq!(y, yaml);
         }
-        _ => panic!("Expected Export command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Export command")),
     }
+
+    Ok(())
 }
 
 /// 测试 Config Export 命令输出格式标志解析
@@ -265,13 +273,12 @@ fn test_config_export_command_with_output_format_flags_parses_correctly(
     #[case] toml: bool,
     #[case] json: bool,
     #[case] yaml: bool,
-) {
+) -> Result<()> {
     // Arrange: 准备带输出格式标志的命令输入
     let args = &["test-config", "export", "output.toml", flag];
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(args)?;
 
     // Assert: 验证输出格式标志解析正确
     match cli.command {
@@ -285,8 +292,10 @@ fn test_config_export_command_with_output_format_flags_parses_correctly(
             assert_eq!(j, json);
             assert_eq!(y, yaml);
         }
-        _ => panic!("Expected Export command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Export command")),
     }
+
+    Ok(())
 }
 
 // ==================== Import Command Tests ====================
@@ -315,7 +324,7 @@ fn test_config_import_command_with_various_options_parses_correctly(
     #[case] overwrite: bool,
     #[case] section: Option<&str>,
     #[case] dry_run: bool,
-) {
+) -> Result<()> {
     // Arrange: 准备命令行参数
     let mut args = vec!["test-config", "import", input_path];
     if overwrite {
@@ -330,7 +339,7 @@ fn test_config_import_command_with_various_options_parses_correctly(
     }
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(&args)?;
 
     // Assert: 验证参数解析正确
     match cli.command {
@@ -345,8 +354,10 @@ fn test_config_import_command_with_various_options_parses_correctly(
             assert_eq!(s, section.map(|s| s.to_string()));
             assert_eq!(dr.dry_run, dry_run);
         }
-        _ => panic!("Expected Import command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Import command")),
     }
+
+    Ok(())
 }
 
 // ==================== Common Command Tests ====================
@@ -371,7 +382,7 @@ fn test_config_import_command_with_various_options_parses_correctly(
 fn test_config_command_with_all_subcommands_parses_successfully(
     #[case] subcommand: &str,
     #[case] assert_fn: fn(&ConfigSubcommand) -> bool,
-) {
+) -> Result<()> {
     // Arrange: 准备所有子命令的输入
     let mut args = vec!["test-config", subcommand];
     // 为需要参数的命令添加最小参数
@@ -382,13 +393,15 @@ fn test_config_command_with_all_subcommands_parses_successfully(
     }
 
     // Act: 解析命令行参数
-    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(&args)?;
 
     // Assert: 验证所有子命令都可以正确解析
     assert!(
         assert_fn(&cli.command),
         "Command should match expected variant"
     );
+
+    Ok(())
 }
 
 // ==================== Error Handling Tests ====================
@@ -406,7 +419,7 @@ fn test_config_command_with_all_subcommands_parses_successfully(
 /// ## 预期结果
 /// - 无效子命令返回解析错误
 #[test]
-fn test_config_command_with_invalid_subcommand_returns_error() {
+fn test_config_command_with_invalid_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备无效子命令的输入
     let args = &["test-config", "invalid"];
 
@@ -415,6 +428,8 @@ fn test_config_command_with_invalid_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail on invalid subcommand");
+
+    Ok(())
 }
 
 /// 测试 Config 命令缺少子命令错误处理
@@ -430,7 +445,7 @@ fn test_config_command_with_invalid_subcommand_returns_error() {
 /// ## 预期结果
 /// - 缺少子命令时返回解析错误
 #[test]
-fn test_config_command_with_missing_subcommand_returns_error() {
+fn test_config_command_with_missing_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备缺少子命令的输入
     // 注意：由于 TestConfigCli 中的 command 字段是必需的（不是 Option），缺少子命令应该失败
     let args = &["test-config"];
@@ -440,4 +455,6 @@ fn test_config_command_with_missing_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail when subcommand is missing");
+
+    Ok(())
 }

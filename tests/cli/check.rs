@@ -3,6 +3,7 @@
 //! 测试 Check CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use workflow::cli::Commands;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -29,16 +30,17 @@ struct TestCheckCli {
 /// - 解析成功
 /// - 命令类型为 `Commands::Check`
 #[test]
-fn test_check_command_with_valid_input_parses_successfully() {
+fn test_check_command_with_valid_input_parses_successfully() -> Result<()> {
     // Arrange: 准备有效的 Check 命令输入
     let args = &["test-workflow", "check"];
 
     // Act: 解析命令行参数
-    let cli = TestCheckCli::try_parse_from(args)
-        .expect("CLI args should parse successfully");
+    let cli = TestCheckCli::try_parse_from(args)?;
 
     // Assert: 验证 Check 命令可以正确解析
     assert!(matches!(cli.command, Some(Commands::Check)));
+
+    Ok(())
 }
 
 // ==================== Error Handling Tests ====================
@@ -57,7 +59,7 @@ fn test_check_command_with_valid_input_parses_successfully() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示不接受额外参数
 #[test]
-fn test_check_command_with_extra_arguments_returns_error() {
+fn test_check_command_with_extra_arguments_returns_error() -> Result<()> {
     // Arrange: 准备包含额外参数的输入
     let args = &["test-workflow", "check", "extra-arg"];
 
@@ -66,4 +68,6 @@ fn test_check_command_with_extra_arguments_returns_error() {
 
     // Assert: 验证 Check 命令不接受额外参数，返回错误
     assert!(result.is_err(), "Should fail on extra arguments");
+
+    Ok(())
 }

@@ -3,6 +3,7 @@
 //! 测试 Proxy CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use workflow::cli::ProxySubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -29,24 +30,23 @@ struct TestProxyCli {
 /// - 所有子命令都能正确解析
 /// - 命令类型匹配预期
 #[test]
-fn test_proxy_command_with_all_subcommands_parses_successfully() {
+fn test_proxy_command_with_all_subcommands_parses_successfully() -> Result<()> {
     // Arrange: 准备所有子命令的输入
     let on_args = &["test-proxy", "on"];
     let off_args = &["test-proxy", "off"];
     let check_args = &["test-proxy", "check"];
 
     // Act: 解析所有子命令
-    let on_cli = TestProxyCli::try_parse_from(on_args)
-        .expect("CLI args should parse successfully");
-    let off_cli = TestProxyCli::try_parse_from(off_args)
-        .expect("CLI args should parse successfully");
-    let check_cli = TestProxyCli::try_parse_from(check_args)
-        .expect("CLI args should parse successfully");
+    let on_cli = TestProxyCli::try_parse_from(on_args)?;
+    let off_cli = TestProxyCli::try_parse_from(off_args)?;
+    let check_cli = TestProxyCli::try_parse_from(check_args)?;
 
     // Assert: 验证所有子命令都可以正确解析
     assert!(matches!(on_cli.command, ProxySubcommand::On));
     assert!(matches!(off_cli.command, ProxySubcommand::Off));
     assert!(matches!(check_cli.command, ProxySubcommand::Check));
+
+    Ok(())
 }
 
 // ==================== Error Handling Tests ====================
@@ -65,7 +65,7 @@ fn test_proxy_command_with_all_subcommands_parses_successfully() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示无效子命令
 #[test]
-fn test_proxy_command_with_invalid_subcommand_returns_error() {
+fn test_proxy_command_with_invalid_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备无效子命令的输入
     let args = &["test-proxy", "invalid"];
 
@@ -74,6 +74,8 @@ fn test_proxy_command_with_invalid_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail on invalid subcommand");
+
+    Ok(())
 }
 
 /// 测试Proxy命令缺少子命令返回错误
@@ -90,7 +92,7 @@ fn test_proxy_command_with_invalid_subcommand_returns_error() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示缺少子命令
 #[test]
-fn test_proxy_command_with_missing_subcommand_returns_error() {
+fn test_proxy_command_with_missing_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备缺少子命令的输入
     let args = &["test-proxy"];
 
@@ -99,6 +101,8 @@ fn test_proxy_command_with_missing_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail when subcommand is missing");
+
+    Ok(())
 }
 
 /// 测试Proxy所有命令使用额外参数返回错误
@@ -115,7 +119,7 @@ fn test_proxy_command_with_missing_subcommand_returns_error() {
 /// - 所有命令在使用额外参数时都返回错误
 /// - 错误消息明确指示不接受额外参数
 #[test]
-fn test_proxy_all_commands_with_extra_arguments_return_error() {
+fn test_proxy_all_commands_with_extra_arguments_return_error() -> Result<()> {
     // Arrange: 准备所有命令和额外参数
     let commands = ["on", "off", "check"];
 
@@ -129,6 +133,8 @@ fn test_proxy_all_commands_with_extra_arguments_return_error() {
             cmd
         );
     }
+
+    Ok(())
 }
 
 /// 测试Proxy命令使用大写子命令返回错误
@@ -149,7 +155,7 @@ fn test_proxy_all_commands_with_extra_arguments_return_error() {
 /// - 所有大写命令都返回错误
 /// - 错误消息明确指示命令无效
 #[test]
-fn test_proxy_command_with_uppercase_subcommand_returns_error() {
+fn test_proxy_command_with_uppercase_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备大写子命令的输入（clap 默认区分大小写）
     let on_args = &["test-proxy", "ON"];
     let off_args = &["test-proxy", "OFF"];
@@ -173,6 +179,8 @@ fn test_proxy_command_with_uppercase_subcommand_returns_error() {
         check_result.is_err(),
         "Uppercase commands should fail (clap is case-sensitive by default)"
     );
+
+    Ok(())
 }
 
 // ==================== Command Name Tests ====================
@@ -194,7 +202,7 @@ fn test_proxy_command_with_uppercase_subcommand_returns_error() {
 /// - 所有命令都能正确解析
 /// - 命令类型匹配预期
 #[test]
-fn test_proxy_command_with_full_names_parses_successfully() {
+fn test_proxy_command_with_full_names_parses_successfully() -> Result<()> {
     // Arrange: 准备完整命令名称的输入
     // 注意：ProxySubcommand 没有定义短名称，所以只测试完整名称
     let on_args = &["test-proxy", "on"];
@@ -202,15 +210,14 @@ fn test_proxy_command_with_full_names_parses_successfully() {
     let check_args = &["test-proxy", "check"];
 
     // Act: 解析所有命令
-    let on_cli = TestProxyCli::try_parse_from(on_args)
-        .expect("CLI args should parse successfully");
-    let off_cli = TestProxyCli::try_parse_from(off_args)
-        .expect("CLI args should parse successfully");
-    let check_cli = TestProxyCli::try_parse_from(check_args)
-        .expect("CLI args should parse successfully");
+    let on_cli = TestProxyCli::try_parse_from(on_args)?;
+    let off_cli = TestProxyCli::try_parse_from(off_args)?;
+    let check_cli = TestProxyCli::try_parse_from(check_args)?;
 
     // Assert: 验证命令可以正确解析
     assert!(matches!(on_cli.command, ProxySubcommand::On));
     assert!(matches!(off_cli.command, ProxySubcommand::Off));
     assert!(matches!(check_cli.command, ProxySubcommand::Check));
+
+    Ok(())
 }

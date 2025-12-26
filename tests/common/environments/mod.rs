@@ -9,7 +9,3 @@ pub mod git_test_env;
 pub use cli_test_env::CliTestEnv;
 pub use git_test_env::GitTestEnv;
 
-// RepoTestEnv 暂时未实现，将在后续添加
-// pub mod repo_test_env;
-// pub use repo_test_env::RepoTestEnv;
-

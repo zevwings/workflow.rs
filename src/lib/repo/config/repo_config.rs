@@ -78,7 +78,6 @@ impl RepoConfig {
     /// * `home` - 用户主目录路径
     pub fn exists_in(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<bool> {
         let repo_path = repo_path.as_ref();
-        // 1. Check if in Git repository
         // Note: GitRepo::is_git_repo() still uses current directory, so we check by trying to get git dir
         let is_git_repo = GitCommand::new(["rev-parse", "--git-dir", "--quiet"])
             .with_cwd(repo_path)
@@ -88,11 +87,9 @@ impl RepoConfig {
             return Ok(true); // Not in Git repository, consider as "configured" (skip check)
         }
 
-        // 2. Load personal preference configuration
         let config = PrivateRepoConfig::load_from(repo_path, home)
             .wrap_err("Failed to load repository personal config")?;
 
-        // 3. Check if configured (unified check: always use PrivateRepoConfig.configured)
         Ok(config.configured)
     }
 

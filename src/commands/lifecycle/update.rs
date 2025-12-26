@@ -546,7 +546,6 @@ impl UpdateCommand {
     ) -> Result<BinaryStatus> {
         let path_obj = Path::new(path);
 
-        // 1. 检查文件是否存在
         let exists = path_obj.exists();
         if !exists {
             return Ok(BinaryStatus {
@@ -559,7 +558,6 @@ impl UpdateCommand {
             });
         }
 
-        // 2. 检查文件是否可执行
         let executable = Self::check_executable(path_obj)?;
 
         // 不再检查版本号和执行能力，避免 Gatekeeper 问题

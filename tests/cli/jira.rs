@@ -79,7 +79,7 @@ fn test_jira_command_with_id_return_ok(#[case] subcommand: &str, #[case] jira_id
         JiraSubcommand::Attachments { jira_id: id } => {
             assert_eq!(id.jira_id, Some(jira_id.to_string()));
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -123,7 +123,7 @@ fn test_jira_command_without_id_parses_correctly_return_ok(#[case] subcommand: &
         JiraSubcommand::Clean { jira_id, .. } => {
             assert_eq!(jira_id.jira_id, None);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -172,7 +172,7 @@ fn test_jira_command_with_table_output_format_parses_correctly_return_ok(
             assert!(!output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -219,7 +219,7 @@ fn test_jira_command_with_json_output_format_parses_correctly_return_ok(
             assert!(!output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -266,7 +266,7 @@ fn test_jira_command_with_yaml_output_format_parses_correctly_return_ok(
             assert!(output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -308,7 +308,7 @@ fn test_jira_command_output_format_markdown_return_ok(
             assert!(!output_format.yaml);
             assert!(output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -351,7 +351,7 @@ fn test_jira_command_output_format_all_flags_return_ok(
             assert!(args.query_display.output_format.yaml);
             assert!(args.query_display.output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -394,7 +394,7 @@ fn test_jira_clean_command_structure_return_ok() -> Result<()> {
             assert!(dry_run.dry_run);
             assert!(list);
         }
-        _ => panic!("Expected Clean command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Clean command")),
     }
     Ok(())
 }
@@ -447,7 +447,7 @@ fn test_jira_clean_command_flags_return_ok(
             assert_eq!(dr.dry_run, dry_run);
             assert_eq!(l, list);
         }
-        _ => panic!("Expected Clean command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Clean command")),
     }
     Ok(())
 }
@@ -481,7 +481,7 @@ fn test_jira_clean_command_short_flags_return_ok() -> Result<()> {
             assert!(dry_run.dry_run);
             assert!(list);
         }
-        _ => panic!("Expected Clean command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Clean command")),
     }
     Ok(())
 }
@@ -505,7 +505,7 @@ fn test_jira_comments_command_with_limit_return_ok() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.limit, Some(10)),
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
     Ok(())
 }
@@ -527,7 +527,7 @@ fn test_jira_comments_command_with_offset_return_ok() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.offset, Some(5)),
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
     Ok(())
 }
@@ -557,7 +557,7 @@ fn test_jira_comments_command_with_author_return_ok() -> Result<()> {
         JiraSubcommand::Comments { author, .. } => {
             assert_eq!(author, Some("user@example.com".to_string()));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
     Ok(())
 }
@@ -587,7 +587,7 @@ fn test_jira_comments_command_with_since_return_ok() -> Result<()> {
         JiraSubcommand::Comments { since, .. } => {
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
     Ok(())
 }
@@ -635,7 +635,7 @@ fn test_jira_comments_command_all_filters_return_collect() -> Result<()> {
             assert_eq!(author, Some("user@example.com".to_string()));
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
     Ok(())
 }
@@ -675,7 +675,7 @@ fn test_jira_comments_command_pagination_return_ok() -> Result<()> {
             assert_eq!(pagination.limit, Some(15));
             assert_eq!(pagination.offset, Some(30));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
     Ok(())
 }
@@ -749,7 +749,7 @@ fn test_jira_changelog_command_with_field_filter_return_ok() -> Result<()> {
             assert_eq!(args.jira_id.jira_id, Some("PROJ-123".to_string()));
             // field 字段当前不存在于枚举定义中
         }
-        _ => panic!("Expected Changelog command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Changelog command")),
     }
     Ok(())
 }

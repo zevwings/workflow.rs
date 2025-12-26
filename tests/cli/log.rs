@@ -52,7 +52,7 @@ fn test_log_download_command_with_jira_id_parses_correctly_return_ok() -> Result
         LogSubcommand::Download { jira_id } => {
             assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
         }
-        _ => panic!("Expected Download command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Download command")),
     }
     Ok(())
 }
@@ -82,7 +82,7 @@ fn test_log_download_command_without_id_parses_correctly_return_ok() -> Result<(
         LogSubcommand::Download { jira_id } => {
             assert_eq!(jira_id.jira_id, None);
         }
-        _ => panic!("Expected Download command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Download command")),
     }
     Ok(())
 }
@@ -118,7 +118,7 @@ fn test_log_find_command_with_jira_id_and_request_id_parses_correctly_return_ok(
             assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
             assert_eq!(request_id, Some("req-12345".to_string()));
         }
-        _ => panic!("Expected Find command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Find command")),
     }
     Ok(())
 }
@@ -152,7 +152,7 @@ fn test_log_find_command_with_jira_id_only_parses_correctly_return_ok() -> Resul
             assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
             assert_eq!(request_id, None);
         }
-        _ => panic!("Expected Find command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Find command")),
     }
     Ok(())
 }
@@ -186,7 +186,7 @@ fn test_log_find_command_without_parameters_parses_correctly_return_ok() -> Resu
             assert_eq!(jira_id.jira_id, None);
             assert_eq!(request_id, None);
         }
-        _ => panic!("Expected Find command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Find command")),
     }
     Ok(())
 }
@@ -222,7 +222,7 @@ fn test_log_search_command_with_jira_id_and_search_term_parses_correctly_return_
             assert_eq!(jira_id.jira_id, Some("PROJ-789".to_string()));
             assert_eq!(search_term, Some("error".to_string()));
         }
-        _ => panic!("Expected Search command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Search command")),
     }
     Ok(())
 }
@@ -256,7 +256,7 @@ fn test_log_search_command_with_jira_id_only_parses_correctly_return_ok() -> Res
             assert_eq!(jira_id.jira_id, Some("PROJ-789".to_string()));
             assert_eq!(search_term, None);
         }
-        _ => panic!("Expected Search command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Search command")),
     }
     Ok(())
 }
@@ -290,7 +290,7 @@ fn test_log_search_command_without_parameters_parses_correctly_return_ok() -> Re
             assert_eq!(jira_id.jira_id, None);
             assert_eq!(search_term, None);
         }
-        _ => panic!("Expected Search command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Search command")),
     }
     Ok(())
 }
@@ -384,17 +384,17 @@ fn test_log_jira_id_parameter_is_optional_in_all_commands_return_collect() -> Re
     // Assert: 验证 JIRA ID 参数在所有命令中都是可选的
     match download_cli.command {
         LogSubcommand::Download { jira_id } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
 
     match find_cli.command {
         LogSubcommand::Find { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
 
     match search_cli.command {
         LogSubcommand::Search { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
     Ok(())
 }
@@ -429,7 +429,7 @@ fn test_log_find_command_with_request_id_only_parses_correctly_return_ok() -> Re
             assert_eq!(jira_id.jira_id, Some("req-12345".to_string()));
             assert_eq!(request_id, None);
         }
-        _ => panic!("Expected Find command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Find command")),
     }
     Ok(())
 }
@@ -464,7 +464,7 @@ fn test_log_search_command_with_search_term_only_parses_correctly_return_ok() ->
             assert_eq!(jira_id.jira_id, Some("error".to_string()));
             assert_eq!(search_term, None);
         }
-        _ => panic!("Expected Search command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Search command")),
     }
     Ok(())
 }

@@ -3,6 +3,7 @@
 //! 测试 LLM CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use workflow::cli::LLMSubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -29,20 +30,20 @@ struct TestLlmCli {
 /// - 所有子命令都能正确解析
 /// - 命令类型匹配预期
 #[test]
-fn test_llm_command_with_all_subcommands_parses_successfully() {
+fn test_llm_command_with_all_subcommands_parses_successfully() -> Result<()> {
     // Arrange: 准备所有子命令的输入
     let show_args = &["test-llm", "show"];
     let setup_args = &["test-llm", "setup"];
 
     // Act: 解析命令行参数
-    let show_cli = TestLlmCli::try_parse_from(show_args)
-        .expect("CLI args should parse successfully");
-    let setup_cli = TestLlmCli::try_parse_from(setup_args)
-        .expect("CLI args should parse successfully");
+    let show_cli = TestLlmCli::try_parse_from(show_args)?;
+    let setup_cli = TestLlmCli::try_parse_from(setup_args)?;
 
     // Assert: 验证所有子命令都可以正确解析
     assert!(matches!(show_cli.command, LLMSubcommand::Show));
     assert!(matches!(setup_cli.command, LLMSubcommand::Setup));
+
+    Ok(())
 }
 
 // ==================== Error Handling Tests ====================
@@ -61,7 +62,7 @@ fn test_llm_command_with_all_subcommands_parses_successfully() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示无效子命令
 #[test]
-fn test_llm_command_with_invalid_subcommand_returns_error() {
+fn test_llm_command_with_invalid_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备无效子命令的输入
     let invalid_args = &["test-llm", "invalid"];
 
@@ -70,6 +71,8 @@ fn test_llm_command_with_invalid_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail on invalid subcommand");
+
+    Ok(())
 }
 
 /// 测试LLM命令缺少子命令返回错误
@@ -86,7 +89,7 @@ fn test_llm_command_with_invalid_subcommand_returns_error() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示缺少子命令
 #[test]
-fn test_llm_command_with_missing_subcommand_returns_error() {
+fn test_llm_command_with_missing_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备缺少子命令的输入
     let missing_args = &["test-llm"];
 
@@ -95,6 +98,8 @@ fn test_llm_command_with_missing_subcommand_returns_error() {
 
     // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail when subcommand is missing");
+
+    Ok(())
 }
 
 /// 测试LLM show命令使用额外参数返回错误
@@ -111,7 +116,7 @@ fn test_llm_command_with_missing_subcommand_returns_error() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示不接受额外参数
 #[test]
-fn test_llm_show_command_with_extra_arguments_returns_error() {
+fn test_llm_show_command_with_extra_arguments_returns_error() -> Result<()> {
     // Arrange: 准备包含额外参数的 Show 命令输入
     let extra_args = &["test-llm", "show", "extra-arg"];
 
@@ -123,6 +128,8 @@ fn test_llm_show_command_with_extra_arguments_returns_error() {
         result.is_err(),
         "Show command should not accept extra arguments"
     );
+
+    Ok(())
 }
 
 /// 测试LLM setup命令使用额外参数返回错误
@@ -139,7 +146,7 @@ fn test_llm_show_command_with_extra_arguments_returns_error() {
 /// - 解析失败，返回错误
 /// - 错误消息明确指示不接受额外参数
 #[test]
-fn test_llm_setup_command_with_extra_arguments_returns_error() {
+fn test_llm_setup_command_with_extra_arguments_returns_error() -> Result<()> {
     // Arrange: 准备包含额外参数的 Setup 命令输入
     let extra_args = &["test-llm", "setup", "extra-arg"];
 
@@ -151,6 +158,8 @@ fn test_llm_setup_command_with_extra_arguments_returns_error() {
         result.is_err(),
         "Setup command should not accept extra arguments"
     );
+
+    Ok(())
 }
 
 /// 测试LLM命令使用大写子命令返回错误
@@ -171,7 +180,7 @@ fn test_llm_setup_command_with_extra_arguments_returns_error() {
 /// - 所有大写命令都返回错误
 /// - 错误消息明确指示命令无效
 #[test]
-fn test_llm_command_with_uppercase_subcommand_returns_error() {
+fn test_llm_command_with_uppercase_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备大写子命令的输入（clap 默认区分大小写）
     let uppercase_show_args = &["test-llm", "SHOW"];
     let uppercase_setup_args = &["test-llm", "SETUP"];
@@ -189,6 +198,8 @@ fn test_llm_command_with_uppercase_subcommand_returns_error() {
         setup_result.is_err(),
         "Uppercase commands should fail (clap is case-sensitive by default)"
     );
+
+    Ok(())
 }
 
 // 枚举变体完整性已通过 test_llm_command_parsing_all_subcommands 测试验证

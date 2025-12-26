@@ -104,21 +104,16 @@ impl BranchSync {
     ) -> Result<BranchSyncResult> {
         let repo_path = repo_path.as_ref();
 
-        // 1. 获取当前分支
         let current_branch = GitBranch::current_branch_in(repo_path)?;
         log_success!("Current branch: {}", current_branch);
 
-        // 2. 检查工作区并 stash
         let has_stashed = Self::check_working_directory_in(repo_path)?;
 
-        // 3. 验证并准备源分支（要合并到当前分支的分支）
         let source_branch_info = Self::prepare_source_branch_in(repo_path, &options.source_branch)?;
 
-        // 4. 确定同步策略
         let strategy =
             Self::determine_sync_strategy(options.rebase, options.ff_only, options.squash);
 
-        // 5. 执行同步
         let success = Self::execute_sync_in(
             repo_path,
             &options.source_branch,
@@ -136,21 +131,18 @@ impl BranchSync {
             success,
         };
 
-        // 6. 调用回调处理同步后的操作
         let skip_stash_pop = if let Some(ref callbacks) = callbacks {
             callbacks.on_sync_success(&result, source_branch_info.is_remote)?
         } else {
             false
         };
 
-        // 7. 恢复 stash（如果需要）
         if !skip_stash_pop && has_stashed {
             log_info!("Restoring stashed changes...");
             handle_stash_pop_result(Self::stash_pop_in(repo_path, None));
         }
 
-        // 8. 推送（如果当前分支在远程存在，使用 ConfirmDialog 确认）
-        // 注意：如果回调已经推送了（skip_stash_pop == true），可能已经推送过了
+        // 如果回调已经推送了（skip_stash_pop == true），可能已经推送过了
         // 但为了确保所有情况都覆盖，我们仍然检查并询问用户
         let current_branch_exists_remote = Self::has_remote_branch_in(repo_path, &result.current_branch)
             .wrap_err("Failed to check if current branch exists on remote")?;
@@ -172,20 +164,11 @@ impl BranchSync {
             }
         }
 
-        // 9. 调用清理回调
         if let Some(ref callbacks) = callbacks {
             callbacks.on_after_sync(&result, &options.source_branch)?;
         }
 
         Ok(result)
-    }
-
-    /// 检查工作区状态
-    ///
-    /// 检查是否有未提交的更改，如果有则提示用户处理。
-    /// 返回是否执行了 stash 操作。
-    fn check_working_directory() -> Result<bool> {
-        Self::check_working_directory_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
     }
 
     /// 检查工作区状态（指定仓库路径）
@@ -230,14 +213,6 @@ impl BranchSync {
         }
     }
 
-    /// 验证并准备源分支
-    ///
-    /// 检查要合并到当前分支的源分支是否存在（本地或远程），如果只在远程则先 fetch。
-    /// 返回源分支信息（类型、合并引用）。
-    fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
-        Self::prepare_source_branch_in(std::env::current_dir().wrap_err("Failed to get current directory")?, source_branch)
-    }
-
     /// 验证并准备源分支（指定仓库路径）
     ///
     /// 检查要合并到当前分支的源分支是否存在（本地或远程），如果只在远程则先 fetch。
@@ -261,7 +236,6 @@ impl BranchSync {
                 Self::fetch_in(repo_path).wrap_err("Failed to fetch from remote")
             })?;
             log_success!("Fetched latest changes from remote");
-            // 返回远程分支引用
             Ok(SourceBranchInfo {
                 is_remote: true,
                 merge_ref: format!("origin/{}", source_branch),
@@ -289,24 +263,6 @@ impl BranchSync {
         } else {
             SyncStrategy::Merge(crate::MergeStrategy::Merge)
         }
-    }
-
-    /// 执行同步操作
-    fn execute_sync(
-        source_branch: &str,
-        current_branch: &str,
-        source_branch_info: &SourceBranchInfo,
-        strategy: SyncStrategy,
-        has_stashed: bool,
-    ) -> Result<bool> {
-        Self::execute_sync_in(
-            std::env::current_dir().wrap_err("Failed to get current directory")?,
-            source_branch,
-            current_branch,
-            source_branch_info,
-            strategy,
-            has_stashed,
-        )
     }
 
     /// 执行同步操作（指定仓库路径）
@@ -358,7 +314,6 @@ impl BranchSync {
                 }
             }
             SyncStrategy::Rebase => {
-                // 执行 rebase
                 let rebase_result = Spinner::with(
                     format!("Rebasing '{}' onto '{}'...", current_branch, source_branch),
                     || Self::rebase_onto_in(repo_path, &source_branch_info.merge_ref),
@@ -397,11 +352,6 @@ impl BranchSync {
         }
     }
 
-    /// 询问用户并推送同步后的更改
-    fn prompt_and_push_after_sync(result: &BranchSyncResult) -> Result<()> {
-        Self::prompt_and_push_after_sync_in(std::env::current_dir().wrap_err("Failed to get current directory")?, result)
-    }
-
     /// 询问用户并推送同步后的更改（指定仓库路径）
     fn prompt_and_push_after_sync_in(repo_path: impl AsRef<Path>, result: &BranchSyncResult) -> Result<()> {
         let repo_path = repo_path.as_ref();
@@ -431,11 +381,6 @@ impl BranchSync {
         }
 
         Ok(())
-    }
-
-    /// 推送同步后的更改
-    fn push_after_sync(result: &BranchSyncResult) -> Result<()> {
-        Self::push_after_sync_in(std::env::current_dir().wrap_err("Failed to get current directory")?, result)
     }
 
     /// 推送同步后的更改（指定仓库路径）
