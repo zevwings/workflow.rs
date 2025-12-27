@@ -449,7 +449,39 @@ mod tests {
 
         // 验证配置已设置
 
-        let config = Config::open(guard.config_path())?;
+        // 使用环境变量中的路径（git2 会读取 GIT_CONFIG 环境变量）
+        // 或者直接使用 config_path
+        let config_path = guard.config_path();
+
+        // 确保文件存在
+        if !config_path.exists() {
+            return Err(color_eyre::eyre::eyre!(
+                "Config file does not exist: {}",
+                config_path.display()
+            ));
+        }
+
+        // Windows 上，git2 的 Config::open() 可能需要使用环境变量
+        // 或者我们需要确保使用正确的路径格式
+        #[cfg(target_os = "windows")]
+        {
+            // 在 Windows 上，优先使用环境变量中的路径
+            if let Ok(env_path) = std::env::var("GIT_CONFIG") {
+                if let Ok(config) = Config::open(&env_path) {
+                    if let Ok(name) = config.get_string("user.name") {
+                        assert_eq!(name, "Test User");
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
+        // 打开配置文件（使用绝对路径）
+        let abs_path = std::fs::canonicalize(&config_path)
+            .unwrap_or_else(|_| config_path.clone());
+        let config = Config::open(&abs_path)?;
+
+        // 读取配置值
         let name = config.get_string("user.name")?;
         assert_eq!(name, "Test User");
 
