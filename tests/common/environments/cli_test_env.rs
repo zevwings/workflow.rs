@@ -183,23 +183,16 @@ impl CliTestEnv {
         }
 
         // 在仓库的配置文件中设置Git用户配置
-        // 临时取消 GIT_CONFIG 环境变量（如果存在），然后使用 --local 选项设置配置
+        // 在 Command 中显式移除 GIT_CONFIG 环境变量，然后使用 --local 选项设置配置
         // 这样可以避免 "only one config file at a time" 错误
-        let original_git_config = std::env::var("GIT_CONFIG").ok();
-
-        // 临时取消 GIT_CONFIG 环境变量
-        std::env::remove_var("GIT_CONFIG");
-
+        // 设置用户配置，在 Command 中显式移除 GIT_CONFIG 环境变量
         let output = std::process::Command::new("git")
             .args(["config", "--local", "user.name", "Test User"])
             .current_dir(work_dir)
+            .env_remove("GIT_CONFIG")
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user name: {}", e))?;
         if !output.status.success() {
-            // 恢复 GIT_CONFIG 环境变量
-            if let Some(ref val) = original_git_config {
-                std::env::set_var("GIT_CONFIG", val);
-            }
             let error = String::from_utf8_lossy(&output.stderr);
             return Err(color_eyre::eyre::eyre!(
                 "Failed to set git user name: {}",
@@ -210,23 +203,15 @@ impl CliTestEnv {
         let output = std::process::Command::new("git")
             .args(["config", "--local", "user.email", "test@example.com"])
             .current_dir(work_dir)
+            .env_remove("GIT_CONFIG")
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user email: {}", e))?;
         if !output.status.success() {
-            // 恢复 GIT_CONFIG 环境变量
-            if let Some(ref val) = original_git_config {
-                std::env::set_var("GIT_CONFIG", val);
-            }
             let error = String::from_utf8_lossy(&output.stderr);
             return Err(color_eyre::eyre::eyre!(
                 "Failed to set git user email: {}",
                 error
             ));
-        }
-
-        // 恢复 GIT_CONFIG 环境变量
-        if let Some(ref val) = original_git_config {
-            std::env::set_var("GIT_CONFIG", val);
         }
 
         // 禁用网络连接，避免测试超时

@@ -100,22 +100,16 @@ impl GitTestEnv {
         Self::run_git_command(&work_dir, &["init", "-b", "main"])?;
 
         // 在仓库的配置文件中设置Git用户配置
-        // 临时取消 GIT_CONFIG 环境变量（如果存在），然后使用 --local 选项设置配置
+        // 使用 --local 选项设置配置，在 Command 中显式移除 GIT_CONFIG 环境变量
         // 这样可以避免 "only one config file at a time" 错误
-        let original_git_config = std::env::var("GIT_CONFIG").ok();
-        std::env::remove_var("GIT_CONFIG");
-
-        // 设置用户配置
-        Self::run_git_command(&work_dir, &["config", "--local", "user.name", "Test User"])?;
-        Self::run_git_command(
+        Self::run_git_command_without_git_config(
+            &work_dir,
+            &["config", "--local", "user.name", "Test User"],
+        )?;
+        Self::run_git_command_without_git_config(
             &work_dir,
             &["config", "--local", "user.email", "test@example.com"],
         )?;
-
-        // 恢复 GIT_CONFIG 环境变量
-        if let Some(ref val) = original_git_config {
-            std::env::set_var("GIT_CONFIG", val);
-        }
 
         // 创建初始提交
         std::fs::write(work_dir.join("README.md"), "# Test Repository\n")?;
@@ -471,6 +465,37 @@ impl GitTestEnv {
     /// 成功时返回`Ok(())`，失败时返回错误
     fn run_git_command(repo_path: &Path, args: &[&str]) -> Result<()> {
         let output = Command::new("git").args(args).current_dir(repo_path).output()?;
+
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!(
+                "Git command failed: git {}\nError: {}",
+                args.join(" "),
+                error
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// 运行Git命令，但不使用GIT_CONFIG环境变量
+    ///
+    /// 用于在设置了GIT_CONFIG环境变量的情况下，仍然能够使用--local选项设置仓库本地配置。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - Git仓库路径
+    /// * `args` - Git命令参数
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回`Ok(())`，失败时返回错误
+    fn run_git_command_without_git_config(repo_path: &Path, args: &[&str]) -> Result<()> {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(repo_path)
+            .env_remove("GIT_CONFIG")
+            .output()?;
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
