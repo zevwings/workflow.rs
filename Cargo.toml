@@ -40,6 +40,7 @@ fs2 = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 handlebars = "5.1"
+git2 = "0.18"  # Git 操作库
 
 [dev-dependencies]
 pretty_assertions = "1.4"
@@ -48,7 +49,7 @@ mockito = "1.2"
 assert_cmd = "2.0"      # CLI 命令测试
 tempfile = "3.8"        # 临时文件和目录
 serial_test = "3.2.0"
-gix = "0.66"            # 现代 Git 操作库 (仅用于测试)
+git2 = "0.18"           # Git 操作库 (用于测试环境)
 criterion = { version = "0.5", features = ["html_reports"] }
 
 # 测试分类features（用于分类管理被忽略的测试）

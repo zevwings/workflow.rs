@@ -24,10 +24,10 @@
 //! }
 //! ```
 
-use color_eyre::Result;
+use color_eyre::{eyre::WrapErr, Result};
+use git2::Config;
 use serial_test::serial;
 use std::path::PathBuf;
-use std::process::Command;
 use tempfile::NamedTempFile;
 
 /// Git配置隔离守卫
@@ -121,26 +121,7 @@ impl GitConfigGuard {
         const MAX_RETRIES: usize = 3;
         const RETRY_DELAY_MS: u64 = 100;
 
-        // 使用稳定的工作目录（项目根目录或系统临时目录）
-        // Git 命令使用 --file 参数，不需要特定的工作目录
-        // 但在并行测试时，当前工作目录可能被删除，导致 Git 命令失败
-        // 优先使用项目根目录（CARGO_MANIFEST_DIR），如果不可用则使用系统临时目录
-        let stable_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .ok()
-            .and_then(|p| std::path::PathBuf::from(p).canonicalize().ok())
-            .or_else(|| {
-                std::env::current_dir()
-                    .ok()
-                    .and_then(|d| d.canonicalize().ok())
-                    .filter(|d| d.exists())
-            })
-            .unwrap_or_else(std::env::temp_dir);
-
         // 重试机制：处理锁文件冲突和短暂的并发锁定
-        let config_path_str = self
-            .config_path
-            .to_str()
-            .ok_or_else(|| color_eyre::eyre::eyre!("config path should be valid UTF-8"))?;
         for attempt in 0..MAX_RETRIES {
             // 清理可能存在的锁文件（解决锁文件残留问题）
             // Git 在写入配置文件时会创建锁文件（.tmpXXXXX.lock）
@@ -151,33 +132,51 @@ impl GitConfigGuard {
                 let _ = std::fs::remove_file(&lock_file);
             }
 
-            let output = Command::new("git")
-                .args(["config", "--file", config_path_str, key, value])
-                .current_dir(&stable_dir) // 设置稳定的工作目录，避免并行测试时目录被删除的问题
-                .output()
-                .map_err(|e| color_eyre::eyre::eyre!("Failed to execute git config: {}", e))?;
+            // 使用 git2 API 打开并设置配置
+            match Config::open(&self.config_path) {
+                Ok(mut config) => {
+                    match config.set_str(key, value) {
+                        Ok(()) => return Ok(()),
+                        Err(e) => {
+                            // 检查是否是锁文件错误
+                            let error_msg = e.message();
+                            let is_lock_error = error_msg.contains("could not lock config file");
 
-            if output.status.success() {
-                return Ok(());
+                            // 如果是锁文件错误且还有重试机会，等待后重试
+                            if is_lock_error && attempt < MAX_RETRIES - 1 {
+                                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
+                                continue;
+                            }
+
+                            // 其他错误或重试次数用尽，返回错误
+                            return Err(color_eyre::eyre::eyre!(
+                                "Failed to set Git config {}={}: {}",
+                                key,
+                                value,
+                                error_msg
+                            ));
+                        }
+                    }
+                }
+                Err(e) => {
+                    // 如果配置文件不存在，创建一个新的
+                    if e.code() == git2::ErrorCode::NotFound {
+                        // 创建空配置文件
+                        std::fs::write(&self.config_path, "")
+                            .wrap_err("Failed to create config file")?;
+                        // 重试
+                        if attempt < MAX_RETRIES - 1 {
+                            std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
+                            continue;
+                        }
+                    }
+                    return Err(color_eyre::eyre::eyre!(
+                        "Failed to open Git config file {}: {}",
+                        self.config_path.display(),
+                        e.message()
+                    ));
+                }
             }
-
-            // 检查是否是锁文件错误
-            let error = String::from_utf8_lossy(&output.stderr);
-            let is_lock_error = error.contains("could not lock config file");
-
-            // 如果是锁文件错误且还有重试机会，等待后重试
-            if is_lock_error && attempt < MAX_RETRIES - 1 {
-                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
-                continue;
-            }
-
-            // 其他错误或重试次数用尽，返回错误
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to set Git config {}={}: {}",
-                key,
-                value,
-                error
-            ));
         }
 
         unreachable!()
@@ -270,30 +269,10 @@ mod tests {
         guard.set("user.email", "test@example.com")?;
 
         // 验证配置已设置
-        // 使用稳定的工作目录，避免并行测试时目录被删除的问题
-        let stable_dir = std::env::var("CARGO_MANIFEST_DIR")
-            .ok()
-            .and_then(|p| std::path::PathBuf::from(p).canonicalize().ok())
-            .or_else(|| {
-                std::env::current_dir()
-                    .ok()
-                    .and_then(|d| d.canonicalize().ok())
-                    .filter(|d| d.exists())
-            })
-            .unwrap_or_else(std::env::temp_dir);
 
-        let config_path_str = guard
-            .config_path()
-            .to_str()
-            .ok_or_else(|| color_eyre::eyre::eyre!("config path should be valid UTF-8"))?;
-        let output = Command::new("git")
-            .args(["config", "--file", config_path_str, "user.name"])
-            .current_dir(&stable_dir)
-            .output()?;
-
-        assert!(output.status.success());
-        let name = String::from_utf8(output.stdout)?;
-        assert_eq!(name.trim(), "Test User");
+        let config = Config::open(guard.config_path())?;
+        let name = config.get_string("user.name")?;
+        assert_eq!(name, "Test User");
 
         Ok(())
     }

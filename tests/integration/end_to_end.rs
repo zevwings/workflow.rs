@@ -9,6 +9,7 @@ use crate::common::environments::CliTestEnv;
 use crate::common::mock::server::MockServer;
 use crate::common::test_data::TestDataFactory;
 use color_eyre::Result;
+use git2::Repository;
 
 // ==================== PR 工作流测试 ====================
 
@@ -265,28 +266,18 @@ fn test_branch_management_workflow() -> Result<()> {
     env.checkout("feature/one")?;
 
     // 验证当前分支
-    let env_path = env.path().to_path_buf();
-    let output = std::process::Command::new("git")
-        .args(["branch", "--show-current"])
-        .current_dir(&env_path)
-        .output()?;
-
-    let stdout_str = String::from_utf8_lossy(&output.stdout);
-    let current_branch = stdout_str.trim();
-    assert_eq!(current_branch, "feature/one");
+    let repo = Repository::open(env.path())?;
+    let head = repo.head()?;
+    let branch_name = head.name().unwrap().strip_prefix("refs/heads/").unwrap();
+    assert_eq!(branch_name, "feature/one");
 
     // 4. 切换到另一个分支
     env.checkout("feature/two")?;
 
-    let env_path = env.path().to_path_buf();
-    let output = std::process::Command::new("git")
-        .args(["branch", "--show-current"])
-        .current_dir(&env_path)
-        .output()?;
-
-    let stdout_str = String::from_utf8_lossy(&output.stdout);
-    let current_branch = stdout_str.trim();
-    assert_eq!(current_branch, "feature/two");
+    let repo = Repository::open(env.path())?;
+    let head = repo.head()?;
+    let branch_name = head.name().unwrap().strip_prefix("refs/heads/").unwrap();
+    assert_eq!(branch_name, "feature/two");
 
     Ok(())
 }
@@ -324,18 +315,22 @@ fn test_commit_workflow() -> Result<()> {
         .create_commit("feat: add library")?;
 
     // 3. 验证提交历史
-    let env_path = env.path().to_path_buf();
-    let output = std::process::Command::new("git")
-        .args(["log", "--oneline"])
-        .current_dir(&env_path)
-        .output()?;
+    let repo = Repository::open(env.path())?;
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head()?;
 
-    let log_output = String::from_utf8_lossy(&output.stdout);
+    let mut commit_messages = Vec::new();
+    for oid in revwalk {
+        let oid = oid?;
+        let commit = repo.find_commit(oid)?;
+        commit_messages.push(commit.message().unwrap_or("").to_string());
+    }
 
     // 应该包含所有提交
-    assert!(log_output.contains("Initial commit"));
-    assert!(log_output.contains("add main function"));
-    assert!(log_output.contains("add library"));
+    let all_messages = commit_messages.join(" ");
+    assert!(all_messages.contains("Initial commit"));
+    assert!(all_messages.contains("add main function"));
+    assert!(all_messages.contains("add library"));
 
     Ok(())
 }

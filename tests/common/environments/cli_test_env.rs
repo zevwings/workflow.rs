@@ -19,7 +19,8 @@
 //! }
 //! ```
 
-use color_eyre::Result;
+use color_eyre::{eyre::WrapErr, Result};
+use git2::{IndexAddOption, Repository, Signature};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -169,77 +170,107 @@ impl CliTestEnv {
             })?;
         }
 
-        let output = std::process::Command::new("git")
-            .args(["init", "-b", "main"])
-            .current_dir(work_dir)
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to init git repo: {}", e))?;
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to init git repo: {}",
-                error
-            ));
-        }
+        // 初始化Git仓库，设置默认分支为main
+        let mut init_opts = git2::RepositoryInitOptions::new();
+        init_opts.initial_head("main");
+        let repo = Repository::init_opts(work_dir, &init_opts)
+            .wrap_err("Failed to initialize git repository")?;
 
         // 在仓库的配置文件中设置Git用户配置
-        // 在 Command 中显式移除 GIT_CONFIG 环境变量，然后使用 --local 选项设置配置
-        // 这样可以避免 "only one config file at a time" 错误
-        // 设置用户配置，在 Command 中显式移除 GIT_CONFIG 环境变量
-        let output = std::process::Command::new("git")
-            .args(["config", "--local", "user.name", "Test User"])
-            .current_dir(work_dir)
-            .env_remove("GIT_CONFIG")
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user name: {}", e))?;
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to set git user name: {}",
-                error
-            ));
-        }
+        // 使用 git2 API 设置本地配置，避免 GIT_CONFIG 环境变量冲突
+        let mut config = repo
+            .config()
+            .wrap_err("Failed to open repository config")?;
+        config
+            .set_str("user.name", "Test User")
+            .wrap_err("Failed to set user.name")?;
+        config
+            .set_str("user.email", "test@example.com")
+            .wrap_err("Failed to set user.email")?;
 
-        let output = std::process::Command::new("git")
-            .args(["config", "--local", "user.email", "test@example.com"])
-            .current_dir(work_dir)
-            .env_remove("GIT_CONFIG")
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user email: {}", e))?;
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to set git user email: {}",
-                error
-            ));
-        }
-
-        // 禁用网络连接，避免测试超时
-        // 设置 GIT_TERMINAL_PROMPT=0 和 url.insteadOf 来避免网络请求
-        std::process::Command::new("git")
-            .args([
-                "config",
-                "url.insteadOf",
-                "https://github.com/test/test-repo.git",
-            ])
-            .current_dir(work_dir)
-            .output()
-            .ok(); // 允许失败
+        // 注意：不设置 url.insteadOf，因为这会替换 URL 为 file:///dev/null
+        // 导致 extract_repo_name() 无法提取仓库名
+        // 我们使用假的远程引用而不是替换 URL，这样既能避免网络请求，又能保持 URL 格式正确
 
         // 添加remote origin（用于测试需要remote的功能）
-        std::process::Command::new("git")
-            .args([
-                "remote",
-                "add",
-                "origin",
-                "https://github.com/test/test-repo.git",
-            ])
-            .current_dir(work_dir)
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote origin: {}", e))?;
+        repo.remote("origin", "https://github.com/test/test-repo.git")
+            .wrap_err("Failed to add remote origin")?;
+
+        // 创建初始提交（这样 HEAD 才会存在，setup_fake_remote_refs 才能正常工作）
+        std::fs::write(work_dir.join("README.md"), "# Test Repository\n")?;
+
+        // 添加所有文件到索引
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        index
+            .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
+            .wrap_err("Failed to add files to index")?;
+        let tree_id = index
+            .write_tree()
+            .wrap_err("Failed to write index to tree")?;
+        index.write().wrap_err("Failed to write index")?;
+
+        // 创建提交
+        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
+        let signature = Signature::now("Test User", "test@example.com")
+            .wrap_err("Failed to create signature")?;
+        repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            "Initial commit",
+            &tree,
+            &[],
+        )
+        .wrap_err("Failed to create initial commit")?;
 
         // 创建假的远程分支引用（让get_default_branch()等函数能正常工作）
         self.setup_fake_remote_refs()?;
+
+        Ok(self)
+    }
+
+    /// 初始化Git仓库（不创建初始提交）
+    ///
+    /// 创建一个空的Git仓库，不包含任何提交。
+    /// 用于测试需要空仓库的场景（如测试空仓库的错误处理）。
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回`&Self`以支持链式调用，失败时返回错误
+    pub fn init_git_repo_empty(&self) -> Result<&Self> {
+        let work_dir = &self.project_path;
+
+        // 确保.git目录不存在（如果存在则删除）
+        let git_dir = work_dir.join(".git");
+        if git_dir.exists() {
+            std::fs::remove_dir_all(&git_dir).map_err(|e| {
+                color_eyre::eyre::eyre!("Failed to remove existing .git directory: {}", e)
+            })?;
+        }
+
+        // 初始化Git仓库，设置默认分支为main
+        let mut init_opts = git2::RepositoryInitOptions::new();
+        init_opts.initial_head("main");
+        let repo = Repository::init_opts(work_dir, &init_opts)
+            .wrap_err("Failed to initialize git repository")?;
+
+        // 在仓库的配置文件中设置Git用户配置
+        let mut config = repo
+            .config()
+            .wrap_err("Failed to open repository config")?;
+        config
+            .set_str("user.name", "Test User")
+            .wrap_err("Failed to set user.name")?;
+        config
+            .set_str("user.email", "test@example.com")
+            .wrap_err("Failed to set user.email")?;
+
+        // 添加remote origin（用于测试需要remote的功能）
+        repo.remote("origin", "https://github.com/test/test-repo.git")
+            .wrap_err("Failed to add remote origin")?;
+
+        // 注意：不创建初始提交，保持仓库为空
+        // 也不调用 setup_fake_remote_refs()，因为 HEAD 不存在
 
         Ok(self)
     }
@@ -259,32 +290,49 @@ impl CliTestEnv {
     /// 2. 删除可能存在的旧引用（如`origin/master`）
     /// 3. 设置远程HEAD引用（`refs/remotes/origin/HEAD`）
     pub fn setup_fake_remote_refs(&self) -> Result<&Self> {
-        let work_dir = &self.project_path;
+        let repo = Repository::open(&self.project_path)
+            .wrap_err("Failed to open repository")?;
 
         // 1. 创建假的远程分支引用（指向当前HEAD）
-        std::process::Command::new("git")
-            .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
-            .current_dir(work_dir)
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to create remote ref: {}", e))?;
+        // 注意：如果仓库还没有提交（UnbornBranch），HEAD 可能不存在
+        // 在这种情况下，我们跳过创建远程引用
+        let head_oid = match repo.head() {
+            Ok(head) => {
+                head.target().ok_or_else(|| {
+                    color_eyre::eyre::eyre!("HEAD does not point to a valid commit")
+                })?
+            }
+            Err(e) if e.code() == git2::ErrorCode::UnbornBranch => {
+                // 如果 HEAD 不存在（空仓库），跳过创建远程引用
+                // 这通常发生在 init_git_repo() 被调用但还没有创建提交时
+                return Ok(self);
+            }
+            Err(e) => {
+                return Err(color_eyre::eyre::eyre!("Failed to get HEAD: {}", e.message()).into());
+            }
+        };
+
+        repo.reference(
+            "refs/remotes/origin/main",
+            head_oid,
+            true,
+            "fake remote ref",
+        )
+        .wrap_err("Failed to create remote ref")?;
 
         // 2. 删除可能存在的旧引用（如origin/master）
-        std::process::Command::new("git")
-            .args(["update-ref", "-d", "refs/remotes/origin/master"])
-            .current_dir(work_dir)
-            .output()
-            .ok(); // 允许失败，因为可能不存在
+        let old_ref = "refs/remotes/origin/master";
+        if let Ok(mut reference) = repo.find_reference(old_ref) {
+            let _ = reference.delete();
+        }
 
         // 3. 设置远程HEAD引用指向main（让 git remote show origin 能工作）
-        std::process::Command::new("git")
-            .args([
-                "symbolic-ref",
-                "refs/remotes/origin/HEAD",
-                "refs/remotes/origin/main",
-            ])
-            .current_dir(work_dir)
-            .output()
-            .ok(); // 允许失败，某些Git版本可能不支持
+        let _ = repo.reference_symbolic(
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/main",
+            true,
+            "fake remote HEAD",
+        );
 
         Ok(self)
     }
@@ -343,25 +391,40 @@ impl CliTestEnv {
     /// env.create_commit("Initial commit")?;
     /// ```
     pub fn create_commit(&self, message: &str) -> Result<&Self> {
-        let output = std::process::Command::new("git")
-            .args(["add", "."])
-            .current_dir(&self.project_path)
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to add files: {}", e))?;
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!("Failed to add files: {}", error));
-        }
+        let repo = Repository::open(&self.project_path)
+            .wrap_err("Failed to open repository")?;
 
-        let output = std::process::Command::new("git")
-            .args(["commit", "-m", message])
-            .current_dir(&self.project_path)
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to commit: {}", e))?;
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!("Failed to commit: {}", error));
-        }
+        // 添加所有文件到索引
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        index
+            .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
+            .wrap_err("Failed to add files to index")?;
+        let tree_id = index
+            .write_tree()
+            .wrap_err("Failed to write index to tree")?;
+        index.write().wrap_err("Failed to write index")?;
+
+        // 创建提交
+        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
+        let signature = Signature::now("Test User", "test@example.com")
+            .wrap_err("Failed to create signature")?;
+
+        // 获取父提交（如果有）
+        let parent_commit = repo.head().ok().and_then(|head| {
+            head.target()
+                .and_then(|oid| repo.find_commit(oid).ok())
+        });
+        let parents: Vec<&git2::Commit> = parent_commit.iter().collect();
+
+        repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            message,
+            &tree,
+            &parents,
+        )
+        .wrap_err_with(|| format!("Failed to create commit: {}", message))?;
 
         Ok(self)
     }
@@ -390,20 +453,14 @@ impl CliTestEnv {
     /// env.create_branch("feature/test")?;
     /// ```
     pub fn create_branch(&self, branch_name: &str) -> Result<&Self> {
-        let output = std::process::Command::new("git")
-            .args(["branch", branch_name])
-            .current_dir(&self.project_path)
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to create branch: {}", e))?;
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to create branch '{}': {}",
-                branch_name,
-                error
-            ));
-        }
-
+        let repo = Repository::open(&self.project_path)
+            .wrap_err("Failed to open repository")?;
+        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let head_commit = repo
+            .find_commit(head.target().unwrap())
+            .wrap_err("Failed to find HEAD commit")?;
+        repo.branch(branch_name, &head_commit, false)
+            .wrap_err_with(|| format!("Failed to create branch: {}", branch_name))?;
         Ok(self)
     }
 
@@ -432,20 +489,18 @@ impl CliTestEnv {
     /// env.checkout("feature/test")?;
     /// ```
     pub fn checkout(&self, branch_name: &str) -> Result<&Self> {
-        let output = std::process::Command::new("git")
-            .args(["checkout", branch_name])
-            .current_dir(&self.project_path)
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to checkout branch: {}", e))?;
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to checkout branch '{}': {}",
-                branch_name,
-                error
-            ));
-        }
-
+        let repo = Repository::open(&self.project_path)
+            .wrap_err("Failed to open repository")?;
+        let refname = format!("refs/heads/{}", branch_name);
+        repo.set_head(&refname)
+            .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
+        repo.checkout_head(Some(
+            git2::build::CheckoutBuilder::default()
+                .force()
+                .remove_ignored(false)
+                .remove_untracked(false),
+        ))
+        .wrap_err_with(|| format!("Failed to checkout HEAD for branch: {}", branch_name))?;
         Ok(self)
     }
 
@@ -767,13 +822,9 @@ mod tests {
         env.create_branch("feature/test")?;
 
         // 验证分支存在
-        let output = std::process::Command::new("git")
-            .args(["branch", "--list", "feature/test"])
-            .current_dir(env.path())
-            .output()?;
-
-        let branch_list = String::from_utf8_lossy(&output.stdout);
-        assert!(branch_list.contains("feature/test"));
+        let repo = Repository::open(env.path()).unwrap();
+        let branch = repo.find_branch("feature/test", git2::BranchType::Local);
+        assert!(branch.is_ok(), "Branch should exist");
 
         Ok(())
     }
@@ -807,13 +858,13 @@ mod tests {
         env.checkout("feature/test")?;
 
         // 验证当前分支
-        let output = std::process::Command::new("git")
-            .args(["branch", "--show-current"])
-            .current_dir(env.path())
-            .output()?;
-
-        let current_branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        assert_eq!(current_branch, "feature/test");
+        let repo = Repository::open(env.path()).unwrap();
+        let head = repo.head().unwrap();
+        let branch_name = head.name().unwrap();
+        let branch_name = branch_name
+            .strip_prefix("refs/heads/")
+            .unwrap();
+        assert_eq!(branch_name, "feature/test");
 
         Ok(())
     }

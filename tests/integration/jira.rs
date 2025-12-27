@@ -9,6 +9,7 @@ use crate::common::environments::CliTestEnv;
 use crate::common::mock::server::MockServer;
 use crate::common::test_data::TestDataFactory;
 use color_eyre::Result;
+use git2::Repository;
 
 // ==================== Jira Ticket 创建测试 ====================
 
@@ -47,14 +48,9 @@ username = "test@example.com"
         .create_commit(&format!("feat({}): add feature", ticket_id))?;
 
     // 验证分支存在
-    let env_path = env.path().to_path_buf();
-    let output = std::process::Command::new("git")
-        .args(["branch", "--show-current"])
-        .current_dir(&env_path)
-        .output()?;
-
-    let stdout_str = String::from_utf8_lossy(&output.stdout);
-    let current_branch = stdout_str.trim();
+    let repo = Repository::open(env.path())?;
+    let head = repo.head()?;
+    let current_branch = head.name().unwrap().strip_prefix("refs/heads/").unwrap();
     assert_eq!(current_branch, branch_name);
 
     Ok(())

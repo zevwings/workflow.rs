@@ -20,7 +20,7 @@ use crate::common::helpers::CurrentDirGuard;
 
 // ==================== Worktree Status Check Tests ====================
 
-// ==================== Worktree Status Tests (Reimplemented with gix) ====================
+// ==================== Worktree Status Tests ====================
 
 /// 测试干净的Git工作树状态检测
 ///
@@ -38,7 +38,6 @@ use crate::common::helpers::CurrentDirGuard;
 /// ## 技术细节
 /// - 使用 `GitTestEnv` 确保测试隔离（支持并行执行）
 /// - 使用临时目录进行隔离测试
-/// - 使用 `gix` 库（纯Rust的Git实现）而非git2
 /// - 自动恢复原始工作目录（即使测试失败）
 ///
 /// ## 预期结果
@@ -48,9 +47,9 @@ use crate::common::helpers::CurrentDirGuard;
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-#[test]
-#[serial]
-fn test_worktree_status_clean_with_gix_return_ok() -> Result<()> {
+    #[test]
+    #[serial]
+    fn test_worktree_status_clean_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
@@ -69,9 +68,9 @@ fn test_worktree_status_clean_with_gix_return_ok() -> Result<()> {
 
 // ==================== Change Detection Tests ====================
 
-// ==================== Change Detection Tests (Reimplemented with gix) ====================
+// ==================== Change Detection Tests ====================
 
-/// 测试检查干净仓库是否有更改（使用gix）
+/// 测试检查干净仓库是否有更改
 ///
 /// ## 测试目的
 /// 验证 `GitCommit::get_worktree_status()` 在干净仓库（无修改、无暂存、无未跟踪文件）中返回正确的状态。
@@ -88,9 +87,9 @@ fn test_worktree_status_clean_with_gix_return_ok() -> Result<()> {
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-#[test]
-#[serial]
-fn test_has_changes_clean_repo_with_gix_return_ok() -> Result<()> {
+    #[test]
+    #[serial]
+    fn test_has_changes_clean_repo_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
@@ -107,7 +106,7 @@ fn test_has_changes_clean_repo_with_gix_return_ok() -> Result<()> {
     Ok(())
 }
 
-/// 测试检查包含未跟踪文件的仓库是否有更改（使用gix）
+/// 测试检查包含未跟踪文件的仓库是否有更改
 ///
 /// ## 测试目的
 /// 验证 `GitCommit::get_worktree_status()` 能够正确检测未跟踪文件的存在。
@@ -125,9 +124,9 @@ fn test_has_changes_clean_repo_with_gix_return_ok() -> Result<()> {
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-#[test]
-#[serial]
-fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()> {
+    #[test]
+    #[serial]
+    fn test_has_changes_with_untracked_files_return_collect() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
@@ -147,7 +146,7 @@ fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()>
     Ok(())
 }
 
-/// 测试检查包含已修改文件的仓库是否有更改（使用gix）
+/// 测试检查包含已修改文件的仓库是否有更改
 ///
 /// ## 测试目的
 /// 验证 `GitCommit::get_worktree_status()` 能够正确检测已修改文件的存在。
@@ -165,9 +164,9 @@ fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()>
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-#[test]
-#[serial]
-fn test_has_changes_with_modified_files_with_gix_return_collect() -> Result<()> {
+    #[test]
+    #[serial]
+    fn test_has_changes_with_modified_files_return_collect() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;

@@ -92,6 +92,34 @@ pub fn cli_env_with_git() -> CliTestEnv {
     env
 }
 
+/// CLI 测试环境 Fixture（空 Git 仓库，无提交）
+///
+/// 创建一个 CLI 测试环境，包含空的 Git 仓库（无任何提交）。
+///
+/// # 使用场景
+///
+/// 用于测试需要空仓库的场景，如测试空仓库的错误处理。
+///
+/// # 使用示例
+///
+/// ```rust
+/// use tests::common::fixtures::cli_env_with_empty_git;
+///
+/// #[test]
+/// fn test_empty_repo(cli_env_with_empty_git: CliTestEnv) -> Result<()> {
+///     // cli_env_with_empty_git 已经初始化了空的 Git 仓库（无提交）
+///     Ok(())
+/// }
+/// ```
+#[fixture]
+pub fn cli_env_with_empty_git() -> CliTestEnv {
+    let env =
+        CliTestEnv::new().unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e));
+    env.init_git_repo_empty()
+        .unwrap_or_else(|e| panic!("Failed to init empty git repo: {:?}", e));
+    env
+}
+
 /// CLI 测试环境 Fixture（不带 Git 仓库）
 ///
 /// 创建一个基础的 CLI 测试环境，不包含 Git 仓库。

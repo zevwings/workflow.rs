@@ -3,7 +3,8 @@
 //! 测试 Commit 命令的辅助函数，包括提交存在性检查、默认分支检查等。
 
 use crate::common::environments::CliTestEnv;
-use crate::common::fixtures::cli_env_with_git;
+use crate::common::fixtures::{cli_env_with_empty_git, cli_env_with_git};
+use git2::Repository;
 use rstest::rstest;
 // Removed serial_test::serial - tests can run in parallel with CliTestEnv isolation
 use workflow::commands::commit::helpers::{
@@ -71,12 +72,12 @@ fn test_check_has_last_commit_without_git_repo_returns_error() {
 /// - 自动恢复原始工作目录和环境变量
 #[rstest]
 fn test_check_has_last_commit_with_empty_git_repo_return_empty(
-    cli_env_with_git: CliTestEnv,
+    cli_env_with_empty_git: CliTestEnv,
 ) -> color_eyre::Result<()> {
-    // cli_env_with_git 已经初始化了 Git 仓库，但不创建任何 commit
+    // cli_env_with_empty_git 已经初始化了空的 Git 仓库，不包含任何 commit
 
     // 使用路径参数版本，避免切换全局工作目录
-    let result = check_has_last_commit_in(cli_env_with_git.path());
+    let result = check_has_last_commit_in(cli_env_with_empty_git.path());
 
     // 验证函数返回错误（无 commit）
     assert!(
@@ -92,7 +93,7 @@ fn test_check_has_last_commit_with_empty_git_repo_return_empty(
         error_msg
     );
 
-    // cli_env_with_git fixture 会在函数结束时自动恢复目录和环境
+    // cli_env_with_empty_git fixture 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -211,17 +212,24 @@ fn test_check_not_on_default_branch_on_feature_branch_return_ok(
     cli_env_with_git.setup_fake_remote_refs()?;
 
     // 创建并切换到 feature 分支
-    let output = std::process::Command::new("git")
-        .args(["checkout", "-b", "feature/test"])
-        .current_dir(cli_env_with_git.path())
-        .output()
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to create feature branch: {}", e))?;
-    if !output.status.success() {
-        return Err(color_eyre::eyre::eyre!(
-            "Failed to create feature branch: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
+    let repo = Repository::open(cli_env_with_git.path())
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to open repository: {}", e))?;
+    let head = repo.head()
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to get HEAD: {}", e))?;
+    let head_commit = repo
+        .find_commit(head.target().unwrap())
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to find HEAD commit: {}", e))?;
+    repo.branch("feature/test", &head_commit, false)
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to create branch: {}", e))?;
+    repo.set_head("refs/heads/feature/test")
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to checkout branch: {}", e))?;
+    repo.checkout_head(Some(
+        git2::build::CheckoutBuilder::default()
+            .force()
+            .remove_ignored(false)
+            .remove_untracked(false),
+    ))
+    .map_err(|e| color_eyre::eyre::eyre!("Failed to checkout HEAD: {}", e))?;
 
     // Act: 使用路径参数版本，避免切换全局工作目录
     let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");
