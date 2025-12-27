@@ -97,12 +97,26 @@ impl GitTestEnv {
         // 初始化Git仓库，设置默认分支为main
         Self::run_git_command(&work_dir, &["init", "-b", "main"])?;
 
-        // 在仓库中设置Git用户配置（使用--local确保配置存储在仓库中）
-        // 这比依赖GIT_CONFIG环境变量更可靠，特别是在CI环境中
-        Self::run_git_command(&work_dir, &["config", "--local", "user.name", "Test User"])?;
+        // 在仓库的配置文件中设置Git用户配置
+        // 使用 --file 选项直接写入到仓库的 .git/config 文件，避免与 GIT_CONFIG 环境变量冲突
+        // 这样即使 GIT_CONFIG 环境变量被设置，我们也能确保仓库级别的配置存在
+        let git_config_path = work_dir.join(".git").join("config");
+        let git_config_path_str = git_config_path
+            .to_str()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Git config path should be valid UTF-8"))?;
         Self::run_git_command(
             &work_dir,
-            &["config", "--local", "user.email", "test@example.com"],
+            &["config", "--file", git_config_path_str, "user.name", "Test User"],
+        )?;
+        Self::run_git_command(
+            &work_dir,
+            &[
+                "config",
+                "--file",
+                git_config_path_str,
+                "user.email",
+                "test@example.com",
+            ],
         )?;
 
         // 创建初始提交
