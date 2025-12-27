@@ -18,20 +18,13 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # 检查是否应该跳过 CI（只检查版本更新分支）
-  check-skip-ci:
-    name: ⏭️ Check Skip CI
-    env:
-      # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
-      WORKFLOW_USER_NAME: ${{ secrets.WORKFLOW_USER_NAME }}
+  # 构建 dev 工具（供后续 job 使用）
+  build-dev-tool:
+    name: 🔨 Build Dev Tool
     runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.check.outputs.should_skip }}
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 需要完整历史来检查提交者
 
       - name: 🔧 Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -70,6 +63,38 @@ jobs:
       - name: 🔨 Build dev binary
         run: cargo build --bin dev --release
 
+      - name: 📤 Upload dev binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-binary
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+          retention-days: 1
+          if-no-files-found: error
+
+  # 检查是否应该跳过 CI（只检查版本更新分支）
+  check-skip-ci:
+    name: ⏭️ Check Skip CI
+    env:
+      # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
+      WORKFLOW_USER_NAME: ${{ secrets.WORKFLOW_USER_NAME }}
+    runs-on: ubuntu-latest
+    needs: build-dev-tool
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史来检查提交者
+
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dev-binary
+          path: target/release/
+
       - name: 🔍 Check if version bump branch
         id: check
         env:
@@ -84,11 +109,12 @@ jobs:
             --pr-creator "${{ github.event.pull_request.user.login }}" \
             --expected-user "${{ env.WORKFLOW_USER_NAME }}" \
             --ci
+
   # 代码质量检查（Lint）
   check-lint:
     name: 🔍 Code Quality Check
     runs-on: ubuntu-latest
-    needs: check-skip-ci
+    needs: [check-skip-ci, build-dev-tool]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     steps:
@@ -127,12 +153,12 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
 
-  # 运行单元测试和集成测试（跨平台并行执行，分层测试策略）
+  # 运行单元测试、集成测试和文档测试（跨平台并行执行，分层测试策略）
   tests:
     name: 🧪 Run Tests (${{ matrix.test_type }}) (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    needs: check-skip-ci
+    needs: [check-skip-ci, build-dev-tool]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     strategy:
@@ -171,6 +197,22 @@ jobs:
             test_type: integration
             test_timeout: 30
             test_command: cargo test --test integration_test --verbose
+          # 文档测试
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+            test_type: doctest
+            test_timeout: 12
+            test_command: cargo test --doc --verbose
+          - os: macos-latest
+            platform: macOS
+            test_type: doctest
+            test_timeout: 12
+            test_command: cargo test --doc --verbose
+          - os: windows-latest
+            platform: Windows-x86_64
+            test_type: doctest
+            test_timeout: 12
+            test_command: cargo test --doc --verbose
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -196,22 +238,11 @@ jobs:
         if: runner.os == 'Linux'
         run: bash scripts/dev/dependencies/install-basic.sh
 
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 🧪 Run ${{ matrix.test_type }} tests
         timeout-minutes: ${{ matrix.test_timeout }}
@@ -384,53 +415,6 @@ jobs:
         timeout-minutes: ${{ matrix.test_timeout }}
         run: cargo test --test completeness --verbose
 
-  # 运行文档测试（与单元测试并行执行，跨平台并行执行）
-  doctests:
-    name: 📝 Run Doctests (${{ matrix.platform }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
-    needs: check-skip-ci
-    # 跳过版本更新分支（bump-version-*）
-    if: needs.check-skip-ci.outputs.should_skip != 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: Linux-x86_64
-          - os: macos-latest
-            platform: macOS
-          - os: windows-latest
-            platform: Windows-x86_64
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-          # 优化 Windows 上的缓存性能
-          enableCrossOsArchive: false
-
-      - name: 📦 Install system dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
-
-      - name: 📝 Run doctests
-        timeout-minutes: 12
-        run: cargo test --doc --verbose
-
   # 注意：测试覆盖率检查已移至 coverage-check.yml workflow（定时运行）
   # 注意：被忽略的测试需要交互，不适合在 CI 中运行
   # 注意：文档检查（check-docs 和 check-links）已移至 doc-consistency-check.yml workflow
@@ -440,7 +424,7 @@ jobs:
   build:
     name: 🔨 Build (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
-    needs: [check-skip-ci, tests, doctests]
+    needs: [check-skip-ci, tests]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     strategy:
@@ -653,7 +637,7 @@ jobs:
   pr-comment:
     name: 💬 Comment Test Results on PR
     runs-on: ubuntu-latest
-    needs: [tests]
+    needs: [tests, build-dev-tool]
     if: github.event_name == 'pull_request' && always()
     permissions:
       contents: read
@@ -683,22 +667,11 @@ jobs:
         if: runner.os == 'Linux'
         run: bash scripts/dev/dependencies/install-basic.sh
 
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 📥 Download all test reports
         uses: actions/download-artifact@v4
@@ -806,7 +779,7 @@ jobs:
   test-trends:
     name: 📈 Analyze Test Trends
     runs-on: ubuntu-latest
-    needs: [tests]
+    needs: [tests, build-dev-tool]
     if: always()
     steps:
       - name: 📥 Checkout repository
@@ -832,22 +805,11 @@ jobs:
         if: runner.os == 'Linux'
         run: bash scripts/dev/dependencies/install-basic.sh
 
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 📥 Download test metrics
         uses: actions/download-artifact@v4
@@ -909,7 +871,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests, doctests, build]
+    needs: [check-skip-ci, check-lint, tests, build, build-dev-tool]
     if: always()
     steps:
       - name: 🔧 Setup Rust toolchain
@@ -932,22 +894,12 @@ jobs:
         if: runner.os == 'Linux'
         run: bash scripts/dev/dependencies/install-basic.sh
 
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: ✅ Check lint and test status
         id: status_check
@@ -955,9 +907,8 @@ jobs:
           should_skip: ${{ needs.check-skip-ci.outputs.should_skip }}
           CHECK_LINT_RESULT: ${{ needs.check-lint.result }}
           TESTS_RESULT: ${{ needs.tests.result }}
-          DOCTESTS_RESULT: ${{ needs.doctests.result }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
           cargo run --bin dev --release ci verify \
             --should-skip ${{ needs.check-skip-ci.outputs.should_skip == 'true' }} \
-            --jobs "check-lint,tests,doctests,build"
+            --jobs "check-lint,tests,build"

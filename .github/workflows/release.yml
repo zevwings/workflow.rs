@@ -30,6 +30,64 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # 构建 dev 工具（供后续 job 使用）
+  build-dev-tool:
+    name: 🔨 Build Dev Tool
+    runs-on: ubuntu-latest
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/dependencies/install-basic.sh
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
+      - name: 📤 Upload dev binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-binary
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+          retention-days: 1
+          if-no-files-found: error
+
   # 代码质量检查（Lint）
   check-lint:
     name: 🔍 Code Quality Check
@@ -204,7 +262,7 @@ jobs:
   update-version:
     name: 📦 Generate Version
     runs-on: ubuntu-latest
-    needs: [check-status]
+    needs: [check-status, build-dev-tool]
     if: |
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
       (github.ref == 'refs/heads/master' && github.event_name == 'push')
@@ -273,38 +331,11 @@ jobs:
           echo "   Event: ${{ github.event_name }}"
           echo "   Is Manual: $IS_MANUAL_TRIGGER"
 
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-deps-
-          enableCrossOsArchive: false
-
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 📦 Generate version number
         id: generate_version
@@ -383,7 +414,7 @@ jobs:
   build:
     name: 🔨 Build Binaries - ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
-    needs: [check-status, update-version]
+    needs: [check-status, update-version, build-dev-tool]
     # 手动触发/ Master Push: 需要依赖成功
     if: |
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.check-status.result == 'success' && needs.update-version.result == 'success') ||
@@ -631,38 +662,11 @@ jobs:
           echo "📦 Archive contents:"
           tar tzf "$ARCHIVE_NAME"
 
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-deps-
-          enableCrossOsArchive: false
-
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 🔐 Calculate SHA256 checksum for archive
         id: sha256
@@ -741,38 +745,11 @@ jobs:
           # 当 tag 指向的 commit 修改了 workflow 文件时，GITHUB_TOKEN 无法推送，必须使用 PAT
           token: ${{ secrets.WORKFLOW_PAT }}
 
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-deps-
-          enableCrossOsArchive: false
-
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 🔧 Install jq
         shell: bash
@@ -1030,39 +1007,6 @@ jobs:
           fi
 
       # Step 3: Create and push tag
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-deps-
-          enableCrossOsArchive: false
-
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
-
       - name: ⚙️ Configure Git for tag creation
         shell: bash
         run: |
@@ -1245,38 +1189,11 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-deps-
-          enableCrossOsArchive: false
-
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 🔍 Get version and tag from previous jobs
         id: version
@@ -1339,38 +1256,11 @@ jobs:
           # 使用 PAT 以支持删除 tag
           token: ${{ secrets.WORKFLOW_PAT }}
 
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
+      - name: 📥 Download dev binary artifact
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-deps-
-          enableCrossOsArchive: false
-
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
+          name: dev-binary
+          path: target/release/
 
       - name: 🧹 Cleanup Alpha Tags
         id: cleanup
