@@ -72,23 +72,73 @@ impl GitConfigGuard {
     /// let guard = GitConfigGuard::new()?;
     /// ```
     pub fn new() -> Result<Self> {
-        // 创建临时配置文件
-        let temp_file = tempfile::NamedTempFile::new()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to create temp Git config file: {}", e))?;
+        // Windows 上使用更安全的临时文件创建方式
+        #[cfg(target_os = "windows")]
+        {
+            // 在 Windows 上，使用自定义临时目录，避免权限问题
+            // 使用进程 ID 和线程 ID 确保唯一性
+            let temp_dir = std::env::temp_dir();
+            let process_id = std::process::id();
+            let thread_id = format!("{:?}", std::thread::current().id());
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
 
-        let config_path = temp_file.path().to_path_buf();
+            // 创建唯一的临时文件名
+            let file_name = format!("git_config_{}_{}_{}.tmp", process_id, thread_id, timestamp);
+            let config_path = temp_dir.join(&file_name);
 
-        // 保存原始的GIT_CONFIG环境变量
-        let original_git_config_env = std::env::var("GIT_CONFIG").ok();
+            // 确保父目录存在且有写权限
+            if let Some(parent) = config_path.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| {
+                    color_eyre::eyre::eyre!("Failed to create temp directory: {}", e)
+                })?;
+            }
 
-        // 设置GIT_CONFIG环境变量指向临时文件
-        std::env::set_var("GIT_CONFIG", config_path.to_string_lossy().as_ref());
+            // 创建空文件，确保有写权限
+            std::fs::write(&config_path, "").map_err(|e| {
+                color_eyre::eyre::eyre!("Failed to create temp Git config file: {}", e)
+            })?;
 
-        Ok(Self {
-            _temp_config_file: temp_file,
-            original_git_config_env,
-            config_path,
-        })
+            // 保存原始的GIT_CONFIG环境变量
+            let original_git_config_env = std::env::var("GIT_CONFIG").ok();
+
+            // 设置GIT_CONFIG环境变量指向临时文件（使用绝对路径）
+            let abs_path =
+                std::fs::canonicalize(&config_path).unwrap_or_else(|_| config_path.clone());
+            std::env::set_var("GIT_CONFIG", abs_path.to_string_lossy().as_ref());
+
+            Ok(Self {
+                _temp_config_file: tempfile::NamedTempFile::from_path(&config_path).map_err(
+                    |e| color_eyre::eyre::eyre!("Failed to create NamedTempFile: {}", e),
+                )?,
+                original_git_config_env,
+                config_path,
+            })
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            // 非 Windows 平台使用标准方式
+            let temp_file = tempfile::NamedTempFile::new().map_err(|e| {
+                color_eyre::eyre::eyre!("Failed to create temp Git config file: {}", e)
+            })?;
+
+            let config_path = temp_file.path().to_path_buf();
+
+            // 保存原始的GIT_CONFIG环境变量
+            let original_git_config_env = std::env::var("GIT_CONFIG").ok();
+
+            // 设置GIT_CONFIG环境变量指向临时文件
+            std::env::set_var("GIT_CONFIG", config_path.to_string_lossy().as_ref());
+
+            Ok(Self {
+                _temp_config_file: temp_file,
+                original_git_config_env,
+                config_path,
+            })
+        }
     }
 
     /// 设置Git配置项
@@ -190,14 +240,56 @@ impl GitConfigGuard {
             let config_result = Config::open(&self.config_path);
             match config_result {
                 Ok(mut config) => {
+                    // Windows 上先检查文件权限和可访问性
+                    #[cfg(target_os = "windows")]
+                    {
+                        // 确保文件存在且可写
+                        match std::fs::metadata(&self.config_path) {
+                            Ok(metadata) => {
+                                // 检查文件是否可写（通过尝试打开文件）
+                                if let Err(e) =
+                                    std::fs::OpenOptions::new().write(true).open(&self.config_path)
+                                {
+                                    drop(config);
+                                    if attempt < MAX_RETRIES - 1 {
+                                        std::thread::sleep(std::time::Duration::from_millis(
+                                            RETRY_DELAY_MS * 2,
+                                        ));
+                                        continue;
+                                    }
+                                    return Err(color_eyre::eyre::eyre!(
+                                        "Config file is not writable: {} (metadata: {:?})",
+                                        e,
+                                        metadata
+                                    ));
+                                }
+                            }
+                            Err(e) => {
+                                drop(config);
+                                if attempt < MAX_RETRIES - 1 {
+                                    std::thread::sleep(std::time::Duration::from_millis(
+                                        RETRY_DELAY_MS * 2,
+                                    ));
+                                    continue;
+                                }
+                                return Err(color_eyre::eyre::eyre!(
+                                    "Failed to access config file {}: {}",
+                                    self.config_path.display(),
+                                    e
+                                ));
+                            }
+                        }
+                    }
+
                     match config.set_str(key, value) {
                         Ok(()) => {
                             // Windows 上需要显式关闭 Config 对象，确保文件完全释放
                             #[cfg(target_os = "windows")]
                             {
                                 drop(config);
-                                // 额外等待，确保文件系统操作完成
-                                std::thread::sleep(std::time::Duration::from_millis(50));
+                                // 在 CI 环境中可能需要更长的等待时间
+                                // 确保文件系统操作完成，特别是重命名操作
+                                std::thread::sleep(std::time::Duration::from_millis(150));
                             }
                             return Ok(());
                         }
