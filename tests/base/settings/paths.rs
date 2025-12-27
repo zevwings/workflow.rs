@@ -5,6 +5,9 @@
 use color_eyre::Result;
 use workflow::base::settings::paths::Paths;
 
+#[cfg(target_os = "windows")]
+use crate::common::guards::EnvGuard;
+
 // ==================== Paths Expand Tests ====================
 
 /// 测试展开主目录路径（~）
