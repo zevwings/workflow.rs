@@ -10,8 +10,8 @@
 use chrono::{FixedOffset, TimeZone};
 use color_eyre::{eyre::WrapErr, Result};
 
+use super::helpers::open_repo;
 use super::pre_commit::GitPreCommit;
-use super::{helpers::open_repo, GitCommand};
 
 /// Git 提交结果
 #[derive(Debug, Clone)]
@@ -295,19 +295,69 @@ impl GitCommit {
     /// {worktree diff content}
     /// ```
     pub fn get_diff() -> Option<String> {
+        let repo = open_repo().ok()?;
         let mut diff_parts = Vec::new();
 
-        // 获取暂存区的修改
-        if let Ok(staged_diff) = GitCommand::new(["diff", "--cached"]).read() {
-            if !staged_diff.trim().is_empty() {
-                diff_parts.push(format!("Staged changes:\n{}", staged_diff));
+        // 获取 HEAD 树和索引
+        let head_tree = repo.head().ok()?.peel_to_tree().ok();
+        let index = repo.index().ok()?;
+
+        // 获取暂存区的修改（HEAD -> Index）
+        if let Some(ref tree) = head_tree {
+            if let Ok(diff) = repo.diff_tree_to_index(Some(tree), Some(&index), None) {
+                let mut staged_output = Vec::new();
+                if diff
+                    .print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+                        staged_output.extend_from_slice(line.content());
+                        true
+                    })
+                    .is_ok()
+                    && !staged_output.is_empty()
+                {
+                    if let Ok(staged_diff) = String::from_utf8(staged_output) {
+                        if !staged_diff.trim().is_empty() {
+                            diff_parts.push(format!("Staged changes:\n{}", staged_diff));
+                        }
+                    }
+                }
+            }
+        } else {
+            // 如果没有 HEAD（新仓库），获取索引中的所有文件
+            if let Ok(diff) = repo.diff_tree_to_index(None, Some(&index), None) {
+                let mut staged_output = Vec::new();
+                if diff
+                    .print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+                        staged_output.extend_from_slice(line.content());
+                        true
+                    })
+                    .is_ok()
+                    && !staged_output.is_empty()
+                {
+                    if let Ok(staged_diff) = String::from_utf8(staged_output) {
+                        if !staged_diff.trim().is_empty() {
+                            diff_parts.push(format!("Staged changes:\n{}", staged_diff));
+                        }
+                    }
+                }
             }
         }
 
-        // 获取工作区的修改
-        if let Ok(worktree_diff) = GitCommand::new(["diff"]).read() {
-            if !worktree_diff.trim().is_empty() {
-                diff_parts.push(format!("Working tree changes:\n{}", worktree_diff));
+        // 获取工作区的修改（Index -> Workdir）
+        if let Ok(diff) = repo.diff_index_to_workdir(Some(&index), None) {
+            let mut worktree_output = Vec::new();
+            if diff
+                .print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+                    worktree_output.extend_from_slice(line.content());
+                    true
+                })
+                .is_ok()
+                && !worktree_output.is_empty()
+            {
+                if let Ok(worktree_diff) = String::from_utf8(worktree_output) {
+                    if !worktree_diff.trim().is_empty() {
+                        diff_parts.push(format!("Working tree changes:\n{}", worktree_diff));
+                    }
+                }
             }
         }
 
@@ -320,7 +370,7 @@ impl GitCommit {
 
     /// 重置工作区到指定提交
     ///
-    /// 使用 `git reset --hard <target>` 将工作区和暂存区重置到指定提交。
+    /// 使用 git2 库将工作区和暂存区重置到指定提交。
     /// 这会丢弃所有未提交的更改。
     ///
     /// # 参数
@@ -336,27 +386,53 @@ impl GitCommit {
     ///
     /// 如果重置失败，返回相应的错误信息。
     pub fn reset_hard(target: Option<&str>) -> Result<()> {
-        let target = target.unwrap_or("HEAD");
-        GitCommand::new(["reset", "--hard", target])
-            .run()
-            .wrap_err_with(|| format!("Failed to reset working directory to {}", target))
+        let repo = open_repo()?;
+        let target_ref = target.unwrap_or("HEAD");
+
+        // 解析目标引用
+        let obj = repo
+            .revparse_single(target_ref)
+            .wrap_err_with(|| format!("Failed to parse target reference: {}", target_ref))?;
+
+        // 执行硬重置（重置索引和工作区）
+        repo.reset(
+            &obj,
+            git2::ResetType::Hard,
+            Some(
+                git2::build::CheckoutBuilder::default()
+                    .force()
+                    .remove_ignored(false)
+                    .remove_untracked(false),
+            ),
+        )
+        .wrap_err_with(|| format!("Failed to reset working directory to {}", target_ref))?;
+
+        Ok(())
     }
 
     /// 检查是否有最后一次 commit
     ///
-    /// 使用 `git log -1` 检查是否有 commit 历史。
+    /// 使用 git2 库检查是否有 commit 历史。
     ///
     /// # 返回
     ///
     /// - `Ok(true)` - 如果有 commit
     /// - `Ok(false)` - 如果没有 commit
     pub fn has_last_commit() -> Result<bool> {
-        Ok(GitCommand::new(["log", "-1", "--oneline"]).quiet_success())
+        let repo = open_repo()?;
+        let head_result = repo.head();
+        match head_result {
+            Ok(head) => {
+                let commit_result = head.peel_to_commit();
+                Ok(commit_result.is_ok())
+            }
+            Err(_) => Ok(false),
+        }
     }
 
     /// 检查是否有最后一次 commit（指定仓库路径）
     ///
-    /// 使用 `git log -1` 检查指定仓库是否有 commit 历史。
+    /// 使用 git2 库检查指定仓库是否有 commit 历史。
     ///
     /// # 参数
     ///
@@ -367,9 +443,16 @@ impl GitCommit {
     /// - `Ok(true)` - 如果有 commit
     /// - `Ok(false)` - 如果没有 commit
     pub fn has_last_commit_in(repo_path: impl AsRef<std::path::Path>) -> Result<bool> {
-        Ok(GitCommand::new(["log", "-1", "--oneline"])
-            .with_cwd(repo_path.as_ref())
-            .quiet_success())
+        let repo: git2::Repository =
+            git2::Repository::open(repo_path.as_ref()).wrap_err("Failed to open repository")?;
+        let head_result = repo.head();
+        match head_result {
+            Ok(head) => {
+                let commit_result = head.peel_to_commit();
+                Ok(commit_result.is_ok())
+            }
+            Err(_) => Ok(false),
+        }
     }
 
     /// 获取最后一次 commit 信息

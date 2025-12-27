@@ -5,7 +5,7 @@
 //! - 安装路径（二进制文件和补全脚本的安装路径和名称）
 //! - Shell 相关路径（shell 配置文件和 completion 目录）
 
-use crate::base::util::directory::DirectoryWalker;
+use crate::base::fs::DirectoryWalker;
 
 // 配置文件和目录名称常量
 pub const WORKFLOW_DIR: &str = ".workflow";

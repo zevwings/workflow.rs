@@ -1407,7 +1407,7 @@ mod tests {
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_add_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
         // 测试 AliasManager::add() 方法 - 使用临时配置文件（覆盖 manager.rs:162-181）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");
@@ -1433,7 +1433,7 @@ aliases = {}
 
         // 验证别名已添加到配置文件（直接读取文件，因为 Settings 使用 OnceLock 缓存）
         use toml::Value;
-        use workflow::base::util::file::FileReader;
+        use workflow::base::fs::FileReader;
         let config_content = FileReader::new(&config_path).to_string()?;
         let config: Value = toml::from_str(&config_content)?;
         let aliases_table = config
@@ -1468,7 +1468,7 @@ aliases = {}
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_remove_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 使用临时配置文件（覆盖 manager.rs:198-222）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");
@@ -1498,7 +1498,7 @@ aliases = { test_remove_alias = "echo test" }
 
         // 验证别名已从配置文件中删除（直接读取文件，因为 Settings 使用 OnceLock 缓存）
         use toml::Value;
-        use workflow::base::util::file::FileReader;
+        use workflow::base::fs::FileReader;
         let config_content = FileReader::new(&config_path).to_string()?;
         let config: Value = toml::from_str(&config_content)?;
         let aliases_table = config.get("aliases").and_then(|v| v.as_table());
@@ -1528,7 +1528,7 @@ aliases = { test_remove_alias = "echo test" }
         mut cli_env: CliTestEnv,
     ) -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 删除不存在的别名（覆盖 manager.rs:202-205）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");
@@ -1576,7 +1576,7 @@ aliases = {}
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 使用临时配置文件（覆盖 manager.rs:54-98）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");
@@ -1634,7 +1634,7 @@ aliases = { test_expand_alias = "git status" }
         mut cli_env: CliTestEnv,
     ) -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 嵌套别名展开（覆盖 manager.rs:84-95）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");
@@ -1694,7 +1694,7 @@ aliases = {
         mut cli_env: CliTestEnv,
     ) -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 循环别名检测（覆盖 manager.rs:65-71）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");
@@ -1750,7 +1750,7 @@ aliases = {
         mut cli_env: CliTestEnv,
     ) -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 使用临时配置文件（覆盖 manager.rs:116-148）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");
@@ -1808,7 +1808,7 @@ aliases = { test_args_alias = "git status" }
         mut cli_env: CliTestEnv,
     ) -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 使用临时配置文件（覆盖 manager.rs:273-302）
-        use workflow::base::util::file::FileWriter;
+        use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
         let config_dir = env.path().join(".workflow").join("config");

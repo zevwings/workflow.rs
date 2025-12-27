@@ -2,7 +2,7 @@
 //!
 //! 提供 `.cursor/mcp.json` 配置文件的读写和管理功能。
 
-use crate::base::util::file::{FileReader, FileWriter};
+use crate::base::fs::{FileReader, FileWriter};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

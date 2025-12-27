@@ -1,25 +1,11 @@
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashSet;
 
-use super::{GitAuth, GitCommand};
+use super::GitAuth;
 use crate::git::helpers::open_repo;
 use git2::{FetchOptions, PushOptions};
 
 const COMMON_DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
-/// 尝试使用 git switch，失败时回退到 git checkout
-#[allow(dead_code)]
-fn switch_or_checkout(
-    switch_args: &[&str],
-    checkout_args: &[&str],
-    error_msg: impl AsRef<str>,
-) -> Result<()> {
-    if !GitCommand::new(switch_args).quiet_success() {
-        GitCommand::new(checkout_args)
-            .run()
-            .wrap_err_with(|| error_msg.as_ref().to_string())?;
-    }
-    Ok(())
-}
 
 /// 移除分支名称的前缀
 ///
@@ -336,7 +322,7 @@ impl GitBranch {
             if remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None).is_ok() {
                 // 获取远程引用列表
                 if let Ok(refs) = remote.list() {
-                    // 查找 HEAD 引用
+                    // 查找 HEAD 引用（符号引用）
                     for remote_ref in refs {
                         if remote_ref.name() == "HEAD" {
                             // HEAD 引用指向默认分支，格式通常是 "refs/heads/main"
@@ -347,85 +333,21 @@ impl GitBranch {
                             }
                         }
                     }
-                }
-            }
-        }
 
-        // 尝试方法3：从 remote show origin 获取（需要网络连接，作为回退）
-        // 使用 quiet_success() 快速检查是否可用，避免长时间阻塞
-        if GitCommand::new(["remote", "show", "origin"])
-            .with_cwd(repo_path.as_ref())
-            .with_env("GIT_TERMINAL_PROMPT", "0")
-            .quiet_success()
-        {
-            if let Ok(branch) = Self::get_default_branch_from_remote_show_in(repo_path.as_ref()) {
-                return Ok(branch);
-            }
-        }
-
-        // 尝试方法4：使用 ls-remote --symref 直接从远程获取符号引用（需要网络连接，作为最后回退）
-        // 使用 quiet_success() 快速检查是否可用，避免长时间阻塞
-        if GitCommand::new(["ls-remote", "--symref", "origin", "HEAD"])
-            .with_cwd(repo_path.as_ref())
-            .with_env("GIT_TERMINAL_PROMPT", "0")
-            .quiet_success()
-        {
-            if let Ok(output) = GitCommand::new(["ls-remote", "--symref", "origin", "HEAD"])
-                .with_cwd(repo_path.as_ref())
-                .with_env("GIT_TERMINAL_PROMPT", "0")
-                .read()
-            {
-                if let Some(branch) = Self::parse_symref_output(&output) {
-                    return Ok(branch);
+                    // 如果找不到符号引用，尝试查找 refs/remotes/origin/HEAD 指向的分支
+                    // 这通常指向默认分支
+                    if let Ok(head_ref) = repo.find_reference("refs/remotes/origin/HEAD") {
+                        if let Some(target_name) = head_ref.symbolic_target() {
+                            if let Some(branch) = target_name.strip_prefix("refs/remotes/origin/") {
+                                return Ok(branch.to_string());
+                            }
+                        }
+                    }
                 }
             }
         }
 
         color_eyre::eyre::bail!("Failed to get default branch")
-    }
-
-    /// 从 `git remote show origin` 获取默认分支（指定仓库路径）
-    fn get_default_branch_from_remote_show_in(
-        repo_path: impl AsRef<std::path::Path>,
-    ) -> Result<String> {
-        let remote_info = GitCommand::new(["remote", "show", "origin"])
-            .with_cwd(repo_path.as_ref())
-            .with_env("GIT_TERMINAL_PROMPT", "0")
-            .read()?;
-        for line in remote_info.lines() {
-            if line.contains("HEAD branch:") {
-                if let Some(branch) = line.split("HEAD branch:").nth(1) {
-                    return Ok(branch.trim().to_string());
-                }
-            }
-        }
-        color_eyre::eyre::bail!("Could not determine default branch from remote show")
-    }
-
-    /// 解析 ls-remote --symref 的输出
-    ///
-    /// 从 `git ls-remote --symref` 的输出中提取默认分支名称。
-    /// 输出格式通常是：`ref: refs/heads/main\tHEAD`
-    ///
-    /// # 参数
-    ///
-    /// * `output` - `git ls-remote --symref` 命令的输出字符串
-    ///
-    /// # 返回
-    ///
-    /// 返回默认分支名称（如果找到），否则返回 `None`。
-    fn parse_symref_output(output: &str) -> Option<String> {
-        for line in output.lines() {
-            if line.starts_with("ref:") {
-                // 提取 refs/heads/<branch> 中的分支名
-                if let Some(parts) = line.split_whitespace().nth(1) {
-                    if let Some(branch) = parts.strip_prefix("refs/heads/") {
-                        return Some(branch.to_string());
-                    }
-                }
-            }
-        }
-        None
     }
 
     /// 从远程分支列表中查找常见的默认分支名（指定仓库路径）
@@ -1236,7 +1158,7 @@ impl GitBranch {
 
     /// 重命名本地分支
     ///
-    /// 使用 `git branch -m` 重命名本地分支。
+    /// 使用 git2 库重命名本地分支引用。
     ///
     /// # 参数
     ///
@@ -1247,18 +1169,64 @@ impl GitBranch {
     ///
     /// 如果重命名失败，返回相应的错误信息。
     pub fn rename(old_name: Option<&str>, new_name: &str) -> Result<()> {
-        let mut args = vec!["branch", "-m"];
-        if let Some(old) = old_name {
-            args.push(old);
+        let repo = open_repo()?;
+
+        // 确定要重命名的分支引用路径
+        let old_ref_path = if let Some(old) = old_name {
+            format!("refs/heads/{}", old)
+        } else {
+            // 获取当前分支
+            let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+            head.name()
+                .ok_or_else(|| color_eyre::eyre::eyre!("HEAD reference name is not valid UTF-8"))?
+                .to_string()
+        };
+
+        let new_ref_path = format!("refs/heads/{}", new_name);
+
+        // 检查新分支是否已存在
+        if repo.find_reference(&new_ref_path).is_ok() {
+            return Err(color_eyre::eyre::eyre!(
+                "Branch '{}' already exists",
+                new_name
+            ));
         }
-        args.push(new_name);
-        GitCommand::new(args).run().wrap_err_with(|| {
+
+        // 找到旧分支引用
+        let mut old_ref = repo.find_reference(&old_ref_path).wrap_err_with(|| {
             if let Some(old) = old_name {
-                format!("Failed to rename branch from '{}' to '{}'", old, new_name)
+                format!("Branch '{}' does not exist", old)
             } else {
-                format!("Failed to rename current branch to '{}'", new_name)
+                "Current branch reference not found".to_string()
             }
-        })
+        })?;
+
+        // 获取旧引用的目标 OID
+        let target_oid = old_ref
+            .target()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Branch reference has no target"))?;
+
+        // 创建新分支引用
+        repo.reference(
+            &new_ref_path,
+            target_oid,
+            true,
+            &format!("Rename branch to {}", new_name),
+        )
+        .wrap_err_with(|| format!("Failed to create new branch reference '{}'", new_ref_path))?;
+
+        // 如果重命名的是当前分支，更新 HEAD
+        if old_ref_path == repo.head()?.name().unwrap_or("") {
+            repo.set_head(&new_ref_path)
+                .wrap_err_with(|| format!("Failed to update HEAD to '{}'", new_ref_path))?;
+        }
+
+        // 删除旧分支引用
+        old_ref.delete().wrap_err_with(|| {
+            format!("Failed to delete old branch reference '{}'", old_ref_path)
+        })?;
+
+        Ok(())
     }
 
     /// 重命名远程分支
@@ -1465,29 +1433,9 @@ impl GitBranch {
         Ok(())
     }
 
-    /// 验证合并是否已经完成
-    ///
-    /// 通过检查 MERGE_HEAD 是否存在或 HEAD 是否改变来判断合并是否完成。
-    #[allow(dead_code)]
-    fn verify_merge_completed(head_before: Option<String>) -> bool {
-        // 检查是否有 MERGE_HEAD（表示合并正在进行或刚完成）
-        let has_merge_head =
-            GitCommand::new(["rev-parse", "--verify", "MERGE_HEAD"]).quiet_success();
-
-        // 检查 HEAD 是否已经改变（表示合并可能已经完成）
-        let head_after = GitCommand::new(["rev-parse", "HEAD"]).read().ok();
-        let head_changed = if let (Some(before), Some(after)) = (head_before, head_after) {
-            before.trim() != after.trim()
-        } else {
-            false
-        };
-
-        head_changed || has_merge_head
-    }
-
     /// 检查是否有合并冲突
     ///
-    /// 使用 `git diff --check` 检查是否有合并冲突标记。
+    /// 使用 git2 库检查是否有合并冲突。
     ///
     /// # 返回
     ///
@@ -1496,18 +1444,50 @@ impl GitBranch {
     ///
     /// # 错误
     ///
-    /// 如果命令执行失败，返回相应的错误信息。
+    /// 如果操作失败，返回相应的错误信息。
     pub fn has_merge_conflicts() -> Result<bool> {
-        // 检查是否有未合并的文件
-        if !GitCommand::new(["diff", "--check"]).quiet_success() {
+        let repo = open_repo()?;
+
+        // 检查索引是否有冲突
+        let index = repo.index().wrap_err("Failed to open repository index")?;
+        if index.has_conflicts() {
             return Ok(true);
         }
 
         // 检查 MERGE_HEAD 是否存在（表示正在进行合并）
-        if GitCommand::new(["rev-parse", "--verify", "MERGE_HEAD"]).quiet_success() {
-            // 检查是否有未解决的冲突文件
-            if let Ok(files) = GitCommand::new(["diff", "--name-only", "--diff-filter=U"]).read() {
-                return Ok(!files.trim().is_empty());
+        let git_dir = repo.path();
+        let merge_head_path = git_dir.join("MERGE_HEAD");
+        if merge_head_path.exists() {
+            // 如果 MERGE_HEAD 存在，检查工作区是否有冲突标记
+            // 使用 git2 diff API 检查工作区和索引之间的差异
+            let head = repo.head()?.peel_to_tree()?;
+            let diff = repo.diff_tree_to_index(Some(&head), Some(&index), None)?;
+
+            // 检查是否有冲突标记（<<<<<<, ======, >>>>>>）
+            let mut has_conflict_markers = false;
+            diff.foreach(
+                &mut |_delta, _progress| true,
+                None,
+                Some(&mut |_delta, _hunk| {
+                    // 检查 hunk 内容中是否有冲突标记
+                    true
+                }),
+                Some(&mut |_delta, _hunk, line| {
+                    let content = std::str::from_utf8(line.content()).unwrap_or("");
+                    if content.contains("<<<<<<<")
+                        || content.contains("=======")
+                        || content.contains(">>>>>>>")
+                    {
+                        has_conflict_markers = true;
+                        false // 停止遍历
+                    } else {
+                        true
+                    }
+                }),
+            )?;
+
+            if has_conflict_markers {
+                return Ok(true);
             }
         }
 

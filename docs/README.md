@@ -537,6 +537,12 @@
 - 想了解格式化工具？ → [format.md](./architecture/format.md)
 - 想了解表格输出工具？ → [table.md](./architecture/table.md)
 - 想了解 Prompt 管理？ → [prompt.md](./architecture/prompt.md)
+- 想了解校验和工具？ → [checksum.md](./architecture/checksum.md)
+- 想了解文件系统操作？ → [fs.md](./architecture/fs.md)
+- 想了解系统交互？ → [system.md](./architecture/system.md)
+- 想了解解压工具？ → [zip.md](./architecture/zip.md)
+- 想了解常量管理？ → [constants.md](./architecture/constants.md)
+- 想了解 MCP 配置管理？ → [mcp.md](./architecture/mcp.md)
 
 ### 命令层模块（CLI 命令封装）
 - 想了解 PR 命令？ → [pr.md](./architecture/pr.md)
@@ -557,4 +563,4 @@
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-12-27

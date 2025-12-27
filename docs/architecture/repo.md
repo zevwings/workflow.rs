@@ -27,7 +27,12 @@ Repo 模块（`lib/repo/`）是 Workflow CLI 的核心库模块，提供仓库�
 ```
 src/lib/repo/
 ├── mod.rs          # Repo 模块声明和导出 (8行)
-└── config.rs       # 仓库配置管理 (358行)
+└── config/         # 仓库配置管理模块
+    ├── mod.rs      # 配置模块声明和导出
+    ├── types.rs    # 类型定义（BranchConfig, PullRequestsConfig）
+    ├── public.rs   # 公共配置（项目模板，提交到 Git）
+    ├── private.rs  # 私有配置（个人偏好，不提交到 Git）
+    └── repo_config.rs  # 统一配置接口（RepoConfig）
 ```
 
 ### 依赖模块
@@ -61,22 +66,23 @@ src/lib/repo/
 
 ### 核心组件
 
-#### 1. RepoConfig 结构体
+#### 1. RepoConfig 结构体（统一配置接口）
 
-**职责**：提供仓库配置管理的静态方法
+**位置**：`config/repo_config.rs`
+
+**职责**：提供统一的仓库配置访问接口，内部调用 `PublicRepoConfig` 和 `PrivateRepoConfig`
 
 **主要方法**：
-- `exists()` - 检查配置是否存在且完整
-- `load()` - 加载项目配置
-- `save()` - 保存项目配置
-- `get-_branch-_prefix()` - 获取分支前缀
-- `get-_ignore-_branches()` - 获取忽略分支列表
+- `exists()` - 检查配置是否存在且完整（检查 `configured` 字段）
+- `load()` - 加载项目配置（合并公共和私有配置）
+- `get-_branch-_prefix()` - 获取分支前缀（仅从私有配置读取）
+- `get-_ignore-_branches()` - 获取忽略分支列表（仅从私有配置读取）
+- `get-_auto-_accept-_change-_type()` - 获取自动接受变更类型设置（仅从私有配置读取）
 
 **关键特性**：
-- 配置文件路径：`.workflow/config.toml`（项目根目录）
-- 自动创建目录结构（如果不存在）
-- 支持配置合并（保存时合并现有配置）
-- 向后兼容（支持旧格式配置）
+- **统一接口**：外部代码应使用 `RepoConfig`，而不是直接使用 `PublicRepoConfig` 或 `PrivateRepoConfig`
+- **配置检查**：`exists()` 方法是检查 `repo setup` 是否完成的唯一来源
+- **配置分离**：公共配置（项目模板）和私有配置（个人偏好）分离管理
 
 **使用场景**：
 - `repo setup` 命令：加载和保存配置
@@ -84,25 +90,57 @@ src/lib/repo/
 - `branch` 命令：获取分支前缀和忽略列表
 - 其他命令：检查配置是否存在
 
-#### 2. ProjectConfig 结构体
+#### 2. PublicRepoConfig 结构体（公共配置）
 
-**职责**：表示项目级配置结构
+**位置**：`config/public.rs`
+
+**职责**：管理项目级模板配置，应提交到 Git
+
+**配置文件**：`.workflow/config.toml`（项目根目录）
 
 **字段**：
 - `template-_commit: Map<String, Value>` - 提交模板配置
 - `template-_branch: Map<String, Value>` - 分支模板配置
 - `template-_pull-_requests: Map<String, Value>` - PR 模板配置
-- `branch: ProjectBranchConfig` - 分支配置
-- `auto-_accept-_change-_type: Option<bool>` - 自动接受变更类型选择
 
 **关键特性**：
+- 配置文件存储在项目根目录，可提交到 Git
+- 团队成员共享的配置
 - 使用 `toml::Value` 存储模板配置，支持灵活配置
-- 分支配置使用结构化类型 `ProjectBranchConfig`
-- 支持可选字段（使用 `Option`）
 
-#### 3. ProjectBranchConfig 结构体
+**主要方法**：
+- `load()` / `load-_from()` - 加载公共配置
+- `save()` / `save-_in()` - 保存公共配置
 
-**职责**：表示项目级分支配置
+#### 3. PrivateRepoConfig 结构体（私有配置）
+
+**位置**：`config/private.rs`
+
+**职责**：管理个人偏好配置，不应提交到 Git
+
+**配置文件**：`~/.workflow/config/repository.toml`（支持 iCloud 同步）
+
+**字段**：
+- `configured: bool` - **配置完成标志**（这是检查 `repo setup` 是否完成的唯一来源）
+- `branch: Option<BranchConfig>` - 分支配置（个人偏好）
+- `pr: Option<PullRequestsConfig>` - PR 配置（个人偏好）
+
+**关键特性**：
+- 配置文件存储在用户主目录，不提交到 Git
+- 个人偏好配置，支持 iCloud 同步（macOS）
+- 使用仓库标识符（`{repo_name}_{hash}`）区分不同仓库的配置
+- **`configured` 字段**：所有代码应通过 `RepoConfig::exists()` 检查此字段，而不是检查文件存在性
+
+**主要方法**：
+- `load()` / `load-_from()` - 加载私有配置
+- `save()` / `save-_in()` - 保存私有配置
+- `generate-_repo-_id()` / `generate-_repo-_id-_in()` - 生成仓库标识符
+
+#### 4. BranchConfig 结构体（类型定义）
+
+**位置**：`config/types.rs`
+
+**职责**：表示个人偏好的分支配置
 
 **字段**：
 - `prefix: Option<String>` - 分支前缀（可选）
@@ -113,6 +151,19 @@ src/lib/repo/
 - 支持 TOML 格式
 - 可选字段使用 `skip-_serializing-_if` 控制序列化
 
+#### 5. PullRequestsConfig 结构体（类型定义）
+
+**位置**：`config/types.rs`
+
+**职责**：表示个人偏好的 PR 配置
+
+**字段**：
+- `auto-_accept-_change-_type: Option<bool>` - 自动接受变更类型选择
+
+**关键特性**：
+- 使用 `serde` 进行序列化/反序列化
+- 支持 TOML 格式
+
 ---
 
 ## 🔄 Lib 层核心功能
@@ -121,74 +172,98 @@ src/lib/repo/
 
 **功能**：检查仓库配置是否存在且完整
 
+**重要说明**：这是检查 `repo setup` 是否完成的**唯一来源**。所有代码应使用此方法，而不是检查文件存在性或其他方法。
+
 **流程**：
-1. 检查是否在 Git 仓库中（如果不是，返回 `true`，跳过检查）
-2. 检查配置文件是否存在
-3. 检查配置是否有必需的节（`[template.commit]` 或 `[branch]`）
+1. 检查是否在 Git 仓库中（如果不是，返回 `Ok(true)`，跳过检查）
+2. 加载私有配置（`PrivateRepoConfig::load()`）
+3. 检查 `configured` 字段（这是唯一判断标准）
 
 **返回值**：
-- `Ok(true)` - 配置存在且完整
-- `Ok(false)` - 配置不存在或不完整
+- `Ok(true)` - 仓库已配置（`configured = true`）
+- `Ok(false)` - 仓库未配置（`configured = false` 或未设置）
 - `Err(_)` - 检查过程中出错
+
+**设计说明**：
+- 项目标准配置（`.workflow/config.toml`）是可选的，不需要检查
+- 个人偏好配置（`~/.workflow/config/repository.toml`）通过 `configured` 字段检查
+- 所有代码应使用 `RepoConfig::exists()` 检查配置状态
 
 ### 2. 配置加载 (`load()`)
 
-**功能**：从文件加载项目配置
+**功能**：从文件加载项目配置（合并公共配置和私有配置）
 
 **流程**：
-1. 获取配置文件路径（`.workflow/config.toml`）
-2. 如果文件不存在，返回默认配置
-3. 读取并解析 TOML 文件
-4. 解析各个配置节：
-   - `[template.commit]` - 提交模板配置
-   - `[template.branch]` - 分支模板配置
-   - `[template.pull-_requests]` - PR 模板配置
-   - `[branch]` - 分支配置
-   - `[pr]` 或顶层 `auto-_accept-_change-_type` - PR 配置
+1. 加载公共配置（`PublicRepoConfig::load()`）
+   - 从 `.workflow/config.toml` 加载项目模板配置
+   - 如果文件不存在，返回默认配置
+   - 解析 `[template.commit]`、`[template.branch]`、`[template.pull-_requests]` 节
+2. 加载私有配置（`PrivateRepoConfig::load()`）
+   - 从 `~/.workflow/config/repository.toml` 加载个人偏好配置
+   - 使用仓库标识符（`{repo_name}_{hash}`）区分不同仓库
+   - 如果文件不存在，返回默认配置
+   - 解析 `branch` 和 `pr` 配置
+3. 合并配置并返回 `RepoConfig` 结构体
 
 **关键特性**：
 - 文件不存在时返回默认配置（不报错）
-- 支持向后兼容（手动解析旧格式）
+- 公共配置和私有配置分离管理
 - 使用 `toml::Value` 灵活处理模板配置
+- 支持 iCloud 同步（macOS，私有配置）
 
 ### 3. 配置保存 (`save()`)
 
-**功能**：保存项目配置到文件
+**功能**：保存项目配置到文件（分别保存公共配置和私有配置）
 
 **流程**：
-1. 获取配置文件路径
-2. 确保目录存在（创建 `.workflow/` 目录）
-3. 读取现有配置（如果存在）
-4. 合并新配置与现有配置
-5. 写入文件
+1. 保存公共配置（`PublicRepoConfig::save()`）
+   - 保存到 `.workflow/config.toml`（项目根目录）
+   - 只保存模板配置（`template_commit`、`template_branch`、`template_pull_requests`）
+   - 自动创建目录结构（`.workflow/`）
+   - 合并现有配置（保留现有配置，只更新提供的字段）
+2. 保存私有配置（`PrivateRepoConfig::save()`）
+   - 保存到 `~/.workflow/config/repository.toml`（用户主目录）
+   - 保存个人偏好配置（`configured`、`branch`、`pr`）
+   - 使用仓库标识符区分不同仓库
+   - 支持 iCloud 同步（macOS）
+   - 使用文件锁确保并发安全
 
 **关键特性**：
 - 自动创建目录结构
 - 配置合并（保留现有配置，只更新提供的字段）
 - 使用 `toml::to-_string-_pretty()` 格式化输出
+- 公共配置和私有配置分离保存
 
 ### 4. 分支前缀获取 (`get-_branch-_prefix()`)
 
-**功能**：获取当前仓库的分支前缀
+**功能**：获取当前仓库的分支前缀（仅从私有配置读取）
 
 **流程**：
-1. 加载项目配置
-2. 返回 `config.branch.prefix`
+1. 加载私有配置（`PrivateRepoConfig::load()`）
+2. 从 `config.branch.prefix` 读取分支前缀
 
 **返回值**：
 - `Some(String)` - 如果配置了分支前缀
 - `None` - 如果未配置或加载失败
 
+**设计说明**：
+- 分支前缀是个人偏好配置，存储在私有配置中
+- 不同开发者可以为同一仓库配置不同的分支前缀
+
 ### 5. 忽略分支列表获取 (`get-_ignore-_branches()`)
 
-**功能**：获取当前仓库的忽略分支列表
+**功能**：获取当前仓库的忽略分支列表（仅从私有配置读取）
 
 **流程**：
-1. 加载项目配置
-2. 返回 `config.branch.ignore`
+1. 加载私有配置（`PrivateRepoConfig::load()`）
+2. 从 `config.branch.ignore` 读取忽略分支列表
 
 **返回值**：
 - `Vec<String>` - 忽略分支列表（如果未配置或加载失败，返回空列表）
+
+**设计说明**：
+- 忽略分支列表是个人偏好配置，存储在私有配置中
+- 不同开发者可以为同一仓库配置不同的忽略列表
 
 ---
 
@@ -381,22 +456,25 @@ Repo Clean 命令用于清理本地分支和本地 tag，支持以下功能：
 
 ### 配置文件位置
 
-```
-项目根目录/.workflow/config.toml
-```
+Repo 模块使用两个配置文件：
 
-### 配置格式示例
+1. **公共配置**（项目模板，提交到 Git）：
+   ```
+   项目根目录/.workflow/config.toml
+   ```
+
+2. **私有配置**（个人偏好，不提交到 Git）：
+   ```
+   ~/.workflow/config/repository.toml
+   ```
+
+   支持 iCloud 同步（macOS），使用仓库标识符（`{repo_name}_{hash}`）区分不同仓库的配置。
+
+### 公共配置文件格式（`.workflow/config.toml`）
+
+**说明**：项目模板配置，应提交到 Git，团队成员共享。
 
 ```toml
-[branch]
-prefix = "feature"
-ignore = [
-    "main",
-    "master",
-    "develop",
-    "zw/important-feature",
-]
-
 [template.commit]
 use-_scope = false
 default = "{{#if jira-_key}}{{jira-_key}}: {{subject}}{{else}}# {{subject}}{{/if}}"
@@ -407,24 +485,33 @@ feature = "feature/{{jira-_key}}-{{summary-_slug}}"
 
 [template.pull-_requests]
 default = "## Description\n\n{{jira-_summary}}\n\n..."
+```
 
-[pr]
-auto-_accept-_change-_type = true
+### 私有配置文件格式（`~/.workflow/config/repository.toml`）
+
+**说明**：个人偏好配置，不提交到 Git，支持 iCloud 同步。
+
+```toml
+[workflow.rs_12345678]  # 仓库标识符：{repo_name}_{hash}
+configured = true
+branch = { prefix = "feature", ignore = ["main", "master", "develop"] }
+pr = { auto_accept_change_type = true }
+
+[other-repo_abcdefgh]  # 另一个仓库的配置
+configured = true
+branch = { prefix = "fix", ignore = ["main"] }
 ```
 
 ### 配置节说明
 
-#### `[branch]` 节
+#### 公共配置（`.workflow/config.toml`）
 
-- `prefix` (可选) - 分支前缀，用于生成分支名时自动添加前缀
-- `ignore` (可选) - 忽略分支列表，分支清理时会自动排除这些分支
-
-#### `[template.commit]` 节
+##### `[template.commit]` 节
 
 - `use-_scope` (可选) - 是否使用 scope（Conventional Commits 格式）
 - `default` (可选) - 默认提交模板（Handlebars 格式）
 
-#### `[template.branch]` 节
+##### `[template.branch]` 节
 
 - `default` (可选) - 默认分支模板
 - `feature` (可选) - Feature 分支模板
@@ -433,13 +520,22 @@ auto-_accept-_change-_type = true
 - `refactoring` (可选) - Refactoring 分支模板
 - `chore` (可选) - Chore 分支模板
 
-#### `[template.pull-_requests]` 节
+##### `[template.pull-_requests]` 节
 
 - `default` (可选) - 默认 PR 模板（Handlebars 格式）
 
-#### `[pr]` 节
+#### 私有配置（`~/.workflow/config/repository.toml`）
 
-- `auto-_accept-_change-_type` (可选) - 是否自动接受变更类型选择
+##### `[{repo_id}]` 节
+
+每个仓库使用其标识符（`{repo_name}_{hash}`）作为节名。
+
+- `configured` (必需) - 配置完成标志，`true` 表示 `repo setup` 已完成
+- `branch` (可选) - 分支配置（个人偏好）
+  - `prefix` (可选) - 分支前缀，用于生成分支名时自动添加前缀
+  - `ignore` (可选) - 忽略分支列表，分支清理时会自动排除这些分支
+- `pr` (可选) - PR 配置（个人偏好）
+  - `auto-_accept-_change-_type` (可选) - 是否自动接受变更类型选择
 
 ---
 
@@ -609,5 +705,5 @@ Repo 模块采用清晰的设计原则：
 
 ---
 
-**最后更新**: 2025-12-16
+**最后更新**: 2025-12-27
 

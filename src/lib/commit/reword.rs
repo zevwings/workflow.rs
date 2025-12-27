@@ -7,7 +7,7 @@
 //! - Rebase 相关操作
 
 use crate::base::constants::errors::file_operations;
-use crate::base::util::file::FileWriter;
+use crate::base::fs::FileWriter;
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;

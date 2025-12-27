@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-use crate::base::util::file::FileReader;
+use crate::base::fs::FileReader;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

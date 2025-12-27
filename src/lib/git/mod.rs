@@ -40,11 +40,11 @@ mod types;
 pub use auth::GitAuth;
 pub use branch::{GitBranch, MergeStrategy};
 pub use cherry_pick::GitCherryPick;
-pub(crate) use command::GitCommand;
-// 也导出 GitCommand 供 crate 内其他模块使用（如 branch::sync）
+// 导出 GitCommand 供其他模块使用（如 branch::sync）
 pub use command::GitCommand as GitCommandPublic;
 pub use commit::{CommitInfo, GitCommit, WorktreeStatus};
 pub use config::GitConfig;
+pub use helpers::open_repo_at;
 pub use pre_commit::GitPreCommit;
 pub use repo::GitRepo;
 pub use stash::{GitStash, StashApplyResult, StashEntry, StashPopResult, StashStat};

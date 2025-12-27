@@ -357,6 +357,55 @@ workflow setup
 | `codeup.csrf_token` | Codeup CSRF Token | - |
 | `codeup.cookie` | Codeup Cookie | - |
 
+#### Git 认证配置
+
+Workflow CLI 使用 git2 库进行 Git 操作，支持 SSH 和 HTTPS 两种认证方式。以下操作需要 Git 认证：
+
+- `workflow pr create` - 创建 PR（推送到远程）
+- `workflow pr sync` - 同步分支（fetch/push）
+- `workflow branch sync` - 同步分支（fetch/push）
+- `workflow branch delete` - 删除远程分支
+- `workflow tag delete` - 删除远程 tag
+
+**SSH 认证（推荐）**
+
+如果使用 SSH URL（如 `git@github.com:user/repo.git`），Workflow CLI 会自动检测并使用以下认证方式（按优先级顺序）：
+
+1. **SSH Agent**（优先级最高，在认证时实时尝试）
+   ```bash
+   # 添加 SSH 密钥到 agent
+   ssh-add ~/.ssh/id_ed25519
+   ```
+
+2. **SSH 密钥文件**（如果 SSH Agent 不可用，使用缓存的密钥文件）
+   - **优先级 1**：SSH config 匹配（根据远程 URL 匹配 `~/.ssh/config` 中的 Host 配置）
+   - **优先级 2**：默认密钥顺序（自动查找）：
+     - `~/.ssh/id_ed25519` → `~/.ssh/id_rsa` → `~/.ssh/id_ecdsa`
+
+**HTTPS 认证**
+
+如果使用 HTTPS URL（如 `https://github.com/user/repo.git`），需要设置环境变量：
+
+```bash
+# GitHub Token（优先级 1，推荐）
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+
+# 或通用 Git Token（优先级 2，如果 GITHUB_TOKEN 不存在则使用）
+export GIT_TOKEN=your-token
+
+# 可选：设置用户名（用于 HTTPS 认证）
+export GIT_USERNAME=your-username
+```
+
+**故障排除**
+
+如果遇到认证失败，Workflow CLI 会提供详细的错误信息和配置指导：
+
+- **SSH 认证失败**：检查 SSH Agent 是否运行、密钥权限是否正确
+- **HTTPS 认证失败**：检查环境变量是否设置正确
+
+> **注意**：Git 认证配置与 GitHub API Token（`github.api_token`）是分开的。GitHub API Token 用于 PR 操作（创建、合并、查询等），而 Git 认证用于 Git 操作（push、fetch 等）。
+
 ### 查看配置
 
 查看当前所有配置：
@@ -920,3 +969,5 @@ graph TB
 - [docs/architecture/architecture.md](./docs/architecture/architecture.md) - 了解架构设计和核心模块详情
 
 ---
+
+**最后更新**: 2025-12-27

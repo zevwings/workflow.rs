@@ -13,9 +13,9 @@ use std::path::PathBuf;
 use clap_complete::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 
+use crate::base::fs::FileWriter;
 use crate::base::settings::paths::Paths;
 use crate::base::shell::ShellConfigManager;
-use crate::base::util::file::FileWriter;
 use crate::trace_debug;
 use crate::trace_info;
 

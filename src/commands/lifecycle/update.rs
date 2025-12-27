@@ -1,7 +1,7 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
-use crate::base::util::directory::DirectoryWalker;
+use crate::base::fs::DirectoryWalker;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -14,6 +14,7 @@ use reqwest::header::HeaderMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::base::checksum::Checksum;
 use crate::base::dialog::ConfirmDialog;
 use crate::base::format::DisplayFormatter;
 use crate::base::http::client::HttpClient;
@@ -24,7 +25,8 @@ use crate::base::indicator::{Progress, Spinner};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{Checksum, Platform, Unzip};
+use crate::base::system::Platform;
+use crate::base::zip::Unzip;
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,

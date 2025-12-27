@@ -152,11 +152,10 @@ fn test_mcp_config_manager_write_and_read_return_ok(cli_env: CliTestEnv) -> Resu
     config.mcp_servers.insert("test-server".to_string(), server_config);
 
     // 写入配置
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
 
     // 读取配置
-    let read_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let read_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     assert_eq!(read_config.mcp_servers.len(), 1);
     assert!(read_config.mcp_servers.contains_key("test-server"));
 
@@ -191,11 +190,10 @@ fn test_mcp_config_manager_update_return_ok(cli_env: CliTestEnv) -> Result<()> {
         env: HashMap::new(),
     };
     config.mcp_servers.insert("server1".to_string(), server_config);
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
 
     // 模拟 update 操作
-    let mut read_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let mut read_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     read_config.mcp_servers.insert(
         "server2".to_string(),
         MCPServerConfig {
@@ -204,11 +202,10 @@ fn test_mcp_config_manager_update_return_ok(cli_env: CliTestEnv) -> Result<()> {
             env: HashMap::new(),
         },
     );
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&read_config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&read_config)?;
 
     // Assert: 验证更新成功
-    let updated_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let updated_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     assert_eq!(updated_config.mcp_servers.len(), 2);
     assert!(updated_config.mcp_servers.contains_key("server1"));
     assert!(updated_config.mcp_servers.contains_key("server2"));
@@ -249,8 +246,7 @@ fn test_mcp_config_manager_merge_return_ok(cli_env: CliTestEnv) -> Result<()> {
         .env
         .insert("EXISTING_KEY".to_string(), "existing_value".to_string());
     existing_config.mcp_servers.insert("server1".to_string(), existing_server);
-    workflow::base::util::file::FileWriter::new(&config_path)
-        .write_json_secure(&existing_config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&existing_config)?;
 
     // 创建新配置
     let mut new_config = MCPConfig::default();
@@ -271,8 +267,7 @@ fn test_mcp_config_manager_merge_return_ok(cli_env: CliTestEnv) -> Result<()> {
     );
 
     // 模拟合并操作
-    let mut merged_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let mut merged_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     for (name, server_config) in &new_config.mcp_servers {
         if let Some(existing_server) = merged_config.mcp_servers.get_mut(name) {
             // 合并环境变量（不覆盖已有）
@@ -341,11 +336,10 @@ fn test_mcp_config_manager_detect_configured_servers_return_ok(cli_env: CliTestE
             env: HashMap::new(),
         },
     );
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
 
     // 读取并检测
-    let read_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let read_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     let servers: std::collections::HashSet<String> =
         read_config.mcp_servers.keys().cloned().collect();
 
@@ -386,11 +380,10 @@ fn test_mcp_config_manager_is_configured_return_ok(cli_env: CliTestEnv) -> Resul
             env: HashMap::new(),
         },
     );
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
 
     // 检查配置
-    let read_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let read_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     assert!(read_config.mcp_servers.contains_key("server1"));
     assert!(!read_config.mcp_servers.contains_key("server2"));
 
@@ -425,11 +418,10 @@ fn test_mcp_config_manager_read_existing_file_return_ok(cli_env: CliTestEnv) -> 
         env: HashMap::new(),
     };
     config.mcp_servers.insert("test-server".to_string(), server_config);
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
 
     // 读取配置
-    let read_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let read_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     assert_eq!(read_config.mcp_servers.len(), 1);
     assert!(read_config.mcp_servers.contains_key("test-server"));
 
@@ -467,8 +459,7 @@ fn test_mcp_config_manager_merge_existing_server_return_ok(cli_env: CliTestEnv) 
         .env
         .insert("EXISTING_KEY".to_string(), "existing_value".to_string());
     existing_config.mcp_servers.insert("server1".to_string(), existing_server);
-    workflow::base::util::file::FileWriter::new(&config_path)
-        .write_json_secure(&existing_config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&existing_config)?;
 
     // 创建新配置，包含相同的服务器但不同的环境变量
     let mut new_config = MCPConfig::default();
@@ -481,8 +472,7 @@ fn test_mcp_config_manager_merge_existing_server_return_ok(cli_env: CliTestEnv) 
     new_config.mcp_servers.insert("server1".to_string(), new_server.clone());
 
     // 模拟合并操作（覆盖已存在服务器的环境变量合并逻辑）
-    let mut merged_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let mut merged_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     for (name, server_config) in &new_config.mcp_servers {
         if let Some(existing_server) = merged_config.mcp_servers.get_mut(name) {
             // 合并环境变量（不覆盖已有）
@@ -539,8 +529,7 @@ fn test_mcp_config_manager_merge_new_server_return_ok(cli_env: CliTestEnv) -> Re
             env: HashMap::new(),
         },
     );
-    workflow::base::util::file::FileWriter::new(&config_path)
-        .write_json_secure(&existing_config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&existing_config)?;
 
     // 创建新配置，包含新服务器
     let mut new_config = MCPConfig::default();
@@ -554,8 +543,7 @@ fn test_mcp_config_manager_merge_new_server_return_ok(cli_env: CliTestEnv) -> Re
     );
 
     // 模拟合并操作（覆盖新服务器添加逻辑）
-    let mut merged_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let mut merged_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     for (name, server_config) in &new_config.mcp_servers {
         if let Some(_existing_server) = merged_config.mcp_servers.get_mut(name) {
             // 已存在的情况已在其他测试中覆盖
@@ -644,8 +632,7 @@ fn test_mcp_config_manager_write_creates_directory(cli_env: CliTestEnv) -> Resul
 
     // 使用 FileWriter 写入配置（模拟 MCPConfigManager::write 的行为）
     let config = MCPConfig::default();
-    let result =
-        workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config);
+    let result = workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config);
 
     // 应该能够创建目录和文件
     assert!(result.is_ok());
@@ -689,8 +676,7 @@ fn test_mcp_config_manager_merge_env_vars_not_overwrite_return_ok(
         .env
         .insert("EXISTING_KEY".to_string(), "existing_value".to_string());
     existing_config.mcp_servers.insert("server1".to_string(), existing_server);
-    workflow::base::util::file::FileWriter::new(&config_path)
-        .write_json_secure(&existing_config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&existing_config)?;
 
     // 创建新配置，包含相同的键但不同的值
     let mut new_config = MCPConfig::default();
@@ -703,8 +689,7 @@ fn test_mcp_config_manager_merge_env_vars_not_overwrite_return_ok(
     new_config.mcp_servers.insert("server1".to_string(), new_server);
 
     // 模拟合并操作（覆盖 env.entry().or_insert_with() 逻辑）
-    let mut merged_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let mut merged_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     for (name, server_config) in &new_config.mcp_servers {
         if let Some(existing_server) = merged_config.mcp_servers.get_mut(name) {
             for (key, value) in &server_config.env {
@@ -755,7 +740,7 @@ fn test_read_invalid_json_config_return_ok(cli_env: CliTestEnv) -> Result<()> {
     std::fs::write(&config_path, "{ invalid json }")?;
 
     // 尝试读取损坏的配置文件
-    let result = workflow::base::util::file::FileReader::new(&config_path).json::<MCPConfig>();
+    let result = workflow::base::fs::FileReader::new(&config_path).json::<MCPConfig>();
 
     // 应该返回错误
     assert!(result.is_err());
@@ -800,7 +785,7 @@ fn test_read_corrupted_json_config_return_ok(cli_env: CliTestEnv) -> Result<()> 
 
     for (i, invalid_json) in invalid_json_cases.iter().enumerate() {
         std::fs::write(&config_path, invalid_json)?;
-        let result = workflow::base::util::file::FileReader::new(&config_path).json::<MCPConfig>();
+        let result = workflow::base::fs::FileReader::new(&config_path).json::<MCPConfig>();
         assert!(
             result.is_err(),
             "Case {}: Expected error for invalid JSON: '{}'",
@@ -841,8 +826,7 @@ fn test_write_permission_denied_return_ok(cli_env: CliTestEnv) -> Result<()> {
 
     // 尝试写入配置文件
     let config = MCPConfig::default();
-    let result =
-        workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config);
+    let result = workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config);
 
     // 应该返回错误
     assert!(result.is_err());
@@ -889,7 +873,7 @@ fn test_read_permission_denied_return_ok(cli_env: CliTestEnv) -> Result<()> {
 
     // 创建配置文件
     let config = MCPConfig::default();
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
 
     // 移除读取权限
     let mut perms = std::fs::metadata(&config_path)?.permissions();
@@ -897,7 +881,7 @@ fn test_read_permission_denied_return_ok(cli_env: CliTestEnv) -> Result<()> {
     std::fs::set_permissions(&config_path, perms)?;
 
     // 尝试读取配置文件
-    let result = workflow::base::util::file::FileReader::new(&config_path).json::<MCPConfig>();
+    let result = workflow::base::fs::FileReader::new(&config_path).json::<MCPConfig>();
 
     // 应该返回错误
     assert!(result.is_err());
@@ -941,7 +925,7 @@ fn test_write_to_readonly_filesystem_return_collect(cli_env: CliTestEnv) -> Resu
 
     // 创建配置文件
     let config = MCPConfig::default();
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
 
     #[cfg(unix)]
     {
@@ -953,8 +937,8 @@ fn test_write_to_readonly_filesystem_return_collect(cli_env: CliTestEnv) -> Resu
 
         // 尝试写入只读文件
         let new_config = MCPConfig::default();
-        let result = workflow::base::util::file::FileWriter::new(&config_path)
-            .write_json_secure(&new_config);
+        let result =
+            workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&new_config);
 
         // 应该返回错误
         assert!(result.is_err());
@@ -974,8 +958,8 @@ fn test_write_to_readonly_filesystem_return_collect(cli_env: CliTestEnv) -> Resu
 
         // 尝试写入只读文件
         let new_config = MCPConfig::default();
-        let result = workflow::base::util::file::FileWriter::new(&config_path)
-            .write_json_secure(&new_config);
+        let result =
+            workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&new_config);
 
         // 应该返回错误
         assert!(result.is_err());
@@ -1052,15 +1036,13 @@ fn test_merge_with_empty_new_config_return_empty(cli_env: CliTestEnv) -> Result<
             env: HashMap::new(),
         },
     );
-    workflow::base::util::file::FileWriter::new(&config_path)
-        .write_json_secure(&existing_config)?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&existing_config)?;
 
     // 创建空配置
     let new_config = MCPConfig::default();
 
     // 模拟合并空配置
-    let mut merged_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let mut merged_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
     for (name, server_config) in &new_config.mcp_servers {
         if let Some(existing_server) = merged_config.mcp_servers.get_mut(name) {
             for (key, value) in &server_config.env {
@@ -1107,9 +1089,8 @@ fn test_server_config_with_empty_values_return_empty(cli_env: CliTestEnv) -> Res
     config.mcp_servers.insert("empty-server".to_string(), server_config);
 
     // 写入和读取
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config)?;
-    let read_config: MCPConfig =
-        workflow::base::util::file::FileReader::new(&config_path).json()?;
+    workflow::base::fs::FileWriter::new(&config_path).write_json_secure(&config)?;
+    let read_config: MCPConfig = workflow::base::fs::FileReader::new(&config_path).json()?;
 
     // Assert: 验证空值被正确保存和读取
     let server = read_config

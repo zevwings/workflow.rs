@@ -48,7 +48,7 @@ pub fn cleanup_test_env() {
 pub fn create_temp_test_dir(prefix: &str) -> color_eyre::Result<PathBuf> {
     use color_eyre::eyre::Context;
     let temp_dir = std::env::temp_dir();
-    let timestamp = workflow::base::util::date::get_unix_timestamp_nanos();
+    let timestamp = workflow::base::format::date::get_unix_timestamp_nanos();
     let random_suffix = random_string(8);
     let test_dir = temp_dir.join(format!(
         "workflow_test_{}_{}_{}",

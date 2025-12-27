@@ -433,7 +433,7 @@ impl GitStash {
 
     /// 获取 stash 的统计信息
     ///
-    /// 使用 `git stash show --stat` 获取 stash 的文件变更统计。
+    /// 使用 git2 库获取 stash 的文件变更统计。
     ///
     /// # 参数
     ///
@@ -443,52 +443,105 @@ impl GitStash {
     ///
     /// 返回 `StashStat`，包含文件变更统计信息。
     pub fn stash_show_stat(stash_ref: &str) -> Result<StashStat> {
-        // 注意：stash_show_stat 仍使用 GitCommand，因为 git2 没有直接提供统计信息
-        // 这是一个辅助函数，不影响主要迁移目标
-        use super::GitCommand;
-        let output = GitCommand::new(["stash", "show", "--stat", stash_ref])
-            .read()
-            .wrap_err("Failed to get stash statistics")?;
+        let mut repo = open_repo()?;
 
-        // 解析输出，例如：
-        //  file1.txt | 2 +-
-        //  file2.txt | 5 +++--
-        //  2 files changed, 5 insertions(+), 3 deletions(-)
+        // 解析 stash 索引
+        let stash_index = stash_ref
+            .strip_prefix("stash@{")
+            .and_then(|s| s.strip_suffix("}"))
+            .and_then(|s| s.parse::<usize>().ok())
+            .ok_or_else(|| color_eyre::eyre::eyre!("Invalid stash reference: {}", stash_ref))?;
+
+        // 获取 stash commit OID
+        let mut stash_oid = None;
+        repo.stash_foreach(|index, _message, oid| {
+            if index == stash_index {
+                stash_oid = Some(*oid);
+                false // 停止遍历
+            } else {
+                true // 继续遍历
+            }
+        })
+        .wrap_err("Failed to find stash entry")?;
+
+        let stash_oid =
+            stash_oid.ok_or_else(|| color_eyre::eyre::eyre!("Stash {} not found", stash_ref))?;
+        let stash_commit = repo
+            .find_commit(stash_oid)
+            .wrap_err_with(|| format!("Failed to find stash commit: {}", stash_ref))?;
+
+        // Stash commit 的结构：
+        // - parent 0: WIP commit (工作区状态)
+        // - parent 1: index commit (暂存区状态，可选)
+        // - parent 2: HEAD commit (原始 HEAD，可选)
+        // 我们需要计算 WIP commit 相对于 HEAD 的 diff
+
+        let stash_tree = stash_commit.tree()?;
         let mut files_changed = 0;
         let mut insertions = 0;
         let mut deletions = 0;
+        let mut seen_files = std::collections::HashSet::new();
 
-        // 查找最后一行统计信息
-        for line in output.lines().rev() {
-            if let Some(stat_line) = line.strip_suffix(")") {
-                // 解析格式：2 files changed, 5 insertions(+), 3 deletions(-)
-                if let Some(files_part) = stat_line.split(',').next() {
-                    if let Some(num) =
-                        files_part.split_whitespace().next().and_then(|s| s.parse::<usize>().ok())
-                    {
-                        files_changed = num;
-                    }
-                }
+        // 如果有父提交，计算相对于父提交的 diff
+        // 通常 stash 的第一个父提交是 WIP commit
+        if stash_commit.parent_count() > 0 {
+            if let Ok(parent_commit) = stash_commit.parent(0) {
+                let parent_tree = parent_commit.tree()?;
 
-                // 解析 insertions
-                if let Some(ins_part) = stat_line.split(',').nth(1) {
-                    if let Some(num) =
-                        ins_part.split_whitespace().next().and_then(|s| s.parse::<usize>().ok())
-                    {
-                        insertions = num;
-                    }
-                }
+                // 计算 diff
+                let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None)?;
 
-                // 解析 deletions
-                if let Some(del_part) = stat_line.split(',').nth(2) {
-                    if let Some(num) =
-                        del_part.split_whitespace().next().and_then(|s| s.parse::<usize>().ok())
-                    {
-                        deletions = num;
-                    }
-                }
-                break;
+                diff.foreach(
+                    &mut |delta, _progress| {
+                        if let Some(path) = delta.new_file().path() {
+                            if seen_files.insert(path.to_string_lossy().to_string()) {
+                                files_changed += 1;
+                            }
+                        } else if let Some(path) = delta.old_file().path() {
+                            if seen_files.insert(path.to_string_lossy().to_string()) {
+                                files_changed += 1;
+                            }
+                        }
+                        true
+                    },
+                    None,
+                    None,
+                    Some(&mut |_delta, _hunk, line| {
+                        let origin = line.origin();
+                        if origin == '+' {
+                            insertions += 1;
+                        } else if origin == '-' {
+                            deletions += 1;
+                        }
+                        true
+                    }),
+                )?;
             }
+        } else {
+            // 如果没有父提交，计算相对于空树的 diff（新文件）
+            let diff = repo.diff_tree_to_tree(None, Some(&stash_tree), None)?;
+
+            diff.foreach(
+                &mut |delta, _progress| {
+                    if let Some(path) = delta.new_file().path() {
+                        if seen_files.insert(path.to_string_lossy().to_string()) {
+                            files_changed += 1;
+                        }
+                    }
+                    true
+                },
+                None,
+                None,
+                Some(&mut |_delta, _hunk, line| {
+                    let origin = line.origin();
+                    if origin == '+' {
+                        insertions += 1;
+                    } else if origin == '-' {
+                        deletions += 1;
+                    }
+                    true
+                }),
+            )?;
         }
 
         Ok(StashStat {

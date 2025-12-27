@@ -39,9 +39,9 @@
 //! Tracer::init();
 //! ```
 
+use crate::base::fs::DirectoryWalker;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
-use crate::base::util::directory::DirectoryWalker;
 use crate::base::LogLevel;
 use chrono::Local;
 use color_eyre::eyre::WrapErr;

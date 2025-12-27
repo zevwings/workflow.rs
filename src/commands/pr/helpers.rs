@@ -4,7 +4,7 @@
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::indicator::Spinner;
-use crate::base::util::{Browser, Clipboard};
+use crate::base::system::{Browser, Clipboard};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::status::JiraStatus;
 use crate::jira::Jira;

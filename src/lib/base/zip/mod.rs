@@ -33,7 +33,7 @@ impl Unzip {
     /// # 示例
     ///
     /// ```no_run
-    /// use workflow::base::util::unzip::Unzip;
+    /// use workflow::base::zip::Unzip;
     /// use std::path::Path;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
