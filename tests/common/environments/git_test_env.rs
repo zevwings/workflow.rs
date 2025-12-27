@@ -106,7 +106,13 @@ impl GitTestEnv {
             .ok_or_else(|| color_eyre::eyre::eyre!("Git config path should be valid UTF-8"))?;
         Self::run_git_command(
             &work_dir,
-            &["config", "--file", git_config_path_str, "user.name", "Test User"],
+            &[
+                "config",
+                "--file",
+                git_config_path_str,
+                "user.name",
+                "Test User",
+            ],
         )?;
         Self::run_git_command(
             &work_dir,
