@@ -127,6 +127,17 @@ provider = "invalid_provider"
 "#,
     )?;
 
+    // 设置 auto_accept_change_type 以避免变更类型选择的对话框
+    use workflow::repo::config::private::PrivateRepoConfig;
+    let repo_id = PrivateRepoConfig::generate_repo_id_in(env.project_path())?;
+    let repository_config = format!(
+        r#"
+["{repo_id}.pr"]
+auto_accept_change_type = true
+"#
+    );
+    env.create_home_config(&repository_config)?;
+
     // 创建初始提交
     env.create_file("README.md", "# Test Project")?
         .create_commit("Initial commit")?;
@@ -141,9 +152,21 @@ provider = "invalid_provider"
         .create_commit(&format!("feat({}): add feature", ticket_id))?;
 
     // 创建PR（dry-run模式）
+    // 通过命令行参数提供所有必需值，避免触发用户交互对话框
+    // 提供 --jira-id 参数，让 resolve_title 从 Jira 获取标题，避免 InputDialog
     // LLM 调用会在 build_url() 阶段快速失败，不会等待网络超时
     let binding = CliCommandBuilder::new()
-        .args(["pr", "create", "--dry-run"])
+        .args([
+            "pr",
+            "create",
+            "--dry-run",
+            "--jira-id",
+            "PROJ-123",
+            "--title",
+            "Test Issue", // 从 Mock Jira API 获取的标题
+            "--description",
+            "Test description",
+        ])
         .current_dir(env.path())
         .assert();
     let output = binding.get_output();

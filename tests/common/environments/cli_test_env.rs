@@ -584,8 +584,9 @@ impl CliTestEnv {
         })?;
 
         let config_file = config_dir.join("workflow.toml");
-        fs::write(&config_file, content)
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to write home workflow config file: {}", e))?;
+        fs::write(&config_file, content).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to write home workflow config file: {}", e)
+        })?;
 
         Ok(config_file)
     }
