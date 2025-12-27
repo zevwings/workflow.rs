@@ -562,7 +562,6 @@ impl DisplayFormatter {
 ## 📚 相关文档
 
 - [主架构文档](./architecture.md) - 项目总体架构
-- [工具函数模块架构文档](./tools.md) - Format 模块的简要说明
 - [Dialog 模块架构文档](./dialog.md) - 用户交互相关模块
 - [Logger 模块架构文档](./logger.md) - 日志输出相关模块
 

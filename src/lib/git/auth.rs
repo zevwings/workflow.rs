@@ -4,7 +4,7 @@
 //! 使用智能检测和缓存机制，自动选择最合适的认证方式。
 
 use git2::{Cred, CredentialType, RemoteCallbacks};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 /// 缓存的认证信息
@@ -120,8 +120,7 @@ impl GitAuth {
             if is_https && allowed_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
                 let username = auth_info
                     .https_username
-                    .as_ref()
-                    .map(|s| s.as_str())
+                    .as_deref()
                     .or(username_from_url)
                     .or_else(|| Self::extract_username_from_url(url))
                     .unwrap_or("git")
@@ -164,9 +163,8 @@ impl GitAuth {
         AUTH_INFO.get_or_init(|| {
             // 初始化时读取一次认证信息
             let ssh_key_path = Self::find_ssh_key();
-            let https_token = std::env::var("GITHUB_TOKEN")
-                .or_else(|_| std::env::var("GIT_TOKEN"))
-                .ok();
+            let https_token =
+                std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GIT_TOKEN")).ok();
             let https_username = std::env::var("GIT_USERNAME").ok();
 
             CachedAuthInfo {
@@ -270,9 +268,7 @@ impl GitAuth {
     ///
     /// 返回 `~/.ssh/config` 的完整路径。
     fn get_ssh_config_path() -> Option<PathBuf> {
-        let home_dir = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .ok()?;
+        let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
 
         let config_path = PathBuf::from(&home_dir).join(".ssh").join("config");
         if config_path.exists() {
@@ -343,12 +339,11 @@ impl GitAuth {
                         let identity_file = parts[1];
                         // 展开 ~ 为 home 目录
                         let expanded_path = if identity_file.starts_with('~') {
-                            if let Some(home_dir) = std::env::var("HOME")
-                                .or_else(|_| std::env::var("USERPROFILE"))
-                                .ok()
+                            if let Ok(home_dir) =
+                                std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE"))
                             {
-                                PathBuf::from(&home_dir)
-                                    .join(&identity_file[2..]) // 跳过 "~/"
+                                PathBuf::from(&home_dir).join(&identity_file[2..])
+                            // 跳过 "~/"
                             } else {
                                 PathBuf::from(identity_file)
                             }
@@ -419,9 +414,7 @@ impl GitAuth {
     ///
     /// 返回找到的第一个存在的密钥文件路径，如果都不存在则返回 `None`。
     fn find_ssh_key_default() -> Option<PathBuf> {
-        let home_dir = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .ok()?;
+        let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
 
         let key_paths = vec![
             PathBuf::from(&home_dir).join(".ssh").join("id_ed25519"),
@@ -484,9 +477,7 @@ mod tests {
     #[test]
     fn test_get_remote_callbacks() {
         // 测试获取认证回调（不应该 panic）
-        let callbacks = GitAuth::get_remote_callbacks();
+        let _callbacks = GitAuth::get_remote_callbacks();
         // RemoteCallbacks 没有公共方法可以验证，但创建成功就说明没问题
-        assert!(true); // 占位符
     }
 }
-

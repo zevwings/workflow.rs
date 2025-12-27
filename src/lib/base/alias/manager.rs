@@ -2,9 +2,9 @@
 //!
 //! 提供别名的加载、展开和管理功能。
 
+use crate::base::fs::FileWriter;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
-use crate::base::util::file::FileWriter;
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::{HashMap, HashSet};
 use std::fs;

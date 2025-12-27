@@ -1,7 +1,7 @@
 use clap_complete::shells::Shell;
 use color_eyre::{eyre::eyre, Result};
 
-use crate::base::util::file::FileReader;
+use crate::base::fs::FileReader;
 
 /// Shell 检测工具
 ///

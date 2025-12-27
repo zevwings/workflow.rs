@@ -47,9 +47,9 @@ use crate::common::helpers::CurrentDirGuard;
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-    #[test]
-    #[serial]
-    fn test_worktree_status_clean_return_ok() -> Result<()> {
+#[test]
+#[serial]
+fn test_worktree_status_clean_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
@@ -87,9 +87,9 @@ use crate::common::helpers::CurrentDirGuard;
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-    #[test]
-    #[serial]
-    fn test_has_changes_clean_repo_return_ok() -> Result<()> {
+#[test]
+#[serial]
+fn test_has_changes_clean_repo_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
@@ -124,9 +124,9 @@ use crate::common::helpers::CurrentDirGuard;
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-    #[test]
-    #[serial]
-    fn test_has_changes_with_untracked_files_return_collect() -> Result<()> {
+#[test]
+#[serial]
+fn test_has_changes_with_untracked_files_return_collect() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;
@@ -164,9 +164,9 @@ use crate::common::helpers::CurrentDirGuard;
 ///
 /// ## 注意事项
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
-    #[test]
-    #[serial]
-    fn test_has_changes_with_modified_files_return_collect() -> Result<()> {
+#[test]
+#[serial]
+fn test_has_changes_with_modified_files_return_collect() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
     let _dir_guard = CurrentDirGuard::new(git_repo_with_commit.path())?;

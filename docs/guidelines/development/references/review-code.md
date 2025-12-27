@@ -1201,7 +1201,7 @@ fn some-_function() {
 - [错误处理规范](../../development/error-handling.md) - 错误处理规范
 - [命名规范](../../development/naming.md) - 命名规范
 - [架构文档](../architecture/) - 各模块架构文档
-- [工具函数架构](../../../architecture/tools.md) - 工具函数模块架构
+- [工具函数模块架构文档](../../../architecture/) - 各工具函数模块架构（fs.md、system.md、zip.md、checksum.md、format.md 等）
 
 ### 工具函数位置
 

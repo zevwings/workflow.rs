@@ -49,7 +49,7 @@
 **需求文档模板** (`docs/templates/requirements/requirement.template`)
    - 适用于：待办事项、需求分析、实施计划等需求类文档
    - 特点：提供统一的文档结构，包含状态标记、任务清单、实施计划等
-   - 示例：`jira.md`、`coverage-improvement.md`、`gix-migration.md`、`integration.md`
+   - 示例：`jira.md`、`coverage-improvement.md`、`integration.md`
    - 位置：`docs/templates/requirements/requirement.template`
 
 #### 4. 检查工作流文档模板 (`review-workflow.template`)

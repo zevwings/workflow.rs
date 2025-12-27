@@ -50,7 +50,7 @@ impl Reload {
                         "Shell type {:?} is not supported on this platform",
                         shell
                     )],
-                    reload_hint: format!("Please manually reload your shell configuration"),
+                    reload_hint: "Please manually reload your shell configuration".to_string(),
                 });
             }
         };

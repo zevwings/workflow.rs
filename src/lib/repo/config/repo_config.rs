@@ -3,7 +3,6 @@
 //! Provides a unified configuration access interface, internally calling
 //! `PublicRepoConfig` and `PrivateRepoConfig`.
 
-use crate::git::GitCommandPublic as GitCommand;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use std::path::Path;
@@ -79,10 +78,8 @@ impl RepoConfig {
     /// * `home` - 用户主目录路径
     pub fn exists_in(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<bool> {
         let repo_path = repo_path.as_ref();
-        // Note: GitRepo::is_git_repo() still uses current directory, so we check by trying to get git dir
-        let is_git_repo = GitCommand::new(["rev-parse", "--git-dir", "--quiet"])
-            .with_cwd(repo_path)
-            .quiet_success();
+        // Check if the path is a Git repository using git2 (instead of shell git command)
+        let is_git_repo = crate::git::GitRepo::is_git_repo_at(repo_path);
 
         if !is_git_repo {
             return Ok(true); // Not in Git repository, consider as "configured" (skip check)

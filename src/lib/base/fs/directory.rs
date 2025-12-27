@@ -82,7 +82,7 @@ impl DirectoryWalker {
     /// # Examples
     ///
     /// ```rust
-    /// use workflow::base::util::directory::DirectoryWalker;
+    /// use workflow::base::fs::DirectoryWalker;
     /// # use color_eyre::Result;
     ///
     /// # fn main() -> Result<()> {
@@ -112,7 +112,7 @@ impl DirectoryWalker {
     /// # Examples
     ///
     /// ```rust
-    /// use workflow::base::util::directory::DirectoryWalker;
+    /// use workflow::base::fs::DirectoryWalker;
     /// use std::path::Path;
     /// # use color_eyre::Result;
     ///

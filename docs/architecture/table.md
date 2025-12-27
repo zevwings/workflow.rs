@@ -618,7 +618,6 @@ pub fn render(self) -> String {
 ## 📚 相关文档
 
 - [主架构文档](./architecture.md) - 项目总体架构
-- [工具函数模块架构文档](./tools.md) - Table 模块的简要说明
 - [Format 模块架构文档](./format.md) - 格式化相关模块
 - [Dialog 模块架构文档](./dialog.md) - 用户交互相关模块
 

@@ -33,7 +33,6 @@ pub mod settings;
 pub mod shell;
 pub mod system;
 pub mod table;
-pub mod util;
 pub mod zip;
 
 // 重新导出常用类型，方便使用

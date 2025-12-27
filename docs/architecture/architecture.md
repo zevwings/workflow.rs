@@ -111,16 +111,23 @@ src/
     │       ├── unzip.rs   # 文件解压工具
     │       ├── checksum.rs # 校验和验证工具
     │       └── confirm.rs # 用户确认对话框
-    ├── git/                # Git 操作模块
+    ├── git/                # Git 操作模块（基于 git2 库）
     │   ├── mod.rs          # Git 模块声明和导出
+    │   ├── auth.rs         # Git 认证回调机制（SSH/HTTPS）
     │   ├── branch.rs       # 分支管理操作
     │   ├── commit.rs       # 提交相关操作
     │   ├── repo.rs         # 仓库检测和类型识别
     │   ├── stash.rs        # 暂存管理
     │   ├── config.rs       # Git 配置管理
     │   ├── pre-_commit.rs   # Pre-commit hooks 支持
-    │   ├── helpers.rs      # Git 操作辅助函数
-    │   └── types.rs        # Git 相关类型定义
+    │   ├── cherry_pick.rs  # Cherry-pick 操作
+    │   ├── tag.rs          # Tag 管理
+    │   ├── table.rs        # 表格格式化
+    │   ├── types.rs        # Git 相关类型定义
+    │   └── client/         # Git2 封装层（核心抽象）
+    │       ├── mod.rs      # Client 模块声明
+    │       ├── repository.rs  # GitRepository 封装
+    │       └── remote.rs      # GitRemote 封装
     ├── jira/               # Jira API 集成
     │   ├── mod.rs          # Jira 模块声明
     │   ├── api/            # API 方法子模块
@@ -279,21 +286,32 @@ src/
   - 详细架构请参考 [shell.md](./shell.md)
 
 - **工具函数模块** (`lib::base::util`) - 通用工具函数（数据处理等，其他功能已重组到独立模块）
-  - 详细架构请参考 [tools.md](./tools.md)
-  - **注意**：模块已重组，大部分功能已迁移到独立模块：
-    - `lib::base::system` - 系统交互（平台检测、浏览器、剪贴板）
-    - `lib::base::fs` - 文件系统操作（文件、路径、目录）
-    - `lib::base::format` - 格式化工具（显示格式化、消息格式化、日期时间、敏感字符串）
-    - `lib::base::logger` - 日志功能
-    - `lib::base::zip` - 解压工具
-    - `lib::base::checksum` - 校验和工具
+  - **注意**：模块已重组，大部分功能已迁移到独立模块，请参考相应的架构文档：
+    - `lib::base::system` - 系统交互（平台检测、浏览器、剪贴板）→ [system.md](./system.md)
+    - `lib::base::fs` - 文件系统操作（文件、路径、目录）→ [fs.md](./fs.md)
+    - `lib::base::format` - 格式化工具（显示格式化、消息格式化、日期时间、敏感字符串）→ [format.md](./format.md)
+    - `lib::base::logger` - 日志功能 → [logger.md](./logger.md)
+    - `lib::base::zip` - 解压工具 → [zip.md](./zip.md)
+    - `lib::base::checksum` - 校验和工具 → [checksum.md](./checksum.md)
+    - `lib::base::dialog` - 交互式对话框 → [dialog.md](./dialog.md)
+    - `lib::base::indicator` - 进度指示器 → [indicator.md](./indicator.md)
+    - `lib::base::table` - 表格输出 → [table.md](./table.md)
+    - `lib::base::constants` - 常量管理 → [constants.md](./constants.md)
+    - `lib::base::mcp` - MCP 配置管理 → [mcp.md](./mcp.md)
     - `lib::base::dialog` - 交互式对话框
     - `lib::base::indicator` - 进度指示器
     - `lib::base::table` - 表格输出工具
 
 ### Git 模块 (`lib::git`)
 
-提供 Git 仓库操作功能，包括分支管理、提交、暂存、配置管理等。
+提供 Git 仓库操作功能，包括分支管理、提交、暂存、配置管理等。基于 `git2` (libgit2 Rust 绑定) 实现，提供高性能、类型安全的 Git 操作。
+
+**核心特性**：
+- 使用 `git2` 库替代命令行 Git，消除进程启动开销（性能提升 10-100 倍）
+- 统一的 `GitRepository` 和 `GitRemote` 封装层（`client/` 模块）
+- 统一的认证机制（`GitAuth`），支持 SSH 和 HTTPS
+- 完整的 Git 操作支持（分支、提交、仓库检测、暂存、配置、pre-commit hooks、cherry-pick、tag）
+
 - 详细架构请参考 [git.md](./git.md)
 
 ### Commit 模块 (`lib::commit`)

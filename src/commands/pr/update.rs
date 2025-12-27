@@ -6,10 +6,8 @@ use crate::{log_break, log_info, log_success, log_warning};
 use color_eyre::Result;
 
 /// 快速更新命令
-#[allow(dead_code)]
 pub struct PullRequestUpdateCommand;
 
-#[allow(dead_code)]
 impl PullRequestUpdateCommand {
     /// 快速更新代码（使用 PR 标题作为 commit 消息）
     ///

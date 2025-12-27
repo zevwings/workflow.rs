@@ -93,7 +93,7 @@ impl GitConfigGuard {
 
     /// 设置Git配置项
     ///
-    /// 使用`git config`命令设置配置项到临时配置文件。
+    /// 使用 git2 API 设置配置项到临时配置文件。
     ///
     /// # 参数
     ///
@@ -144,7 +144,9 @@ impl GitConfigGuard {
 
                             // 如果是锁文件错误且还有重试机会，等待后重试
                             if is_lock_error && attempt < MAX_RETRIES - 1 {
-                                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
+                                std::thread::sleep(std::time::Duration::from_millis(
+                                    RETRY_DELAY_MS,
+                                ));
                                 continue;
                             }
 
@@ -256,11 +258,11 @@ mod tests {
     /// ## 测试场景
     /// 1. 创建GitConfigGuard
     /// 2. 设置多个配置项（user.name, user.email）
-    /// 3. 使用git config命令验证配置已设置
+    /// 3. 使用 git2 API 验证配置已设置
     ///
     /// ## 预期结果
     /// - 配置项设置成功
-    /// - git config命令能够读取设置的配置值
+    /// - git2 API 能够读取设置的配置值
     #[test]
     fn test_git_config_guard_set_return_ok() -> Result<()> {
         let guard = GitConfigGuard::new()?;

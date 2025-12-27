@@ -5,7 +5,7 @@
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::base::alias::CommandsConfig;
-use workflow::base::util::file::FileWriter;
+use workflow::base::fs::FileWriter;
 
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env;

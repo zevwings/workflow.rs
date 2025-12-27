@@ -1,7 +1,7 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
-use crate::base::util::directory::DirectoryWalker;
+use crate::base::fs::DirectoryWalker;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -14,6 +14,7 @@ use reqwest::header::HeaderMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::base::checksum::Checksum;
 use crate::base::dialog::ConfirmDialog;
 use crate::base::format::DisplayFormatter;
 use crate::base::http::client::HttpClient;
@@ -24,7 +25,8 @@ use crate::base::indicator::{Progress, Spinner};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{Checksum, Platform, Unzip};
+use crate::base::system::Platform;
+use crate::base::zip::Unzip;
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
@@ -36,21 +38,8 @@ use std::os::unix::fs::PermissionsExt;
 
 /// GitHub Release 信息
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct GitHubRelease {
     tag_name: String,
-    #[allow(dead_code)]
-    assets: Vec<ReleaseAsset>,
-}
-
-/// Release 资源文件
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct ReleaseAsset {
-    #[allow(dead_code)]
-    name: String,
-    #[allow(dead_code)]
-    browser_download_url: String,
 }
 
 /// 版本比较结果
@@ -81,8 +70,6 @@ struct BinaryStatus {
 struct VerificationResult {
     #[allow(dead_code)]
     binaries: Vec<BinaryStatus>,
-    #[allow(dead_code)]
-    completions_installed: bool,
     all_checks_passed: bool,
 }
 
@@ -116,10 +103,8 @@ impl TempDirManager {
 }
 
 /// 更新命令
-#[allow(dead_code)]
 pub struct UpdateCommand;
 
-#[allow(dead_code)]
 impl UpdateCommand {
     // ==================== 版本管理 ====================
 
@@ -706,7 +691,6 @@ impl UpdateCommand {
 
         Ok(VerificationResult {
             binaries,
-            completions_installed,
             all_checks_passed,
         })
     }

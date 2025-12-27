@@ -126,15 +126,6 @@
 - 二进制文件和补全脚本的备份
 - 自动回滚功能
 
-#### [tools.md](./architecture/tools.md)
-**工具函数模块架构文档**
-
-- 日志输出系统（带颜色的日志宏和日志级别管理）
-- 字符串处理工具（敏感值隐藏）
-- 浏览器和剪贴板操作
-- 文件解压和校验和验证
-- 用户确认对话框
-
 #### [format.md](./architecture/format.md)
 **Format 模块架构文档**
 
@@ -533,10 +524,15 @@
 - 想了解 Completion 功能？ → [completion.md](./architecture/completion.md)
 - 想了解代理管理？ → [proxy.md](./architecture/proxy.md)
 - 想了解回滚机制？ → [rollback.md](./architecture/rollback.md)
-- 想了解工具函数？ → [tools.md](./architecture/tools.md)
 - 想了解格式化工具？ → [format.md](./architecture/format.md)
 - 想了解表格输出工具？ → [table.md](./architecture/table.md)
 - 想了解 Prompt 管理？ → [prompt.md](./architecture/prompt.md)
+- 想了解校验和工具？ → [checksum.md](./architecture/checksum.md)
+- 想了解文件系统操作？ → [fs.md](./architecture/fs.md)
+- 想了解系统交互？ → [system.md](./architecture/system.md)
+- 想了解解压工具？ → [zip.md](./architecture/zip.md)
+- 想了解常量管理？ → [constants.md](./architecture/constants.md)
+- 想了解 MCP 配置管理？ → [mcp.md](./architecture/mcp.md)
 
 ### 命令层模块（CLI 命令封装）
 - 想了解 PR 命令？ → [pr.md](./architecture/pr.md)
@@ -557,4 +553,4 @@
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-12-27
