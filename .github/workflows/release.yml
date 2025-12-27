@@ -69,13 +69,27 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
   #
-  # 运行测试
+  # 运行测试（跨平台并行执行）
   tests:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-latest
+    name: 🧪 Run Tests (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+            test_timeout: 25
+          - os: macos-latest
+            platform: macOS
+            test_timeout: 35
+          - os: windows-latest
+            platform: Windows-x86_64
+            test_timeout: 30
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -98,39 +112,69 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          sudo apt-get install -y \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
       - name: 🧪 Run tests
+        timeout-minutes: ${{ matrix.test_timeout }}
         run: cargo test --verbose
+
+  # 性能基准测试
+  check-performance:
+    name: ⚡ Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: [check-status]
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
+
+      - name: ⚡ Run performance benchmarks
+        run: |
+          cargo bench --bench cli_performance \
+            --bench core_operations \
+            --bench network_operations
+
+      - name: 📤 Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-benchmarks-${{ github.run_id }}
+          path: target/criterion/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: 📋 Performance summary
+        if: always()
+        run: |
+          if [ -d "target/criterion" ]; then
+            echo "⚡ Performance benchmarks completed"
+            echo "Reports available in target/criterion/"
+          else
+            echo "⚠️  Performance benchmarks did not generate reports"
+          fi
+
   #
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
@@ -229,167 +273,18 @@ jobs:
           echo "   Event: ${{ github.event_name }}"
           echo "   Is Manual: $IS_MANUAL_TRIGGER"
 
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: 📦 Generate version number
         id: generate_version
-        shell: bash
         run: |
-          set -e
-          LATEST_VERSION="${{ steps.get_latest_version.outputs.latest_version }}"
-          IS_MASTER="${{ steps.detect_mode.outputs.is_master_branch }}"
-
-          # 验证 LATEST_VERSION 不为空
-          if [ -z "$LATEST_VERSION" ]; then
-            echo "❌ Error: LATEST_VERSION is empty"
-            exit 1
-          fi
-
-          echo "📋 Version generation inputs:"
-          echo "   LATEST_VERSION: $LATEST_VERSION"
-          echo "   IS_MASTER: $IS_MASTER"
-
-          if [[ "$IS_MASTER" == "true" ]]; then
-            # Master 分支：生成标准版本号
-            # 解析最新版本号
-            IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
-            MAJOR="${VERSION_PARTS[0]:-0}"
-            MINOR="${VERSION_PARTS[1]:-0}"
-            PATCH="${VERSION_PARTS[2]:-0}"
-
-            # 首先检查当前 commit 是否已经有任何标准版本 tag 指向它
-            CURRENT_COMMIT_SHA=$(git rev-parse HEAD)
-            EXISTING_TAG_ON_COMMIT=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
-
-            if [ -n "$EXISTING_TAG_ON_COMMIT" ]; then
-              # 当前 commit 已经有 tag，使用该 tag 的版本号
-              VERSION=${EXISTING_TAG_ON_COMMIT#v}
-              TAG="$EXISTING_TAG_ON_COMMIT"
-              NEEDS_INCREMENT="false"
-              echo "✅ Found existing tag $TAG on current commit, reusing it"
-            else
-              # 当前 commit 没有 tag，需要根据 Conventional Commits 规范确定版本更新类型
-              # 获取从最新 tag 到当前 commit 的所有 commit messages
-              LATEST_TAG="${{ steps.get_latest_version.outputs.latest_tag }}"
-
-              if [ -n "$LATEST_TAG" ] && git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
-                # 从最新 tag 到当前 commit 的所有提交
-                COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s" --no-merges || echo "")
-              else
-                # 如果没有找到 tag，使用最近的提交
-                COMMITS=$(git log -10 --format="%s" --no-merges || echo "")
-              fi
-
-              # 根据 Conventional Commits 规范确定版本更新类型
-              # 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
-              VERSION_INCREMENT_TYPE="patch"  # 默认是 patch
-
-              if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|BREAKING:)" || echo "$COMMITS" | grep -qE "^[^:]*!:"; then
-                # 检测到 BREAKING CHANGE 或 ! 标记，递增 major 版本（最高优先级）
-                VERSION_INCREMENT_TYPE="major"
-                MAJOR=$((MAJOR + 1))
-                MINOR=0
-                PATCH=0
-                echo "🔴 Detected BREAKING CHANGE, incrementing MAJOR version"
-              elif [ "$PATCH" -ge 9 ]; then
-                # 规则：如果 patch 版本达到 9，自动递增 minor 版本（如 v1.5.9 → v1.6.0）
-                VERSION_INCREMENT_TYPE="minor"
-                MINOR=$((MINOR + 1))
-                PATCH=0
-                echo "🟡 Patch version reached 9, incrementing MINOR version (v${MAJOR}.${MINOR}.${PATCH})"
-              elif echo "$COMMITS" | grep -qE "^(feat|feature):"; then
-                # 检测到 feat: 或 feature:，递增 minor 版本
-                VERSION_INCREMENT_TYPE="minor"
-                MINOR=$((MINOR + 1))
-                PATCH=0
-                echo "🟢 Detected feat: commit, incrementing MINOR version"
-              else
-                # 其他情况（fix、chore、docs 等），递增 patch 版本
-                VERSION_INCREMENT_TYPE="patch"
-                PATCH=$((PATCH + 1))
-                echo "🔵 No feat: or BREAKING CHANGE detected, incrementing PATCH version"
-              fi
-
-              VERSION="$MAJOR.$MINOR.$PATCH"
-              TAG="v$VERSION"
-              NEEDS_INCREMENT="true"
-
-              echo "✅ Version increment type: $VERSION_INCREMENT_TYPE"
-              echo "✅ Generated version $VERSION ($TAG) based on Conventional Commits"
-            fi
-
-            echo "✅ Master branch: Generated version $VERSION ($TAG)"
-          else
-            # 非 Master 分支：生成预发布版本号 (vx.x.x.alpha-xxx)
-            # 应用与 master 分支相同的版本递增规则
-            IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
-            MAJOR="${VERSION_PARTS[0]:-0}"
-            MINOR="${VERSION_PARTS[1]:-0}"
-            PATCH="${VERSION_PARTS[2]:-0}"
-
-            # 获取从最新 tag 到当前 commit 的所有 commit messages
-            LATEST_TAG="${{ steps.get_latest_version.outputs.latest_tag }}"
-
-            if [ -n "$LATEST_TAG" ] && git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
-              # 从最新 tag 到当前 commit 的所有提交
-              COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s" --no-merges || echo "")
-            else
-              # 如果没有找到 tag，使用最近的提交
-              COMMITS=$(git log -10 --format="%s" --no-merges || echo "")
-            fi
-
-            # 根据 Conventional Commits 规范确定版本更新类型
-            # 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
-            VERSION_INCREMENT_TYPE="patch"  # 默认是 patch
-
-            if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|BREAKING:)" || echo "$COMMITS" | grep -qE "^[^:]*!:"; then
-              # 检测到 BREAKING CHANGE 或 ! 标记，递增 major 版本（最高优先级）
-              VERSION_INCREMENT_TYPE="major"
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              echo "🔴 Detected BREAKING CHANGE, incrementing MAJOR version"
-            elif [ "$PATCH" -ge 9 ]; then
-              # 规则：如果 patch 版本达到 9，自动递增 minor 版本（如 v1.5.9 → v1.6.0）
-              VERSION_INCREMENT_TYPE="minor"
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              echo "🟡 Patch version reached 9, incrementing MINOR version (v${MAJOR}.${MINOR}.${PATCH})"
-            elif echo "$COMMITS" | grep -qE "^(feat|feature):"; then
-              # 检测到 feat: 或 feature:，递增 minor 版本
-              VERSION_INCREMENT_TYPE="minor"
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              echo "🟢 Detected feat: commit, incrementing MINOR version"
-            else
-              # 其他情况（fix、chore、docs 等），递增 patch 版本
-              VERSION_INCREMENT_TYPE="patch"
-              PATCH=$((PATCH + 1))
-              echo "🔵 No feat: or BREAKING CHANGE detected, incrementing PATCH version"
-            fi
-
-            BASE_VERSION="$MAJOR.$MINOR.$PATCH"
-
-            # 使用时间戳格式确保唯一性：YYYYMMDDHHmmssSSS
-            # 格式：vx.x.x.alpha-YYYYMMDDHHmmssSSS
-            # 示例：v1.6.1.alpha-20251216101712000
-            # 注意：此 job 运行在 ubuntu-latest 上，date 支持 %3N（毫秒）
-            TIMESTAMP=$(date +%Y%m%d%H%M%S%3N)
-
-            VERSION="${BASE_VERSION}.alpha-${TIMESTAMP}"
-            TAG="v$VERSION"
-            NEEDS_INCREMENT="false"
-
-            echo "✅ Non-master branch: Generated pre-release version $VERSION ($TAG)"
-            echo "   Timestamp format: YYYYMMDDHHmmssSSS"
-            echo "   Example: v1.6.1.alpha-20251216101712000"
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "needs_increment=$NEEDS_INCREMENT" >> $GITHUB_OUTPUT
-
-      - name: 🔧 Setup Rust toolchain
-        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
-        uses: dtolnay/rust-toolchain@stable
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py version generate \
+            --master ${{ steps.detect_mode.outputs.is_master_branch == 'true' }} \
+            --ci
 
       - name: 📝 Update Cargo.toml and Cargo.lock version
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
@@ -545,45 +440,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块（xproto, big_requests, etc.）
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            python3-pip \
-            python3-xcbgen \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            pkg-config
-          # 基本验证：检查关键依赖是否可用
-          python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
-          pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
-          echo "✅ xcb dependencies verified"
+        run: bash scripts/dev/shell/dependencies/install-build.sh
 
       - name: 📦 Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -747,19 +604,23 @@ jobs:
           echo "📦 Archive contents:"
           tar tzf "$ARCHIVE_NAME"
 
+      - name: 🐍 Setup Python 3.13
+        if: matrix.os != 'windows-latest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: 🔐 Calculate SHA256 checksum for archive
         id: sha256
-        shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+            # Windows: 使用 PowerShell 计算 SHA256
+            SHA256=$(powershell -Command "(Get-FileHash -Path '$ARCHIVE_NAME' -Algorithm SHA256).Hash.ToLower()")
           else
             ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
-          fi
-          if command -v shasum >/dev/null 2>&1; then
-            SHA256=$(shasum -a 256 "$ARCHIVE_NAME" | cut -d' ' -f1)
-          else
-            SHA256=$(sha256sum "$ARCHIVE_NAME" | cut -d' ' -f1)
+            # Linux/macOS: 使用 Python dev 工具
+            SHA256=$(python3 scripts/dev/py/dev.py checksum calculate --file "$ARCHIVE_NAME" | tail -1)
           fi
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
           echo "$SHA256" > "sha256-${{ matrix.platform }}.txt"
@@ -784,10 +645,11 @@ jobs:
   release-confirm:
     name: ⏸️ Release Confirmation
     runs-on: ubuntu-latest
-    needs: [update-version, build]
+    needs: [update-version, build, check-performance]
     if: |
       needs.update-version.result == 'success' &&
-      needs.build.result == 'success'
+      needs.build.result == 'success' &&
+      needs.check-performance.result == 'success'
     environment: release-confirm
     permissions:
       contents: read
@@ -828,6 +690,11 @@ jobs:
           # 当 tag 指向的 commit 修改了 workflow 文件时，GITHUB_TOKEN 无法推送，必须使用 PAT
           token: ${{ secrets.WORKFLOW_PAT }}
 
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: 🔧 Install jq
         shell: bash
         run: |
@@ -857,98 +724,14 @@ jobs:
       - name: 🌿 Create version update PR
         id: create_pr
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true' && needs.update-version.outputs.has_changes == 'true'
-        shell: bash
         env:
-          WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
-
-          NEW_VERSION="${{ needs.update-version.outputs.version }}"
-          BRANCH_NAME="bump-version-${NEW_VERSION}"
-
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Step 1: Creating version update PR"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-          # 第一步：创建新分支
-          echo "Step 1.1: Creating branch $BRANCH_NAME"
-          git checkout -b "$BRANCH_NAME"
-
-          # 第二步：添加文件
-          echo "Step 1.2: Staging Cargo.toml and Cargo.lock"
-          git add Cargo.toml Cargo.lock
-
-          # 第三步：提交更改
-          echo "Step 1.3: Committing changes"
-          git commit -m "chore: bump version to ${NEW_VERSION}"
-
-          # 第四步：推送到新分支
-          echo "Step 1.4: Pushing branch to origin"
-          git push origin "$BRANCH_NAME"
-
-          # 第五步：创建 Pull Request（使用 WORKFLOW_PAT 以触发 CI）
-          echo "Step 1.5: Creating Pull Request"
-          echo "Branch: $BRANCH_NAME"
-          echo "Version: $NEW_VERSION"
-
-          PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $WORKFLOW_PAT" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls" \
-            -d '{
-              "title": "chore: bump version to '"$NEW_VERSION"'",
-              "head": "'"$BRANCH_NAME"'",
-              "base": "master",
-              "body": "Automated version bump to '"$NEW_VERSION"'\n\nThis PR was created automatically by the release workflow.\n\n**Changes:**\n- Updated version in Cargo.toml to '"$NEW_VERSION"'\n- Updated version in Cargo.lock to '"$NEW_VERSION"'\n\n**Workflow Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            }')
-
-          HTTP_CODE=$(echo "$PR_RESPONSE" | tail -n1)
-          PR_BODY=$(echo "$PR_RESPONSE" | head -n-1)
-
-          echo "HTTP Status Code: $HTTP_CODE"
-
-          if [ "$HTTP_CODE" != "201" ]; then
-            echo "⚠️  Failed to create PR (HTTP $HTTP_CODE)"
-            echo "Response body:"
-            echo "$PR_BODY" | jq '.' 2>/dev/null || echo "$PR_BODY"
-
-            # 如果是 422 错误（已存在 PR），尝试查找现有的 PR
-            if [ "$HTTP_CODE" = "422" ]; then
-              echo "Checking for existing PR..."
-              EXISTING_PR=$(curl -s \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer $WORKFLOW_PAT" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH_NAME&base=master&state=open")
-
-              PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.[0].number // empty' 2>/dev/null)
-              if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-                PR_URL=$(echo "$EXISTING_PR" | jq -r '.[0].html_url // empty' 2>/dev/null)
-                echo "✅ Found existing PR #$PR_NUMBER: $PR_URL"
-                echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-                echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
-              else
-                exit 1
-              fi
-            else
-              exit 1
-            fi
-          else
-            # 提取 PR 信息
-            PR_NUMBER=$(echo "$PR_BODY" | jq -r '.number // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
-            PR_URL=$(echo "$PR_BODY" | jq -r '.html_url // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
-            echo "✅ PR #$PR_NUMBER created: $PR_URL"
-            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
-            echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
-          fi
-
-          # 确保 PR_NUMBER 已设置
-          if [ -z "$PR_NUMBER" ]; then
-            echo "❌ Error: PR_NUMBER is not set"
-            exit 1
-          fi
-
-          echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py pr create \
+            --version "${{ needs.update-version.outputs.version }}" \
+            --base master \
+            --ci
 
       # Step 2: Merge version update PR (only if needs_increment is true and master branch and has changes)
       - name: ⏳ Wait for PR status update
@@ -1047,77 +830,23 @@ jobs:
             echo "merge_commit_sha=" >> $GITHUB_OUTPUT
           fi
 
-      - name: ⏳ Wait for PR to be mergeable
-        id: wait_mergeable
+      - name: ⏳ Wait for PR to be mergeable and merge
+        id: wait_and_merge_pr
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
           needs.update-version.outputs.has_changes == 'true' &&
           steps.check_pr_status.outputs.merged != 'true' &&
           (steps.check_pr_status.outputs.mergeable == 'null' || steps.check_pr_status.outputs.mergeable == 'false')
-        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
-          MAX_WAIT=300
-          INITIAL_CHECK_INTERVAL=3  # 前 60 秒每 3 秒检查一次
-          NORMAL_CHECK_INTERVAL=5   # 之后每 5 秒检查一次
-          ELAPSED=30  # 从 30 秒开始计数（已等待 CI 完成）
-
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            # 动态调整检查间隔（前 60 秒更频繁检查）
-            if [ $ELAPSED -lt 60 ]; then
-              CHECK_INTERVAL=$INITIAL_CHECK_INTERVAL
-            else
-              CHECK_INTERVAL=$NORMAL_CHECK_INTERVAL
-            fi
-
-            # 使用 GITHUB_TOKEN 检查 PR 状态（默认 token，有 read 权限）
-            PR_STATUS=$(curl -s \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
-
-            MERGED=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
-            MERGEABLE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
-
-            if [ "$MERGED" = "true" ]; then
-              echo "✅ PR already merged"
-              echo "pr_merged=true" >> $GITHUB_OUTPUT
-              break
-            fi
-
-            # 如果 mergeable 为 null，说明 GitHub 还在计算状态，继续等待
-            if [ "$MERGEABLE" = "null" ]; then
-              echo "⏳ PR mergeable status is still being calculated (elapsed: ${ELAPSED}s), waiting..."
-              sleep $CHECK_INTERVAL
-              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-              continue
-            fi
-
-            # 如果 mergeable 为 false，说明 PR 有冲突或未通过检查，记录并继续等待
-            if [ "$MERGEABLE" = "false" ]; then
-              echo "⏳ PR is not mergeable yet (may have conflicts or pending checks, elapsed: ${ELAPSED}s), waiting..."
-              sleep $CHECK_INTERVAL
-              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-              continue
-            fi
-
-            if [ "$MERGEABLE" = "true" ]; then
-              echo "✅ PR is mergeable, proceeding to merge..."
-              echo "pr_mergeable=true" >> $GITHUB_OUTPUT
-              break
-            fi
-
-            sleep $CHECK_INTERVAL
-            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-          done
-
-          if [ $ELAPSED -ge $MAX_WAIT ]; then
-            echo "⏰ Timeout: PR did not become mergeable within ${MAX_WAIT}s"
-            echo "Please manually merge: $PR_URL"
-            exit 1
-          fi
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py pr merge \
+            --pr-number "${{ steps.create_pr.outputs.pr_number }}" \
+            --commit-title "chore: bump version to ${{ needs.update-version.outputs.version }}" \
+            --commit-message "Automated version bump to ${{ needs.update-version.outputs.version }}\n\nMerged via GitHub Actions workflow" \
+            --ci || true
 
       - name: 🔀 Merge version update PR
         id: merge_pr
@@ -1126,7 +855,7 @@ jobs:
           needs.update-version.outputs.is_master_branch == 'true' &&
           needs.update-version.outputs.has_changes == 'true' &&
           steps.check_pr_status.outputs.merged != 'true' &&
-          (steps.wait_mergeable.outputs.pr_mergeable == 'true' || steps.check_pr_status.outputs.mergeable == 'true')
+          (steps.wait_and_merge_pr.outputs.pr_merged == 'true' || steps.check_pr_status.outputs.mergeable == 'true')
         shell: bash
         run: |
           PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
@@ -1171,7 +900,7 @@ jobs:
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
           needs.update-version.outputs.has_changes == 'true' &&
-          (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true' || steps.wait_mergeable.outputs.pr_merged == 'true')
+          (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true' || steps.wait_and_merge_pr.outputs.pr_merged == 'true')
         shell: bash
         run: |
           PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
@@ -1231,129 +960,39 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: 🏷️ Create and push tag
-        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
           TAG="${{ needs.update-version.outputs.tag }}"
-          NEW_VERSION="${{ needs.update-version.outputs.version }}"
           IS_MASTER="${{ needs.update-version.outputs.is_master_branch }}"
           NEEDS_INCREMENT="${{ needs.update-version.outputs.needs_increment }}"
 
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Step 3: Creating and pushing tag"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Creating tag: $TAG"
-
-          # Master 分支：如果 PR 已合并，使用 merge_commit_sha 或拉取最新的 master 分支
+          # Master 分支：如果 PR 已合并，使用 merge_commit_sha
           if [ "$IS_MASTER" == "true" ] && [ "$NEEDS_INCREMENT" == "true" ]; then
             MERGE_COMMIT_SHA="${{ steps.get_merge_sha_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}"
-
             if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
-              # 使用从 PR API 获取的 merge_commit_sha
-              echo "Step 3.1: Using merge_commit_sha from PR API: $MERGE_COMMIT_SHA"
-              TAG_COMMIT_SHA="$MERGE_COMMIT_SHA"
-
               # 验证该 commit 是否存在
-              if git cat-file -e "$TAG_COMMIT_SHA" 2>/dev/null; then
-                echo "✅ Merge commit exists locally"
-              else
-                echo "Step 3.2: Fetching merge commit from origin..."
-                # 尝试通过 refs 获取 commit
-                git fetch origin "$TAG_COMMIT_SHA" 2>/dev/null || \
+              if ! git cat-file -e "$MERGE_COMMIT_SHA" 2>/dev/null; then
+                # 尝试获取 commit
+                git fetch origin "$MERGE_COMMIT_SHA" 2>/dev/null || \
                 git fetch origin "+refs/heads/*:refs/remotes/origin/*" 2>/dev/null || true
-                if ! git cat-file -e "$TAG_COMMIT_SHA" 2>/dev/null; then
-                  echo "⚠️  Warning: Merge commit not found, falling back to git pull method"
-                  TAG_COMMIT_SHA=""
-                fi
               fi
+              # 使用 Python dev 工具
+              python3 scripts/dev/py/dev.py tag create \
+                --tag "$TAG" \
+                --commit "$MERGE_COMMIT_SHA" \
+                --ci
             else
-              TAG_COMMIT_SHA=""
-            fi
-
-            # 如果没有 merge_commit_sha，使用 git pull 方法（回退方案）
-            if [ -z "$TAG_COMMIT_SHA" ]; then
-              echo "Step 3.1: Fetching latest changes from origin (after PR merge)..."
-              # 尝试获取默认分支名称（master 或 main）
-              DEFAULT_BRANCH=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5 || echo "master")
-              echo "Detected default branch: $DEFAULT_BRANCH"
-
-              git fetch origin "$DEFAULT_BRANCH:$DEFAULT_BRANCH" 2>/dev/null || true
-
-              echo "Step 3.2: Checking out $DEFAULT_BRANCH branch..."
-              git checkout "$DEFAULT_BRANCH" 2>/dev/null || true
-
-              echo "Step 3.3: Pulling latest changes..."
-              git pull origin "$DEFAULT_BRANCH" 2>/dev/null || true
-
-              # 验证当前提交包含版本更新
-              echo "Step 3.4: Verifying current commit..."
-              LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
-              TAG_COMMIT_SHA=$(git rev-parse HEAD)
-              echo "Latest commit SHA: $TAG_COMMIT_SHA"
-              echo "Latest commit message: $LATEST_COMMIT_MSG"
-
-              if [[ "$LATEST_COMMIT_MSG" =~ "bump version" ]] || [[ "$LATEST_COMMIT_MSG" =~ "chore: bump version" ]]; then
-                echo "✅ Found version bump commit on master"
-              else
-                echo "⚠️  Warning: Latest commit may not be the version bump commit"
-                echo "   This might happen if PR was merged with a different commit message"
-                echo "   Continuing to create tag on current commit..."
-              fi
+              # 如果没有 merge_commit_sha，使用当前 HEAD
+              python3 scripts/dev/py/dev.py tag create \
+                --tag "$TAG" \
+                --ci
             fi
           else
-            # 非 Master 分支：使用当前分支的 commit
-            echo "Step 3.1: Using current branch for tag creation (non-master branch)"
-            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            TAG_COMMIT_SHA=$(git rev-parse HEAD)
-            echo "Current branch: $CURRENT_BRANCH"
-            echo "Current commit SHA: $TAG_COMMIT_SHA"
-          fi
-
-          # 检查 tag 是否已存在
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            EXISTING_TAG_SHA=$(git rev-parse "$TAG")
-            if [ "$EXISTING_TAG_SHA" = "$TAG_COMMIT_SHA" ]; then
-              echo "✅ Tag $TAG already exists and points to the correct commit: $TAG_COMMIT_SHA"
-            else
-              echo "⚠️  Warning: Tag $TAG already exists but points to different commit"
-              echo "   Existing tag SHA: $EXISTING_TAG_SHA"
-              echo "   Target commit SHA: $TAG_COMMIT_SHA"
-              echo "   Deleting existing tag and recreating..."
-              git tag -d "$TAG" 2>/dev/null || true
-              git push origin ":refs/tags/$TAG" 2>/dev/null || true
-            fi
-          fi
-
-          # 创建 tag（基于指定的 commit SHA）
-          echo "Step 3.5: Creating tag $TAG on commit $TAG_COMMIT_SHA..."
-          git tag "$TAG" "$TAG_COMMIT_SHA"
-
-          # 推送 tag（使用 PAT，因为 tag 可能指向修改了 workflow 文件的 commit）
-          # 注意：当 tag 指向的 commit 修改了 workflow 文件时，GITHUB_TOKEN 无法推送，必须使用 PAT
-          echo "Step 3.6: Pushing tag: $TAG"
-          echo "ℹ️  Using WORKFLOW_PAT to push tag (required when tag points to commit that modifies workflow files)"
-          if git push origin "$TAG" 2>&1; then
-            echo "✅ Successfully created and pushed tag: $TAG"
-          else
-            PUSH_ERROR=$?
-            echo "❌ Error: Failed to push tag: $TAG (exit code: $PUSH_ERROR)"
-            echo "Checking if tag already exists remotely..."
-            if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
-              REMOTE_TAG_SHA=$(git ls-remote --tags origin "$TAG" | cut -f1)
-              if [ "$REMOTE_TAG_SHA" = "$TAG_COMMIT_SHA" ]; then
-                echo "✅ Tag already exists remotely and points to the correct commit"
-                echo "   Remote tag SHA: $REMOTE_TAG_SHA"
-                echo "   Target commit SHA: $TAG_COMMIT_SHA"
-              else
-                echo "⚠️  Warning: Tag exists remotely but points to different commit"
-                echo "   Remote tag SHA: $REMOTE_TAG_SHA"
-                echo "   Target commit SHA: $TAG_COMMIT_SHA"
-                echo "   This may indicate a conflict. Please check manually."
-                exit 1
-              fi
-            else
-              echo "❌ Tag does not exist remotely. Push failed."
-              exit 1
-            fi
+            # 非 Master 分支：使用当前 HEAD
+            python3 scripts/dev/py/dev.py tag create \
+              --tag "$TAG" \
+              --ci
           fi
 
       # Step 4: Set job outputs
@@ -1522,116 +1161,20 @@ jobs:
           token: ${{ secrets.WORKFLOW_PAT }}
           path: homebrew-workflow
 
-      - name: 📝 Generate Formula file
-        shell: bash
-        run: |
-          cd homebrew-workflow
-
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
-          FORMULA_FILE="Formula/workflow.rb"
-
-          # 备份原始文件
-          if [ -f "$FORMULA_FILE" ]; then
-            cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
-          fi
-
-          # 从模板生成 Formula 文件（如果存在模板）
-          # 否则直接更新现有文件
-          if [ -f "Formula/workflow.rb.template" ]; then
-            echo "📝 Generating Formula file from template..."
-            sed -e "s|{{VERSION}}|$VERSION|g" \
-                -e "s|{{TAG}}|$TAG|g" \
-                "Formula/workflow.rb.template" > "$FORMULA_FILE"
-            echo "✅ Formula file generated from template"
-          else
-            # 直接更新现有文件中的版本号
-            echo "📝 Updating version in Formula file..."
-            # 这里需要根据实际的 Formula 文件格式来更新
-            # 通常需要更新 version 和 url 字段
-            sed -i.bak "s/version \".*\"/version \"$VERSION\"/" "$FORMULA_FILE" || true
-            sed -i.bak "s|url \".*\"|url \"https://github.com/${{ github.repository }}/releases/download/$TAG/workflow-$VERSION-x86_64-apple-darwin.tar.gz\"|" "$FORMULA_FILE" || true
-            echo "✅ Formula file updated"
-          fi
-
-          # 验证文件结构（确保没有语法错误）
-          echo "🔍 Validating Formula file structure..."
-          if ! ruby -c "$FORMULA_FILE" 2>/dev/null; then
-            echo "❌ Error: Formula file has syntax errors"
-            ruby -c "$FORMULA_FILE" || true
-            exit 1
-          fi
-          echo "✅ Formula file syntax is valid"
-
-          # 显示生成的 Formula 文件
-          echo ""
-          echo "📄 Generated Formula file:"
-          echo "--- Formula/workflow.rb ---"
-          cat "$FORMULA_FILE"
-          echo ""
-
-          # 显示更改（如果有备份）
-          if [ -f "$FORMULA_FILE.bak" ]; then
-            echo "--- Diff (Before vs After) ---"
-            diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
-          fi
-
-      - name: ⚙️ Configure Git for Homebrew update
-        shell: bash
-        run: |
-          cd homebrew-workflow
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: 📤 Commit and push changes
-        shell: bash
+      - name: 📝 Generate Formula file and update
+        working-directory: homebrew-workflow
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          cd homebrew-workflow
-
-          # 检查是否有更改
-          git add Formula/workflow.rb
-
-          if git diff --staged --quiet; then
-            echo "No changes to commit. Formula file is already up to date."
-            exit 0
-          fi
-
-          # 验证 Formula 文件格式
-          if ! brew audit --strict Formula/workflow.rb 2>/dev/null; then
-            echo "Warning: brew audit failed, but continuing..."
-          fi
-
-          # 提交更改
-          git commit -m "Update workflow to ${{ steps.version.outputs.tag }}"
-
-          # 检测当前分支名称
-          CURRENT_BRANCH=$(git branch --show-current)
-          echo "Current branch: $CURRENT_BRANCH"
-
-          # actions/checkout@v4 已经设置了正确的远程 URL，直接推送即可
-          # 推送更改到当前分支
-          echo "Pushing to branch: $CURRENT_BRANCH"
-          if git push origin "$CURRENT_BRANCH"; then
-            echo "✅ Successfully pushed to $CURRENT_BRANCH branch"
-          else
-            echo "❌ Error: Failed to push changes to $CURRENT_BRANCH"
-            echo "Remote URL: $(git remote get-url origin | sed 's|://.*@|://***@|')"
-            echo "Branch: $CURRENT_BRANCH"
-            echo "Git status:"
-            git status
-            echo "Git log:"
-            git log --oneline -5
-            echo ""
-            echo "Possible issues:"
-            echo "1. WORKFLOW_PAT may not have write access to ${{ github.repository_owner }}/homebrew-workflow"
-            echo "2. Token may have expired or been revoked"
-            echo "3. Repository may not exist or be accessible"
-            exit 1
-          fi
-
-          echo "✅ Homebrew Formula updated successfully!"
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py homebrew update \
+            --version "${{ steps.version.outputs.version }}" \
+            --tag "${{ steps.version.outputs.tag }}" \
+            --formula-path Formula/workflow.rb \
+            --template-path Formula/workflow.rb.template \
+            --repo "${{ github.repository }}" \
+            --commit \
+            --push
 
   # 清理已合并分支的 alpha tag
   # 当 PR 合并到 master 后，清理指向已合并提交的 alpha tag
@@ -1655,15 +1198,14 @@ jobs:
           # 使用 PAT 以支持删除 tag
           token: ${{ secrets.WORKFLOW_PAT }}
 
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: 🧹 Cleanup Alpha Tags
         id: cleanup
-        shell: bash
         run: |
-          set -e
-
-          echo "🔍 Starting alpha tag cleanup..."
-
-          # 获取合并提交的 SHA
           MERGE_COMMIT_SHA="${{ needs.create-tag.outputs.merge_commit_sha }}"
 
           if [ -z "$MERGE_COMMIT_SHA" ]; then
@@ -1671,124 +1213,10 @@ jobs:
             exit 0
           fi
 
-          echo "📌 Merge commit SHA: $MERGE_COMMIT_SHA"
-
-          # 获取当前发布的版本号（例如：1.6.0）
           CURRENT_VERSION="${{ needs.create-tag.outputs.version }}"
-          # 移除版本号中的 'v' 前缀和可能的 alpha 后缀，只保留基础版本号
-          CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
-          echo "📌 Current release version: $CURRENT_VERSION"
-
-          # 获取合并提交的第一个父提交（master 分支的 previous commit）
-          # 这是 master 分支在合并前的最后一个提交
-          FIRST_PARENT=$(git rev-parse ${MERGE_COMMIT_SHA}^1)
-          echo "   First parent (master before merge): $FIRST_PARENT"
-
-          # 获取 master 分支的当前 HEAD（合并后的状态）
-          MASTER_HEAD=$(git rev-parse HEAD)
-          echo "   Master HEAD (after merge): $MASTER_HEAD"
-
-          # 对于 squash merge，合并提交只有一个父提交
-          # 对于常规 merge，合并提交有两个父提交
-          # 我们通过检查 tag 是否在 master 的 first-parent 路径上来判断
-          # 如果 tag 不在 first-parent 路径上，说明它来自已合并的分支
-
-          # 查找所有 alpha tag
-          echo ""
-          echo "🏷️  Finding alpha tags..."
-          ALPHA_TAGS=$(git tag -l '*.alpha-*' | sort -V || echo "")
-
-          if [ -z "$ALPHA_TAGS" ]; then
-            echo "✅ No alpha tags found, nothing to clean up"
-            exit 0
-          fi
-
-          echo "📋 Found alpha tags:"
-          echo "$ALPHA_TAGS" | while read tag; do
-            echo "   - $tag"
-          done
-
-          # 检查每个 alpha tag 是否指向已合并的提交
-          TAGS_TO_DELETE=""
-          DELETED_COUNT=0
-
-          echo ""
-          echo "🔍 Checking which alpha tags point to merged commits..."
-
-          for tag in $ALPHA_TAGS; do
-            TAG_COMMIT=$(git rev-parse "$tag" 2>/dev/null || echo "")
-
-            if [ -z "$TAG_COMMIT" ]; then
-              echo "   ⚠️  Tag $tag: Could not resolve commit"
-              continue
-            fi
-
-            # 提取 tag 的版本号（例如：v1.6.0.alpha-001 -> 1.6.0）
-            # 使用 sed 提取版本号，如果失败则设置为空字符串
-            TAG_VERSION=$(echo "$tag" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+)\.alpha-.*/\1/' 2>/dev/null || echo "")
-            # 验证提取的版本号格式是否正确（应该是 x.y.z 格式）
-            if [ -n "$TAG_VERSION" ] && ! echo "$TAG_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-              TAG_VERSION=""
-            fi
-
-            # 检查 tag 是否在 master 分支的 first-parent 路径上
-            # 如果不在，说明它来自已合并的分支（包括 squash merge 的情况）
-            if git merge-base --is-ancestor "$TAG_COMMIT" "$FIRST_PARENT" 2>/dev/null; then
-              # Tag 在 master 的 first-parent 路径上，保留它
-              echo "   ⏭️  Tag $tag ($TAG_COMMIT) is in master branch first-parent path, keeping"
-            elif git merge-base --is-ancestor "$TAG_COMMIT" "$MASTER_HEAD" 2>/dev/null; then
-              # Tag 在合并提交的祖先中，但不在 first-parent 路径上
-              # 说明它来自已合并的分支，应该删除
-              if [ -n "$TAG_VERSION" ] && [ "$TAG_VERSION" == "$CURRENT_VERSION" ]; then
-                echo "   ✅ Tag $tag ($TAG_COMMIT) version $TAG_VERSION matches current version $CURRENT_VERSION and is from merged branch, will delete"
-              else
-                echo "   ✅ Tag $tag ($TAG_COMMIT) is from merged branch, will delete"
-              fi
-              TAGS_TO_DELETE="$TAGS_TO_DELETE $tag"
-            else
-              # Tag 不在合并提交的祖先中，检查版本号是否匹配
-              if [ -n "$TAG_VERSION" ] && [ "$TAG_VERSION" == "$CURRENT_VERSION" ]; then
-                # 版本号匹配但 commit 不在祖先中，可能是特殊情况
-                # 例如：tag 指向的 commit 在合并之后创建，或者来自不同的分支
-                # 由于版本号匹配，我们仍然考虑删除它
-                echo "   ⚠️  Tag $tag ($TAG_COMMIT) version $TAG_VERSION matches current version $CURRENT_VERSION but commit is not in merge ancestry"
-                echo "   💡 Considering deletion due to version match..."
-                TAGS_TO_DELETE="$TAGS_TO_DELETE $tag"
-              else
-                # Tag 不在合并提交的祖先中，且版本号不匹配，可能是其他分支的 tag，保留
-                echo "   ⏭️  Tag $tag ($TAG_COMMIT) is not related to this merge, keeping"
-              fi
-            fi
-          done
-
-          if [ -z "$TAGS_TO_DELETE" ]; then
-            echo ""
-            echo "✅ No alpha tags to delete"
-            exit 0
-          fi
-
-          echo ""
-          echo "🗑️  Deleting alpha tags..."
-
-          # 删除本地 tag
-          for tag in $TAGS_TO_DELETE; do
-            echo "   Deleting local tag: $tag"
-            git tag -d "$tag" || echo "   ⚠️  Failed to delete local tag $tag (may not exist)"
-          done
-
-          # 删除远程 tag
-          echo ""
-          echo "🗑️  Deleting remote tags..."
-          for tag in $TAGS_TO_DELETE; do
-            echo "   Deleting remote tag: $tag"
-            git push origin --delete "$tag" || echo "   ⚠️  Failed to delete remote tag $tag (may not exist or already deleted)"
-            DELETED_COUNT=$((DELETED_COUNT + 1))
-          done
-
-          echo ""
-          echo "✅ Cleanup completed: Deleted $DELETED_COUNT alpha tag(s)"
-          echo "deleted_count=$DELETED_COUNT" >> $GITHUB_OUTPUT
-          echo "deleted_tags<<EOF" >> $GITHUB_OUTPUT
-          echo "$TAGS_TO_DELETE" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py tag cleanup \
+            --merge-commit "$MERGE_COMMIT_SHA" \
+            --version "$CURRENT_VERSION" \
+            --ci
 

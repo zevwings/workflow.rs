@@ -8,11 +8,10 @@ use color_eyre::{
 };
 use std::path::PathBuf;
 
+use crate::base::fs::{DirectoryWalker, FileWriter};
 use crate::base::indicator::Spinner;
 use crate::base::settings::settings::default_download_base_dir;
 use crate::base::settings::Settings;
-use crate::base::util::directory::DirectoryWalker;
-use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::log_info;
 use crate::log_success;

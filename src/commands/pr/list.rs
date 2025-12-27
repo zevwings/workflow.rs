@@ -4,10 +4,8 @@ use crate::{log_break, log_message};
 use color_eyre::Result;
 
 /// PR 列表命令
-#[allow(dead_code)]
 pub struct PullRequestListCommand;
 
-#[allow(dead_code)]
 impl PullRequestListCommand {
     /// 列出 PR
     pub fn list(state: Option<String>, limit: Option<usize>) -> Result<()> {

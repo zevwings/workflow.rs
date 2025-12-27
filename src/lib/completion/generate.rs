@@ -10,9 +10,8 @@ use color_eyre::{eyre::WrapErr, Result};
 
 use super::helpers::get_completion_filename;
 use crate::base::alias::AliasManager;
+use crate::base::fs::{DirectoryWalker, FileWriter};
 use crate::base::settings::paths::Paths;
-use crate::base::util::directory::DirectoryWalker;
-use crate::base::util::file::FileWriter;
 
 /// 生成结果
 #[derive(Debug, Clone)]

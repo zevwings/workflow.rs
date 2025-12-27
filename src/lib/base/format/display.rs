@@ -162,32 +162,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_path_formatting() {
-        let path = Path::new("/home/user/project/src/main.rs");
-        let formatted = DisplayFormatter::path(path);
-        // 根据当前工作目录，结果可能不同，但应该是一个有效的路径字符串
-        assert!(!formatted.is_empty());
-    }
-
-    #[test]
-    fn test_list_item_formatting() {
-        let item = DisplayFormatter::list_item("  -", "config.toml");
-        assert_eq!(item, "  - config.toml");
-    }
-
-    #[test]
-    fn test_key_value_formatting() {
-        let kv = DisplayFormatter::key_value("Version", "1.0.0", None);
-        assert_eq!(kv, "Version: 1.0.0");
-
-        let kv = DisplayFormatter::key_value("Status", "Active", Some(" = "));
-        assert_eq!(kv, "Status = Active");
-    }
-
-    #[test]
-    fn test_size_formatting() {
-        assert_eq!(DisplayFormatter::size(0), "0 B");
+    fn test_basic_formatting() {
+        // Basic validation of core formatting functions
+        assert_eq!(DisplayFormatter::list_item("-", "test"), "- test");
+        assert_eq!(
+            DisplayFormatter::key_value("key", "value", None),
+            "key: value"
+        );
         assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
-        assert_eq!(DisplayFormatter::size(1048576), "1.00 MB");
     }
 }

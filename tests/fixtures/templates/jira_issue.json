@@ -1,0 +1,32 @@
+{
+  "id": "{{id}}",
+  "key": "{{key}}",
+  "self": "{{self_url}}",
+  "fields": {
+    "summary": "{{summary}}",
+    "description": "{{description}}",
+    "status": {
+      "name": "{{status_name}}",
+      "id": "{{status_id}}"
+    },
+    "assignee": {
+      "displayName": "{{assignee_name}}",
+      "emailAddress": "{{assignee_email}}"
+    },
+    "reporter": {
+      "displayName": "{{reporter_name}}",
+      "emailAddress": "{{reporter_email}}"
+    },
+    "created": "{{created}}",
+    "updated": "{{updated}}",
+    "issuetype": {
+      "name": "{{issue_type}}",
+      "id": "{{issue_type_id}}"
+    },
+    "project": {
+      "key": "{{project_key}}",
+      "name": "{{project_name}}"
+    }
+  }
+}
+

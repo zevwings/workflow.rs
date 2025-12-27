@@ -7,7 +7,7 @@ use std::io::BufRead;
 use std::path::Path;
 use std::sync::OnceLock;
 
-use crate::base::util::FileReader;
+use crate::base::fs::FileReader;
 
 use super::constants::*;
 use super::helpers;

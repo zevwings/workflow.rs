@@ -3,13 +3,15 @@
 //! Manages personal preference configuration that should not be committed to Git.
 //! This configuration is stored in `~/.workflow/config/repository.toml` and supports iCloud sync.
 
+use crate::base::fs::{FileReader, FileWriter, PathAccess};
 use crate::base::settings::paths::Paths;
-use crate::base::util::file::{FileReader, FileWriter};
-use crate::base::util::path::PathAccess;
 use crate::git::GitRepo;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fs::OpenOptions;
+use std::path::Path;
 use toml::map::Map;
 use toml::Value;
 
@@ -72,10 +74,33 @@ impl PrivateRepoConfig {
     ///
     /// Returns an error if unable to get remote URL or extract repository name.
     pub fn generate_repo_id() -> Result<String> {
-        let url = GitRepo::get_remote_url().wrap_err("Failed to get remote URL")?;
+        Self::generate_repo_id_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
+    }
 
-        let repo_name_full =
-            GitRepo::extract_repo_name().wrap_err("Failed to extract repository name")?;
+    /// Generate repository identifier (specified repository path)
+    ///
+    /// Generates a unique repository identifier based on Git remote URL for the specified repository.
+    /// Format: `{repo_name}_{hash}`, where hash is the first 8 characters of the URL's SHA256.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # Returns
+    ///
+    /// Returns a repository identifier string, e.g., `workflow.rs_12345678`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if unable to get remote URL or extract repository name.
+    pub fn generate_repo_id_in(repo_path: impl AsRef<Path>) -> Result<String> {
+        let url =
+            GitRepo::get_remote_url_in(repo_path.as_ref()).wrap_err("Failed to get remote URL")?;
+
+        let repo_name_full = GitRepo::extract_repo_name_in(repo_path.as_ref())
+            .wrap_err("Failed to extract repository name")?;
 
         let repo_name = repo_name_full
             .split('/')
@@ -97,9 +122,27 @@ impl PrivateRepoConfig {
     /// Loads personal preference configuration for the current repository
     /// from `~/.workflow/config/repository.toml`.
     pub fn load() -> Result<Self> {
-        let repo_id = Self::generate_repo_id().wrap_err("Failed to generate repository ID")?;
-        let config_path =
-            Paths::repository_config().wrap_err("Failed to get repository config path")?;
+        let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
+        let home = Paths::home_dir().wrap_err("Failed to get home directory")?;
+        Self::load_from(repo_path, home)
+    }
+
+    /// Load personal preference configuration (specified repository path and home directory)
+    ///
+    /// Loads personal preference configuration for the specified repository
+    /// using the specified home directory, avoiding dependency on global environment variables.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    /// * `home` - 用户主目录路径
+    pub fn load_from(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<Self> {
+        let repo_id = Self::generate_repo_id_in(repo_path.as_ref())
+            .wrap_err("Failed to generate repository ID")?;
+        // 从环境变量读取 disable_icloud 设置（测试环境会设置 WORKFLOW_DISABLE_ICLOUD=1）
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        let config_path = Paths::repository_config_in(home, disable_icloud)
+            .wrap_err("Failed to get repository config path")?;
 
         // If file doesn't exist, return default configuration
         if !config_path.exists() {
@@ -178,22 +221,55 @@ impl PrivateRepoConfig {
         Ok(config)
     }
 
-    /// Save personal preference configuration for current repository
+    /// Save personal preference configuration (specified repository path and home directory)
     ///
-    /// Saves personal preference configuration for the current repository
-    /// to `~/.workflow/config/repository.toml`.
+    /// Saves personal preference configuration for the specified repository
+    /// using the specified home directory, avoiding dependency on global environment variables.
     /// Supports configuration merging, won't overwrite other repositories' configurations.
-    pub fn save(&self) -> Result<()> {
-        let repo_id = Self::generate_repo_id().wrap_err("Failed to generate repository ID")?;
-        let config_path =
-            Paths::repository_config().wrap_err("Failed to get repository config path")?;
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    /// * `home` - 用户主目录路径
+    pub fn save_in(&self, repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<()> {
+        let repo_id = Self::generate_repo_id_in(repo_path.as_ref())
+            .wrap_err("Failed to generate repository ID")?;
+        // 从环境变量读取 disable_icloud 设置（测试环境会设置 WORKFLOW_DISABLE_ICLOUD=1）
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        let config_path = Paths::repository_config_in(home, disable_icloud)
+            .wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
         PathAccess::new(&config_path).ensure_parent_exists()?;
 
-        // Read existing configuration (if exists)
+        // Open file and acquire exclusive lock to prevent concurrent writes
+        // This ensures that multiple tests or processes don't overwrite each other's changes
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(&config_path)
+            .wrap_err_with(|| format!("Failed to open config file: {:?}", config_path))?;
+
+        // Acquire exclusive lock (blocks until lock is available)
+        // This prevents race conditions when multiple tests write to the same file concurrently
+        file.lock_exclusive()
+            .wrap_err_with(|| format!("Failed to lock config file: {:?}", config_path))?;
+
+        // Read existing configuration (if exists) using the locked file handle
+        // Note: On Windows, we must read from the locked file handle, not open a new one
+        // We read after acquiring the lock to ensure we have the latest data
         let mut existing_value: Value = if config_path.exists() {
-            FileReader::new(&config_path).toml()?
+            use std::io::{Read, Seek};
+            // Seek to beginning of file before reading
+            file.seek(std::io::SeekFrom::Start(0))
+                .wrap_err_with(|| format!("Failed to seek config file: {:?}", config_path))?;
+            let mut content = String::new();
+            file.read_to_string(&mut content)
+                .wrap_err_with(|| format!("Failed to read config file: {:?}", config_path))?;
+            toml::from_str(&content)
+                .wrap_err_with(|| format!("Failed to parse TOML config: {:?}", config_path))?
         } else {
             Value::Table(Map::new())
         };
@@ -249,7 +325,12 @@ impl PrivateRepoConfig {
             }
         }
 
-        // Write to file
+        // Unlock before writing (FileWriter will open the file again)
+        // On Windows, we must unlock before another process can write
+        file.unlock()
+            .wrap_err_with(|| format!("Failed to unlock config file: {:?}", config_path))?;
+
+        // Write to file (FileWriter will handle its own locking if needed)
         FileWriter::new(&config_path).write_toml(&existing_value)?;
 
         Ok(())

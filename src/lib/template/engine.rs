@@ -2,7 +2,7 @@
 //!
 //! Provides a unified interface for template rendering using handlebars.
 
-use crate::base::util::date::get_unix_timestamp_nanos;
+use crate::base::format::date::get_unix_timestamp_nanos;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use handlebars::Handlebars;
 use serde::Serialize;

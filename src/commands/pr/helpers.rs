@@ -4,14 +4,14 @@
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::indicator::Spinner;
-use crate::base::util::{Browser, Clipboard};
+use crate::base::system::{Browser, Clipboard};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::status::JiraStatus;
 use crate::jira::Jira;
 use crate::jira::JiraWorkHistory;
 use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
 use crate::pr::{create_provider_auto, TYPES_OF_CHANGES};
-use crate::{log_break, log_info, log_success, log_warning};
+use crate::{log_info, log_success, log_warning};
 use color_eyre::{
     eyre::{Report, WrapErr},
     Result,
@@ -57,7 +57,6 @@ pub fn handle_stash_pop_result(result: Result<crate::git::StashPopResult>) {
 /// # 返回
 ///
 /// 如果错误表示 PR 已合并，返回 `true`，否则返回 `false`
-#[allow(dead_code)]
 pub fn is_pr_already_merged_error(error: &Report) -> bool {
     let error_msg = error.to_string().to_lowercase();
 
@@ -96,7 +95,6 @@ pub fn is_pr_already_merged_error(error: &Report) -> bool {
 /// # 返回
 ///
 /// 如果错误表示 PR 已关闭，返回 `true`，否则返回 `false`
-#[allow(dead_code)]
 pub fn is_pr_already_closed_error(error: &Report) -> bool {
     let error_msg = error.to_string().to_lowercase();
 
@@ -445,10 +443,9 @@ pub fn create_branch_from_default(
     Spinner::with("Committing changes...", || {
         GitCommit::commit(commit_title, true) // no-verify
     })?;
-    log_break!();
-    log_info!("Pushing to remote...");
-    log_break!();
-    GitBranch::push(branch_name, true)?; // set-upstream
+    Spinner::with_output("Pushing to remote...", || {
+        GitBranch::push(branch_name, true) // set-upstream
+    })?;
 
     Ok((branch_name.to_string(), default_branch.to_string()))
 }

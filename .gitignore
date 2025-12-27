@@ -20,7 +20,14 @@ out/
 .rustrover/
 
 # IDE - Cursor
-.cursor/
+!.cursor/
+.cursor/mcp.json
+!.cursor/rules/
+!.cursor/rules/**
+
+# Claude AI
+.claude/
+.claude/**
 
 # macOS
 .DS_Store
@@ -84,18 +91,42 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.venv/
+venv/
+env/
+ENV/
 
-report/
+# Coverage
+*.profraw
+coverage/
+coverage/**
+
+# documentation
+
+# report 目录：忽略所有内容，但保留目录结构和 .gitkeep
+report/**
+!report/.gitkeep
 requirements/
+# analysis 目录：忽略所有内容，但保留目录结构和 .gitkeep
+analysis/**
+!analysis/.gitkeep
+!analysis/impl/
+analysis/impl/**
+!analysis/impl/.gitkeep
 
 docs/**
+!docs/cursorrules.md
 !docs/README.md
 !docs/architecture/
 !docs/architecture/**
+!docs/cursorrules/
+!docs/cursorrules/**
 !docs/guidelines/
 !docs/guidelines/**
-!docs/todo/
-!docs/todo/**
 !docs/migration/
 !docs/migration/**
+!docs/requirements/
+!docs/requirements/**
+!docs/templates/
+!docs/templates/**
 handlebars

@@ -1,8 +1,8 @@
+#![allow(dead_code, clippy::test_attr_in_doctest)] // 这些函数是为测试准备的公共 API
+
 //! 共享测试工具函数
 //!
 //! 提供测试中常用的辅助函数和工具。
-
-#![allow(dead_code)] // 这些函数是为测试准备的公共 API
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,12 +42,13 @@ pub fn cleanup_test_env() {
 /// ```no_run
 /// use tests::common::helpers::create_temp_test_dir;
 ///
-/// let test_dir = create_temp_test_dir("my_test");
+/// let test_dir = create_temp_test_dir("my_test")?;
 /// // 使用 test_dir 进行测试
 /// ```
-pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
+pub fn create_temp_test_dir(prefix: &str) -> color_eyre::Result<PathBuf> {
+    use color_eyre::eyre::Context;
     let temp_dir = std::env::temp_dir();
-    let timestamp = workflow::base::util::date::get_unix_timestamp_nanos();
+    let timestamp = workflow::base::format::date::get_unix_timestamp_nanos();
     let random_suffix = random_string(8);
     let test_dir = temp_dir.join(format!(
         "workflow_test_{}_{}_{}",
@@ -60,8 +61,9 @@ pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
     }
 
     // 创建目录
-    fs::create_dir_all(&test_dir).expect("Failed to create test directory");
-    test_dir
+    fs::create_dir_all(&test_dir)
+        .wrap_err_with(|| format!("Failed to create test directory: {}", test_dir.display()))?;
+    Ok(test_dir)
 }
 
 /// 清理临时测试目录
@@ -137,10 +139,12 @@ pub fn fixture_path(name: &str) -> PathBuf {
 /// # 返回
 ///
 /// 返回创建的文件路径。
-pub fn create_test_file(dir: &Path, filename: &str, content: &str) -> PathBuf {
+pub fn create_test_file(dir: &Path, filename: &str, content: &str) -> color_eyre::Result<PathBuf> {
+    use color_eyre::eyre::Context;
     let file_path = dir.join(filename);
-    fs::write(&file_path, content).expect("Failed to write test file");
-    file_path
+    fs::write(&file_path, content)
+        .wrap_err_with(|| format!("Failed to write test file: {}", file_path.display()))?;
+    Ok(file_path)
 }
 
 /// 断言文件存在
@@ -250,4 +254,72 @@ pub fn assert_error_contains(error_msg: &str, keywords: &[&str]) {
         "Error message should contain at least one of {:?}: {}",
         keywords, error_msg
     );
+}
+
+/// 当前目录守卫
+///
+/// 使用 RAII 模式确保当前目录在作用域结束时恢复到原始值。
+/// 即使在测试失败（panic）时也能保证恢复，避免测试间的状态污染。
+///
+/// # 使用场景
+///
+/// - 需要临时切换到其他目录执行操作
+/// - 确保测试间的目录隔离
+/// - 避免全局状态污染
+///
+/// # 示例
+///
+/// ```no_run
+/// use tests::common::helpers::CurrentDirGuard;
+/// use std::path::Path;
+///
+/// #[test]
+/// fn my_test() -> color_eyre::Result<()> {
+///     // 自动恢复目录，即使测试失败
+///     let _guard = CurrentDirGuard::new("/tmp/test")?;
+///
+///     // 在新目录中执行操作
+///     assert_eq!(std::env::current_dir()?, Path::new("/tmp/test"));
+///
+///     // Drop 时自动恢复到原始目录
+///     Ok(())
+/// }
+/// ```
+///
+/// # 注意事项
+///
+/// - 必须保持`_guard`变量在作用域内，通常命名为`_guard`以表明其用途
+/// - 如果需要手动提前恢复，可以显式调用`drop(_guard)`
+/// - Drop 时的恢复失败会被忽略（避免 panic during panic）
+pub struct CurrentDirGuard {
+    original_dir: PathBuf,
+}
+
+impl CurrentDirGuard {
+    /// 创建目录守卫并切换到新目录
+    ///
+    /// # 参数
+    ///
+    /// * `new_dir` - 要切换到的目标目录
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回守卫实例，失败时返回错误
+    ///
+    /// # 错误
+    ///
+    /// - 无法获取当前目录
+    /// - 无法切换到目标目录
+    pub fn new(new_dir: impl AsRef<Path>) -> color_eyre::Result<Self> {
+        let original_dir = std::env::current_dir()?;
+        std::env::set_current_dir(new_dir)?;
+        Ok(Self { original_dir })
+    }
+}
+
+impl Drop for CurrentDirGuard {
+    fn drop(&mut self) {
+        // 忽略恢复失败，避免 panic during panic
+        let _ = std::env::set_current_dir(&self.original_dir);
+    }
 }

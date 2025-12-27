@@ -57,10 +57,10 @@ brew install workflow
 
 ```bash
 # 安装最新版本
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 
 # 安装指定版本
-VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 ```
 
 **功能特性**：
@@ -89,7 +89,7 @@ VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevw
 
 ```bash
 # 使用卸载脚本
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.sh)"
 
 # 或使用已安装的命令
 workflow uninstall
@@ -121,15 +121,15 @@ workflow uninstall
 **PowerShell (推荐)**:
 ```powershell
 # 安装最新版本
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1" -OutFile install.ps1; .\install.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.ps1" -OutFile install.ps1; .\install.ps1
 
 # 或一行命令
-powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **安装指定版本**:
 ```powershell
-$env:VERSION="v1.6.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+$env:VERSION="v1.6.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **功能特性**：
@@ -159,10 +159,10 @@ $env:VERSION="v1.6.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRe
 
 ```powershell
 # 使用卸载脚本（PowerShell 推荐）
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
 
 # 或一行命令
-powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
 
 # 或使用已安装的命令
 workflow uninstall
@@ -240,9 +240,52 @@ make release
 
 ### 运行测试
 
+**基本测试命令**：
 ```bash
+# 运行所有测试
 cargo test
+# 或使用 Makefile
+make test
+
+# 运行所有测试（包括被忽略的）
+make test-all
+
+# 运行特定测试
+cargo test --lib 模块名
+cargo test --test 测试文件名
+
+# 运行文档测试
+cargo test --doc
 ```
+
+**测试覆盖率**：
+```bash
+# 生成覆盖率报告
+make coverage
+
+# 打开覆盖率报告
+make coverage-open
+
+# CI 环境覆盖率检查
+make coverage-ci
+```
+
+**性能测试**：
+```bash
+# 运行所有基准测试
+make bench
+
+# 运行特定性能测试
+make bench-cli        # CLI 性能测试
+make bench-core       # 核心操作测试
+make bench-network    # 网络操作测试
+
+# 查看性能报告
+make bench-report
+make bench-open
+```
+
+**详细测试指南**：请参考 [测试规范指南](./docs/guidelines/testing.md)
 
 ### 运行 CLI
 
@@ -313,6 +356,55 @@ workflow setup
 | `codeup.project_id` | Codeup 项目 ID | - |
 | `codeup.csrf_token` | Codeup CSRF Token | - |
 | `codeup.cookie` | Codeup Cookie | - |
+
+#### Git 认证配置
+
+Workflow CLI 使用 git2 库进行 Git 操作，支持 SSH 和 HTTPS 两种认证方式。以下操作需要 Git 认证：
+
+- `workflow pr create` - 创建 PR（推送到远程）
+- `workflow pr sync` - 同步分支（fetch/push）
+- `workflow branch sync` - 同步分支（fetch/push）
+- `workflow branch delete` - 删除远程分支
+- `workflow tag delete` - 删除远程 tag
+
+**SSH 认证（推荐）**
+
+如果使用 SSH URL（如 `git@github.com:user/repo.git`），Workflow CLI 会自动检测并使用以下认证方式（按优先级顺序）：
+
+1. **SSH Agent**（优先级最高，在认证时实时尝试）
+   ```bash
+   # 添加 SSH 密钥到 agent
+   ssh-add ~/.ssh/id_ed25519
+   ```
+
+2. **SSH 密钥文件**（如果 SSH Agent 不可用，使用缓存的密钥文件）
+   - **优先级 1**：SSH config 匹配（根据远程 URL 匹配 `~/.ssh/config` 中的 Host 配置）
+   - **优先级 2**：默认密钥顺序（自动查找）：
+     - `~/.ssh/id_ed25519` → `~/.ssh/id_rsa` → `~/.ssh/id_ecdsa`
+
+**HTTPS 认证**
+
+如果使用 HTTPS URL（如 `https://github.com/user/repo.git`），需要设置环境变量：
+
+```bash
+# GitHub Token（优先级 1，推荐）
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+
+# 或通用 Git Token（优先级 2，如果 GITHUB_TOKEN 不存在则使用）
+export GIT_TOKEN=your-token
+
+# 可选：设置用户名（用于 HTTPS 认证）
+export GIT_USERNAME=your-username
+```
+
+**故障排除**
+
+如果遇到认证失败，Workflow CLI 会提供详细的错误信息和配置指导：
+
+- **SSH 认证失败**：检查 SSH Agent 是否运行、密钥权限是否正确
+- **HTTPS 认证失败**：检查环境变量是否设置正确
+
+> **注意**：Git 认证配置与 GitHub API Token（`github.api_token`）是分开的。GitHub API Token 用于 PR 操作（创建、合并、查询等），而 Git 认证用于 Git 操作（push、fetch 等）。
 
 ### 查看配置
 
@@ -757,13 +849,18 @@ make lint
 
 ### 开发规范
 
-详细的开发规范请参考 [开发规范文档](./docs/guidelines/DEVELOPMENT_GUIDELINES.md)，包括：
+详细的开发规范请参考 [开发规范文档](./docs/guidelines/development/README.md)，包括：
 - 代码风格规范（格式化、Lint、命名约定）
 - 错误处理规范
 - 文档规范
 - Git 工作流和提交规范
-- 测试规范
+- 测试规范（[测试规范指南](./docs/guidelines/testing.md)）
 - 代码审查指南
+
+**测试相关文档**：
+- [测试规范指南](./docs/guidelines/testing.md) - 测试组织规范、命名约定、测试工具、覆盖率测试、性能测试
+- [测试用例检查指南](./docs/guidelines/development/references/review-test-case.md) - 测试用例覆盖检查
+- [测试覆盖检查机制](./docs/guidelines/development/references/test-coverage-check.md) - 测试覆盖检查机制
 
 ## 📚 文档
 
@@ -865,8 +962,12 @@ graph TB
 
 ## 📝 贡献
 
-请参考以下文档了解更多信息：
+欢迎贡献 Workflow CLI！请参考以下文档：
+
+- **[贡献指南](./CONTRIBUTING.md)** - 如何开始贡献、提交 PR、开发规范
 - [docs/README.md](./docs/README.md) - 完整文档索引
-- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 了解架构设计和核心模块详情
+- [docs/architecture/architecture.md](./docs/architecture/architecture.md) - 了解架构设计和核心模块详情
 
 ---
+
+**最后更新**: 2025-12-27

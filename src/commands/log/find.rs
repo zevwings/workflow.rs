@@ -1,6 +1,6 @@
 use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
-use crate::base::util::Clipboard;
+use crate::base::system::Clipboard;
 use crate::jira::logs::JiraLogs;
 use crate::{log_debug, log_error, log_success};
 use color_eyre::{eyre::WrapErr, Result};

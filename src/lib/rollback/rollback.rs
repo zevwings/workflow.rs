@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::process::Command;
 
-use crate::base::util::directory::DirectoryWalker;
+use crate::base::fs::DirectoryWalker;
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::completion::get_all_completion_files;

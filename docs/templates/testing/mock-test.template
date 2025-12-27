@@ -1,0 +1,25 @@
+// Mock测试模板
+
+use crate::common::http_helpers::MockServer;
+
+#[test]
+fn test_API_CALL_NAME() {
+    // 创建 Mock 服务器
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+    
+    // 创建 Mock 端点
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/ENDPOINT")
+        .with_status(200)
+        .with_body(r#"{"result": "success"}"#)
+        .create();
+    
+    // 执行测试
+    // TODO: 调用被测试的API
+    
+    // 验证结果
+    // TODO: 添加断言
+}

@@ -8,7 +8,8 @@ use color_eyre::Result;
 
 use workflow::commands::alias::{AliasAddCommand, AliasListCommand, AliasRemoveCommand};
 use workflow::commands::branch::{
-    create as branch_create, delete, ignore, rename, switch, sync as branch_sync,
+    create as branch_create, delete, ignore, push as branch_push, rename, switch,
+    sync as branch_sync,
 };
 use workflow::commands::check::check;
 use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand, CommitSquashCommand};
@@ -228,6 +229,13 @@ fn main() -> Result<()> {
                     dry_run.is_dry_run(),
                     force.is_force(),
                 )?;
+            }
+            BranchSubcommand::Push {
+                branch_name,
+                set_upstream,
+                force_with_lease,
+            } => {
+                branch_push::PushCommand::execute(branch_name, set_upstream, force_with_lease)?;
             }
         },
         // Commit 操作命令

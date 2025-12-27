@@ -2,8 +2,8 @@
 //!
 //! Loads templates from configuration files (global and project-level).
 
+use crate::base::fs::FileReader;
 use crate::base::settings::paths::Paths;
-use crate::base::util::file::FileReader;
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;

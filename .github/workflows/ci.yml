@@ -8,10 +8,11 @@ on:
   # 允许手动触发 CI（用于测试或特殊情况）
   workflow_dispatch:
 
-# 配置工作流权限，允许读取 PR 信息
+# 配置工作流权限，允许读取 PR 信息和写入评论
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write  # 需要写入权限以添加 PR 评论
+  issues: write         # PR 评论使用 issues API
 
 env:
   CARGO_TERM_COLOR: always
@@ -32,47 +33,36 @@ jobs:
         with:
           fetch-depth: 0  # 需要完整历史来检查提交者
 
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
+
       - name: 🔍 Check if version bump branch
         id: check
+        env:
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_PR_CREATOR: ${{ github.event.pull_request.user.login }}
+          WORKFLOW_USER_NAME: ${{ env.WORKFLOW_USER_NAME }}
         run: |
-          # 获取分支名称（对于 PR 事件使用 head_ref，对于其他事件使用 ref）
-          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          # 使用 Python dev 工具
+                 python3 scripts/dev/py/dev.py ci check-skip \
+            --branch "${{ github.head_ref || github.ref_name }}" \
+            --pr-creator "${{ github.event.pull_request.user.login }}" \
+            --expected-user "${{ env.WORKFLOW_USER_NAME }}" \
+            --ci
 
-          echo "🔍 Checking branch: $BRANCH_NAME"
-          echo "   Event: ${{ github.event_name }}"
-          echo "   Head ref: ${{ github.head_ref }}"
-          echo "   Ref name: ${{ github.ref_name }}"
-
-          # 只检查是否是版本更新分支（bump-version-*）
-          if [[ "$BRANCH_NAME" =~ ^bump-version- ]]; then
-            echo "✅ Detected bump-version-* branch: $BRANCH_NAME"
-
-            # 对于 PR 事件，验证分支是否由 CI 创建
-            if [ "${{ github.event_name }}" == "pull_request" ]; then
-              PR_CREATOR="${{ github.event.pull_request.user.login }}"
-              WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
-
-              echo "   PR creator: ${PR_CREATOR:-'unknown'}"
-              echo "   Expected user: $WORKFLOW_USER_NAME"
-
-              if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
-                echo "❌ Error: bump-version-* branches can only be created by authorized user"
-                echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
-                exit 1
-              fi
-            fi
-
-            echo "✅ Setting should_skip=true (bump-version-* branch detected)"
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️  Not a bump-version-* branch, CI will run normally"
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-          fi
   # 代码质量检查（Lint）
   check-lint:
     name: 🔍 Code Quality Check
     runs-on: ubuntu-latest
-    needs: check-skip-ci
+    needs: [check-skip-ci]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     steps:
@@ -99,40 +89,8 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
       - name: ✨ Check code formatting
         run: cargo fmt --check
@@ -143,13 +101,66 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
 
-  # 运行测试
+  # 运行单元测试、集成测试和文档测试（跨平台并行执行，分层测试策略）
   tests:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-latest
-    needs: check-skip-ci
+    name: 🧪 Run Tests (${{ matrix.test_type }}) (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    needs: [check-skip-ci]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 单元测试
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+            test_type: unit
+            test_timeout: 20
+            test_command: cargo test --lib --verbose
+          - os: macos-latest
+            platform: macOS
+            test_type: unit
+            test_timeout: 25
+            test_command: cargo test --lib --verbose
+          - os: windows-latest
+            platform: Windows-x86_64
+            test_type: unit
+            test_timeout: 25
+            test_command: cargo test --lib --verbose
+          # 集成测试
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+            test_type: integration
+            test_timeout: 25
+            test_command: cargo test --test integration_test --verbose
+          - os: macos-latest
+            platform: macOS
+            test_type: integration
+            test_timeout: 35
+            test_command: cargo test --test integration_test --verbose
+          - os: windows-latest
+            platform: Windows-x86_64
+            test_type: integration
+            test_timeout: 30
+            test_command: cargo test --test integration_test --verbose
+          # 文档测试
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+            test_type: doctest
+            test_timeout: 12
+            test_command: cargo test --doc --verbose
+          - os: macos-latest
+            platform: macOS
+            test_type: doctest
+            test_timeout: 12
+            test_command: cargo test --doc --verbose
+          - os: windows-latest
+            platform: Windows-x86_64
+            test_type: doctest
+            test_timeout: 12
+            test_command: cargo test --doc --verbose
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -172,13 +183,265 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 🧪 Run ${{ matrix.test_type }} tests
+        timeout-minutes: ${{ matrix.test_timeout }}
+        id: test_run
+        shell: bash
+        run: |
+          echo "🧪 Running ${{ matrix.test_type }} tests on ${{ matrix.platform }}..."
+          # 记录测试开始时间（Unix 时间戳）
+          START_TIME=$(date +%s 2>/dev/null || echo "0")
+          # 运行测试并记录输出到文件（用于性能分析和报告生成）
+          # 使用 --message-format=json 以便生成测试报告
+          ${{ matrix.test_command }} --message-format=json 2>&1 | tee test-output.log
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          # 记录测试结束时间并计算持续时间
+          END_TIME=$(date +%s 2>/dev/null || echo "0")
+          if [ "$START_TIME" != "0" ] && [ "$END_TIME" != "0" ]; then
+            DURATION=$((END_TIME - START_TIME))
+            echo "⏱️  Test duration: ${DURATION} seconds"
+            echo "duration=${DURATION}" >> $GITHUB_OUTPUT
+          else
+            echo "⏱️  Test duration: Unable to calculate (platform: ${{ runner.os }})"
+            echo "duration=0" >> $GITHUB_OUTPUT
+          fi
+          # 检查是否有慢测试（超过50秒的测试）
+          if grep -E "test.*took.*[5-9][0-9]\.|test.*took.*[0-9]{3,}\." test-output.log 2>/dev/null; then
+            echo "⚠️  Warning: Found slow tests (>50 seconds)"
+            echo "slow_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "slow_tests=false" >> $GITHUB_OUTPUT
+          fi
+          exit $TEST_EXIT_CODE
+
+      - name: ⚠️  Report slow tests
+        if: steps.test_run.outputs.slow_tests == 'true'
+        run: |
+          echo "::warning::Found slow tests in ${{ matrix.test_type }} tests"
+          echo "Test duration: ${{ steps.test_run.outputs.duration }} seconds"
+          echo "Please review slow tests and consider optimization"
+
+      - name: 📊 Generate test report
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+          LC_ALL: C.UTF-8
+          LANG: C.UTF-8
+        run: |
+          echo "📊 Generating test report..."
+          # 检查 Python 是否可用
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping test report generation"
+            exit 0
+          fi
+          # 从 test-output.log 中提取 JSON 格式的测试输出并生成报告
+          REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.html"
+          JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+
+          # 使用 Python dev 工具
+          grep '^{' test-output.log 2>/dev/null | \
+            python3 scripts/dev/py/dev.py tests report generate \
+              --format html \
+              --output "$REPORT_FILE" || {
+            echo "⚠️  Failed to generate test report, continuing..."
+            exit 0
+          }
+          # 同时生成 JSON 报告用于 PR 评论
+          grep '^{' test-output.log 2>/dev/null | \
+            python3 scripts/dev/py/dev.py tests report generate \
+              --format json \
+              --output "$JSON_REPORT_FILE" || {
+            echo "⚠️  Failed to generate JSON report, continuing..."
+          }
+          echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+          echo "json_report_file=$JSON_REPORT_FILE" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload test report
+        if: always() && steps.test_run.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: test-report-*.html
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 📤 Upload JSON test report
+        if: always() && steps.test_run.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-json-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: test-report-*.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 📊 Collect test metrics
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "📊 Collecting test metrics..."
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping metrics collection"
+            exit 0
+          fi
+
+          # 收集指标
+          METRICS_DIR="test-metrics"
+          mkdir -p "$METRICS_DIR"
+
+          JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+          if [ -f "$JSON_REPORT_FILE" ]; then
+            # 使用 Python dev 工具
+            python3 scripts/dev/py/dev.py tests metrics collect \
+              --report "$JSON_REPORT_FILE" \
+              --output "$METRICS_DIR/metrics-${{ matrix.test_type }}-${{ matrix.platform }}-${{ github.run_id }}.json"
+          fi
+
+          echo "metrics_dir=$METRICS_DIR" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload test metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-metrics-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: test-metrics/*.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: ⚡ Analyze performance regression
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "⚡ Analyzing performance regression..."
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping performance analysis"
+            exit 0
+          fi
+
+          JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+          if [ ! -f "$JSON_REPORT_FILE" ]; then
+            echo "⚠️  Test report not found, skipping"
+            exit 0
+          fi
+
+          # 基准文件路径（从 Artifacts 下载或使用当前作为基准）
+          BASELINE_FILE="performance-baseline-${{ matrix.test_type }}-${{ matrix.platform }}.json"
+
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py performance analyze \
+            --current "$JSON_REPORT_FILE" \
+            --baseline "$BASELINE_FILE" \
+            --output "performance-regression-report.md" \
+            --threshold 0.2 || {
+            echo "⚠️  Performance regression detected, but continuing..."
+          }
+
+          # 更新基准（如果当前性能更好或首次运行）
+          if [ ! -f "$BASELINE_FILE" ] || [ "${{ steps.test_run.outcome }}" == "success" ]; then
+            cp "$JSON_REPORT_FILE" "$BASELINE_FILE"
+            echo "✅ Performance baseline updated"
+          fi
+
+      - name: 📤 Upload performance baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-baseline-${{ matrix.test_type }}-${{ matrix.platform }}
+          path: performance-baseline-*.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: ✅ Run completion completeness tests
+        if: matrix.test_type == 'unit'
+        timeout-minutes: ${{ matrix.test_timeout }}
+        run: cargo test --test completeness --verbose
+
+  # 注意：测试覆盖率检查已移至 coverage-check.yml workflow（定时运行）
+  # 注意：被忽略的测试需要交互，不适合在 CI 中运行
+  # 注意：文档检查（check-docs 和 check-links）已移至 doc-consistency-check.yml workflow
+  # 该 workflow 支持 PR 触发和定期检查，功能更完整
+
+  # 构建验证：验证代码可以在所有平台上正确构建
+  build:
+    name: 🔨 Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    needs: [check-skip-ci, tests]
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macOS-Intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macOS-AppleSilicon
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: Linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: Linux-ARM64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: Linux-x86_64-static
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: Windows-x86_64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            platform: Windows-ARM64
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust for ${{ matrix.target }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 📦 Install musl target
+        if: contains(matrix.target, 'musl')
+        run: |
+          rustup target add ${{ matrix.target }}
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: 📦 Install cross-compilation toolchain (Linux ARM64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu python3
+          # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
+          # 因此不需要安装 XCB 开发库，简化构建流程
+          # 但需要安装 Python3 用于处理 Cargo.lock 脚本
+
+      - name: 📦 Install system dependencies (Linux x86_64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb crate 需要 xcb-proto 来生成代码模块（xproto, big_requests, etc.）
           # xcb-proto 需要 Python 来运行代码生成脚本
           sudo apt-get install -y \
             python3 \
+            python3-pip \
+            python3-xcbgen \
             libxcb1-dev \
             libxcb-render0-dev \
             libxcb-shape0-dev \
@@ -203,12 +466,352 @@ jobs:
             libxcb-screensaver0-dev \
             libxcb-res0-dev \
             libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+            libxkbcommon-x11-dev \
+            pkg-config
+          # 基本验证：检查关键依赖是否可用
+          python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
+          pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
+          echo "✅ xcb dependencies verified"
 
-      - name: 🧪 Run tests
-        run: cargo test --verbose
+      - name: 📦 Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # 检查 pkg-config 是否已安装，避免重复安装警告
+          if ! command -v pkg-config >/dev/null 2>&1; then
+            brew install pkg-config
+          else
+            echo "✅ pkg-config is already installed"
+          fi
+
+      - name: 🔍 Get Cargo.lock hash
+        id: cargo_lock
+        shell: bash
+        run: |
+          if [ -f "Cargo.lock" ]; then
+            # macOS 使用 shasum，Linux 使用 sha256sum
+            if command -v shasum >/dev/null 2>&1; then
+              HASH=$(shasum -a 256 Cargo.lock | cut -d' ' -f1 | head -c 16)
+            else
+              HASH=$(sha256sum Cargo.lock | cut -d' ' -f1 | head -c 16)
+            fi
+            echo "hash=$HASH" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 💾 Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ steps.cargo_lock.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build binaries (验证构建)
+        shell: bash
+        run: |
+          # 设置交叉编译环境变量（仅 Linux ARM64）
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            echo "🔧 Cross-compiling for Linux ARM64"
+            echo "   CC: $CC_aarch64_unknown_linux_gnu"
+            echo "   LINKER: $CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER"
+            # 验证交叉编译工具链
+            if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+              echo "✅ aarch64-linux-gnu-gcc found: $(which aarch64-linux-gnu-gcc)"
+              aarch64-linux-gnu-gcc --version || true
+            else
+              echo "❌ Error: aarch64-linux-gnu-gcc not found"
+              exit 1
+            fi
+          fi
+
+          # 对于 Linux x86_64，设置环境变量以支持 xcb 构建
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if ! python3 -c "import xcbgen" 2>/dev/null; then
+              XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_DIR" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
+              fi
+            fi
+            # 基本验证
+            python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
+            pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
+          fi
+
+          # 构建项目（只验证构建，不打包）
+          echo "🔨 Building for ${{ matrix.platform }} (${{ matrix.target }})..."
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            # Linux x86_64 使用详细输出以便调试
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install -vv 2>&1 | tee build.log; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+              echo "❌ Build failed. Checking build log for xcb-related errors..."
+              grep -i "xcb\|xproto\|xcbgen" build.log | head -20 || true
+            fi
+          elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            # Linux ARM64 交叉编译
+            echo "🔨 Building for Linux ARM64..."
+            # 确保环境变量已设置
+            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+              echo "❌ Build failed for Linux ARM64"
+            fi
+          else
+            # 其他目标（macOS, Windows, musl）
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+            fi
+          fi
+
+          # 如果构建失败，退出并返回错误码
+          if [ "$BUILD_SUCCESS" != "true" ]; then
+            echo "❌ Build verification failed for ${{ matrix.platform }}"
+            exit 1
+          fi
+
+          echo "✅ Build verification passed for ${{ matrix.platform }}"
+
+  # 生成 PR 评论（汇总所有测试结果）
+  # 这个 job 在所有测试完成后运行，汇总结果并添加 PR 评论
+  pr-comment:
+    name: 💬 Comment Test Results on PR
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: github.event_name == 'pull_request' && always()
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 📥 Download all test reports
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: test-report-json-*
+          merge-multiple: false
+
+      - name: 📊 Generate PR comment
+        id: generate_comment
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "📊 Generating PR comment..."
+
+          # 检查 Python 是否可用
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping PR comment generation"
+            exit 0
+          fi
+
+          # 查找所有 JSON 报告文件
+          JSON_FILES=$(find . -name "test-report-*.json" -type f 2>/dev/null)
+
+          if [ -z "$JSON_FILES" ]; then
+            echo "⚠️  No JSON test reports found, skipping PR comment"
+            exit 0
+          fi
+
+          # 合并所有报告（支持多平台）
+          echo "Found JSON reports:"
+          echo "$JSON_FILES"
+
+          # 生成 PR 评论内容（合并所有报告）
+          COMMENT_FILE="pr-comment.md"
+          # 构建命令参数（每个报告文件都需要 --report 前缀）
+          CMD_ARGS="--comment --format markdown --output $COMMENT_FILE"
+          for json_file in $JSON_FILES; do
+            CMD_ARGS="$CMD_ARGS --report $json_file"
+          done
+
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py tests report generate $CMD_ARGS || {
+            echo "⚠️  Failed to generate PR comment, continuing..."
+            exit 0
+          }
+
+          # 将评论内容保存到输出（用于后续步骤）
+          echo "comment_file=$COMMENT_FILE" >> $GITHUB_OUTPUT
+          echo "✅ PR comment generated"
+
+      - name: 💬 Comment on PR
+        if: steps.generate_comment.outputs.comment_file != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const commentFile = '${{ steps.generate_comment.outputs.comment_file }}';
+
+            if (!fs.existsSync(commentFile)) {
+              console.log('⚠️  Comment file not found, skipping');
+              return;
+            }
+
+            const commentBody = fs.readFileSync(commentFile, 'utf8');
+            const prNumber = context.issue.number;
+
+            console.log(`📝 Posting comment on PR #${prNumber}`);
+
+            // 查找是否已有测试结果评论
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            // 查找由 bot 创建的测试结果评论
+            const botComment = comments.data.find(
+              comment =>
+                comment.user.type === 'Bot' &&
+                comment.body.includes('Test Results Summary')
+            );
+
+            if (botComment) {
+              // 更新现有评论
+              console.log(`🔄 Updating existing comment #${botComment.id}`);
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody,
+              });
+              console.log('✅ Comment updated');
+            } else {
+              // 创建新评论
+              console.log('✨ Creating new comment');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody,
+              });
+              console.log('✅ Comment created');
+            }
+
+  # 测试趋势分析（在所有测试完成后运行）
+  # 只在所有测试成功时运行，因为测试失败时趋势分析意义不大
+  test-trends:
+    name: 📈 Analyze Test Trends
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: needs.tests.result == 'success'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 📥 Download test metrics
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: test-metrics-*
+          merge-multiple: false
+
+      - name: 📊 Analyze trends
+        continue-on-error: true
+        shell: bash
+        run: |
+          echo "📊 Analyzing test trends..."
+
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "⚠️  Python3 not found, skipping trend analysis"
+            exit 0
+          fi
+
+          # 收集所有指标文件
+          METRICS_DIR="all-metrics"
+          mkdir -p "$METRICS_DIR"
+          find . -name "metrics-*.json" -type f -exec cp {} "$METRICS_DIR/" \; 2>/dev/null || true
+
+          if [ -z "$(ls -A $METRICS_DIR 2>/dev/null)" ]; then
+            echo "⚠️  No metrics found, skipping analysis"
+            exit 0
+          fi
+
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py tests trends analyze \
+            --metrics-dir "$METRICS_DIR" \
+            --output "test-trends-report.md" || {
+            echo "⚠️  Failed to generate trend report, continuing..."
+            exit 0
+          }
+
+          echo "trend_report=test-trends-report.md" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload trend report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-trends-report
+          path: test-trends-report.md
+          retention-days: 30
+          if-no-files-found: ignore
 
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
@@ -216,80 +819,50 @@ jobs:
   # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
   # 状态检查名称：CI / ✅ Verify All Checks
   # 注意：job 名称必须与分支保护规则中配置的状态检查名称匹配
+  # 注意：文档检查已移至 doc-consistency-check.yml workflow
   check-status:
     name: ✅ Verify All Checks
     runs-on: ubuntu-latest
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests]
+    needs: [check-skip-ci, check-lint, tests, build]
     if: always()
     steps:
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: ✅ Check lint and test status
         id: status_check
+        env:
+          should_skip: ${{ needs.check-skip-ci.outputs.should_skip }}
+          CHECK_LINT_RESULT: ${{ needs.check-lint.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
         run: |
-          set +e  # 允许命令失败，继续执行
-
-          # 获取所有相关 job 的结果（如果 job 未运行，result 可能为空）
-          SKIP_CI_RESULT="${{ needs.check-skip-ci.result }}"
-          SKIP_CI_SHOULD_SKIP="${{ needs.check-skip-ci.outputs.should_skip }}"
-          LINT_RESULT="${{ needs.check-lint.result }}"
-          TEST_RESULT="${{ needs.tests.result }}"
-
-          echo "📊 Checking job status:"
-          echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
-          echo "  check-lint: $LINT_RESULT"
-          echo "  tests: $TEST_RESULT"
-
-          # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
-          if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
-            echo "✅ CI should be skipped for version bump branch"
-            exit 0
-          fi
-
-          # 优先级2: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
-          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
-            echo "✅ CI checks were skipped"
-            exit 0
-          fi
-
-          # 检查 check-skip-ci 是否失败（这不应该发生，但需要处理）
-          if [ "$SKIP_CI_RESULT" == "failure" ]; then
-            echo "❌ check-skip-ci failed"
-            exit 1
-          fi
-
-          # 检查 check-lint 状态
-          if [ -n "$LINT_RESULT" ]; then
-            if [ "$LINT_RESULT" == "failure" ] || [ "$LINT_RESULT" == "cancelled" ]; then
-              echo "❌ Lint check failed: $LINT_RESULT"
-              exit 1
-            elif [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
-              echo "❌ Lint check has unexpected status: $LINT_RESULT"
-              exit 1
-            fi
-          fi
-
-          # 检查 tests 状态
-          if [ -n "$TEST_RESULT" ]; then
-            if [ "$TEST_RESULT" == "failure" ] || [ "$TEST_RESULT" == "cancelled" ]; then
-              echo "❌ Test check failed: $TEST_RESULT"
-              exit 1
-            elif [ "$TEST_RESULT" != "success" ] && [ "$TEST_RESULT" != "skipped" ]; then
-              echo "❌ Test check has unexpected status: $TEST_RESULT"
-              exit 1
-            fi
-          fi
-
-          # 如果 check-lint 和 tests 都成功或被跳过，则通过
-          if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
-            if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
-              echo "✅ All checks passed or were skipped"
-              exit 0
-            fi
-          fi
-
-          # 如果到达这里，说明有未处理的状况
-          echo "⚠️  Unexpected state: lint=$LINT_RESULT, test=$TEST_RESULT"
-          echo "   This should not happen. Please check the workflow configuration."
-          exit 1
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py ci verify \
+            --should-skip ${{ needs.check-skip-ci.outputs.should_skip == 'true' }} \
+            --jobs "check-lint,tests,build"

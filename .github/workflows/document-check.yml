@@ -1,0 +1,162 @@
+name: Document Check
+
+on:
+  schedule:
+    # 每周六 00:00 UTC 运行
+    - cron: '0 0 * * 6'
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: read
+  issues: write  # 如果需要创建 Issue
+
+jobs:
+  check-architecture-docs:
+    name: 📚 Document Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 📦 Install lychee
+        continue-on-error: true
+        run: |
+          echo "📦 Installing lychee for external link checking..."
+          cargo install lychee || echo "⚠️ Failed to install lychee, external link checking will be skipped"
+
+      - name: 🔍 Run document checks
+        id: check
+        timeout-minutes: 15
+        continue-on-error: true
+        run: |
+          echo "📋 Running document checks..."
+
+          HAS_ISSUES=false
+
+          # 使用 Python dev 工具
+          # 检查文档完整性（架构文档和时间戳）
+          echo ""
+          echo "📝 Checking document integrity..."
+            python3 scripts/dev/py/dev.py docs check integrity --ci || {
+            echo "⚠️  Document integrity check found issues"
+            HAS_ISSUES=true
+          }
+
+          # 检查文档链接
+          echo ""
+          echo "🔗 Checking document links..."
+          if command -v lychee >/dev/null 2>&1; then
+            python3 scripts/dev/py/dev.py docs check links --external --ci || {
+              echo "⚠️  Document link check found issues"
+              HAS_ISSUES=true
+            }
+          else
+            python3 scripts/dev/py/dev.py docs check links --ci || {
+              echo "⚠️  Document link check found issues"
+              HAS_ISSUES=true
+            }
+          fi
+
+          # 输出是否有问题的标志
+          if [ "$HAS_ISSUES" = true ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+            echo ""
+            echo "❌ Found issues that need to be addressed"
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+            echo ""
+            echo "✅ All checks passed"
+          fi
+
+          echo ""
+          echo "✅ Document checks completed"
+
+      - name: 📊 Generate report
+        if: always()
+        run: |
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py docs report generate \
+            --check-type "定期审查"
+
+      - name: 📤 Upload document check reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: document-reports
+          path: report/doc-check-*.md
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # 创建 Issue 汇总问题（仅在发现问题时）
+      - name: 📝 Create issue if problems found
+        if: steps.check.outputs.has_issues == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const timestamp = new Date().toISOString().split('T')[0];
+            const checkDate = new Date().toISOString();
+
+            // 检查是否已经存在相同标题的 Issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'document-check'
+            });
+
+            const existingIssue = issues.find(issue =>
+              issue.title.includes('[Document Check]') &&
+              issue.title.includes(timestamp)
+            );
+
+            if (existingIssue) {
+              console.log(`Issue already exists: #${existingIssue.number}`);
+              return;
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Document Check] Document issues found - ${timestamp}`,
+              body: `## 文档检查发现问题
+
+              定期检查发现文档问题，请查看检查报告。
+
+              **检查日期**：${checkDate}
+              **报告位置**：\`report/doc-check-*.md\`
+
+              请参考以下文档进行修复：
+              - [架构文档审查指南](https://github.com/${{ github.repository }}/blob/main/docs/guidelines/development/references/review-architecture-consistency.md)
+              - [文档更新检查清单](https://github.com/${{ github.repository }}/blob/main/docs/guidelines/development/code-review.md)
+
+              ---
+
+              **注意**：此 Issue 由自动化检查创建，请及时处理。
+              `,
+              labels: ['document-check', 'documentation']
+            });
+

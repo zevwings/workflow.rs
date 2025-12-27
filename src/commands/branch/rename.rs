@@ -10,7 +10,6 @@ use crate::commands::check;
 use crate::git::GitBranch;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
-use std::process::Command;
 
 // Git 保留分支名称常量
 const GIT_RESERVED_NAMES: &[&str] = &["HEAD", "FETCH_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD"];
@@ -378,12 +377,22 @@ impl BranchRenameCommand {
     }
 
     /// 检查分支是否有远程跟踪设置
+    ///
+    /// 使用 git2 库检查分支是否配置了远程跟踪。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 分支名称
+    ///
+    /// # 返回
+    ///
+    /// 如果分支配置了远程跟踪，返回 `true`；否则返回 `false`。
     fn check_remote_tracking(branch_name: &str) -> Result<bool> {
-        let output = Command::new("git")
-            .args(["config", "--get", &format!("branch.{}.remote", branch_name)])
-            .output()
-            .wrap_err("Failed to check remote tracking")?;
-
-        Ok(output.status.success() && !output.stdout.is_empty())
+        // 检查 branch.{branch_name}.remote 配置
+        let config_key = format!("branch.{}.remote", branch_name);
+        match crate::git::GitConfig::get_config_string(&config_key)? {
+            Some(remote) => Ok(!remote.is_empty()),
+            None => Ok(false), // 配置不存在，返回 false
+        }
     }
 }

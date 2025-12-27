@@ -5,7 +5,7 @@
 //! - 统一的错误处理
 //! - Unix 系统下的文件权限设置（600）
 
-use crate::base::util::file::{FileReader, FileWriter};
+use crate::base::fs::{FileReader, FileWriter};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};

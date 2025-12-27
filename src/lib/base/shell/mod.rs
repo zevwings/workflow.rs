@@ -15,4 +15,4 @@ mod reload;
 
 pub use config::ShellConfigManager;
 pub use detect::Detect;
-pub use reload::Reload;
+pub use reload::{Reload, ReloadResult};

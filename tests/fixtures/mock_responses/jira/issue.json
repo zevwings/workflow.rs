@@ -1,0 +1,12 @@
+{
+  "id": "12345",
+  "key": "PROJ-123",
+  "fields": {
+    "summary": "Test Issue",
+    "description": "Test description",
+    "status": {
+      "name": "In Progress"
+    }
+  }
+}
+

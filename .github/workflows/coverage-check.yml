@@ -1,0 +1,226 @@
+name: Coverage Check
+
+on:
+  schedule:
+    # 每周六 00:00 UTC 运行
+    - cron: '0 0 * * 6'
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: write  # 需要写入权限以提交报告到仓库（使用 PAT）
+  issues: write  # 创建 Issue 的权限（使用 GITHUB_TOKEN）
+
+jobs:
+  coverage-check:
+    name: 📊 Coverage Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史以支持推送
+          # 使用 PAT 以支持推送报告到仓库
+          token: ${{ secrets.WORKFLOW_PAT }}
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📦 Install system dependencies (Linux)
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
+
+      - name: 📦 Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: 📊 Generate coverage report
+        timeout-minutes: 50
+        run: cargo tarpaulin --out Html --output-dir coverage --tests
+
+      - name: 📋 Check coverage threshold and generate report
+        id: check
+        continue-on-error: true
+        run: |
+          mkdir -p report
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+          REPORT_FILE="report/coverage-check-${TIMESTAMP}.md"
+
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py tests check coverage \
+            --threshold 80.0 \
+            --ci \
+            --output "$REPORT_FILE" \
+            --check-type "定期审查" || true
+
+          if [ -f "$REPORT_FILE" ]; then
+            echo "📄 Report generated: $REPORT_FILE"
+            echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Report file not generated"
+          fi
+
+      - name: 📤 Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+
+      # 注意：覆盖率趋势分析已由 Codecov 提供
+      # Codecov 提供以下功能：
+      # - 覆盖率历史趋势图（云端）
+      # - PR 评论中的覆盖率变化（自动）
+      # - 覆盖率回归检测（自动）
+      # - 模块级别的覆盖率对比（可视化）
+      # 因此不再需要本地趋势分析脚本
+
+      - name: 📤 Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/coverage.json
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        continue-on-error: true
+
+
+      - name: 📤 Upload check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-check-report
+          path: report/coverage-check-*.md
+          retention-days: 90
+
+      - name: ⚙️ Configure Git for report commit
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 📤 Commit and push report to repository
+        if: always() && steps.check.outputs.report_file != ''
+        run: |
+          REPORT_FILE="${{ steps.check.outputs.report_file }}"
+
+          if [ -z "$REPORT_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
+            echo "⚠️  Report file not found, skipping commit"
+            exit 0
+          fi
+
+          echo "📤 Committing report to repository..."
+          echo "Report file: $REPORT_FILE"
+
+          # 添加报告文件
+          git add "$REPORT_FILE"
+
+          # 检查是否有更改
+          if git diff --staged --quiet; then
+            echo "ℹ️  No changes to commit. Report file may already be committed."
+            exit 0
+          fi
+
+          # 提交更改
+          COMMIT_MESSAGE="docs(report): add coverage check report $(date +%Y-%m-%d)"
+          git commit -m "$COMMIT_MESSAGE"
+
+          # 推送到当前分支（通常是 master/main）
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD || echo "master")
+          echo "Pushing to branch: $CURRENT_BRANCH"
+
+          if git push origin "$CURRENT_BRANCH"; then
+            echo "✅ Successfully pushed report to $CURRENT_BRANCH branch"
+            echo "📄 Report available at: $REPORT_FILE"
+          else
+            echo "⚠️  Failed to push report to repository"
+            echo "   This may be due to:"
+            echo "   1. WORKFLOW_PAT may not have write access"
+            echo "   2. Branch protection rules may prevent direct push"
+            echo "   Report is still available as artifact"
+          fi
+
+      # 创建 Issue 汇总问题（仅在覆盖率未达标时）
+      # 注意：使用 GITHUB_TOKEN（actions/github-script 默认使用），不需要 PAT
+      - name: 📝 Create issue if coverage below threshold
+        if: failure() && steps.check.outputs.coverage_status == 'fail'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const timestamp = new Date().toISOString().split('T')[0];
+            const checkDate = new Date().toISOString();
+            const coverageValue = '${{ steps.check.outputs.coverage_value }}';
+            const targetCoverage = '${{ steps.check.outputs.target_coverage }}';
+
+            // 检查是否已经存在相同标题的 Issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'coverage-check'
+            });
+
+            const existingIssue = issues.find(issue =>
+              issue.title.includes('[Coverage Check]') &&
+              issue.title.includes(timestamp)
+            );
+
+            if (existingIssue) {
+              console.log(`Issue already exists: #${existingIssue.number}`);
+              return;
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Coverage Check] Test coverage below threshold - ${timestamp}`,
+              body: `## 测试覆盖率检查发现问题
+
+              定期检查发现测试覆盖率未达到目标阈值，请查看检查报告。
+
+              **检查日期**：${checkDate}
+              **当前覆盖率**：${coverageValue}%
+              **目标覆盖率**：${targetCoverage}%
+              **报告位置**：\`report/coverage-check-*.md\`
+
+              请参考以下文档进行改进：
+              - [测试覆盖率改进分析](docs/requirements/coverage-improvement.md)
+              - [快速覆盖率提升模块](docs/requirements/QUICK_COVERAGE_MODULES.md)
+              - [测试规范](docs/guidelines/testing.md)
+
+              ---
+
+              **注意**：此 Issue 由自动化检查创建，请及时处理。
+              `,
+              labels: ['coverage-check', 'testing', 'documentation']
+            });
+
+      - name: 📋 Coverage check summary
+        if: always()
+        run: |
+          echo "📊 Coverage check completed"
+          echo "Coverage report has been uploaded as an artifact"
+          echo "Check report has been generated and uploaded"
+

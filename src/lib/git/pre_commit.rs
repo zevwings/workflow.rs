@@ -6,8 +6,8 @@ use duct::cmd;
 
 use super::commit::GitCommit;
 use super::repo::GitRepo;
+use crate::base::fs::FileReader;
 use crate::base::indicator::Spinner;
-use crate::base::util::file::FileReader;
 use crate::{log_break, log_error, log_success, trace_debug};
 
 /// Pre-commit 执行结果

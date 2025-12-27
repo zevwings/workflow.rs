@@ -22,9 +22,10 @@
 //! - `config` - Git 配置管理（`GitConfig` 结构体）
 //! - `types` - 类型定义（`RepoType` 枚举）
 
+mod auth;
 mod branch;
 mod cherry_pick;
-mod command;
+mod client;
 mod commit;
 mod config;
 mod pre_commit;
@@ -35,9 +36,10 @@ mod tag;
 mod types;
 
 // 重新导出所有公共 API
+pub use auth::GitAuth;
 pub use branch::{GitBranch, MergeStrategy};
 pub use cherry_pick::GitCherryPick;
-pub(crate) use command::GitCommand;
+pub use client::{GitRemote, GitRepository};
 pub use commit::{CommitInfo, GitCommit, WorktreeStatus};
 pub use config::GitConfig;
 pub use pre_commit::GitPreCommit;
