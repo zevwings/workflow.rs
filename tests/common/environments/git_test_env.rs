@@ -97,6 +97,11 @@ impl GitTestEnv {
         // 初始化Git仓库，设置默认分支为main
         Self::run_git_command(&work_dir, &["init", "-b", "main"])?;
 
+        // 在仓库中设置Git用户配置（使用--local确保配置存储在仓库中）
+        // 这比依赖GIT_CONFIG环境变量更可靠，特别是在CI环境中
+        Self::run_git_command(&work_dir, &["config", "--local", "user.name", "Test User"])?;
+        Self::run_git_command(&work_dir, &["config", "--local", "user.email", "test@example.com"])?;
+
         // 创建初始提交
         std::fs::write(work_dir.join("README.md"), "# Test Repository\n")?;
         Self::run_git_command(&work_dir, &["add", "."])?;

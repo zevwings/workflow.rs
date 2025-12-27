@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 安装 Linux 系统依赖
+# 安装 Linux 基本系统依赖
 # 用于 CI/CD 和本地开发环境
 
 set -euo pipefail
@@ -16,14 +16,12 @@ if [[ "$(uname)" != "Linux" ]]; then
     exit 0
 fi
 
-echo -e "${GREEN}📦 Installing system dependencies (Linux)...${NC}"
+echo -e "${GREEN}📦 Installing basic system dependencies (Linux)...${NC}"
 
 # 更新包列表
 sudo apt-get update
 
-# 安装 XCB 开发库（clipboard 依赖）
-# xcb crate 需要 xcb-proto 来生成代码模块
-# xcb-proto 需要 Python 来运行代码生成脚本
+# 安装基本依赖
 sudo apt-get install -y \
     python3 \
     libxcb1-dev \
@@ -52,11 +50,11 @@ sudo apt-get install -y \
     libxkbcommon-dev \
     libxkbcommon-x11-dev
 
-# 基本验证
+# 验证安装
 if ! python3 --version; then
     echo -e "${RED}❌ Error: Python3 not found${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ System dependencies installed successfully${NC}"
+echo -e "${GREEN}✅ Basic system dependencies installed successfully${NC}"
 

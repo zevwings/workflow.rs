@@ -113,36 +113,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          sudo apt-get install -y \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 🧪 Run tests
         timeout-minutes: ${{ matrix.test_timeout }}
@@ -177,35 +148,7 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: ⚡ Run performance benchmarks
         run: |
@@ -524,45 +467,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块（xproto, big_requests, etc.）
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            python3-pip \
-            python3-xcbgen \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            pkg-config
-          # 基本验证：检查关键依赖是否可用
-          python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
-          pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
-          echo "✅ xcb dependencies verified"
+        run: bash scripts/dev/dependencies/install-build.sh
 
       - name: 📦 Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'

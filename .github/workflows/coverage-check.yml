@@ -57,35 +57,7 @@ jobs:
         run: cargo build --bin dev --release
 
       - name: 📦 Install system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 📦 Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin

@@ -167,23 +167,46 @@ impl CliTestEnv {
             })?;
         }
 
-        std::process::Command::new("git")
+        let output = std::process::Command::new("git")
             .args(["init", "-b", "main"])
             .current_dir(&work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to init git repo: {}", e))?;
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to init git repo: {}",
+                error
+            ));
+        }
 
-        std::process::Command::new("git")
-            .args(["config", "user.name", "Test User"])
+        // 在仓库中设置Git用户配置（使用--local确保配置存储在仓库中）
+        // 这比依赖GIT_CONFIG环境变量更可靠，特别是在CI环境中
+        let output = std::process::Command::new("git")
+            .args(["config", "--local", "user.name", "Test User"])
             .current_dir(&work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user name: {}", e))?;
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to set git user name: {}",
+                error
+            ));
+        }
 
-        std::process::Command::new("git")
-            .args(["config", "user.email", "test@example.com"])
+        let output = std::process::Command::new("git")
+            .args(["config", "--local", "user.email", "test@example.com"])
             .current_dir(&work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user email: {}", e))?;
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to set git user email: {}",
+                error
+            ));
+        }
 
         // 禁用网络连接，避免测试超时
         // 设置 GIT_TERMINAL_PROMPT=0 和 url.insteadOf 来避免网络请求
@@ -314,17 +337,25 @@ impl CliTestEnv {
     /// env.create_commit("Initial commit")?;
     /// ```
     pub fn create_commit(&self, message: &str) -> Result<&Self> {
-        std::process::Command::new("git")
+        let output = std::process::Command::new("git")
             .args(["add", "."])
             .current_dir(&self.project_path)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to add files: {}", e))?;
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!("Failed to add files: {}", error));
+        }
 
-        std::process::Command::new("git")
+        let output = std::process::Command::new("git")
             .args(["commit", "-m", message])
             .current_dir(&self.project_path)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to commit: {}", e))?;
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!("Failed to commit: {}", error));
+        }
 
         Ok(self)
     }
@@ -353,11 +384,19 @@ impl CliTestEnv {
     /// env.create_branch("feature/test")?;
     /// ```
     pub fn create_branch(&self, branch_name: &str) -> Result<&Self> {
-        std::process::Command::new("git")
+        let output = std::process::Command::new("git")
             .args(["branch", branch_name])
             .current_dir(&self.project_path)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to create branch: {}", e))?;
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to create branch '{}': {}",
+                branch_name,
+                error
+            ));
+        }
 
         Ok(self)
     }
@@ -387,11 +426,19 @@ impl CliTestEnv {
     /// env.checkout("feature/test")?;
     /// ```
     pub fn checkout(&self, branch_name: &str) -> Result<&Self> {
-        std::process::Command::new("git")
+        let output = std::process::Command::new("git")
             .args(["checkout", branch_name])
             .current_dir(&self.project_path)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to checkout branch: {}", e))?;
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to checkout branch '{}': {}",
+                branch_name,
+                error
+            ));
+        }
 
         Ok(self)
     }

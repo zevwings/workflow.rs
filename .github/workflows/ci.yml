@@ -51,7 +51,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/install-dependencies.sh
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -116,7 +116,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/install-dependencies.sh
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: ✨ Check code formatting
         run: cargo fmt --check
@@ -194,7 +194,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/install-dependencies.sh
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -425,7 +425,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/install-dependencies.sh
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 📝 Run doctests
         timeout-minutes: 12
@@ -681,7 +681,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/install-dependencies.sh
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -830,7 +830,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/install-dependencies.sh
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -930,7 +930,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/install-dependencies.sh
+        run: bash scripts/dev/dependencies/install-basic.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4

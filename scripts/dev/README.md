@@ -50,7 +50,8 @@
 
 | 脚本 | 语言 | 说明 | 状态 |
 |------|------|------|------|
-| `install-dependencies.sh` | Bash | 安装 Linux 系统依赖（XCB 开发库等） | ✅ 已完成 |
+| `dependencies/install-basic.sh` | Bash | 安装 Linux 基本系统依赖（XCB 开发库等） | ✅ 已完成 |
+| `dependencies/install-build.sh` | Bash | 安装 Linux 构建依赖（基本依赖 + 构建工具） | ✅ 已完成 |
 
 ---
 
@@ -285,18 +286,20 @@ cargo install cargo-tarpaulin
 
 ### 🔧 环境配置相关脚本
 
-##### install-dependencies.sh
+#### 依赖安装脚本
 
-安装 Linux 系统依赖，包括 XCB 开发库和 Python3。主要用于 CI/CD 环境，也可用于本地 Linux 开发环境。
+##### install-basic.sh
+
+安装 Linux 基本系统依赖，包括 XCB 开发库和 Python3。主要用于测试、运行和 CI/CD 环境。
 
 ```bash
-./scripts/dev/install-dependencies.sh
+./scripts/dev/dependencies/install-basic.sh
 ```
 
 **功能**:
 - 安装 XCB 开发库（clipboard 依赖）
 - 安装 Python3（xcb-proto 代码生成需要）
-- 验证安装结果
+- 基本验证
 
 **前置要求**:
 - Linux 系统（脚本会自动检查）
@@ -306,6 +309,28 @@ cargo install cargo-tarpaulin
 - 脚本会自动检测操作系统，非 Linux 系统会安全退出
 - 包含错误处理和验证步骤
 - 在 CI/CD 中使用时，建议配合 `if: runner.os == 'Linux'` 条件
+
+##### install-build.sh
+
+安装 Linux 构建依赖，包含基本依赖 + 构建工具（python3-pip, python3-xcbgen, pkg-config）。用于编译 Linux x86_64 平台的二进制文件。
+
+```bash
+./scripts/dev/dependencies/install-build.sh
+```
+
+**功能**:
+- 调用 `install-basic.sh` 安装基本依赖
+- 安装构建工具（python3-pip, python3-xcbgen, pkg-config）
+- 验证构建依赖（xcbgen 模块、pkg-config）
+
+**前置要求**:
+- Linux 系统（脚本会自动检查）
+- sudo 权限
+
+**说明**:
+- 会自动调用基本依赖安装脚本
+- 包含完整的构建依赖验证
+- 主要用于 Release workflow 的构建阶段
 
 ---
 
