@@ -11,7 +11,7 @@ use crate::jira::Jira;
 use crate::jira::JiraWorkHistory;
 use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
 use crate::pr::{create_provider_auto, TYPES_OF_CHANGES};
-use crate::{log_break, log_info, log_success, log_warning};
+use crate::{log_info, log_success, log_warning};
 use color_eyre::{
     eyre::{Report, WrapErr},
     Result,
@@ -443,10 +443,9 @@ pub fn create_branch_from_default(
     Spinner::with("Committing changes...", || {
         GitCommit::commit(commit_title, true) // no-verify
     })?;
-    log_break!();
-    log_info!("Pushing to remote...");
-    log_break!();
-    GitBranch::push(branch_name, true)?; // set-upstream
+    Spinner::with_output("Pushing to remote...", || {
+        GitBranch::push(branch_name, true) // set-upstream
+    })?;
 
     Ok((branch_name.to_string(), default_branch.to_string()))
 }

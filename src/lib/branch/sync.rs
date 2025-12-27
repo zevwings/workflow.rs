@@ -409,16 +409,15 @@ impl BranchSync {
 
         // 如果是 rebase，使用 force-with-lease
         let use_force = matches!(result.strategy, SyncStrategy::Rebase);
-        log_break!();
-        log_info!("Pushing to remote...");
-        log_break!();
-        if use_force {
-            Self::push_force_with_lease_in(repo_path, &result.current_branch)
-                .wrap_err("Failed to push to remote (force-with-lease)")?;
-        } else {
-            Self::push_in(repo_path, &result.current_branch, !exists_remote)
-                .wrap_err("Failed to push to remote")?;
-        }
+        Spinner::with_output("Pushing to remote...", || {
+            if use_force {
+                Self::push_force_with_lease_in(repo_path, &result.current_branch)
+                    .wrap_err("Failed to push to remote (force-with-lease)")
+            } else {
+                Self::push_in(repo_path, &result.current_branch, !exists_remote)
+                    .wrap_err("Failed to push to remote")
+            }
+        })?;
         log_break!();
         log_success!("Pushed to remote successfully");
         Ok(())
