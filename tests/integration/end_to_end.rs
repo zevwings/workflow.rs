@@ -43,9 +43,11 @@ fn test_pr_creation_workflow() -> Result<()> {
     env.create_file("test.txt", "test content")?.create_commit("feat: add test")?;
 
     // 4. 创建PR（dry-run模式，避免实际创建）
+    // 禁用 LLM 调用以避免网络请求超时（设置无效 provider 让 LLM 快速失败并回退）
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
         .current_dir(env.path())
+        .env("WORKFLOW_LLM_PROVIDER", "invalid_provider") // 禁用 LLM，让其在配置阶段失败
         .assert();
     let output = binding.get_output();
 
@@ -132,9 +134,11 @@ token = "test_token"
         .create_commit("feat(PROJ-123): add new feature")?;
 
     // 4. 创建PR（dry-run模式）
+    // 禁用 LLM 调用以避免网络请求超时（设置无效 provider 让 LLM 快速失败并回退）
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
         .current_dir(env.path())
+        .env("WORKFLOW_LLM_PROVIDER", "invalid_provider") // 禁用 LLM，让其在配置阶段失败
         .assert();
     let output = binding.get_output();
 
