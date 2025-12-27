@@ -295,7 +295,10 @@ impl CliTestEnv {
                 return Ok(self);
             }
             Err(e) => {
-                return Err(color_eyre::eyre::eyre!("Failed to get HEAD: {}", e.message()));
+                return Err(color_eyre::eyre::eyre!(
+                    "Failed to get HEAD: {}",
+                    e.message()
+                ));
             }
         };
 

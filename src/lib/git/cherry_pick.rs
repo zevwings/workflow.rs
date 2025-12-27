@@ -52,7 +52,7 @@ impl GitCherryPick {
 
         // 获取提交的父提交（cherry-pick 的基础）
         let parent = cherry_commit.parent(0).ok();
-        let parent_tree = parent.as_ref().map(|p| p.tree().ok()).flatten();
+        let parent_tree = parent.as_ref().and_then(|p| p.tree().ok());
 
         // 获取要应用的树
         let cherry_tree = cherry_commit.tree()?;
@@ -132,7 +132,7 @@ impl GitCherryPick {
 
         // 获取提交的父提交（cherry-pick 的基础）
         let parent = cherry_commit.parent(0).ok();
-        let parent_tree = parent.as_ref().map(|p| p.tree().ok()).flatten();
+        let parent_tree = parent.as_ref().and_then(|p| p.tree().ok());
 
         // 获取要应用的树
         let cherry_tree = cherry_commit.tree()?;
@@ -290,9 +290,9 @@ impl GitCherryPick {
     pub fn is_cherry_pick_in_progress() -> bool {
         open_repo()
             .ok()
-            .and_then(|repo| {
+            .map(|repo| {
                 let git_dir = repo.path();
-                Some(git_dir.join("CHERRY_PICK_HEAD").exists())
+                git_dir.join("CHERRY_PICK_HEAD").exists()
             })
             .unwrap_or(false)
     }

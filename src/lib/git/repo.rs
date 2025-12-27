@@ -9,8 +9,8 @@ use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use regex::Regex;
 use std::path::Path;
 
-use super::types::RepoType;
 use super::helpers::open_repo;
+use super::types::RepoType;
 
 /// Git 仓库管理
 ///

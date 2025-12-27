@@ -460,7 +460,7 @@ impl GitTestEnv {
                     let mut config = repo.config().ok();
                     if let Some(ref mut config) = config {
                         let _ = config.set_str(
-                            &"url.file:///dev/null.insteadOf".to_string(),
+                            "url.file:///dev/null.insteadOf",
                             &format!("https://{}", domain_only),
                         );
                     }

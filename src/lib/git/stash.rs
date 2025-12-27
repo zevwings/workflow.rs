@@ -272,7 +272,7 @@ impl GitStash {
                     } else {
                         vec![]
                     },
-                    stat: Self::stash_show_stat(stash_ref.unwrap_or_else(|| "stash@{0}")).ok(),
+                    stat: Self::stash_show_stat(stash_ref.unwrap_or("stash@{0}")).ok(),
                 })
             }
             Err(e) => {
@@ -285,7 +285,7 @@ impl GitStash {
                     warnings: vec![
                         format!(
                             "Failed to apply stash {}: {}",
-                            stash_ref.unwrap_or_else(|| "stash@{0}"),
+                            stash_ref.unwrap_or("stash@{0}"),
                             e
                         ),
                         if has_conflicts {
@@ -327,12 +327,8 @@ impl GitStash {
         };
 
         // 删除 stash
-        repo.stash_drop(stash_index).wrap_err_with(|| {
-            format!(
-                "Failed to drop stash {}",
-                stash_ref.unwrap_or_else(|| "stash@{0}")
-            )
-        })
+        repo.stash_drop(stash_index)
+            .wrap_err_with(|| format!("Failed to drop stash {}", stash_ref.unwrap_or("stash@{0}")))
     }
 
     /// 应用并删除指定的 stash
@@ -379,7 +375,7 @@ impl GitStash {
                     restored: true,
                     message: Some(format!(
                         "Stash {} applied and removed",
-                        stash_ref.unwrap_or_else(|| "stash@{0}")
+                        stash_ref.unwrap_or("stash@{0}")
                     )),
                     warnings: vec![],
                 })
@@ -392,7 +388,7 @@ impl GitStash {
                     let warnings = vec![
                         format!(
                             "Merge conflicts detected when applying stash {}.",
-                            stash_ref.unwrap_or_else(|| "stash@{0}")
+                            stash_ref.unwrap_or("stash@{0}")
                         ),
                         "The stash entry is kept in case you need it again.".to_string(),
                         "Please resolve the conflicts manually and then:".to_string(),
@@ -415,7 +411,7 @@ impl GitStash {
                     let warnings = vec![
                         format!(
                             "Failed to apply stash {}: {}",
-                            stash_ref.unwrap_or_else(|| "stash@{0}"),
+                            stash_ref.unwrap_or("stash@{0}"),
                             e
                         ),
                         "The stash entry is kept. You can try again later.".to_string(),

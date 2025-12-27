@@ -120,8 +120,7 @@ impl GitAuth {
             if is_https && allowed_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
                 let username = auth_info
                     .https_username
-                    .as_ref()
-                    .map(|s| s.as_str())
+                    .as_deref()
                     .or(username_from_url)
                     .or_else(|| Self::extract_username_from_url(url))
                     .unwrap_or("git")
@@ -340,8 +339,8 @@ impl GitAuth {
                         let identity_file = parts[1];
                         // 展开 ~ 为 home 目录
                         let expanded_path = if identity_file.starts_with('~') {
-                            if let Some(home_dir) =
-                                std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()
+                            if let Ok(home_dir) =
+                                std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE"))
                             {
                                 PathBuf::from(&home_dir).join(&identity_file[2..])
                             // 跳过 "~/"
@@ -480,6 +479,5 @@ mod tests {
         // 测试获取认证回调（不应该 panic）
         let _callbacks = GitAuth::get_remote_callbacks();
         // RemoteCallbacks 没有公共方法可以验证，但创建成功就说明没问题
-        assert!(true); // 占位符
     }
 }
