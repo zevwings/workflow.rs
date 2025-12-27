@@ -41,8 +41,8 @@ impl GitConfig {
         trace_info!("Updating Git global config: email={}, name={}", email, name);
 
         // 打开全局配置
-        let mut config = git2::Config::open_default()
-            .wrap_err("Failed to open Git global config")?;
+        let mut config =
+            git2::Config::open_default().wrap_err("Failed to open Git global config")?;
 
         // 设置全局 user.email
         config
@@ -75,20 +75,13 @@ impl GitConfig {
     /// 如果操作失败，返回相应的错误信息。
     pub fn get_global_user() -> Result<(Option<String>, Option<String>)> {
         // 打开全局配置
-        let config = git2::Config::open_default()
-            .wrap_err("Failed to open Git global config")?;
+        let config = git2::Config::open_default().wrap_err("Failed to open Git global config")?;
 
         // 读取 user.email
-        let email = config
-            .get_string("user.email")
-            .ok()
-            .filter(|s| !s.is_empty());
+        let email = config.get_string("user.email").ok().filter(|s| !s.is_empty());
 
         // 读取 user.name
-        let name = config
-            .get_string("user.name")
-            .ok()
-            .filter(|s| !s.is_empty());
+        let name = config.get_string("user.name").ok().filter(|s| !s.is_empty());
 
         Ok((email, name))
     }

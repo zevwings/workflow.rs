@@ -214,8 +214,7 @@ fn test_check_not_on_default_branch_on_feature_branch_return_ok(
     // 创建并切换到 feature 分支
     let repo = Repository::open(cli_env_with_git.path())
         .map_err(|e| color_eyre::eyre::eyre!("Failed to open repository: {}", e))?;
-    let head = repo.head()
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to get HEAD: {}", e))?;
+    let head = repo.head().map_err(|e| color_eyre::eyre::eyre!("Failed to get HEAD: {}", e))?;
     let head_commit = repo
         .find_commit(head.target().unwrap())
         .map_err(|e| color_eyre::eyre::eyre!("Failed to find HEAD commit: {}", e))?;

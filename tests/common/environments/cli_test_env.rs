@@ -178,12 +178,8 @@ impl CliTestEnv {
 
         // 在仓库的配置文件中设置Git用户配置
         // 使用 git2 API 设置本地配置，避免 GIT_CONFIG 环境变量冲突
-        let mut config = repo
-            .config()
-            .wrap_err("Failed to open repository config")?;
-        config
-            .set_str("user.name", "Test User")
-            .wrap_err("Failed to set user.name")?;
+        let mut config = repo.config().wrap_err("Failed to open repository config")?;
+        config.set_str("user.name", "Test User").wrap_err("Failed to set user.name")?;
         config
             .set_str("user.email", "test@example.com")
             .wrap_err("Failed to set user.email")?;
@@ -204,9 +200,7 @@ impl CliTestEnv {
         index
             .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
             .wrap_err("Failed to add files to index")?;
-        let tree_id = index
-            .write_tree()
-            .wrap_err("Failed to write index to tree")?;
+        let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
         index.write().wrap_err("Failed to write index")?;
 
         // 创建提交
@@ -255,12 +249,8 @@ impl CliTestEnv {
             .wrap_err("Failed to initialize git repository")?;
 
         // 在仓库的配置文件中设置Git用户配置
-        let mut config = repo
-            .config()
-            .wrap_err("Failed to open repository config")?;
-        config
-            .set_str("user.name", "Test User")
-            .wrap_err("Failed to set user.name")?;
+        let mut config = repo.config().wrap_err("Failed to open repository config")?;
+        config.set_str("user.name", "Test User").wrap_err("Failed to set user.name")?;
         config
             .set_str("user.email", "test@example.com")
             .wrap_err("Failed to set user.email")?;
@@ -290,25 +280,22 @@ impl CliTestEnv {
     /// 2. 删除可能存在的旧引用（如`origin/master`）
     /// 3. 设置远程HEAD引用（`refs/remotes/origin/HEAD`）
     pub fn setup_fake_remote_refs(&self) -> Result<&Self> {
-        let repo = Repository::open(&self.project_path)
-            .wrap_err("Failed to open repository")?;
+        let repo = Repository::open(&self.project_path).wrap_err("Failed to open repository")?;
 
         // 1. 创建假的远程分支引用（指向当前HEAD）
         // 注意：如果仓库还没有提交（UnbornBranch），HEAD 可能不存在
         // 在这种情况下，我们跳过创建远程引用
         let head_oid = match repo.head() {
-            Ok(head) => {
-                head.target().ok_or_else(|| {
-                    color_eyre::eyre::eyre!("HEAD does not point to a valid commit")
-                })?
-            }
+            Ok(head) => head
+                .target()
+                .ok_or_else(|| color_eyre::eyre::eyre!("HEAD does not point to a valid commit"))?,
             Err(e) if e.code() == git2::ErrorCode::UnbornBranch => {
                 // 如果 HEAD 不存在（空仓库），跳过创建远程引用
                 // 这通常发生在 init_git_repo() 被调用但还没有创建提交时
                 return Ok(self);
             }
             Err(e) => {
-                return Err(color_eyre::eyre::eyre!("Failed to get HEAD: {}", e.message()).into());
+                return Err(color_eyre::eyre::eyre!("Failed to get HEAD: {}", e.message()));
             }
         };
 
@@ -391,17 +378,14 @@ impl CliTestEnv {
     /// env.create_commit("Initial commit")?;
     /// ```
     pub fn create_commit(&self, message: &str) -> Result<&Self> {
-        let repo = Repository::open(&self.project_path)
-            .wrap_err("Failed to open repository")?;
+        let repo = Repository::open(&self.project_path).wrap_err("Failed to open repository")?;
 
         // 添加所有文件到索引
         let mut index = repo.index().wrap_err("Failed to open repository index")?;
         index
             .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
             .wrap_err("Failed to add files to index")?;
-        let tree_id = index
-            .write_tree()
-            .wrap_err("Failed to write index to tree")?;
+        let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
         index.write().wrap_err("Failed to write index")?;
 
         // 创建提交
@@ -410,10 +394,10 @@ impl CliTestEnv {
             .wrap_err("Failed to create signature")?;
 
         // 获取父提交（如果有）
-        let parent_commit = repo.head().ok().and_then(|head| {
-            head.target()
-                .and_then(|oid| repo.find_commit(oid).ok())
-        });
+        let parent_commit = repo
+            .head()
+            .ok()
+            .and_then(|head| head.target().and_then(|oid| repo.find_commit(oid).ok()));
         let parents: Vec<&git2::Commit> = parent_commit.iter().collect();
 
         repo.commit(
@@ -453,8 +437,7 @@ impl CliTestEnv {
     /// env.create_branch("feature/test")?;
     /// ```
     pub fn create_branch(&self, branch_name: &str) -> Result<&Self> {
-        let repo = Repository::open(&self.project_path)
-            .wrap_err("Failed to open repository")?;
+        let repo = Repository::open(&self.project_path).wrap_err("Failed to open repository")?;
         let head = repo.head().wrap_err("Failed to get HEAD")?;
         let head_commit = repo
             .find_commit(head.target().unwrap())
@@ -489,8 +472,7 @@ impl CliTestEnv {
     /// env.checkout("feature/test")?;
     /// ```
     pub fn checkout(&self, branch_name: &str) -> Result<&Self> {
-        let repo = Repository::open(&self.project_path)
-            .wrap_err("Failed to open repository")?;
+        let repo = Repository::open(&self.project_path).wrap_err("Failed to open repository")?;
         let refname = format!("refs/heads/{}", branch_name);
         repo.set_head(&refname)
             .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
@@ -861,9 +843,7 @@ mod tests {
         let repo = Repository::open(env.path()).unwrap();
         let head = repo.head().unwrap();
         let branch_name = head.name().unwrap();
-        let branch_name = branch_name
-            .strip_prefix("refs/heads/")
-            .unwrap();
+        let branch_name = branch_name.strip_prefix("refs/heads/").unwrap();
         assert_eq!(branch_name, "feature/test");
 
         Ok(())

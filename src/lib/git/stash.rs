@@ -81,17 +81,20 @@ impl GitStash {
         let mut repo = open_repo()?;
 
         // 获取签名
-        let signature = repo
-            .signature()
-            .wrap_err("Failed to get repository signature")?;
+        let signature = repo.signature().wrap_err("Failed to get repository signature")?;
 
         // 构建 stash 消息
         let stash_message = if let Some(msg) = message {
             msg.to_string()
         } else {
             // 如果没有提供消息，使用默认格式
-            let branch = super::GitBranch::current_branch().unwrap_or_else(|_| "unknown".to_string());
-            format!("WIP on {}: {}", branch, chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))
+            let branch =
+                super::GitBranch::current_branch().unwrap_or_else(|_| "unknown".to_string());
+            format!(
+                "WIP on {}: {}",
+                branch,
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+            )
         };
 
         // 保存 stash
@@ -109,7 +112,7 @@ impl GitStash {
         let repo = open_repo()?;
 
         // 使用 index 检查未合并的文件
-        let index = repo.index().wrap_err("Failed to open repository index")?;
+        let _index = repo.index().wrap_err("Failed to open repository index")?;
 
         // 遍历索引条目，查找未合并的文件
         // git2 的 IndexEntry 不直接暴露 stage，我们使用 statuses 检查冲突
@@ -119,7 +122,8 @@ impl GitStash {
         status_options.include_untracked(false);
         status_options.include_ignored(false);
 
-        let statuses = repo.statuses(Some(&mut status_options))
+        let statuses = repo
+            .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
         // 检查是否有冲突状态的文件
@@ -144,14 +148,13 @@ impl GitStash {
     pub fn stash_list() -> Result<Vec<StashEntry>> {
         let mut repo = open_repo()?;
         let mut entries = Vec::new();
-        let mut index = 0;
 
         // 使用 stash_foreach 遍历所有 stash
         // 注意：需要先收集所有 stash OID，然后在回调外处理，避免借用冲突
         let mut stash_oids = Vec::new();
         let mut stash_messages = Vec::new();
 
-        repo.stash_foreach(|stash_index, message, stash_oid| {
+        repo.stash_foreach(|_stash_index, message, stash_oid| {
             stash_oids.push(*stash_oid);
             stash_messages.push(message.to_string());
             true // 继续遍历
@@ -260,7 +263,10 @@ impl GitStash {
                 Ok(StashApplyResult {
                     applied: true,
                     has_conflicts,
-                    message: Some(format!("Stash {} applied successfully", stash_ref.unwrap_or("stash@{0}"))),
+                    message: Some(format!(
+                        "Stash {} applied successfully",
+                        stash_ref.unwrap_or("stash@{0}")
+                    )),
                     warnings: if has_conflicts {
                         vec!["Merge conflicts detected. Please resolve them manually.".to_string()]
                     } else {
@@ -277,7 +283,11 @@ impl GitStash {
                     has_conflicts,
                     message: None,
                     warnings: vec![
-                        format!("Failed to apply stash {}: {}", stash_ref.unwrap_or_else(|| "stash@{0}"), e),
+                        format!(
+                            "Failed to apply stash {}: {}",
+                            stash_ref.unwrap_or_else(|| "stash@{0}"),
+                            e
+                        ),
                         if has_conflicts {
                             "Merge conflicts detected. Please resolve them manually.".to_string()
                         } else {
@@ -317,8 +327,12 @@ impl GitStash {
         };
 
         // 删除 stash
-        repo.stash_drop(stash_index)
-            .wrap_err_with(|| format!("Failed to drop stash {}", stash_ref.unwrap_or_else(|| "stash@{0}")))
+        repo.stash_drop(stash_index).wrap_err_with(|| {
+            format!(
+                "Failed to drop stash {}",
+                stash_ref.unwrap_or_else(|| "stash@{0}")
+            )
+        })
     }
 
     /// 应用并删除指定的 stash
@@ -363,7 +377,10 @@ impl GitStash {
 
                 Ok(StashPopResult {
                     restored: true,
-                    message: Some(format!("Stash {} applied and removed", stash_ref.unwrap_or_else(|| "stash@{0}"))),
+                    message: Some(format!(
+                        "Stash {} applied and removed",
+                        stash_ref.unwrap_or_else(|| "stash@{0}")
+                    )),
                     warnings: vec![],
                 })
             }
@@ -396,7 +413,11 @@ impl GitStash {
                 } else {
                     // 没有冲突但失败了，返回包含警告的结果
                     let warnings = vec![
-                        format!("Failed to apply stash {}: {}", stash_ref.unwrap_or_else(|| "stash@{0}"), e),
+                        format!(
+                            "Failed to apply stash {}: {}",
+                            stash_ref.unwrap_or_else(|| "stash@{0}"),
+                            e
+                        ),
                         "The stash entry is kept. You can try again later.".to_string(),
                     ];
                     // 记录到 tracing（用于调试）

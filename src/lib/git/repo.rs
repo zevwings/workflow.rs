@@ -10,7 +10,7 @@ use regex::Regex;
 use std::path::Path;
 
 use super::types::RepoType;
-use super::{GitCommand, helpers::open_repo};
+use super::helpers::open_repo;
 
 /// Git 仓库管理
 ///
@@ -91,9 +91,7 @@ impl GitRepo {
     /// 如果无法获取远程 URL，返回相应的错误信息。
     pub fn get_remote_url() -> Result<String> {
         let repo = open_repo()?;
-        let remote = repo
-            .find_remote("origin")
-            .wrap_err("Failed to find remote 'origin'")?;
+        let remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         remote
             .url()
@@ -119,9 +117,7 @@ impl GitRepo {
     pub fn get_remote_url_in(repo_path: impl AsRef<std::path::Path>) -> Result<String> {
         let repo = git2::Repository::open(repo_path.as_ref())
             .wrap_err_with(|| format!("Failed to open repository at: {:?}", repo_path.as_ref()))?;
-        let remote = repo
-            .find_remote("origin")
-            .wrap_err("Failed to find remote 'origin'")?;
+        let remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         remote
             .url()
@@ -158,14 +154,12 @@ impl GitRepo {
     ///
     /// 如果获取失败，返回相应的错误信息。
     pub fn fetch() -> Result<()> {
-        use git2::FetchOptions;
-        use super::GitAuth;
         use super::helpers::open_repo;
+        use super::GitAuth;
+        use git2::FetchOptions;
 
         let repo = open_repo()?;
-        let mut remote = repo
-            .find_remote("origin")
-            .wrap_err("Failed to find remote 'origin'")?;
+        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         // 获取认证回调
         let callbacks = GitAuth::get_remote_callbacks();
@@ -199,9 +193,7 @@ impl GitRepo {
         Self::fetch()?;
 
         // 获取远程引用列表
-        let mut remote = repo
-            .find_remote("origin")
-            .wrap_err("Failed to find remote 'origin'")?;
+        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         // 连接远程并获取引用列表
         let callbacks = super::GitAuth::get_remote_callbacks();
@@ -210,9 +202,7 @@ impl GitRepo {
             .wrap_err("Failed to connect to remote")?;
 
         // 获取远程引用列表
-        let remote_refs = remote
-            .list()
-            .wrap_err("Failed to list remote references")?;
+        let remote_refs = remote.list().wrap_err("Failed to list remote references")?;
 
         // 构建远程引用名称集合
         let mut remote_ref_names = std::collections::HashSet::new();

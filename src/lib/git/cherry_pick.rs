@@ -7,7 +7,6 @@
 //! - 检查 cherry-pick 操作状态
 
 use color_eyre::{eyre::WrapErr, Result};
-use std::str::FromStr;
 
 use super::helpers::open_repo;
 
@@ -73,10 +72,7 @@ impl GitCherryPick {
             merge_result.write()?;
             // 创建 CHERRY_PICK_HEAD 文件以标记正在进行 cherry-pick
             let git_dir = repo.path();
-            std::fs::write(
-                git_dir.join("CHERRY_PICK_HEAD"),
-                commit_oid.to_string(),
-            )?;
+            std::fs::write(git_dir.join("CHERRY_PICK_HEAD"), commit_oid.to_string())?;
             color_eyre::eyre::bail!(
                 "Cherry-pick conflict detected. Please resolve conflicts manually and continue."
             );
@@ -88,9 +84,7 @@ impl GitCherryPick {
 
         // 创建新提交
         let signature = repo.signature()?;
-        let message = cherry_commit
-            .message()
-            .unwrap_or("Cherry-pick commit");
+        let message = cherry_commit.message().unwrap_or("Cherry-pick commit");
 
         repo.commit(
             Some("HEAD"),
@@ -158,10 +152,7 @@ impl GitCherryPick {
             merge_result.write()?;
             // 创建 CHERRY_PICK_HEAD 文件以标记正在进行 cherry-pick
             let git_dir = repo.path();
-            std::fs::write(
-                git_dir.join("CHERRY_PICK_HEAD"),
-                commit_oid.to_string(),
-            )?;
+            std::fs::write(git_dir.join("CHERRY_PICK_HEAD"), commit_oid.to_string())?;
             color_eyre::eyre::bail!(
                 "Cherry-pick conflict detected. Please resolve conflicts manually and continue."
             );
@@ -185,10 +176,7 @@ impl GitCherryPick {
 
         // 创建 CHERRY_PICK_HEAD 文件以标记正在进行 cherry-pick（no-commit 模式）
         let git_dir = repo.path();
-        std::fs::write(
-            git_dir.join("CHERRY_PICK_HEAD"),
-            commit_oid.to_string(),
-        )?;
+        std::fs::write(git_dir.join("CHERRY_PICK_HEAD"), commit_oid.to_string())?;
 
         Ok(())
     }
@@ -235,9 +223,7 @@ impl GitCherryPick {
         let tree = repo.find_tree(tree_id)?;
 
         let signature = repo.signature()?;
-        let message = cherry_commit
-            .message()
-            .unwrap_or("Cherry-pick commit");
+        let message = cherry_commit.message().unwrap_or("Cherry-pick commit");
 
         repo.commit(
             Some("HEAD"),

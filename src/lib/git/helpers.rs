@@ -4,7 +4,6 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 use git2::Repository;
-use std::path::Path;
 
 /// 打开当前目录的 Git 仓库
 ///
@@ -41,4 +40,3 @@ pub fn open_repo() -> Result<Repository> {
 //     Repository::open(path.as_ref())
 //         .wrap_err_with(|| format!("Failed to open Git repository at: {:?}", path.as_ref()))
 // }
-

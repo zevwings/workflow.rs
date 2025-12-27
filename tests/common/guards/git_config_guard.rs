@@ -144,7 +144,9 @@ impl GitConfigGuard {
 
                             // 如果是锁文件错误且还有重试机会，等待后重试
                             if is_lock_error && attempt < MAX_RETRIES - 1 {
-                                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
+                                std::thread::sleep(std::time::Duration::from_millis(
+                                    RETRY_DELAY_MS,
+                                ));
                                 continue;
                             }
 

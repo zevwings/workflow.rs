@@ -7,12 +7,11 @@
 //! - 修改最后一次提交（amend）
 //! - 修改历史提交消息（reword）
 
+use chrono::{FixedOffset, TimeZone};
 use color_eyre::{eyre::WrapErr, Result};
-use chrono::{DateTime, FixedOffset, TimeZone};
-use std::str::FromStr;
 
 use super::pre_commit::GitPreCommit;
-use super::{GitCommand, helpers::open_repo};
+use super::{helpers::open_repo, GitCommand};
 
 /// Git 提交结果
 #[derive(Debug, Clone)]
@@ -70,7 +69,8 @@ impl GitCommit {
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
-        let statuses = repo.statuses(Some(&mut status_options))
+        let statuses = repo
+            .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
         let mut lines = Vec::new();
@@ -133,7 +133,8 @@ impl GitCommit {
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
-        let statuses = repo.statuses(Some(&mut status_options))
+        let statuses = repo
+            .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
         // 检查是否有任何更改（工作区或暂存区）
@@ -163,7 +164,8 @@ impl GitCommit {
         status_options.include_untracked(false);
         status_options.include_ignored(false);
 
-        let statuses = repo.statuses(Some(&mut status_options))
+        let statuses = repo
+            .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
         // 检查是否有暂存的文件（索引区有更改）
@@ -248,10 +250,10 @@ impl GitCommit {
         let signature = repo.signature().wrap_err("Failed to get repository signature")?;
 
         // 获取父提交（如果有）
-        let parent_commit = repo.head().ok().and_then(|head| {
-            head.target()
-                .and_then(|oid| repo.find_commit(oid).ok())
-        });
+        let parent_commit = repo
+            .head()
+            .ok()
+            .and_then(|head| head.target().and_then(|oid| repo.find_commit(oid).ok()));
         let parents: Vec<&git2::Commit> = parent_commit.iter().collect();
 
         // 创建提交
@@ -380,9 +382,7 @@ impl GitCommit {
     pub fn get_last_commit_info() -> Result<CommitInfo> {
         let repo = open_repo()?;
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let commit = head
-            .peel_to_commit()
-            .wrap_err("Failed to get commit from HEAD")?;
+        let commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
 
         let sha = commit.id().to_string();
         let message = commit
@@ -400,7 +400,8 @@ impl GitCommit {
         // 使用 chrono 库格式化时间
         let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
             .unwrap_or_else(|| FixedOffset::east_opt(0).unwrap());
-        let datetime = offset.timestamp_opt(time.seconds(), 0)
+        let datetime = offset
+            .timestamp_opt(time.seconds(), 0)
             .single()
             .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timestamp"))?;
         let date = datetime.format("%Y-%m-%d %H:%M:%S %z").to_string();
@@ -439,9 +440,7 @@ impl GitCommit {
     pub fn get_last_commit_message() -> Result<String> {
         let repo = open_repo()?;
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let commit = head
-            .peel_to_commit()
-            .wrap_err("Failed to get commit from HEAD")?;
+        let commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
         Ok(commit
             .message()
             .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
@@ -461,7 +460,8 @@ impl GitCommit {
         status_options.include_untracked(false);
         status_options.include_ignored(false);
 
-        let statuses = repo.statuses(Some(&mut status_options))
+        let statuses = repo
+            .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
         let mut files = Vec::new();
@@ -491,7 +491,8 @@ impl GitCommit {
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
-        let statuses = repo.statuses(Some(&mut status_options))
+        let statuses = repo
+            .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
         let mut files = Vec::new();
@@ -565,9 +566,7 @@ impl GitCommit {
 
         // 获取当前 HEAD 提交
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let parent_commit = head
-            .peel_to_commit()
-            .wrap_err("Failed to get commit from HEAD")?;
+        let parent_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
 
         // 获取索引并写入树
         let mut index = repo.index().wrap_err("Failed to open repository index")?;
@@ -667,9 +666,11 @@ impl GitCommit {
     /// 返回指定 commit 的详细信息。
     pub fn get_commit_info(commit_ref: &str) -> Result<CommitInfo> {
         let repo = open_repo()?;
-        let obj = repo.revparse_single(commit_ref)
+        let obj = repo
+            .revparse_single(commit_ref)
             .wrap_err_with(|| format!("Failed to parse commit reference: {}", commit_ref))?;
-        let commit = obj.peel_to_commit()
+        let commit = obj
+            .peel_to_commit()
             .wrap_err_with(|| format!("Failed to get commit from reference: {}", commit_ref))?;
 
         let sha = commit.id().to_string();
@@ -688,7 +689,8 @@ impl GitCommit {
         // 使用 chrono 库格式化时间
         let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
             .unwrap_or_else(|| FixedOffset::east_opt(0).unwrap());
-        let datetime = offset.timestamp_opt(time.seconds(), 0)
+        let datetime = offset
+            .timestamp_opt(time.seconds(), 0)
             .single()
             .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timestamp"))?;
         let date = datetime.format("%Y-%m-%d %H:%M:%S %z").to_string();
@@ -757,15 +759,11 @@ impl GitCommit {
 
         // 获取 HEAD commit
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let head_commit = head
-            .peel_to_commit()
-            .wrap_err("Failed to get commit from HEAD")?;
+        let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
 
         // 使用 revwalk 遍历提交历史
         let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
-        revwalk
-            .push(head_commit.id())
-            .wrap_err("Failed to push HEAD to revwalk")?;
+        revwalk.push(head_commit.id()).wrap_err("Failed to push HEAD to revwalk")?;
 
         let mut commits = Vec::new();
         for (index, oid) in revwalk.enumerate() {
@@ -861,9 +859,7 @@ impl GitCommit {
 
         // 获取 HEAD commit
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let head_commit = head
-            .peel_to_commit()
-            .wrap_err("Failed to get commit from HEAD")?;
+        let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
 
         // 如果 from_commit 就是 HEAD，返回空列表
         if from_commit_obj.id() == head_commit.id() {
@@ -872,12 +868,8 @@ impl GitCommit {
 
         // 使用 revwalk 遍历从 from_commit 到 HEAD 的所有 commits
         let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
-        revwalk
-            .push(head_commit.id())
-            .wrap_err("Failed to push HEAD to revwalk")?;
-        revwalk
-            .hide(from_oid)
-            .wrap_err("Failed to hide from_commit from revwalk")?;
+        revwalk.push(head_commit.id()).wrap_err("Failed to push HEAD to revwalk")?;
+        revwalk.hide(from_oid).wrap_err("Failed to hide from_commit from revwalk")?;
 
         let mut commits = Vec::new();
         for oid in revwalk {
@@ -936,7 +928,8 @@ impl GitCommit {
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
-        let statuses = repo.statuses(Some(&mut status_options))
+        let statuses = repo
+            .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
         let mut modified_count = 0;

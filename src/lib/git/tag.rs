@@ -7,7 +7,6 @@
 //! - 获取 tag 信息
 
 use color_eyre::{eyre::WrapErr, Result};
-use std::str::FromStr;
 
 use super::GitAuth;
 use crate::git::helpers::open_repo;
@@ -77,9 +76,7 @@ impl GitTag {
     /// 如果操作失败，返回相应的错误信息。
     pub fn list_remote_tags() -> Result<Vec<String>> {
         let repo = open_repo()?;
-        let mut remote = repo
-            .find_remote("origin")
-            .wrap_err("Failed to find remote 'origin'")?;
+        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         // 获取认证回调
         let callbacks = GitAuth::get_remote_callbacks();
@@ -89,9 +86,7 @@ impl GitTag {
             .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
             .wrap_err("Failed to connect to remote")?;
 
-        let remote_refs = remote
-            .list()
-            .wrap_err("Failed to list remote references")?;
+        let remote_refs = remote.list().wrap_err("Failed to list remote references")?;
 
         let mut tags = Vec::new();
         for remote_ref in remote_refs {
@@ -156,10 +151,8 @@ impl GitTag {
                     remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None).ok()?;
                     let remote_refs = remote.list().ok()?;
                     // 收集名称和 OID 到 Vec 以避免生命周期问题
-                    let refs_info: Vec<(String, git2::Oid)> = remote_refs
-                        .iter()
-                        .map(|r| (r.name().to_string(), r.oid()))
-                        .collect();
+                    let refs_info: Vec<(String, git2::Oid)> =
+                        remote_refs.iter().map(|r| (r.name().to_string(), r.oid())).collect();
                     refs_info
                         .iter()
                         .find(|(name, _)| name == &format!("refs/tags/{}", tag_name))
@@ -247,30 +240,24 @@ impl GitTag {
         // 获取 commit hash
         let commit_hash = if exists_local {
             let tag_ref = format!("refs/tags/{}", tag_name);
-            let reference = repo
-                .find_reference(&tag_ref)
-                .wrap_err("Failed to find tag reference")?;
+            let reference =
+                repo.find_reference(&tag_ref).wrap_err("Failed to find tag reference")?;
             reference
                 .target()
                 .ok_or_else(|| color_eyre::eyre::eyre!("Tag reference has no target"))?
                 .to_string()
         } else {
             // 从远程获取（使用 git2）
-            let mut remote = repo
-                .find_remote("origin")
-                .wrap_err("Failed to find remote 'origin'")?;
+            let mut remote =
+                repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
             let callbacks = GitAuth::get_remote_callbacks();
             remote
                 .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
                 .wrap_err("Failed to connect to remote")?;
-            let remote_refs = remote
-                .list()
-                .wrap_err("Failed to list remote references")?;
+            let remote_refs = remote.list().wrap_err("Failed to list remote references")?;
             // 收集名称和 OID 到 Vec 以避免生命周期问题
-            let refs_info: Vec<(String, git2::Oid)> = remote_refs
-                .iter()
-                .map(|r| (r.name().to_string(), r.oid()))
-                .collect();
+            let refs_info: Vec<(String, git2::Oid)> =
+                remote_refs.iter().map(|r| (r.name().to_string(), r.oid())).collect();
             refs_info
                 .iter()
                 .find(|(name, _)| name == &format!("refs/tags/{}", tag_name))
@@ -326,9 +313,7 @@ impl GitTag {
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete_remote(tag_name: &str) -> Result<()> {
         let repo = open_repo()?;
-        let mut remote = repo
-            .find_remote("origin")
-            .wrap_err("Failed to find remote 'origin'")?;
+        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         // 获取认证回调
         let callbacks = GitAuth::get_remote_callbacks();
@@ -398,15 +383,12 @@ impl GitTag {
 
         // 获取目标 commit
         let commit = if let Some(sha) = commit_sha {
-            let oid = Oid::from_str(sha)
-                .wrap_err_with(|| format!("Invalid commit SHA: {}", sha))?;
-            repo.find_commit(oid)
-                .wrap_err_with(|| format!("Commit '{}' not found", sha))?
+            let oid =
+                Oid::from_str(sha).wrap_err_with(|| format!("Invalid commit SHA: {}", sha))?;
+            repo.find_commit(oid).wrap_err_with(|| format!("Commit '{}' not found", sha))?
         } else {
             // 使用当前 HEAD
-            repo.head()?
-                .peel_to_commit()
-                .wrap_err("Failed to get HEAD commit")?
+            repo.head()?.peel_to_commit().wrap_err("Failed to get HEAD commit")?
         };
 
         // 创建 lightweight tag（指向 commit）
@@ -435,9 +417,7 @@ impl GitTag {
     /// 如果推送失败，返回相应的错误信息。
     pub fn push(tag_name: &str) -> Result<()> {
         let repo = open_repo()?;
-        let mut remote = repo
-            .find_remote("origin")
-            .wrap_err("Failed to find remote 'origin'")?;
+        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         // 获取认证回调
         let callbacks = GitAuth::get_remote_callbacks();
@@ -477,12 +457,7 @@ impl GitTag {
             let target_sha = commit_sha.map(|s| s.to_string()).unwrap_or_else(|| {
                 open_repo()
                     .ok()
-                    .and_then(|r| {
-                        r.head()
-                            .ok()
-                            .and_then(|h| h.target())
-                            .map(|oid| oid.to_string())
-                    })
+                    .and_then(|r| r.head().ok().and_then(|h| h.target()).map(|oid| oid.to_string()))
                     .unwrap_or_default()
             });
 

@@ -60,4 +60,3 @@ impl PushCommand {
         Ok(())
     }
 }
-

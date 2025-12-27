@@ -164,9 +164,8 @@ impl GitAuth {
         AUTH_INFO.get_or_init(|| {
             // 初始化时读取一次认证信息
             let ssh_key_path = Self::find_ssh_key();
-            let https_token = std::env::var("GITHUB_TOKEN")
-                .or_else(|_| std::env::var("GIT_TOKEN"))
-                .ok();
+            let https_token =
+                std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GIT_TOKEN")).ok();
             let https_username = std::env::var("GIT_USERNAME").ok();
 
             CachedAuthInfo {
@@ -270,9 +269,7 @@ impl GitAuth {
     ///
     /// 返回 `~/.ssh/config` 的完整路径。
     fn get_ssh_config_path() -> Option<PathBuf> {
-        let home_dir = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .ok()?;
+        let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
 
         let config_path = PathBuf::from(&home_dir).join(".ssh").join("config");
         if config_path.exists() {
@@ -343,12 +340,11 @@ impl GitAuth {
                         let identity_file = parts[1];
                         // 展开 ~ 为 home 目录
                         let expanded_path = if identity_file.starts_with('~') {
-                            if let Some(home_dir) = std::env::var("HOME")
-                                .or_else(|_| std::env::var("USERPROFILE"))
-                                .ok()
+                            if let Some(home_dir) =
+                                std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()
                             {
-                                PathBuf::from(&home_dir)
-                                    .join(&identity_file[2..]) // 跳过 "~/"
+                                PathBuf::from(&home_dir).join(&identity_file[2..])
+                            // 跳过 "~/"
                             } else {
                                 PathBuf::from(identity_file)
                             }
@@ -419,9 +415,7 @@ impl GitAuth {
     ///
     /// 返回找到的第一个存在的密钥文件路径，如果都不存在则返回 `None`。
     fn find_ssh_key_default() -> Option<PathBuf> {
-        let home_dir = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .ok()?;
+        let home_dir = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).ok()?;
 
         let key_paths = vec![
             PathBuf::from(&home_dir).join(".ssh").join("id_ed25519"),
@@ -489,4 +483,3 @@ mod tests {
         assert!(true); // 占位符
     }
 }
-
