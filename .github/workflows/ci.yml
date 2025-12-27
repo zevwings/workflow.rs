@@ -51,40 +51,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        run: bash scripts/dev/install-dependencies.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -148,40 +115,8 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/install-dependencies.sh
 
       - name: ✨ Check code formatting
         run: cargo fmt --check
@@ -259,40 +194,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        run: bash scripts/dev/install-dependencies.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -523,40 +425,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        run: bash scripts/dev/install-dependencies.sh
 
       - name: 📝 Run doctests
         timeout-minutes: 12
@@ -812,40 +681,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        run: bash scripts/dev/install-dependencies.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -994,40 +830,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        run: bash scripts/dev/install-dependencies.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4
@@ -1127,40 +930,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        run: bash scripts/dev/install-dependencies.sh
 
       - name: 💾 Cache dev binary build artifacts
         uses: actions/cache@v4

@@ -323,8 +323,9 @@ fn test_pull_request_info_structure_with_valid_fields_creates_info() {
         title: title.to_string(),
         body: body.clone(),
         state: state.to_string(),
-        merged: false,
+        merged: Some(false),
         merged_at: None,
+        mergeable: None,
         html_url: "https://github.com/owner/repo/pull/123".to_string(),
         head: PullRequestBranch {
             ref_name: "feature/test".to_string(),
@@ -340,7 +341,7 @@ fn test_pull_request_info_structure_with_valid_fields_creates_info() {
     assert_eq!(pr_info.title, title);
     assert_eq!(pr_info.body, body);
     assert_eq!(pr_info.state, state);
-    assert!(!pr_info.merged);
+    assert_eq!(pr_info.merged, Some(false));
     assert_eq!(pr_info.head.ref_name, "feature/test");
     assert_eq!(pr_info.base.ref_name, "main");
 }
@@ -412,7 +413,7 @@ fn test_pull_request_info_merged_state_with_merged_pr_return_ok() -> Result<()> 
     let pr_info: PullRequestInfo = serde_json::from_str(json)?;
 
     // Assert: 验证合并状态正确
-    assert!(pr_info.merged, "Should be marked as merged");
+    assert_eq!(pr_info.merged, Some(true), "Should be marked as merged");
     assert_eq!(pr_info.state, "closed");
     assert!(pr_info.merged_at.is_some());
     Ok(())
@@ -697,8 +698,9 @@ fn test_response_type_safety() {
         title: "Test".to_string(),
         body: None,
         state: "open".to_string(),
-        merged: false,
+        merged: Some(false),
         merged_at: None,
+        mergeable: None,
         html_url: "https://example.com".to_string(),
         head: PullRequestBranch {
             ref_name: "head".to_string(),
