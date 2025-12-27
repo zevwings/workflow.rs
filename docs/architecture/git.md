@@ -33,7 +33,6 @@ src/lib/git/
 ├── pre_commit.rs   # Pre-commit hooks 支持 (100+行)
 ├── cherry_pick.rs  # Cherry-pick 操作 (200+行)
 ├── helpers.rs      # Git 操作辅助函数 (43行)
-├── command.rs      # GitCommand 封装（供其他模块使用）
 ├── table.rs        # 表格格式化
 └── types.rs        # 类型定义 (15行)
 ```

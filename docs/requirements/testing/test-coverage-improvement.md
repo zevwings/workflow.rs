@@ -281,7 +281,6 @@
 - `git/pre_commit.rs` - Pre-commit hooks 测试
 - `git/config.rs` - Git 配置测试
 - `git/table.rs` - Git 表格输出测试
-- `git/command.rs` - Git 命令封装测试
 
 **难度**: ⭐⭐⭐ 高（需要 Git 仓库环境）
 **预计时间**: 5-7 天
@@ -670,7 +669,6 @@
 - [ ] `git/pre_commit.rs` - Pre-commit hooks 测试
 - [ ] `git/config.rs` - Git 配置测试
 - [ ] `git/table.rs` - Git 表格输出测试
-- [ ] `git/command.rs` - Git 命令封装测试
 
 **预计时间**: 1-2 周
 **预计提升**: +1-2%

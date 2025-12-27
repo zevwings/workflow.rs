@@ -25,7 +25,6 @@
 mod auth;
 mod branch;
 mod cherry_pick;
-mod command;
 mod commit;
 mod config;
 mod helpers;
@@ -40,8 +39,6 @@ mod types;
 pub use auth::GitAuth;
 pub use branch::{GitBranch, MergeStrategy};
 pub use cherry_pick::GitCherryPick;
-// 导出 GitCommand 供其他模块使用（如 branch::sync）
-pub use command::GitCommand as GitCommandPublic;
 pub use commit::{CommitInfo, GitCommit, WorktreeStatus};
 pub use config::GitConfig;
 pub use helpers::open_repo_at;

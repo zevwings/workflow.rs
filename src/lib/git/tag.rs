@@ -142,8 +142,6 @@ impl GitTag {
                     .unwrap_or_default()
             } else if exists_remote {
                 // 从远程获取 commit hash（使用 git2）
-                // 注意：这里使用 GitCommand 作为回退，因为远程连接可能失败
-                // 但这可能效率较低，如果性能是问题，可以考虑保留 GitCommand
                 (|| -> Option<String> {
                     let r = open_repo().ok()?;
                     let mut remote = r.find_remote("origin").ok()?;
@@ -206,7 +204,6 @@ impl GitTag {
         // 检查远程 tag
         // 注意：git2 无法直接检查远程 tag，需要先 fetch 或使用 ls-remote
         // 为了保持一致性，我们使用 list_remote_tags() 来检查
-        // 但这可能效率较低，如果性能是问题，可以考虑保留 GitCommand
         let exists_remote = Self::list_remote_tags()
             .ok()
             .map(|remote_tags| remote_tags.contains(&tag_name.to_string()))
