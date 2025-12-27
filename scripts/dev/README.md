@@ -2,6 +2,50 @@
 
 本目录包含用于开发和维护项目的辅助脚本。
 
+## 🆕 Python Dev 工具（推荐使用）
+
+**新的 Python 版本的 dev 工具已可用！** 无需编译，直接运行，速度更快。
+
+### 快速开始
+
+```bash
+# 查看所有可用命令
+python3 scripts/dev/dev.py --help
+
+# 示例：检查 CI 是否应该跳过
+python3 scripts/dev/dev.py ci check-skip --branch "test" --ci
+```
+
+### 📚 文档
+
+- **[快速开始指南](./QUICK_START.md)** - 5 分钟上手
+- **[完整使用文档](./PYTHON_DEV_TOOL.md)** - 详细文档
+- **[CI 集成指南](./CI_USAGE.md)** - GitHub Actions 集成
+- **[迁移状态](./MIGRATION_STATUS.md)** - 迁移进度
+
+### ✨ 特性
+
+- ✅ **零依赖**: 完全使用 Python 标准库
+- ✅ **快速启动**: 无需编译，直接运行
+- ✅ **Python 3.13+**: 使用最新 Python 特性
+- ✅ **双重调用**: 支持统一入口和直接运行
+
+### 🎯 已实现的命令
+
+- ✅ `ci check-skip` - CI 跳过检查
+- ✅ `ci verify` - CI 检查验证
+- ✅ `checksum calculate` - 文件哈希计算
+- ✅ `version generate` - 版本号生成
+- ✅ `tag create` - 创建 Git 标签
+- ✅ `tag cleanup` - 清理 Alpha 标签
+- ✅ `pr create` - 创建 PR
+- ✅ `pr merge` - 合并 PR
+- ✅ `homebrew update` - 更新 Homebrew Formula
+
+---
+
+## 📋 脚本分类（传统脚本）
+
 ## 📋 脚本分类
 
 ### 🧪 测试相关

@@ -195,6 +195,11 @@ impl GitBranch {
     ///
     /// 如果分支操作失败，返回相应的错误信息。
     pub fn checkout_branch(branch_name: &str) -> Result<()> {
+        // 验证分支名不为空
+        if branch_name.is_empty() {
+            return Err(color_eyre::eyre::eyre!("Branch name cannot be empty"));
+        }
+
         // 检查是否是当前分支
         let current_branch = Self::current_branch()?;
         if current_branch == branch_name {

@@ -10,10 +10,14 @@ use crate::common::cli_helpers::{
     contains_error, is_json_format, CliCommandBuilder, TestDataGenerator,
 };
 use crate::common::environments::CliTestEnv;
-use crate::common::fixtures::{cli_env, cli_env_with_git};
+use crate::common::fixtures::cli_env;
+#[cfg(not(target_os = "windows"))]
+use crate::common::fixtures::cli_env_with_git;
+#[cfg(not(target_os = "windows"))]
 use crate::common::mock::server::MockServer;
-use rstest::rstest;
+#[cfg(not(target_os = "windows"))]
 use std::collections::HashMap;
+use rstest::rstest;
 
 // ==================== Basic Command Tests ====================
 

@@ -181,25 +181,23 @@ impl CliTestEnv {
         }
 
         // 在仓库的配置文件中设置Git用户配置
-        // 使用 --file 选项直接写入到仓库的 .git/config 文件，避免与 GIT_CONFIG 环境变量冲突
-        // 这样即使 GIT_CONFIG 环境变量被设置（可能来自其他测试或CI环境），我们也能确保仓库级别的配置存在
-        let git_config_path = work_dir.join(".git").join("config");
-        let git_config_path_str = git_config_path
-            .to_str()
-            .ok_or_else(|| color_eyre::eyre::eyre!("Git config path should be valid UTF-8"))?;
+        // 临时取消 GIT_CONFIG 环境变量（如果存在），然后使用 --local 选项设置配置
+        // 这样可以避免 "only one config file at a time" 错误
+        let original_git_config = std::env::var("GIT_CONFIG").ok();
+
+        // 临时取消 GIT_CONFIG 环境变量
+        std::env::remove_var("GIT_CONFIG");
 
         let output = std::process::Command::new("git")
-            .args([
-                "config",
-                "--file",
-                git_config_path_str,
-                "user.name",
-                "Test User",
-            ])
+            .args(["config", "--local", "user.name", "Test User"])
             .current_dir(&work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user name: {}", e))?;
         if !output.status.success() {
+            // 恢复 GIT_CONFIG 环境变量
+            if let Some(ref val) = original_git_config {
+                std::env::set_var("GIT_CONFIG", val);
+            }
             let error = String::from_utf8_lossy(&output.stderr);
             return Err(color_eyre::eyre::eyre!(
                 "Failed to set git user name: {}",
@@ -208,22 +206,25 @@ impl CliTestEnv {
         }
 
         let output = std::process::Command::new("git")
-            .args([
-                "config",
-                "--file",
-                git_config_path_str,
-                "user.email",
-                "test@example.com",
-            ])
+            .args(["config", "--local", "user.email", "test@example.com"])
             .current_dir(&work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user email: {}", e))?;
         if !output.status.success() {
+            // 恢复 GIT_CONFIG 环境变量
+            if let Some(ref val) = original_git_config {
+                std::env::set_var("GIT_CONFIG", val);
+            }
             let error = String::from_utf8_lossy(&output.stderr);
             return Err(color_eyre::eyre::eyre!(
                 "Failed to set git user email: {}",
                 error
             ));
+        }
+
+        // 恢复 GIT_CONFIG 环境变量
+        if let Some(ref val) = original_git_config {
+            std::env::set_var("GIT_CONFIG", val);
         }
 
         // 禁用网络连接，避免测试超时

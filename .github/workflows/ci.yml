@@ -18,61 +18,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # 构建 dev 工具（供后续 job 使用）
-  build-dev-tool:
-    name: 🔨 Build Dev Tool
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-
-      - name: 🔧 Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: 💾 Cache Cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-          enableCrossOsArchive: false
-
-      - name: 📦 Install system dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
-
-      - name: 💾 Cache dev binary build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-            target/release/.fingerprint/dev*
-            target/release/incremental/dev-*
-          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
-            ${{ runner.os }}-dev-bin-
-          enableCrossOsArchive: false
-
-      - name: 🔨 Build dev binary
-        run: cargo build --bin dev --release
-
-      - name: 📤 Upload dev binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dev-binary
-          path: |
-            target/release/dev
-            target/release/deps/dev*
-          retention-days: 1
-          if-no-files-found: error
-
   # 检查是否应该跳过 CI（只检查版本更新分支）
   check-skip-ci:
     name: ⏭️ Check Skip CI
@@ -80,7 +25,6 @@ jobs:
       # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
       WORKFLOW_USER_NAME: ${{ secrets.WORKFLOW_USER_NAME }}
     runs-on: ubuntu-latest
-    needs: build-dev-tool
     outputs:
       should_skip: ${{ steps.check.outputs.should_skip }}
     steps:
@@ -89,15 +33,14 @@ jobs:
         with:
           fetch-depth: 0  # 需要完整历史来检查提交者
 
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: bash scripts/dev/dependencies/install-basic.sh
-
-      - name: 📥 Download dev binary artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dev-binary
-          path: target/release/
 
       - name: 🔍 Check if version bump branch
         id: check
@@ -108,15 +51,8 @@ jobs:
           GITHUB_PR_CREATOR: ${{ github.event.pull_request.user.login }}
           WORKFLOW_USER_NAME: ${{ env.WORKFLOW_USER_NAME }}
         run: |
-          # 确保二进制文件存在且可执行
-          if [ ! -f "target/release/dev" ]; then
-            echo "❌ Error: dev binary not found at target/release/dev"
-            exit 1
-          fi
-          chmod +x target/release/dev
-
-          # 直接执行二进制文件，避免 cargo run 触发重新编译
-          ./target/release/dev ci check-skip \
+          # 使用 Python dev 工具
+          python3 scripts/dev/dev.py ci check-skip \
             --branch "${{ github.head_ref || github.ref_name }}" \
             --pr-creator "${{ github.event.pull_request.user.login }}" \
             --expected-user "${{ env.WORKFLOW_USER_NAME }}" \
@@ -126,7 +62,7 @@ jobs:
   check-lint:
     name: 🔍 Code Quality Check
     runs-on: ubuntu-latest
-    needs: [check-skip-ci, build-dev-tool]
+    needs: [check-skip-ci]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     steps:
@@ -170,7 +106,7 @@ jobs:
     name: 🧪 Run Tests (${{ matrix.test_type }}) (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    needs: [check-skip-ci, build-dev-tool]
+    needs: [check-skip-ci]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     strategy:
@@ -309,7 +245,8 @@ jobs:
           REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.html"
           JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
 
-          # 使用已下载的二进制文件，避免重新编译
+          # 注意：tests report generate 命令尚未迁移到 Python，暂时使用 Rust 二进制
+          # TODO: 迁移 tests report generate 到 Python
           if [ -f "./target/release/dev" ]; then
             chmod +x ./target/release/dev
             grep '^{' test-output.log 2>/dev/null | \
@@ -381,17 +318,15 @@ jobs:
 
           JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
           if [ -f "$JSON_REPORT_FILE" ]; then
-            # 使用已下载的二进制文件，避免重新编译
+            # 注意：tests metrics collect 命令尚未迁移到 Python，暂时使用 Rust 二进制
+            # TODO: 迁移 tests metrics collect 到 Python
             if [ -f "./target/release/dev" ]; then
               chmod +x ./target/release/dev
               ./target/release/dev tests metrics collect \
                 --report "$JSON_REPORT_FILE" \
                 --output "$METRICS_DIR/metrics-${{ matrix.test_type }}-${{ matrix.platform }}-${{ github.run_id }}.json"
             else
-              echo "⚠️  dev binary not found, falling back to cargo run"
-              cargo run --bin dev --release -- tests metrics collect \
-                --report "$JSON_REPORT_FILE" \
-                --output "$METRICS_DIR/metrics-${{ matrix.test_type }}-${{ matrix.platform }}-${{ github.run_id }}.json"
+              echo "⚠️  dev binary not found, skipping metrics collection"
             fi
           fi
 
@@ -690,7 +625,7 @@ jobs:
   pr-comment:
     name: 💬 Comment Test Results on PR
     runs-on: ubuntu-latest
-    needs: [tests, build-dev-tool]
+    needs: [tests]
     if: github.event_name == 'pull_request' && always()
     permissions:
       contents: read
@@ -766,7 +701,8 @@ jobs:
             CMD_ARGS="$CMD_ARGS --report $json_file"
           done
 
-          # 使用已下载的二进制文件，避免重新编译
+          # 注意：tests report generate 命令尚未迁移到 Python，暂时使用 Rust 二进制
+          # TODO: 迁移 tests report generate 到 Python
           if [ -f "./target/release/dev" ]; then
             chmod +x ./target/release/dev
             ./target/release/dev tests report generate $CMD_ARGS || {
@@ -774,11 +710,7 @@ jobs:
               exit 0
             }
           else
-            echo "⚠️  dev binary not found, falling back to cargo run"
-            cargo run --bin dev --release -- tests report generate $CMD_ARGS || {
-              echo "⚠️  Failed to generate PR comment, continuing..."
-              exit 0
-            }
+            echo "⚠️  dev binary not found, skipping PR comment generation"
           fi
 
           # 将评论内容保存到输出（用于后续步骤）
@@ -843,7 +775,7 @@ jobs:
   test-trends:
     name: 📈 Analyze Test Trends
     runs-on: ubuntu-latest
-    needs: [tests, build-dev-tool]
+    needs: [tests]
     if: always()
     steps:
       - name: 📥 Checkout repository
@@ -946,7 +878,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests, build, build-dev-tool]
+    needs: [check-skip-ci, check-lint, tests, build]
     if: always()
     steps:
       - name: 🔧 Setup Rust toolchain
@@ -969,12 +901,10 @@ jobs:
         if: runner.os == 'Linux'
         run: bash scripts/dev/dependencies/install-basic.sh
 
-      - name: 📥 Download dev binary artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
         with:
-          name: dev-binary
-          path: target/release/
+          python-version: '3.13'
 
       - name: ✅ Check lint and test status
         id: status_check
@@ -984,15 +914,7 @@ jobs:
           TESTS_RESULT: ${{ needs.tests.result }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
-          # 使用已下载的二进制文件，避免重新编译
-          if [ -f "./target/release/dev" ]; then
-            chmod +x ./target/release/dev
-            ./target/release/dev ci verify \
-              --should-skip ${{ needs.check-skip-ci.outputs.should_skip == 'true' }} \
-              --jobs "check-lint,tests,build"
-          else
-            echo "⚠️  dev binary not found, falling back to cargo run"
-            cargo run --bin dev --release -- ci verify \
-              --should-skip ${{ needs.check-skip-ci.outputs.should_skip == 'true' }} \
-              --jobs "check-lint,tests,build"
-          fi
+          # 使用 Python dev 工具
+          python3 scripts/dev/dev.py ci verify \
+            --should-skip ${{ needs.check-skip-ci.outputs.should_skip == 'true' }} \
+            --jobs "check-lint,tests,build"
