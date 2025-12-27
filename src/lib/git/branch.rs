@@ -596,6 +596,7 @@ impl GitBranch {
     }
 
     /// 解析远程分支列表
+    #[allow(dead_code)]
     fn parse_remote_branches(output: &str, branch_set: &mut HashSet<String>) {
         for line in output.lines() {
             let line = line.trim();
@@ -1469,6 +1470,7 @@ impl GitBranch {
     /// 验证合并是否已经完成
     ///
     /// 通过检查 MERGE_HEAD 是否存在或 HEAD 是否改变来判断合并是否完成。
+    #[allow(dead_code)]
     fn verify_merge_completed(head_before: Option<String>) -> bool {
         // 检查是否有 MERGE_HEAD（表示合并正在进行或刚完成）
         let has_merge_head =
