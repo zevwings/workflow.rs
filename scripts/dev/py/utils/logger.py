@@ -23,35 +23,58 @@ class Colors:
 
 _use_color = _supports_color()
 
+def _safe_print(text: str, file=sys.stdout):
+    """安全打印，处理编码错误"""
+    try:
+        print(text, file=file, flush=True)
+    except UnicodeEncodeError:
+        # 如果编码失败，尝试重新配置编码
+        try:
+            if hasattr(file, 'reconfigure'):
+                file.reconfigure(encoding='utf-8', errors='replace')
+                print(text, file=file, flush=True)
+            else:
+                # 回退：使用 ASCII 安全版本
+                safe_text = text.encode('ascii', errors='replace').decode('ascii')
+                print(safe_text, file=file, flush=True)
+        except (UnicodeEncodeError, AttributeError):
+            # 最后的回退：使用 ASCII 替代字符
+            safe_text = text.encode('ascii', errors='replace').decode('ascii')
+            print(safe_text, file=file, flush=True)
+
 def log_success(message: str):
     """成功消息（绿色 ✓）"""
+    symbol = '✓'
     if _use_color:
-        print(f"{Colors.GREEN}✓ {message}{Colors.RESET}")
+        _safe_print(f"{Colors.GREEN}{symbol} {message}{Colors.RESET}")
     else:
-        print(f"✓ {message}")
+        _safe_print(f"{symbol} {message}")
 
 def log_error(message: str):
     """错误消息（红色 ✗）"""
+    symbol = '✗'
     if _use_color:
-        print(f"{Colors.RED}✗ {message}{Colors.RESET}", file=sys.stderr)
+        _safe_print(f"{Colors.RED}{symbol} {message}{Colors.RESET}", file=sys.stderr)
     else:
-        print(f"✗ {message}", file=sys.stderr)
+        _safe_print(f"{symbol} {message}", file=sys.stderr)
 
 def log_warning(message: str):
     """警告消息（黄色 ⚠）"""
+    symbol = '⚠'
     if _use_color:
-        print(f"{Colors.YELLOW}⚠ {message}{Colors.RESET}")
+        _safe_print(f"{Colors.YELLOW}{symbol} {message}{Colors.RESET}")
     else:
-        print(f"⚠ {message}")
+        _safe_print(f"{symbol} {message}")
 
 def log_info(message: str):
     """信息消息（蓝色 ℹ）"""
+    symbol = 'ℹ'
     if _use_color:
-        print(f"{Colors.BLUE}ℹ {message}{Colors.RESET}")
+        _safe_print(f"{Colors.BLUE}{symbol} {message}{Colors.RESET}")
     else:
-        print(f"ℹ {message}")
+        _safe_print(f"{symbol} {message}")
 
 def log_break(char: str = '-', length: int = 80):
     """分隔线"""
-    print(char * length)
+    _safe_print(char * length)
 

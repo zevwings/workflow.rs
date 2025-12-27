@@ -29,16 +29,35 @@ use color_eyre::Result;
 /// - 输出包含PR相关信息
 #[test]
 fn test_pr_creation_workflow() -> Result<()> {
+    // 设置 Mock Server 来快速失败 LLM 调用，避免 Windows 上的超时问题
+    let mut mock_server = MockServer::new();
+
+    // Mock LLM API 端点（返回 404，快速失败，不等待超时）
+    // 使用 proxy provider 配置 Mock Server URL，这样 LLM 调用会立即失败
+    mock_server
+        .server
+        .as_mut()
+        .mock("POST", "/chat/completions")
+        .with_status(404)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"error": "Not found"}"#)
+        .create();
+
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
 
-    // 禁用 LLM 调用以避免网络请求超时（在用户级配置中设置无效 provider）
-    env.create_home_workflow_config(
+    // 配置 LLM 使用 proxy provider，指向 Mock Server
+    // 这样 LLM 调用会立即失败（404），而不是等待 60 秒超时
+    env.create_home_workflow_config(&format!(
         r#"
 [llm]
-provider = "invalid_provider"
+provider = "proxy"
+proxy_url = "{}"
+api_key = "test_key"
+model = "test_model"
 "#,
-    )?;
+        mock_server.base_url()
+    ))?;
 
     // 设置 auto_accept_change_type 以避免变更类型选择的对话框
     use workflow::repo::config::private::PrivateRepoConfig;
@@ -63,7 +82,7 @@ auto_accept_change_type = true
 
     // 4. 创建PR（dry-run模式，避免实际创建）
     // 通过命令行参数提供所有必需值，避免触发用户交互对话框
-    // LLM 调用会在 build_url() 阶段快速失败，不会等待网络超时
+    // LLM 调用会快速失败（404），然后回退到使用 title 的 sanitized 版本作为分支名
     let binding = CliCommandBuilder::new()
         .args([
             "pr",

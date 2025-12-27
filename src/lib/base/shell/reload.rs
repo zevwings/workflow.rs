@@ -39,7 +39,21 @@ impl Reload {
     ///
     /// 如果重新加载失败，返回相应的错误信息。
     pub fn shell(shell: &Shell) -> Result<ReloadResult> {
-        let config_file = Paths::config_file(shell)?;
+        // Handle unsupported shells gracefully (e.g., non-PowerShell shells on Windows)
+        let config_file = match Paths::config_file(shell) {
+            Ok(path) => path,
+            Err(e) => {
+                trace_warn!("Unsupported shell type or config file not found: {}", e);
+                return Ok(ReloadResult {
+                    reloaded: false,
+                    messages: vec![format!(
+                        "Shell type {:?} is not supported on this platform",
+                        shell
+                    )],
+                    reload_hint: format!("Please manually reload your shell configuration"),
+                });
+            }
+        };
         let config_file_str = config_file.display().to_string();
 
         // PowerShell 使用 `.` 而不是 `source`

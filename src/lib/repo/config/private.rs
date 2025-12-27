@@ -245,7 +245,7 @@ impl PrivateRepoConfig {
 
         // Open file and acquire exclusive lock to prevent concurrent writes
         // This ensures that multiple tests or processes don't overwrite each other's changes
-        let file = OpenOptions::new()
+        let mut file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
@@ -258,10 +258,19 @@ impl PrivateRepoConfig {
         file.lock_exclusive()
             .wrap_err_with(|| format!("Failed to lock config file: {:?}", config_path))?;
 
-        // Read existing configuration (if exists)
-        // Note: We read after acquiring the lock to ensure we have the latest data
+        // Read existing configuration (if exists) using the locked file handle
+        // Note: On Windows, we must read from the locked file handle, not open a new one
+        // We read after acquiring the lock to ensure we have the latest data
         let mut existing_value: Value = if config_path.exists() {
-            FileReader::new(&config_path).toml()?
+            use std::io::{Read, Seek};
+            // Seek to beginning of file before reading
+            file.seek(std::io::SeekFrom::Start(0))
+                .wrap_err_with(|| format!("Failed to seek config file: {:?}", config_path))?;
+            let mut content = String::new();
+            file.read_to_string(&mut content)
+                .wrap_err_with(|| format!("Failed to read config file: {:?}", config_path))?;
+            toml::from_str(&content)
+                .wrap_err_with(|| format!("Failed to parse TOML config: {:?}", config_path))?
         } else {
             Value::Table(Map::new())
         };
@@ -317,14 +326,13 @@ impl PrivateRepoConfig {
             }
         }
 
-        // Write to file
-        // Lock is automatically released when file is dropped
-        FileWriter::new(&config_path).write_toml(&existing_value)?;
-
-        // Explicitly unlock (though it will be unlocked when file is dropped)
-        // This makes the lock release timing explicit
+        // Unlock before writing (FileWriter will open the file again)
+        // On Windows, we must unlock before another process can write
         file.unlock()
             .wrap_err_with(|| format!("Failed to unlock config file: {:?}", config_path))?;
+
+        // Write to file (FileWriter will handle its own locking if needed)
+        FileWriter::new(&config_path).write_toml(&existing_value)?;
 
         Ok(())
     }

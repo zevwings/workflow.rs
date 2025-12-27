@@ -332,6 +332,11 @@ mod tests {
             assert!(std::env::var("GIT_CONFIG").is_ok());
         }
 
+        // On Windows, environment variable cleanup might have a slight delay
+        // Give it a moment to ensure the Drop implementation has completed
+        #[cfg(target_os = "windows")]
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
         // 验证GIT_CONFIG已恢复
         match original_git_config {
             Some(ref val) => {
@@ -352,7 +357,30 @@ mod tests {
                     assert_eq!(current, *val);
                 }
             }
-            None => assert!(std::env::var("GIT_CONFIG").is_err()),
+            None => {
+                // On Windows, check with retry as environment variable cleanup might be delayed
+                #[cfg(target_os = "windows")]
+                {
+                    // Retry a few times to account for Windows environment variable cleanup delay
+                    let mut retries = 0;
+                    let max_retries = 5;
+                    while retries < max_retries {
+                        if std::env::var("GIT_CONFIG").is_err() {
+                            break;
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(10));
+                        retries += 1;
+                    }
+                    assert!(
+                        std::env::var("GIT_CONFIG").is_err(),
+                        "GIT_CONFIG should be unset after guard drop"
+                    );
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    assert!(std::env::var("GIT_CONFIG").is_err());
+                }
+            }
         }
 
         Ok(())
