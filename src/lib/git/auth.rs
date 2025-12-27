@@ -4,7 +4,7 @@
 //! 使用智能检测和缓存机制，自动选择最合适的认证方式。
 
 use git2::{Cred, CredentialType, RemoteCallbacks};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 /// 缓存的认证信息
@@ -35,7 +35,7 @@ impl GitAuth {
     ///
     /// **SSH 认证优先级：**
     /// 1. SSH Agent（如果可用）
-    /// 2. 缓存的 SSH 密钥文件
+    /// 2. 缓存的 SSH 密钥文件（通过 SSH config 或 GitHub 账号匹配找到）
     ///
     /// **HTTPS 认证优先级：**
     /// 1. 环境变量 `GITHUB_TOKEN` 或 `GIT_TOKEN`
@@ -93,27 +93,115 @@ impl GitAuth {
                     match Cred::ssh_key(username, None, key_path, None) {
                         Ok(cred) => return Ok(cred),
                         Err(e) => {
+                            // 从传入的 URL 提取 host
+                            let host = Self::extract_host_from_url(url)
+                                .unwrap_or_else(|| "github.com".to_string());
+
                             return Err(git2::Error::from_str(&format!(
                                 "SSH authentication failed: {}\n\
                                 \n\
+                                Remote URL: {}\n\
+                                Host: {}\n\
+                                \n\
+                                Configuration Options:\n\
+                                \n\
+                                Option 1: Configure SSH config (Recommended)\n\
+                                Add to ~/.ssh/config:\n\
+                                \n\
+                                  Host {}\n\
+                                    HostName {}\n\
+                                    User git\n\
+                                    IdentityFile {:?}\n\
+                                    IdentitiesOnly yes\n\
+                                \n\
+                                Then update remote URL:\n\
+                                  git remote set-url origin git@{}:owner/repo.git\n\
+                                \n\
+                                Option 2: Use SSH agent\n\
+                                  1. Add SSH key to agent:\n\
+                                     ssh-add {:?}\n\
+                                  2. Verify key is added:\n\
+                                     ssh-add -l\n\
+                                  3. Test connection:\n\
+                                     ssh -T git@{}\n\
+                                \n\
+                                Option 3: Use HTTPS with token\n\
+                                  1. Switch to HTTPS URL:\n\
+                                     git remote set-url origin https://github.com/owner/repo.git\n\
+                                  2. Set GitHub token:\n\
+                                     export GITHUB_TOKEN=your_token_here\n\
+                                \n\
                                 Troubleshooting:\n\
-                                1. Add SSH key to agent: ssh-add {:?}\n\
-                                2. Check key permissions: chmod 600 {:?}\n\
-                                3. Test SSH connection: ssh -T git@github.com\n\
-                                4. Or use HTTPS URL with GITHUB_TOKEN environment variable",
-                                e, key_path, key_path
+                                  - Check key permissions: chmod 600 {:?}\n\
+                                  - Verify SSH config: cat ~/.ssh/config\n\
+                                  - Test SSH connection: ssh -T git@{}\n\
+                                  - Check Git config: git config user.email",
+                                e,
+                                url,
+                                host,
+                                host,
+                                host,
+                                key_path,
+                                host,
+                                key_path,
+                                host,
+                                key_path,
+                                host
                             )));
                         }
                     }
                 }
 
                 // 所有 SSH 认证方式都失败
-                return Err(git2::Error::from_str(
-                    "No SSH key found. Please ensure:\n\
-                    1. SSH agent is running and has keys added: ssh-add ~/.ssh/id_ed25519\n\
-                    2. Or SSH key file exists at ~/.ssh/id_ed25519, ~/.ssh/id_rsa, or ~/.ssh/id_ecdsa\n\
-                    3. Or switch to HTTPS URL and set GITHUB_TOKEN environment variable"
-                ));
+                // 从传入的 URL 提取 host
+                let host = Self::extract_host_from_url(url)
+                    .unwrap_or_else(|| "github.com".to_string());
+
+                return Err(git2::Error::from_str(&format!(
+                    "No SSH key found for remote: {}\n\
+                    \n\
+                    Configuration Options:\n\
+                    \n\
+                    Option 1: Configure SSH config (Recommended)\n\
+                    Add to ~/.ssh/config:\n\
+                    \n\
+                      Host {}\n\
+                        HostName {}\n\
+                        User git\n\
+                        IdentityFile ~/.ssh/id_ed25519\n\
+                        IdentitiesOnly yes\n\
+                    \n\
+                    Then update remote URL:\n\
+                      git remote set-url origin git@{}:owner/repo.git\n\
+                    \n\
+                    Option 2: Use SSH agent\n\
+                      1. Generate SSH key (if not exists):\n\
+                         ssh-keygen -t ed25519 -C \"your_email@example.com\"\n\
+                      2. Add SSH key to agent:\n\
+                         ssh-add ~/.ssh/id_ed25519\n\
+                      3. Verify key is added:\n\
+                         ssh-add -l\n\
+                      4. Test connection:\n\
+                         ssh -T git@{}\n\
+                    \n\
+                    Option 3: Use HTTPS with token\n\
+                      1. Switch to HTTPS URL:\n\
+                         git remote set-url origin https://github.com/owner/repo.git\n\
+                      2. Set GitHub token:\n\
+                         export GITHUB_TOKEN=your_token_here\n\
+                    \n\
+                    Troubleshooting:\n\
+                      - Check if SSH key exists: ls -la ~/.ssh/id_*\n\
+                      - Verify SSH config: cat ~/.ssh/config\n\
+                      - Test SSH connection: ssh -T git@{}\n\
+                      - Check Git config: git config user.email",
+                    url,
+                    host,
+                    host,
+                    host,
+                    host,
+                    host
+                )));
             }
 
             // 3. HTTPS 认证
@@ -181,8 +269,10 @@ impl GitAuth {
     ///
     /// 按优先级顺序查找 SSH 密钥：
     /// 1. SSH config 匹配（如果远程 URL 匹配 SSH config 中的 Host）
-    /// 2. SSH agent 中的密钥（在认证回调中处理）
-    /// 3. 默认密钥顺序：`~/.ssh/id_ed25519`, `~/.ssh/id_rsa`, `~/.ssh/id_ecdsa`
+    /// 2. GitHub 账号匹配（通过 Git 配置的 user.email 匹配 GitHub 账号，然后查找对应的 SSH config Host）
+    /// 3. SSH agent 中的密钥（在认证回调中处理）
+    ///
+    /// 如果以上方式都失败，将返回 `None`，并在认证回调中提供详细的配置指导。
     ///
     /// # 返回
     ///
@@ -195,10 +285,15 @@ impl GitAuth {
             }
         }
 
-        // 优先级 2: SSH agent（在认证回调中处理，这里跳过）
+        // 优先级 2: 通过 Git 配置 + GitHub API 匹配
+        if let Some(key_path) = Self::get_ssh_key_from_github_account() {
+            return Some(key_path);
+        }
 
-        // 优先级 3: 默认密钥顺序
-        Self::find_ssh_key_default()
+        // 优先级 3: SSH agent（在认证回调中处理，这里跳过）
+
+        // 如果前三个优先级都失败，返回 None，让认证回调提供详细的配置指导
+        None
     }
 
     /// 从 SSH config 获取密钥路径
@@ -408,29 +503,78 @@ impl GitAuth {
         false
     }
 
-    /// 查找默认 SSH 密钥文件
+    /// 通过 Git 配置和 GitHub API 匹配密钥
     ///
-    /// 按优先级顺序查找常见的 SSH 密钥文件：
-    /// 1. `~/.ssh/id_ed25519` (推荐，最安全)
-    /// 2. `~/.ssh/id_rsa` (最常见)
-    /// 3. `~/.ssh/id_ecdsa` (较少使用)
+    /// 根据 Git 配置的 user.email 匹配 GitHub 账号，然后尝试通过 SSH config
+    /// 找到对应的密钥。匹配策略：
+    /// 1. 查找 Host 为 "github-<account-name>" 的配置（如 `github-brainim`）
+    /// 2. 查找 Host 为 "github_<account-name>" 的配置
+    /// 3. 如果账号是当前激活的账号，也可以尝试匹配默认的 `github` Host
     ///
     /// # 返回
     ///
-    /// 返回找到的第一个存在的密钥文件路径，如果都不存在则返回 `None`。
-    fn find_ssh_key_default() -> Option<PathBuf> {
-        let home_dir = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .ok()?;
+    /// 返回匹配的 SSH 密钥路径，如果未找到则返回 `None`。
+    fn get_ssh_key_from_github_account() -> Option<PathBuf> {
+        // 1. 获取 Git 配置的 user.email（优先使用仓库级别配置）
+        let git_email = crate::git::helpers::open_repo()
+            .ok()
+            .and_then(|repo| {
+                repo.config()
+                    .ok()
+                    .and_then(|config| config.get_string("user.email").ok())
+            })
+            .filter(|s| !s.is_empty())
+            .or_else(|| {
+                // 如果没有仓库级别配置，使用全局配置
+                crate::git::GitConfig::get_global_user()
+                    .ok()
+                    .and_then(|(email, _)| email)
+            })?;
 
-        let key_paths = vec![
-            PathBuf::from(&home_dir).join(".ssh").join("id_ed25519"),
-            PathBuf::from(&home_dir).join(".ssh").join("id_rsa"),
-            PathBuf::from(&home_dir).join(".ssh").join("id_ecdsa"),
+        // 2. 在 GitHubSettings 中查找匹配的账号
+        let settings = crate::base::settings::Settings::load();
+        let matched_account = settings
+            .github
+            .accounts
+            .iter()
+            .find(|acc| acc.email == git_email)?;
+
+        // 3. 检查是否是当前激活的账号
+        let is_current = settings
+            .github
+            .current
+            .as_ref()
+            .map(|current| current == &matched_account.name)
+            .unwrap_or(false);
+
+        // 4. 尝试通过 SSH config 匹配账号对应的密钥
+        let account_name = &matched_account.name;
+        let mut possible_hosts: Vec<String> = vec![
+            format!("github-{}", account_name),
+            format!("github_{}", account_name),
         ];
 
-        key_paths.into_iter().find(|p| p.exists())
+        // 如果是当前账号，也可以尝试匹配默认的 github Host
+        if is_current {
+            possible_hosts.push("github".to_string());
+        }
+
+        // 解析 SSH config
+        let config_path = Self::get_ssh_config_path()?;
+        let config_content = std::fs::read_to_string(&config_path).ok()?;
+
+        // 尝试匹配每个可能的 host
+        for host in possible_hosts {
+            if let Some(key_path) = Self::parse_ssh_config_and_match(&config_content, &host) {
+                return Some(key_path);
+            }
+        }
+
+        // 5. 如果没有找到匹配的 SSH config，返回 None
+        // 让认证回调提供详细的配置指导
+        None
     }
+
 
     /// 从 URL 中提取用户名
     ///
@@ -484,9 +628,8 @@ mod tests {
     #[test]
     fn test_get_remote_callbacks() {
         // 测试获取认证回调（不应该 panic）
-        let callbacks = GitAuth::get_remote_callbacks();
+        let _callbacks = GitAuth::get_remote_callbacks();
         // RemoteCallbacks 没有公共方法可以验证，但创建成功就说明没问题
-        assert!(true); // 占位符
     }
 }
 

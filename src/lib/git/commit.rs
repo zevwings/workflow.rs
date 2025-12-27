@@ -8,9 +8,11 @@
 //! - 修改历史提交消息（reword）
 
 use color_eyre::{eyre::WrapErr, Result};
+use chrono::{DateTime, FixedOffset, TimeZone};
+use std::str::FromStr;
 
 use super::pre_commit::GitPreCommit;
-use super::GitCommand;
+use super::{GitCommand, helpers::open_repo};
 
 /// Git 提交结果
 #[derive(Debug, Clone)]
@@ -56,36 +58,94 @@ pub struct GitCommit;
 impl GitCommit {
     /// 检查 Git 状态
     ///
-    /// 使用 `--porcelain` 选项获取简洁、稳定的输出格式。
+    /// 使用 git2 库获取 Git 状态的简洁输出格式（类似 `git status --porcelain`）。
     /// 该格式适合程序解析，不包含颜色和装饰性输出。
     ///
     /// # 返回
     ///
-    /// 返回 Git 状态的简洁输出字符串。
+    /// 返回 Git 状态的简洁输出字符串（porcelain 格式）。
     pub fn status() -> Result<String> {
-        GitCommand::new(["status", "--porcelain"])
-            .read()
-            .wrap_err("Failed to run git status")
+        let repo = open_repo()?;
+        let mut status_options = git2::StatusOptions::new();
+        status_options.include_untracked(true);
+        status_options.include_ignored(false);
+
+        let statuses = repo.statuses(Some(&mut status_options))
+            .wrap_err("Failed to get repository statuses")?;
+
+        let mut lines = Vec::new();
+        for entry in statuses.iter() {
+            let status = entry.status();
+            if let Some(path) = entry.path() {
+                // 格式化状态行（porcelain 格式）
+                // 格式：XY path
+                // X = 暂存区状态，Y = 工作区状态
+                let mut status_str = String::new();
+
+                // 暂存区状态
+                if status.is_index_new() {
+                    status_str.push('A');
+                } else if status.is_index_modified() {
+                    status_str.push('M');
+                } else if status.is_index_deleted() {
+                    status_str.push('D');
+                } else if status.is_index_renamed() {
+                    status_str.push('R');
+                } else if status.is_index_typechange() {
+                    status_str.push('T');
+                } else {
+                    status_str.push(' ');
+                }
+
+                // 工作区状态
+                if status.is_wt_new() {
+                    status_str.push('?');
+                } else if status.is_wt_modified() {
+                    status_str.push('M');
+                } else if status.is_wt_deleted() {
+                    status_str.push('D');
+                } else if status.is_wt_typechange() {
+                    status_str.push('T');
+                } else if status.is_wt_renamed() {
+                    status_str.push('R');
+                } else {
+                    status_str.push(' ');
+                }
+
+                lines.push(format!("{} {}", status_str, path));
+            }
+        }
+
+        Ok(lines.join("\n"))
     }
 
     /// 检查工作区是否有未提交的更改
     ///
-    /// 检查工作区和暂存区是否有未提交的更改。
-    /// 使用 `git diff --quiet` 检查工作区，使用 `git diff --cached --quiet` 检查暂存区。
+    /// 使用 git2 库检查工作区和暂存区是否有未提交的更改。
     ///
     /// # 返回
     ///
     /// - `Ok(true)` - 如果有未提交的更改（工作区或暂存区）
     /// - `Ok(false)` - 如果没有未提交的更改
     pub fn has_commit() -> Result<bool> {
-        // 检查工作区是否有未提交的更改
-        // 如果有差异，返回非零退出码（is_err() 返回 true）
-        let has_worktree_changes = !GitCommand::new(["diff", "--quiet"]).quiet_success();
+        let repo = open_repo()?;
+        let mut status_options = git2::StatusOptions::new();
+        status_options.include_untracked(true);
+        status_options.include_ignored(false);
 
-        // 检查暂存区是否有未提交的更改
-        let has_staged_changes = Self::has_staged()?;
+        let statuses = repo.statuses(Some(&mut status_options))
+            .wrap_err("Failed to get repository statuses")?;
 
-        Ok(has_worktree_changes || has_staged_changes)
+        // 检查是否有任何更改（工作区或暂存区）
+        for entry in statuses.iter() {
+            let status = entry.status();
+            // 如果有任何非忽略的状态，说明有未提交的更改
+            if !status.is_ignored() && status != git2::Status::CURRENT {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     /// 检查是否有暂存的文件
@@ -98,26 +158,48 @@ impl GitCommit {
     /// - `Ok(true)` - 如果有暂存的文件
     /// - `Ok(false)` - 如果没有暂存的文件
     pub(crate) fn has_staged() -> Result<bool> {
-        // 使用 git diff --cached --quiet 检查是否有暂存的文件
-        // --quiet 选项：如果有差异，返回非零退出码；如果没有差异，返回 0
-        // 所以如果命令成功（返回 true），说明没有暂存的文件；如果失败（返回 false），说明有暂存的文件
-        Ok(!GitCommand::new(["diff", "--cached", "--quiet"]).quiet_success())
+        let repo = open_repo()?;
+        let mut status_options = git2::StatusOptions::new();
+        status_options.include_untracked(false);
+        status_options.include_ignored(false);
+
+        let statuses = repo.statuses(Some(&mut status_options))
+            .wrap_err("Failed to get repository statuses")?;
+
+        // 检查是否有暂存的文件（索引区有更改）
+        for entry in statuses.iter() {
+            let status = entry.status();
+            if status.is_index_new() || status.is_index_modified() || status.is_index_deleted() {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
     }
 
     /// 添加所有文件到暂存区
     ///
-    /// 使用 `git add --all` 将所有已修改、新增和删除的文件添加到暂存区。
+    /// 使用 git2 库将所有已修改、新增和删除的文件添加到暂存区。
     ///
     /// # 错误
     ///
-    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    /// 如果操作失败，返回相应的错误信息。
     pub fn add_all() -> Result<()> {
-        GitCommand::new(["add", "--all"]).run().wrap_err("Failed to add all files")
+        let repo = open_repo()?;
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+
+        // 添加所有文件（包括修改、新增和删除的文件）
+        index
+            .add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None)
+            .wrap_err("Failed to add all files to index")?;
+
+        index.write().wrap_err("Failed to write index")?;
+        Ok(())
     }
 
     /// 提交更改
     ///
-    /// 自动暂存所有已修改的文件，然后提交。
+    /// 使用 git2 库自动暂存所有已修改的文件，然后提交。
     /// 如果存在 pre-commit hooks，会在提交前执行（除非 `no_verify` 为 `true`）。
     ///
     /// # 参数
@@ -130,7 +212,7 @@ impl GitCommit {
     /// 1. 检查是否有未提交的更改，如果没有则直接返回
     /// 2. 暂存所有已修改的文件
     /// 3. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
-    /// 4. 执行提交操作
+    /// 4. 执行提交操作（使用 git2）
     ///
     /// # 返回
     ///
@@ -149,24 +231,40 @@ impl GitCommit {
         // 这样可以确保所有更改都被暂存，包括未暂存和已暂存的更改
         Self::add_all().wrap_err("Failed to stage changes")?;
 
-        let should_skip_hook = if !no_verify && GitPreCommit::has_pre_commit() {
+        // 执行 pre-commit hooks（如果需要）
+        if !no_verify && GitPreCommit::has_pre_commit() {
             GitPreCommit::run_pre_commit()?;
-            true // 已经通过 Rust 代码执行了检查，hook 脚本应该跳过
-        } else {
-            false
-        };
-
-        let mut args = vec!["commit", "-m", message];
-        if no_verify {
-            args.push("--no-verify");
         }
 
-        // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
-        if should_skip_hook {
-            GitCommand::new(args).with_env("WORKFLOW_PRE_COMMIT_SKIP", "1").run()?;
-        } else {
-            GitCommand::new(args).run().wrap_err("Failed to commit")?;
-        }
+        // 使用 git2 创建提交
+        let repo = open_repo()?;
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+
+        // 将索引写入树
+        let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
+        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
+
+        // 获取签名（作者和提交者）
+        let signature = repo.signature().wrap_err("Failed to get repository signature")?;
+
+        // 获取父提交（如果有）
+        let parent_commit = repo.head().ok().and_then(|head| {
+            head.target()
+                .and_then(|oid| repo.find_commit(oid).ok())
+        });
+        let parents: Vec<&git2::Commit> = parent_commit.iter().collect();
+
+        // 创建提交
+        let _commit_oid = repo
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                message,
+                &tree,
+                &parents,
+            )
+            .wrap_err("Failed to create commit")?;
 
         Ok(CommitResult {
             committed: true,
@@ -274,74 +372,145 @@ impl GitCommit {
 
     /// 获取最后一次 commit 信息
     ///
+    /// 使用 git2 库获取最后一次 commit 的详细信息。
+    ///
     /// # 返回
     ///
     /// 返回最后一次 commit 的详细信息。
     pub fn get_last_commit_info() -> Result<CommitInfo> {
-        let sha = GitCommand::new(["log", "-1", "--format=%H"]).read()?;
-        let message = GitCommand::new(["log", "-1", "--format=%s"]).read()?;
-        let author = GitCommand::new(["log", "-1", "--format=%an <%ae>"]).read()?;
-        let date = GitCommand::new(["log", "-1", "--format=%ai"]).read()?;
+        let repo = open_repo()?;
+        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+        let commit = head
+            .peel_to_commit()
+            .wrap_err("Failed to get commit from HEAD")?;
+
+        let sha = commit.id().to_string();
+        let message = commit
+            .message()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
+            .to_string();
+
+        let author = commit.author();
+        let author_name = author.name().unwrap_or("Unknown");
+        let author_email = author.email().unwrap_or("unknown@example.com");
+        let author_str = format!("{} <{}>", author_name, author_email);
+
+        let time = commit.time();
+        // 格式化日期时间：YYYY-MM-DD HH:MM:SS +HHMM
+        // 使用 chrono 库格式化时间
+        let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
+            .unwrap_or_else(|| FixedOffset::east_opt(0).unwrap());
+        let datetime = offset.timestamp_opt(time.seconds(), 0)
+            .single()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timestamp"))?;
+        let date = datetime.format("%Y-%m-%d %H:%M:%S %z").to_string();
 
         Ok(CommitInfo {
             sha,
             message,
-            author,
+            author: author_str,
             date,
         })
     }
 
     /// 获取最后一次 commit 的 SHA
     ///
+    /// 使用 git2 库获取最后一次 commit 的完整 SHA。
+    ///
     /// # 返回
     ///
     /// 返回最后一次 commit 的完整 SHA。
     pub fn get_last_commit_sha() -> Result<String> {
-        GitCommand::new(["log", "-1", "--format=%H"])
-            .read()
-            .wrap_err("Failed to get last commit SHA")
+        let repo = open_repo()?;
+        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+        let oid = head
+            .target()
+            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD does not point to a valid commit"))?;
+        Ok(oid.to_string())
     }
 
     /// 获取最后一次 commit 的消息
+    ///
+    /// 使用 git2 库获取最后一次 commit 的提交消息。
     ///
     /// # 返回
     ///
     /// 返回最后一次 commit 的提交消息。
     pub fn get_last_commit_message() -> Result<String> {
-        GitCommand::new(["log", "-1", "--format=%s"])
-            .read()
-            .wrap_err("Failed to get last commit message")
+        let repo = open_repo()?;
+        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+        let commit = head
+            .peel_to_commit()
+            .wrap_err("Failed to get commit from HEAD")?;
+        Ok(commit
+            .message()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
+            .to_string())
     }
 
     /// 获取已修改但未暂存的文件列表
+    ///
+    /// 使用 git2 库获取已修改但未暂存的文件路径列表。
     ///
     /// # 返回
     ///
     /// 返回已修改但未暂存的文件路径列表。
     pub fn get_modified_files() -> Result<Vec<String>> {
-        let output = GitCommand::new(["diff", "--name-only"]).read()?;
-        if output.trim().is_empty() {
-            Ok(Vec::new())
-        } else {
-            Ok(output.lines().map(|s| s.to_string()).collect())
+        let repo = open_repo()?;
+        let mut status_options = git2::StatusOptions::new();
+        status_options.include_untracked(false);
+        status_options.include_ignored(false);
+
+        let statuses = repo.statuses(Some(&mut status_options))
+            .wrap_err("Failed to get repository statuses")?;
+
+        let mut files = Vec::new();
+        for entry in statuses.iter() {
+            let status = entry.status();
+            // 只包含已修改但未暂存的文件（工作区修改）
+            if status.is_wt_modified() || status.is_wt_deleted() {
+                if let Some(path) = entry.path() {
+                    files.push(path.to_string());
+                }
+            }
         }
+
+        Ok(files)
     }
 
     /// 获取未跟踪的文件列表
+    ///
+    /// 使用 git2 库获取未跟踪的文件路径列表。
     ///
     /// # 返回
     ///
     /// 返回未跟踪的文件路径列表。
     pub fn get_untracked_files() -> Result<Vec<String>> {
-        let output = GitCommand::new(["ls-files", "--others", "--exclude-standard"]).read()?;
-        if output.trim().is_empty() {
-            Ok(Vec::new())
-        } else {
-            Ok(output.lines().map(|s| s.to_string()).collect())
+        let repo = open_repo()?;
+        let mut status_options = git2::StatusOptions::new();
+        status_options.include_untracked(true);
+        status_options.include_ignored(false);
+
+        let statuses = repo.statuses(Some(&mut status_options))
+            .wrap_err("Failed to get repository statuses")?;
+
+        let mut files = Vec::new();
+        for entry in statuses.iter() {
+            let status = entry.status();
+            // 只包含未跟踪的文件
+            if status.is_wt_new() {
+                if let Some(path) = entry.path() {
+                    files.push(path.to_string());
+                }
+            }
         }
+
+        Ok(files)
     }
 
     /// 添加指定文件到暂存区
+    ///
+    /// 使用 git2 库添加指定文件到暂存区。
     ///
     /// # 参数
     ///
@@ -349,72 +518,109 @@ impl GitCommit {
     ///
     /// # 错误
     ///
-    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    /// 如果操作失败，返回相应的错误信息。
     pub fn add_files(files: &[String]) -> Result<()> {
         if files.is_empty() {
             return Ok(());
         }
 
-        let mut args = vec!["add"];
+        let repo = open_repo()?;
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+
         for file in files {
-            args.push(file);
+            index
+                .add_path(file.as_ref())
+                .wrap_err_with(|| format!("Failed to add file to index: {}", file))?;
         }
 
-        GitCommand::new(args).run().wrap_err("Failed to add files")
+        index.write().wrap_err("Failed to write index")?;
+        Ok(())
     }
 
     /// 执行 commit amend
     ///
+    /// 使用 git2 库修改最后一次提交。
+    ///
     /// # 参数
     ///
-    /// * `message` - 新的提交消息（如果为 `None`，使用 `--no-edit`）
-    /// * `no_edit` - 是否不编辑消息（使用 `--no-edit`）
+    /// * `message` - 新的提交消息（如果为 `None` 且 `no_edit` 为 `false`，保留原消息）
+    /// * `no_edit` - 是否不编辑消息（保留原消息）
     /// * `no_verify` - 是否跳过 pre-commit hooks 验证
     ///
     /// # 行为
     ///
     /// 1. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
-    /// 2. 执行 `git commit --amend`
+    /// 2. 使用 git2 修改最后一次提交
     ///
     /// # 返回
     ///
     /// 返回新的 commit SHA。
     pub fn amend(message: Option<&str>, no_edit: bool, no_verify: bool) -> Result<String> {
-        // 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
-        let should_skip_hook = if !no_verify && GitPreCommit::has_pre_commit() {
+        // 执行 pre-commit hooks（如果需要）
+        if !no_verify && GitPreCommit::has_pre_commit() {
             GitPreCommit::run_pre_commit()?;
-            true // 已经通过 Rust 代码执行了检查，hook 脚本应该跳过
+        }
+
+        let repo = open_repo()?;
+
+        // 获取当前 HEAD 提交
+        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+        let parent_commit = head
+            .peel_to_commit()
+            .wrap_err("Failed to get commit from HEAD")?;
+
+        // 获取索引并写入树
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
+        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
+
+        // 获取签名
+        let signature = repo.signature().wrap_err("Failed to get repository signature")?;
+
+        // 确定提交消息
+        let commit_message = if no_edit {
+            // 保留原消息
+            parent_commit
+                .message()
+                .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
+                .to_string()
+        } else if let Some(msg) = message {
+            msg.to_string()
         } else {
-            false
+            // 如果没有提供消息且 no_edit 为 false，保留原消息
+            parent_commit
+                .message()
+                .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
+                .to_string()
         };
 
-        // 构建命令参数
-        let mut args = vec!["commit", "--amend"];
-
-        if no_edit {
-            args.push("--no-edit");
-        } else if let Some(msg) = message {
-            args.push("-m");
-            args.push(msg);
-        }
-
-        if no_verify {
-            args.push("--no-verify");
-        }
-
-        // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
-        if should_skip_hook {
-            GitCommand::new(args).with_env("WORKFLOW_PRE_COMMIT_SKIP", "1").run()?;
+        // 获取父提交（amend 的父提交是原提交的父提交）
+        // 需要先获取父提交，然后构建向量
+        let parent_commit_ref = parent_commit.parent(0).ok();
+        let parents: Vec<&git2::Commit> = if let Some(ref parent) = parent_commit_ref {
+            vec![parent]
         } else {
-            GitCommand::new(args).run().wrap_err("Failed to amend commit")?;
-        }
+            Vec::new()
+        };
 
-        // 返回新的 commit SHA
-        Self::get_last_commit_sha()
+        // 创建新的提交（amend）
+        let commit_oid = repo
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                &commit_message,
+                &tree,
+                &parents,
+            )
+            .wrap_err("Failed to amend commit")?;
+
+        Ok(commit_oid.to_string())
     }
 
     /// 解析 commit 引用为完整的 SHA
     ///
+    /// 使用 git2 库解析 commit 引用为完整的 SHA。
     /// 支持格式：HEAD, HEAD~n, SHA, 分支名等
     ///
     /// # 参数
@@ -425,13 +631,32 @@ impl GitCommit {
     ///
     /// 返回完整的 commit SHA（40 个字符）。
     pub fn parse_commit_ref(reference: &str) -> Result<String> {
-        let sha = GitCommand::new(["rev-parse", reference])
-            .read()
-            .wrap_err(format!("Failed to parse commit reference: {}", reference))?;
-        Ok(sha.trim().to_string())
+        let repo = open_repo()?;
+        let obj = repo
+            .revparse_single(reference)
+            .wrap_err_with(|| format!("Failed to parse commit reference: {}", reference))?;
+
+        // 如果是 commit，直接返回 SHA
+        if let Some(commit) = obj.as_commit() {
+            return Ok(commit.id().to_string());
+        }
+
+        // 如果是 tag，获取其目标
+        if let Some(tag) = obj.as_tag() {
+            return Ok(tag.target_id().to_string());
+        }
+
+        // 如果是其他对象，尝试 peel 到 commit
+        let commit = obj
+            .peel_to_commit()
+            .wrap_err_with(|| format!("Reference {} does not point to a commit", reference))?;
+
+        Ok(commit.id().to_string())
     }
 
     /// 获取指定 commit 的信息
+    ///
+    /// 使用 git2 库获取指定 commit 的详细信息。
     ///
     /// # 参数
     ///
@@ -441,24 +666,38 @@ impl GitCommit {
     ///
     /// 返回指定 commit 的详细信息。
     pub fn get_commit_info(commit_ref: &str) -> Result<CommitInfo> {
-        let sha = GitCommand::new(["log", "-1", "--format=%H", commit_ref])
-            .read()
-            .wrap_err(format!("Failed to get commit info for: {}", commit_ref))?;
-        let message = GitCommand::new(["log", "-1", "--format=%s", commit_ref])
-            .read()
-            .wrap_err(format!("Failed to get commit message for: {}", commit_ref))?;
-        let author = GitCommand::new(["log", "-1", "--format=%an <%ae>", commit_ref])
-            .read()
-            .wrap_err(format!("Failed to get commit author for: {}", commit_ref))?;
-        let date = GitCommand::new(["log", "-1", "--format=%ai", commit_ref])
-            .read()
-            .wrap_err(format!("Failed to get commit date for: {}", commit_ref))?;
+        let repo = open_repo()?;
+        let obj = repo.revparse_single(commit_ref)
+            .wrap_err_with(|| format!("Failed to parse commit reference: {}", commit_ref))?;
+        let commit = obj.peel_to_commit()
+            .wrap_err_with(|| format!("Failed to get commit from reference: {}", commit_ref))?;
+
+        let sha = commit.id().to_string();
+        let message = commit
+            .message()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
+            .to_string();
+
+        let author = commit.author();
+        let author_name = author.name().unwrap_or("Unknown");
+        let author_email = author.email().unwrap_or("unknown@example.com");
+        let author_str = format!("{} <{}>", author_name, author_email);
+
+        let time = commit.time();
+        // 格式化日期时间：YYYY-MM-DD HH:MM:SS +HHMM
+        // 使用 chrono 库格式化时间
+        let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
+            .unwrap_or_else(|| FixedOffset::east_opt(0).unwrap());
+        let datetime = offset.timestamp_opt(time.seconds(), 0)
+            .single()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timestamp"))?;
+        let date = datetime.format("%Y-%m-%d %H:%M:%S %z").to_string();
 
         Ok(CommitInfo {
-            sha: sha.trim().to_string(),
-            message: message.trim().to_string(),
-            author: author.trim().to_string(),
-            date: date.trim().to_string(),
+            sha,
+            message,
+            author: author_str,
+            date,
         })
     }
 
@@ -494,12 +733,17 @@ impl GitCommit {
         // 使用 git merge-base --is-ancestor <commit_sha> HEAD
         // 如果 commit_sha 是 HEAD 的祖先，返回 true
         // 注意：如果 commit_sha == HEAD，也返回 true
-        Ok(GitCommand::new(["merge-base", "--is-ancestor", commit_sha, "HEAD"]).quiet_success())
+        let repo = open_repo()?;
+        let commit_oid = git2::Oid::from_str(commit_sha)
+            .wrap_err_with(|| format!("Invalid commit SHA: {}", commit_sha))?;
+        let head = repo.head()?.peel_to_commit()?;
+        let merge_base = repo.merge_base(commit_oid, head.id())?;
+        Ok(merge_base == head.id())
     }
 
     /// 获取当前分支的 commits 列表
     ///
-    /// 获取当前分支最近的 commits。
+    /// 使用 git2 库获取当前分支最近的 commits。
     ///
     /// # 参数
     ///
@@ -509,36 +753,68 @@ impl GitCommit {
     ///
     /// 返回 CommitInfo 列表，按时间顺序排列（从新到旧，HEAD 在第一个）。
     pub fn get_branch_commits(count: usize) -> Result<Vec<CommitInfo>> {
-        // 使用 git log 获取当前分支的 commits
-        // git log -n <count> --format="%H|%s|%an <%ae>|%ai"
-        let output = GitCommand::new([
-            "log",
-            &format!("-{}", count),
-            "--format=%H|%s|%an <%ae>|%ai",
-        ])
-        .read()?;
+        let repo = open_repo()?;
 
-        if output.trim().is_empty() {
-            return Ok(Vec::new());
-        }
+        // 获取 HEAD commit
+        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+        let head_commit = head
+            .peel_to_commit()
+            .wrap_err("Failed to get commit from HEAD")?;
+
+        // 使用 revwalk 遍历提交历史
+        let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+        revwalk
+            .push(head_commit.id())
+            .wrap_err("Failed to push HEAD to revwalk")?;
 
         let mut commits = Vec::new();
-        for line in output.lines() {
-            let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() == 4 {
-                commits.push(CommitInfo {
-                    sha: parts[0].trim().to_string(),
-                    message: parts[1].trim().to_string(),
-                    author: parts[2].trim().to_string(),
-                    date: parts[3].trim().to_string(),
-                });
+        for (index, oid) in revwalk.enumerate() {
+            if index >= count {
+                break;
             }
+
+            let oid = oid.wrap_err("Failed to get commit OID from revwalk")?;
+            let commit = repo
+                .find_commit(oid)
+                .wrap_err_with(|| format!("Failed to find commit: {}", oid))?;
+
+            // 获取提交信息
+            let sha = commit.id().to_string();
+            let message = commit
+                .message()
+                .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
+                .to_string();
+
+            // 获取作者信息
+            let author = commit.author();
+            let author_name = author.name().unwrap_or("Unknown");
+            let author_email = author.email().unwrap_or("unknown@example.com");
+            let author_str = format!("{} <{}>", author_name, author_email);
+
+            // 获取日期并格式化
+            let time = commit.time();
+            let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
+                .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timezone offset"))?;
+            let datetime = offset
+                .timestamp_opt(time.seconds(), 0)
+                .single()
+                .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timestamp"))?;
+            let date = datetime.format("%Y-%m-%d %H:%M:%S %z").to_string();
+
+            commits.push(CommitInfo {
+                sha,
+                message,
+                author: author_str,
+                date,
+            });
         }
 
         Ok(commits)
     }
 
     /// 获取指定 commit 的父 commit SHA
+    ///
+    /// 使用 git2 库获取指定 commit 的父 commit SHA。
     ///
     /// # 参数
     ///
@@ -548,15 +824,23 @@ impl GitCommit {
     ///
     /// 返回父 commit 的完整 SHA。如果 commit 没有父 commit（根 commit），返回错误。
     pub fn get_parent_commit(commit_sha: &str) -> Result<String> {
-        let parent_sha = GitCommand::new(["rev-parse", &format!("{}^", commit_sha)])
-            .read()
-            .wrap_err_with(|| format!("Failed to get parent commit of: {}", commit_sha))?;
-        Ok(parent_sha.trim().to_string())
+        let repo = open_repo()?;
+        let commit_oid = git2::Oid::from_str(commit_sha)
+            .wrap_err_with(|| format!("Invalid commit SHA: {}", commit_sha))?;
+        let commit = repo
+            .find_commit(commit_oid)
+            .wrap_err_with(|| format!("Failed to find commit: {}", commit_sha))?;
+
+        let parent = commit
+            .parent(0)
+            .wrap_err_with(|| format!("Commit {} has no parent (root commit)", commit_sha))?;
+
+        Ok(parent.id().to_string())
     }
 
     /// 获取从指定 commit（不包括）到 HEAD 的所有 commits
     ///
-    /// 用于构建 rebase todo 文件，获取需要 rebase 的 commits 列表。
+    /// 使用 git2 库获取从指定 commit 到 HEAD 的所有 commits，用于构建 rebase todo 文件。
     ///
     /// # 参数
     ///
@@ -566,54 +850,117 @@ impl GitCommit {
     ///
     /// 返回 CommitInfo 列表，按时间顺序排列（从旧到新，第一个是最接近 from_commit 的 commit）。
     pub fn get_commits_from_to_head(from_commit: &str) -> Result<Vec<CommitInfo>> {
-        // 使用 git log 获取从 from_commit 到 HEAD 的所有 commits
-        // git log from_commit..HEAD --format="%H|%s|%an <%ae>|%ai" --reverse
-        // --reverse 表示从旧到新排列
-        let output = GitCommand::new([
-            "log",
-            &format!("{}..HEAD", from_commit),
-            "--format=%H|%s|%an <%ae>|%ai",
-            "--reverse",
-        ])
-        .read()?;
+        let repo = open_repo()?;
 
-        if output.trim().is_empty() {
+        // 解析 from_commit SHA
+        let from_oid = git2::Oid::from_str(from_commit)
+            .wrap_err_with(|| format!("Invalid commit SHA: {}", from_commit))?;
+        let from_commit_obj = repo
+            .find_commit(from_oid)
+            .wrap_err_with(|| format!("Failed to find commit: {}", from_commit))?;
+
+        // 获取 HEAD commit
+        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+        let head_commit = head
+            .peel_to_commit()
+            .wrap_err("Failed to get commit from HEAD")?;
+
+        // 如果 from_commit 就是 HEAD，返回空列表
+        if from_commit_obj.id() == head_commit.id() {
             return Ok(Vec::new());
         }
 
+        // 使用 revwalk 遍历从 from_commit 到 HEAD 的所有 commits
+        let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+        revwalk
+            .push(head_commit.id())
+            .wrap_err("Failed to push HEAD to revwalk")?;
+        revwalk
+            .hide(from_oid)
+            .wrap_err("Failed to hide from_commit from revwalk")?;
+
         let mut commits = Vec::new();
-        for line in output.lines() {
-            let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() == 4 {
-                commits.push(CommitInfo {
-                    sha: parts[0].trim().to_string(),
-                    message: parts[1].trim().to_string(),
-                    author: parts[2].trim().to_string(),
-                    date: parts[3].trim().to_string(),
-                });
-            }
+        for oid in revwalk {
+            let oid = oid.wrap_err("Failed to get commit OID from revwalk")?;
+            let commit = repo
+                .find_commit(oid)
+                .wrap_err_with(|| format!("Failed to find commit: {}", oid))?;
+
+            // 获取提交信息
+            let sha = commit.id().to_string();
+            let message = commit
+                .message()
+                .ok_or_else(|| color_eyre::eyre::eyre!("Commit message is not valid UTF-8"))?
+                .to_string();
+
+            // 获取作者信息
+            let author = commit.author();
+            let author_name = author.name().unwrap_or("Unknown");
+            let author_email = author.email().unwrap_or("unknown@example.com");
+            let author_str = format!("{} <{}>", author_name, author_email);
+
+            // 获取日期并格式化
+            let time = commit.time();
+            let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
+                .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timezone offset"))?;
+            let datetime = offset
+                .timestamp_opt(time.seconds(), 0)
+                .single()
+                .ok_or_else(|| color_eyre::eyre::eyre!("Invalid timestamp"))?;
+            let date = datetime.format("%Y-%m-%d %H:%M:%S %z").to_string();
+
+            commits.push(CommitInfo {
+                sha,
+                message,
+                author: author_str,
+                date,
+            });
         }
+
+        // 反转列表，使其从旧到新排列（--reverse 的效果）
+        commits.reverse();
 
         Ok(commits)
     }
 
     /// 获取工作区状态统计
     ///
-    /// 解析 Git status 输出，统计已修改、已暂存和未跟踪的文件数量。
+    /// 使用 git2 库统计已修改、已暂存和未跟踪的文件数量。
     ///
     /// # 返回
     ///
     /// 返回工作区状态统计信息。
     pub fn get_worktree_status() -> Result<WorktreeStatus> {
-        let status = Self::status()?;
+        let repo = open_repo()?;
+        let mut status_options = git2::StatusOptions::new();
+        status_options.include_untracked(true);
+        status_options.include_ignored(false);
 
-        let modified_count =
-            status.lines().filter(|l| l.starts_with(" M") || l.starts_with("M ")).count();
-        let staged_count = status
-            .lines()
-            .filter(|l| l.starts_with("M ") || l.starts_with("A ") || l.starts_with("D "))
-            .count();
-        let untracked_count = status.lines().filter(|l| l.starts_with("??")).count();
+        let statuses = repo.statuses(Some(&mut status_options))
+            .wrap_err("Failed to get repository statuses")?;
+
+        let mut modified_count = 0;
+        let mut staged_count = 0;
+        let mut untracked_count = 0;
+
+        for entry in statuses.iter() {
+            let status = entry.status();
+
+            // 统计工作区修改的文件（已修改但未暂存）
+            if status.is_wt_modified() || status.is_wt_deleted() {
+                modified_count += 1;
+            }
+
+            // 统计暂存区的文件（已暂存）
+            if status.is_index_new() || status.is_index_modified() || status.is_index_deleted() {
+                staged_count += 1;
+            }
+
+            // 统计未跟踪的文件
+            if status.is_wt_new() {
+                untracked_count += 1;
+            }
+        }
 
         Ok(WorktreeStatus {
             modified_count,

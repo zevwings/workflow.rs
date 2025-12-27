@@ -128,5 +128,3 @@ python3 scripts/dev/py/dev.py ci check-skip --branch "test" --ci
 
 - [Python Dev 工具文档](./py/README.md) - 完整使用指南
 - [Shell 脚本工具文档](./shell/README.md) - Shell 脚本使用说明
-- [脚本迁移分析报告](../../docs/requirements/scripts-migration-analysis.md) - 迁移分析
-- [脚本迁移实施计划](../../docs/requirements/scripts-migration-plan.md) - 迁移计划
