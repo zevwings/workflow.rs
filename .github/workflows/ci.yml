@@ -89,6 +89,10 @@ jobs:
         with:
           fetch-depth: 0  # 需要完整历史来检查提交者
 
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/dependencies/install-basic.sh
+
       - name: 📥 Download dev binary artifact
         uses: actions/download-artifact@v4
         with:
