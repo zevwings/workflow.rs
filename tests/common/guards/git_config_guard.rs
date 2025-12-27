@@ -118,43 +118,128 @@ impl GitConfigGuard {
     /// guard.set("user.email", "test@example.com")?;
     /// ```
     pub fn set(&self, key: &str, value: &str) -> Result<()> {
+        // Windows 上需要更多的重试次数和更长的延迟
+        #[cfg(target_os = "windows")]
+        const MAX_RETRIES: usize = 10;
+        #[cfg(not(target_os = "windows"))]
         const MAX_RETRIES: usize = 3;
+
+        #[cfg(target_os = "windows")]
+        const RETRY_DELAY_MS: u64 = 200; // Windows 上需要更长的延迟
+        #[cfg(not(target_os = "windows"))]
         const RETRY_DELAY_MS: u64 = 100;
 
         // 重试机制：处理锁文件冲突和短暂的并发锁定
         for attempt in 0..MAX_RETRIES {
-            // 清理可能存在的锁文件（解决锁文件残留问题）
-            // Git 在写入配置文件时会创建锁文件（.tmpXXXXX.lock）
-            // 如果之前的测试异常退出，锁文件可能残留
-            let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
-            if std::path::Path::new(&lock_file).exists() {
-                // 忽略清理失败（锁文件可能正在被使用）
-                let _ = std::fs::remove_file(&lock_file);
+            // Windows 上需要清理所有可能的临时文件和锁文件
+            #[cfg(target_os = "windows")]
+            {
+                // 清理锁文件
+                let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
+                if std::path::Path::new(&lock_file).exists() {
+                    for _ in 0..3 {
+                        if std::fs::remove_file(&lock_file).is_ok() {
+                            break;
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(50));
+                    }
+                }
+
+                // 清理 git2 创建的临时文件（.tmpXXXXX）
+                // git2 在写入配置时会创建临时文件，如果操作失败可能残留
+                if let Some(parent) = self.config_path.parent() {
+                    if let Some(file_name) = self.config_path.file_name() {
+                        let file_name_str = file_name.to_string_lossy();
+                        // 查找所有以 .tmp 开头的临时文件
+                        if let Ok(entries) = std::fs::read_dir(parent) {
+                            for entry in entries.flatten() {
+                                let path = entry.path();
+                                if let Some(name) = path.file_name() {
+                                    let name_str = name.to_string_lossy();
+                                    // 匹配 git2 创建的临时文件模式（.tmp + 随机字符）
+                                    if name_str.starts_with(".tmp") && name_str.len() > 4 {
+                                        // 尝试删除临时文件（忽略失败，可能正在被使用）
+                                        let _ = std::fs::remove_file(&path);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Windows 上需要额外等待，确保文件完全释放
+                if attempt > 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            {
+                // 清理可能存在的锁文件（解决锁文件残留问题）
+                // Git 在写入配置文件时会创建锁文件（.tmpXXXXX.lock）
+                // 如果之前的测试异常退出，锁文件可能残留
+                let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
+                if std::path::Path::new(&lock_file).exists() {
+                    // 忽略清理失败（锁文件可能正在被使用）
+                    let _ = std::fs::remove_file(&lock_file);
+                }
             }
 
             // 使用 git2 API 打开并设置配置
-            match Config::open(&self.config_path) {
+            // Windows 上需要确保 Config 对象在每次重试时都是新的
+            let config_result = Config::open(&self.config_path);
+            match config_result {
                 Ok(mut config) => {
                     match config.set_str(key, value) {
-                        Ok(()) => return Ok(()),
+                        Ok(()) => {
+                            // Windows 上需要显式关闭 Config 对象，确保文件完全释放
+                            #[cfg(target_os = "windows")]
+                            {
+                                drop(config);
+                                // 额外等待，确保文件系统操作完成
+                                std::thread::sleep(std::time::Duration::from_millis(50));
+                            }
+                            return Ok(());
+                        }
                         Err(e) => {
-                            // 检查是否是锁文件错误
+                            // Windows 上显式关闭 Config 对象
+                            #[cfg(target_os = "windows")]
+                            {
+                                drop(config);
+                            }
+
+                            // 检查是否是锁文件错误（包括 Windows 特定的错误消息）
                             let error_msg = e.message();
-                            let is_lock_error = error_msg.contains("could not lock config file");
+                            let is_lock_error = error_msg.contains("could not lock config file")
+                                || error_msg.contains("failed to rename lockfile")
+                                || error_msg.contains("Access is denied")
+                                || error_msg.contains("failed to rename"); // 更通用的匹配
 
                             // 如果是锁文件错误且还有重试机会，等待后重试
                             if is_lock_error && attempt < MAX_RETRIES - 1 {
-                                std::thread::sleep(std::time::Duration::from_millis(
-                                    RETRY_DELAY_MS,
-                                ));
+                                // Windows 上使用指数退避策略，并增加基础延迟
+                                #[cfg(target_os = "windows")]
+                                {
+                                    // 基础延迟更长，指数增长
+                                    let base_delay = RETRY_DELAY_MS * 2; // 400ms 基础延迟
+                                    let delay_ms = base_delay * (1 << attempt.min(4)); // 最多 16 倍
+                                    std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+                                }
+                                #[cfg(not(target_os = "windows"))]
+                                {
+                                    std::thread::sleep(std::time::Duration::from_millis(
+                                        RETRY_DELAY_MS,
+                                    ));
+                                }
                                 continue;
                             }
 
                             // 其他错误或重试次数用尽，返回错误
                             return Err(color_eyre::eyre::eyre!(
-                                "Failed to set Git config {}={}: {}",
+                                "Failed to set Git config {}={} after {} attempts: {}",
                                 key,
                                 value,
+                                attempt + 1,
                                 error_msg
                             ));
                         }
