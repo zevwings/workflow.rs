@@ -477,7 +477,9 @@ mod tests {
         }
 
         // 打开配置文件（使用绝对路径）
-        let abs_path = std::fs::canonicalize(config_path).unwrap_or_else(|_| config_path.clone());
+        // canonicalize 需要 &Path，而 config_path 是 &PathBuf，需要解引用
+        let abs_path =
+            std::fs::canonicalize(config_path.as_path()).unwrap_or_else(|_| config_path.clone());
         let config = Config::open(&abs_path)?;
 
         // 读取配置值
