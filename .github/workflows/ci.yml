@@ -727,11 +727,12 @@ jobs:
             }
 
   # 测试趋势分析（在所有测试完成后运行）
+  # 只在所有测试成功时运行，因为测试失败时趋势分析意义不大
   test-trends:
     name: 📈 Analyze Test Trends
     runs-on: ubuntu-latest
     needs: [tests]
-    if: always()
+    if: needs.tests.result == 'success'
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
