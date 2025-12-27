@@ -2,6 +2,17 @@
 
 本目录包含用于开发和维护项目的辅助脚本。
 
+## 📁 目录结构
+
+```
+scripts/dev/
+├── README.md              # 本文档（总览）
+├── py/                    # Python Dev 工具（推荐使用）
+│   └── README.md          # Python 工具文档
+└── shell/                 # Shell 脚本工具
+    └── README.md          # Shell 脚本文档
+```
+
 ## 🆕 Python Dev 工具（推荐使用）
 
 **新的 Python 版本的 dev 工具已可用！** 无需编译，直接运行，速度更快。
@@ -10,18 +21,15 @@
 
 ```bash
 # 查看所有可用命令
-python3 scripts/dev/dev.py --help
+python3 scripts/dev/py/dev.py --help
 
 # 示例：检查 CI 是否应该跳过
-python3 scripts/dev/dev.py ci check-skip --branch "test" --ci
+python3 scripts/dev/py/dev.py ci check-skip --branch "test" --ci
 ```
 
 ### 📚 文档
 
-- **[快速开始指南](./QUICK_START.md)** - 5 分钟上手
-- **[完整使用文档](./PYTHON_DEV_TOOL.md)** - 详细文档
-- **[CI 集成指南](./CI_USAGE.md)** - GitHub Actions 集成
-- **[迁移状态](./MIGRATION_STATUS.md)** - 迁移进度
+- **[Python Dev 工具文档](./py/README.md)** - 完整命令列表和使用指南（包含快速开始、CI/CD 集成、开发指南等）
 
 ### ✨ 特性
 
@@ -30,375 +38,78 @@ python3 scripts/dev/dev.py ci check-skip --branch "test" --ci
 - ✅ **Python 3.13+**: 使用最新 Python 特性
 - ✅ **双重调用**: 支持统一入口和直接运行
 
-### 🎯 已实现的命令
+### 🎯 已实现的命令（17个）
 
+**CI 和版本管理**:
 - ✅ `ci check-skip` - CI 跳过检查
 - ✅ `ci verify` - CI 检查验证
-- ✅ `checksum calculate` - 文件哈希计算
 - ✅ `version generate` - 版本号生成
 - ✅ `tag create` - 创建 Git 标签
 - ✅ `tag cleanup` - 清理 Alpha 标签
 - ✅ `pr create` - 创建 PR
 - ✅ `pr merge` - 合并 PR
 - ✅ `homebrew update` - 更新 Homebrew Formula
+- ✅ `checksum calculate` - 文件哈希计算
+
+**测试和性能**:
+- ✅ `tests check` - 检查测试覆盖率
+- ✅ `tests metrics` - 收集测试指标
+- ✅ `tests report` - 生成测试报告
+- ✅ `tests trends` - 分析测试趋势
+- ✅ `performance analyze` - 分析性能数据
+
+**文档检查**:
+- ✅ `docs check integrity` - 检查文档完整性
+- ✅ `docs check links` - 检查文档链接
+- ✅ `docs report generate` - 生成文档报告
 
 ---
 
-## 📋 脚本分类（传统脚本）
+## 🔧 Shell 脚本工具
 
-## 📋 脚本分类
+用于系统级操作和 CI/CD 环境的 Shell 脚本。
 
-### 🧪 测试相关
+### 📚 文档
 
-#### 测试文档管理
+- **[Shell 脚本文档](./shell/README.md)** - Shell 脚本使用说明
 
-| 脚本 | 语言 | 说明 | 状态 |
-|------|------|------|------|
-| `check-test-docs.sh` | Bash | 检查测试文档注释完成情况 | 📋 待迁移 |
+### 主要脚本
 
-#### 测试执行与报告
-
-| 脚本 | 语言 | 说明 | 状态 |
-|------|------|------|------|
-| `generate-test-report.py` | Python | 生成测试执行报告（HTML/JSON） | ✅ 已完成 |
-| `generate-pr-comment.py` | Python | 从测试报告生成 PR 评论内容 | ✅ 已完成 |
-| `verify-test-stability.sh` | Bash | 连续运行测试验证稳定性 | 🔧 保持 |
-
-#### 测试指标与分析
-
-| 脚本 | 语言 | 说明 | 状态 |
-|------|------|------|------|
-| `collect-test-metrics.py` | Python | 收集测试指标数据，用于趋势分析 | ✅ 已完成 |
-| `analyze-test-trends.py` | Python | 分析测试指标历史数据，生成趋势报告 | ✅ 已完成 |
-| `analyze-performance-regression.py` | Python | 对比性能数据，检测性能回归 | ✅ 已完成 |
-
-#### 测试覆盖率
-
-| 脚本 | 语言 | 说明 | 状态 |
-|------|------|------|------|
-| `analyze-coverage-trends.py` | Python | 分析覆盖率趋势，检测覆盖率变化和回归 | ✅ 已完成 |
-| `check-coverage.sh` | Bash | 测试覆盖率检查 | 📋 待迁移 |
-
-#### 测试迁移工具
-
-> **注意**: 测试迁移工具已完成使用，相关脚本已删除。
-
-### 📚 文档相关
-
-| 脚本 | 语言 | 说明 | 状态 |
-|------|------|------|------|
-| `check-docs.sh` | Bash | 文档检查（链接、架构文档、时间戳） | 📋 待迁移 |
-| `check-links.sh` | Bash | 文档链接有效性检查 | 📋 待迁移 |
-
-### 🔧 环境配置相关
-
-| 脚本 | 语言 | 说明 | 状态 |
-|------|------|------|------|
-| `dependencies/install-basic.sh` | Bash | 安装 Linux 基本系统依赖（XCB 开发库等） | ✅ 已完成 |
-| `dependencies/install-build.sh` | Bash | 安装 Linux 构建依赖（基本依赖 + 构建工具） | ✅ 已完成 |
+- ✅ `shell/dependencies/install-basic.sh` - 安装 Linux 基本系统依赖
+- ✅ `shell/dependencies/install-build.sh` - 安装 Linux 构建依赖
 
 ---
 
-## 🔄 迁移计划
+## 🎯 迁移状态
 
-**迁移方案**: Python 统一（方案 A）
+### ✅ Python Dev 工具迁移完成
 
-所有适合的脚本将统一迁移到 Python，以提高代码可维护性和开发效率。
+所有命令已迁移完成！所有 workflow 文件已更新为使用 Python dev 工具。
 
-**详细计划**: 参见 [docs/requirements/scripts-migration-plan.md](../../docs/requirements/scripts-migration-plan.md)
+**完成度**: 17/17 命令 (100%) 🎉
 
-### 迁移进度
+### 🔑 关键特性
 
-- [ ] 阶段 1: 高优先级脚本（`check-test-docs.sh`, `check-docs.sh`）
-- [ ] 阶段 2: 中优先级脚本（`check-links.sh`, `check-coverage.sh`）
-- [ ] 阶段 3: 优化和整合
+1. **零依赖**: 完全使用 Python 标准库
+2. **GitHub API**: 使用 `urllib.request` 实现，无需第三方库
+3. **Git 操作**: 使用 `subprocess` 执行 Git 命令
+4. **版本检查**: 要求 Python 3.13+
+5. **双重调用**: 支持统一入口和直接运行两种方式
 
-**状态说明**:
-- ✅ 已完成：Python 脚本，功能完整
-- 📋 待迁移：Bash 脚本，计划迁移到 Python
-- 🔧 保持：Bash 脚本，保持现状（简单工具或一次性脚本）
+### 📊 性能提升
 
----
-
-## 📖 使用说明
-
-### 🧪 测试相关脚本
-
-#### 测试文档管理
-
-##### check-test-docs.sh
-
-检查测试文件文档注释完成情况。
-
-```bash
-./scripts/dev/check-test-docs.sh
-```
-
-#### 测试执行与报告
-
-##### generate-test-report.py
-
-生成测试执行报告（HTML 或 JSON 格式）。
-
-```bash
-python3 scripts/dev/generate-test-report.py [OPTIONS]
-```
-
-**选项**:
-- `--format, -f <format>`: 报告格式，`html` 或 `json`（默认: `html`）
-- `--output, -o <path>`: 输出文件路径（默认: `test-report.html`）
-- `--help, -h`: 显示帮助信息
-
-**示例**:
-```bash
-# 生成 HTML 报告
-cargo test --message-format=json 2>&1 | \
-    python3 scripts/dev/generate-test-report.py -f html -o report.html
-
-# 生成 JSON 报告
-cargo test --message-format=json 2>&1 | \
-    python3 scripts/dev/generate-test-report.py -f json -o report.json
-
-# 使用管道（推荐方式）
-cargo test --message-format=json 2>&1 | \
-    python3 scripts/dev/generate-test-report.py --format html --output test-report.html
-```
-
-**工作原理**:
-1. 运行 `cargo test --message-format=json` 获取 JSON 格式的测试输出
-2. 通过管道传递给 Python 脚本进行解析
-3. 生成 HTML 或 JSON 格式的测试报告
-
-**前置要求**:
-- Python 3.8+
-
-##### generate-pr-comment.py
-
-从测试报告 JSON 生成 PR 评论的 Markdown 内容。
-
-```bash
-python3 scripts/dev/generate-pr-comment.py [OPTIONS]
-```
-
-**选项**:
-- `--report, -r <path>`: 测试报告 JSON 文件路径（可指定多个文件进行合并）
-- `--artifact-url, -a <url>`: Artifact 下载 URL（可选）
-- `--output, -o <path>`: 输出文件路径（默认：输出到 stdout）
-- `--help, -h`: 显示帮助信息
-
-**示例**:
-```bash
-# 生成 PR 评论（输出到 stdout）
-python3 scripts/dev/generate-pr-comment.py --report test-report.json
-
-# 生成 PR 评论并保存到文件
-python3 scripts/dev/generate-pr-comment.py --report test-report.json --output pr-comment.md
-
-# 合并多个报告并生成评论
-python3 scripts/dev/generate-pr-comment.py \
-    --report unit-test-report.json integration-test-report.json \
-    --artifact-url https://github.com/.../artifacts \
-    --output pr-comment.md
-```
-
-#### 测试指标与分析
-
-##### collect-test-metrics.py
-
-从测试报告 JSON 中提取指标数据，用于趋势分析。
-
-```bash
-python3 scripts/dev/collect-test-metrics.py [OPTIONS]
-```
-
-**选项**:
-- `--report, -r <path>`: 测试报告 JSON 文件（必需）
-- `--output, -o <path>`: 输出指标文件（必需）
-- `--test-type <type>`: 测试类型（unit/integration，可选）
-- `--platform <platform>`: 平台（Linux/macOS/Windows，可选）
-- `--help, -h`: 显示帮助信息
-
-**示例**:
-```bash
-python3 scripts/dev/collect-test-metrics.py \
-    --report test-report.json \
-    --output metrics/2024-01-01-unit-linux.json \
-    --test-type unit \
-    --platform Linux
-```
-
-##### analyze-test-trends.py
-
-分析测试指标的历史数据，生成趋势报告。
-
-```bash
-python3 scripts/dev/analyze-test-trends.py [OPTIONS]
-```
-
-**选项**:
-- `--metrics-dir, -d <path>`: 指标数据目录（必需）
-- `--output, -o <path>`: 输出报告文件（必需）
-- `--help, -h`: 显示帮助信息
-
-**示例**:
-```bash
-python3 scripts/dev/analyze-test-trends.py \
-    --metrics-dir metrics/ \
-    --output trends-report.md
-```
-
-##### analyze-performance-regression.py
-
-对比当前性能与基准性能，检测性能回归。
-
-```bash
-python3 scripts/dev/analyze-performance-regression.py [OPTIONS]
-```
-
-**选项**:
-- `--current, -c <path>`: 当前性能指标 JSON 文件（必需）
-- `--baseline, -b <path>`: 基准性能指标 JSON 文件（可选）
-- `--output, -o <path>`: 输出报告文件（必需）
-- `--threshold, -t <value>`: 回归阈值（默认: 0.2，即 20%）
-- `--help, -h`: 显示帮助信息
-
-**示例**:
-```bash
-python3 scripts/dev/analyze-performance-regression.py \
-    --current metrics/current.json \
-    --baseline metrics/baseline.json \
-    --output performance-report.md \
-    --threshold 0.2
-```
-
-#### 测试覆盖率
-
-##### analyze-coverage-trends.py
-
-分析覆盖率的历史数据，检测覆盖率变化和回归。
-
-```bash
-python3 scripts/dev/analyze-coverage-trends.py [OPTIONS]
-```
-
-**选项**:
-- `--current, -c <path>`: 当前覆盖率 JSON 文件（必需）
-- `--baseline, -b <path>`: 基准覆盖率 JSON 文件（可选）
-- `--output, -o <path>`: 输出报告文件（必需）
-- `--threshold, -t <value>`: 回归阈值（%，默认: 1.0）
-- `--help, -h`: 显示帮助信息
-
-**示例**:
-```bash
-python3 scripts/dev/analyze-coverage-trends.py \
-    --current coverage.json \
-    --baseline baseline-coverage.json \
-    --output coverage-report.md \
-    --threshold 1.0
-```
-
-##### check-coverage.sh
-
-测试覆盖率检查。
-
-```bash
-./scripts/dev/check-coverage.sh
-```
-
-**前置要求**: 需要安装 `cargo-tarpaulin`
-```bash
-cargo install cargo-tarpaulin
-```
-
-### 📚 文档相关脚本
-
-##### check-docs.sh
-
-文档检查脚本，用于本地测试 document-check.yml 和 CI check-docs job 的逻辑。
-
-```bash
-./scripts/dev/check-docs.sh
-```
-
-##### check-links.sh
-
-文档链接有效性检查。
-
-```bash
-./scripts/dev/check-links.sh
-```
-
-### 🔧 环境配置相关脚本
-
-#### 依赖安装脚本
-
-##### install-basic.sh
-
-安装 Linux 基本系统依赖，包括 XCB 开发库和 Python3。主要用于测试、运行和 CI/CD 环境。
-
-```bash
-./scripts/dev/dependencies/install-basic.sh
-```
-
-**功能**:
-- 安装 XCB 开发库（clipboard 依赖）
-- 安装 Python3（xcb-proto 代码生成需要）
-- 基本验证
-
-**前置要求**:
-- Linux 系统（脚本会自动检查）
-- sudo 权限
-
-**说明**:
-- 脚本会自动检测操作系统，非 Linux 系统会安全退出
-- 包含错误处理和验证步骤
-- 在 CI/CD 中使用时，建议配合 `if: runner.os == 'Linux'` 条件
-
-##### install-build.sh
-
-安装 Linux 构建依赖，包含基本依赖 + 构建工具（python3-pip, python3-xcbgen, pkg-config）。用于编译 Linux x86_64 平台的二进制文件。
-
-```bash
-./scripts/dev/dependencies/install-build.sh
-```
-
-**功能**:
-- 调用 `install-basic.sh` 安装基本依赖
-- 安装构建工具（python3-pip, python3-xcbgen, pkg-config）
-- 验证构建依赖（xcbgen 模块、pkg-config）
-
-**前置要求**:
-- Linux 系统（脚本会自动检查）
-- sudo 权限
-
-**说明**:
-- 会自动调用基本依赖安装脚本
-- 包含完整的构建依赖验证
-- 主要用于 Release workflow 的构建阶段
-
----
-
-## 🔧 依赖要求
-
-### Python 脚本
-- Python 3.8+
-- 标准库（优先使用）
-
-### Bash 脚本
-- Bash 4.0+
-- 常用 Unix 工具（`grep`, `awk`, `find`, `sed` 等）
-- `cargo-tarpaulin`（用于 `check-coverage.sh`）
-- `lychee`（可选，用于 `check-links.sh` 的外部链接检查）
-- `bc`（用于数学计算）
+- **CI 流程**: 从 ~3 分钟编译时间 → 即时运行
+- **Release 流程**: 从 ~3 分钟编译时间 → 即时运行
+- **总性能提升**: 所有 workflows 节省 ~12 分钟
 
 ---
 
 ## 📝 注意事项
 
-1. **迁移进行中**: 部分脚本正在迁移到 Python，请关注迁移进度
+1. **Python 版本**: Python Dev 工具要求 Python 3.13+
 2. **兼容性**: 所有脚本应在 macOS 和 Linux 上正常工作
-3. **错误处理**: 脚本使用 `set -e` 确保错误时退出
-4. **路径**: 脚本应在项目根目录运行
+3. **路径**: 脚本应在项目根目录运行
+4. **错误处理**: Shell 脚本使用 `set -e` 确保错误时退出
 
 ---
 
@@ -415,5 +126,7 @@ cargo install cargo-tarpaulin
 
 ## 📚 相关文档
 
-- [脚本迁移分析报告](../../docs/requirements/scripts-migration-analysis.md)
-- [脚本迁移实施计划](../../docs/requirements/scripts-migration-plan.md)
+- [Python Dev 工具文档](./py/README.md) - 完整使用指南
+- [Shell 脚本工具文档](./shell/README.md) - Shell 脚本使用说明
+- [脚本迁移分析报告](../../docs/requirements/scripts-migration-analysis.md) - 迁移分析
+- [脚本迁移实施计划](../../docs/requirements/scripts-migration-plan.md) - 迁移计划

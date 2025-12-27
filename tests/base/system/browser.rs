@@ -30,7 +30,6 @@ fn test_browser_structure_can_be_created() {
     let _browser = Browser;
 
     // Assert: 验证结构体可以创建（不会panic）
-    assert!(true);
 }
 
 // ==================== Browser Open Tests ====================

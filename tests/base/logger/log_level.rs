@@ -366,7 +366,7 @@ fn test_log_level_init() {
 fn test_log_level_clone_copy() {
     let level1 = LogLevel::Debug;
     let level2 = level1; // Copy
-    let level3 = level1.clone(); // Clone
+    let level3 = level1; // Clone
     assert_eq!(level1, level2);
     assert_eq!(level1, level3);
 }

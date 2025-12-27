@@ -1,11 +1,11 @@
+#![allow(dead_code, clippy::test_attr_in_doctest)] // 这些函数供测试使用，可能暂时未被引用
+
 //! 测试性能测量工具
 //!
 //! 提供用于测量和监控测试执行时间的工具函数，包括：
 //! - 执行时间测量
 //! - 调用栈分析
 //! - 内存使用分析（基础版本）
-
-#![allow(dead_code)] // 这些函数供测试使用，可能暂时未被引用
 
 use color_eyre::Result;
 use std::backtrace::Backtrace;
@@ -445,11 +445,7 @@ where
     let result = test_fn();
     let memory_after = estimate_memory_usage();
 
-    let memory_used = if memory_after > memory_before {
-        memory_after - memory_before
-    } else {
-        0
-    };
+    let memory_used = memory_after.saturating_sub(memory_before);
 
     if memory_used > 10 * 1024 * 1024 {
         // 超过 10MB

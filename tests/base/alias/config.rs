@@ -156,7 +156,6 @@ fn test_commands_config_load_nonexistent_file_with_missing_file_handles_graceful
     let _result = CommandsConfig::load();
 
     // Assert: 验证不会panic（可能返回错误或默认配置）
-    assert!(true);
 }
 
 /// 测试CommandsConfig加载存在的配置文件

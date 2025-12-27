@@ -51,7 +51,7 @@ fn mock_parse_worktree_status(status_output: &str) -> WorktreeStatus {
             continue;
         }
 
-        let staged_status = line.chars().nth(0).unwrap_or(' ');
+        let staged_status = line.chars().next().unwrap_or(' ');
         let worktree_status = line.chars().nth(1).unwrap_or(' ');
 
         // 检查暂存区状态
@@ -162,7 +162,7 @@ mod tests {
         let original = RepoType::GitHub;
 
         // Act: 克隆RepoType
-        let cloned = original.clone();
+        let cloned = original;
 
         // Assert: 验证克隆后的值相等且独立
         assert_eq!(original, cloned);
@@ -440,7 +440,7 @@ mod tests {
         let original = MergeStrategy::Merge;
 
         // Act: 克隆MergeStrategy
-        let cloned = original.clone();
+        let cloned = original;
 
         // Assert: 验证克隆后的值相等（通过Debug输出验证）
         assert_eq!(format!("{:?}", original), format!("{:?}", cloned));

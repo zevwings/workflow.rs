@@ -1,3 +1,5 @@
+#![allow(clippy::approx_constant)]
+
 //! Logger Tracing 测试
 //!
 //! 测试 tracing 封装的功能。
@@ -1003,7 +1005,7 @@ fn test_tracer_init_enable_console_config_read_returns_bool() {
 
     // Assert: 验证配置读取逻辑存在，返回布尔值
     // unwrap_or(false) 的逻辑：如果为 None，则使用 false
-    assert!(enable_console == true || enable_console == false);
+    assert!(enable_console || !enable_console);
 }
 
 /// 测试Tracer初始化时日志文件路径创建逻辑
@@ -1057,7 +1059,6 @@ fn test_tracer_init_registry_building_logic() {
     // 但可以验证代码路径存在且不会 panic
 
     // 如果运行到这里没有 panic，说明 registry 构建逻辑正常
-    assert!(true);
 }
 
 /// 测试Tracer初始化时条件添加console layer的逻辑
@@ -1089,7 +1090,7 @@ fn test_tracer_init_conditional_console_layer() {
     // 无法在同一进程中测试两种情况的代码路径
     // 但可以验证代码逻辑存在
 
-    assert!(enable_console == true || enable_console == false);
+    assert!(enable_console || !enable_console);
 }
 
 /// 测试Tracer初始化时回退逻辑的存在性
@@ -1114,7 +1115,6 @@ fn test_tracer_init_fallback_logic_existence() {
     // 但可以验证代码路径存在
 
     // 如果运行到这里没有 panic，说明回退逻辑存在
-    assert!(true);
 }
 
 /// 测试Tracer初始化时sink writer逻辑的存在性
@@ -1140,5 +1140,4 @@ fn test_tracer_init_sink_writer_logic() {
     // 但可以验证代码路径存在
 
     // 如果运行到这里没有 panic，说明 sink writer 逻辑存在
-    assert!(true);
 }

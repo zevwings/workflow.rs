@@ -1,3 +1,5 @@
+#![allow(clippy::doc_lazy_continuation)]
+
 //! HTTP Retry 测试补充
 //!
 //! 补充测试 HTTP 重试机制的其他功能，特别是错误判断和描述提取。
@@ -85,7 +87,7 @@ fn test_retry_config_new_with_default_values_returns_config() {
     assert_eq!(config.initial_delay, 1);
     assert_eq!(config.max_delay, 30);
     assert_eq!(config.backoff_multiplier, 2.0);
-    assert_eq!(config.interactive, true);
+    assert!(config.interactive);
 }
 
 /// 测试使用Default trait创建HttpRetryConfig实例
@@ -112,7 +114,7 @@ fn test_retry_config_default_with_no_params_returns_config() {
     assert_eq!(config.initial_delay, 1);
     assert_eq!(config.max_delay, 30);
     assert_eq!(config.backoff_multiplier, 2.0);
-    assert_eq!(config.interactive, true);
+    assert!(config.interactive);
 }
 
 /// 测试创建自定义HttpRetryConfig实例
@@ -145,7 +147,7 @@ fn test_retry_config_custom_with_specified_values_returns_config() {
     assert_eq!(config.initial_delay, 2);
     assert_eq!(config.max_delay, 60);
     assert_eq!(config.backoff_multiplier, 1.5);
-    assert_eq!(config.interactive, false);
+    assert!(!config.interactive);
 }
 
 // ==================== HttpRetry Result Tests ====================
@@ -2426,7 +2428,7 @@ fn test_immediate_success_with_always_success_return_true() -> Result<()> {
 
     // Assert: 验证第一次尝试成功
     assert_eq!(result.retry_count, 0);
-    assert_eq!(result.succeeded_on_first_attempt, true);
+    assert!(result.succeeded_on_first_attempt);
     assert_eq!(result.result, "immediate success");
     Ok(())
 }
@@ -2459,7 +2461,7 @@ fn test_success_after_retries_with_second_attempt_return_true() -> Result<()> {
 
     // Assert: 验证重试后成功
     assert_eq!(result.retry_count, 1);
-    assert_eq!(result.succeeded_on_first_attempt, false);
+    assert!(!result.succeeded_on_first_attempt);
     assert_eq!(result.result, "success");
     Ok(())
 }
@@ -2969,7 +2971,7 @@ fn test_different_return_ok() -> Result<()> {
         &config,
         "bool test",
     )?;
-    assert_eq!(bool_result.result, true);
+    assert!(bool_result.result);
 
     #[derive(Debug, PartialEq)]
     struct CustomData {

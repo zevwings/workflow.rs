@@ -45,7 +45,6 @@ fn test_table_builder_new_with_data_creates_builder() {
     let _builder = TableBuilder::new(users);
 
     // Assert: 验证可以创建TableBuilder
-    assert!(true);
 }
 
 /// 测试使用标题创建TableBuilder并渲染
@@ -232,15 +231,13 @@ fn test_table_builder_display_trait() {
 #[test]
 fn test_table_style_variants() {
     // Assert: 验证所有 TableStyle 变体都可以使用
-    let _styles = vec![
+    let _styles = [
         TableStyle::Default,
         TableStyle::Modern,
         TableStyle::Compact,
         TableStyle::Minimal,
         TableStyle::Grid,
     ];
-
-    assert!(true);
 }
 
 /// 测试TableBuilder的链式调用

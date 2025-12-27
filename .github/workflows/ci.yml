@@ -40,7 +40,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
       - name: 🔍 Check if version bump branch
         id: check
@@ -52,7 +52,7 @@ jobs:
           WORKFLOW_USER_NAME: ${{ env.WORKFLOW_USER_NAME }}
         run: |
           # 使用 Python dev 工具
-          python3 scripts/dev/dev.py ci check-skip \
+                 python3 scripts/dev/py/dev.py ci check-skip \
             --branch "${{ github.head_ref || github.ref_name }}" \
             --pr-creator "${{ github.event.pull_request.user.login }}" \
             --expected-user "${{ env.WORKFLOW_USER_NAME }}" \
@@ -90,7 +90,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
       - name: ✨ Check code formatting
         run: cargo fmt --check
@@ -184,13 +184,12 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
-      - name: 📥 Download dev binary artifact
-        uses: actions/download-artifact@v4
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
         with:
-          name: dev-binary
-          path: target/release/
+          python-version: '3.13'
 
       - name: 🧪 Run ${{ matrix.test_type }} tests
         timeout-minutes: ${{ matrix.test_timeout }}
@@ -245,40 +244,21 @@ jobs:
           REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.html"
           JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
 
-          # 注意：tests report generate 命令尚未迁移到 Python，暂时使用 Rust 二进制
-          # TODO: 迁移 tests report generate 到 Python
-          if [ -f "./target/release/dev" ]; then
-            chmod +x ./target/release/dev
-            grep '^{' test-output.log 2>/dev/null | \
-              ./target/release/dev tests report generate \
-                --format html \
-                --output "$REPORT_FILE" || {
-              echo "⚠️  Failed to generate test report, continuing..."
-              exit 0
-            }
-            # 同时生成 JSON 报告用于 PR 评论
-            grep '^{' test-output.log 2>/dev/null | \
-              ./target/release/dev tests report generate \
-                --format json \
-                --output "$JSON_REPORT_FILE" || {
-              echo "⚠️  Failed to generate JSON report, continuing..."
-            }
-          else
-            echo "⚠️  dev binary not found, falling back to cargo run"
-            grep '^{' test-output.log 2>/dev/null | \
-              cargo run --bin dev --release -- tests report generate \
-                --format html \
-                --output "$REPORT_FILE" || {
-              echo "⚠️  Failed to generate test report, continuing..."
-              exit 0
-            }
-            grep '^{' test-output.log 2>/dev/null | \
-              cargo run --bin dev --release -- tests report generate \
-                --format json \
-                --output "$JSON_REPORT_FILE" || {
-              echo "⚠️  Failed to generate JSON report, continuing..."
-            }
-          fi
+          # 使用 Python dev 工具
+          grep '^{' test-output.log 2>/dev/null | \
+            python3 scripts/dev/py/dev.py tests report generate \
+              --format html \
+              --output "$REPORT_FILE" || {
+            echo "⚠️  Failed to generate test report, continuing..."
+            exit 0
+          }
+          # 同时生成 JSON 报告用于 PR 评论
+          grep '^{' test-output.log 2>/dev/null | \
+            python3 scripts/dev/py/dev.py tests report generate \
+              --format json \
+              --output "$JSON_REPORT_FILE" || {
+            echo "⚠️  Failed to generate JSON report, continuing..."
+          }
           echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
           echo "json_report_file=$JSON_REPORT_FILE" >> $GITHUB_OUTPUT
 
@@ -318,16 +298,10 @@ jobs:
 
           JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
           if [ -f "$JSON_REPORT_FILE" ]; then
-            # 注意：tests metrics collect 命令尚未迁移到 Python，暂时使用 Rust 二进制
-            # TODO: 迁移 tests metrics collect 到 Python
-            if [ -f "./target/release/dev" ]; then
-              chmod +x ./target/release/dev
-              ./target/release/dev tests metrics collect \
-                --report "$JSON_REPORT_FILE" \
-                --output "$METRICS_DIR/metrics-${{ matrix.test_type }}-${{ matrix.platform }}-${{ github.run_id }}.json"
-            else
-              echo "⚠️  dev binary not found, skipping metrics collection"
-            fi
+            # 使用 Python dev 工具
+            python3 scripts/dev/py/dev.py tests metrics collect \
+              --report "$JSON_REPORT_FILE" \
+              --output "$METRICS_DIR/metrics-${{ matrix.test_type }}-${{ matrix.platform }}-${{ github.run_id }}.json"
           fi
 
           echo "metrics_dir=$METRICS_DIR" >> $GITHUB_OUTPUT
@@ -362,26 +336,14 @@ jobs:
           # 基准文件路径（从 Artifacts 下载或使用当前作为基准）
           BASELINE_FILE="performance-baseline-${{ matrix.test_type }}-${{ matrix.platform }}.json"
 
-          # 使用已下载的二进制文件，避免重新编译
-          if [ -f "./target/release/dev" ]; then
-            chmod +x ./target/release/dev
-            ./target/release/dev performance analyze \
-              --current "$JSON_REPORT_FILE" \
-              --baseline "$BASELINE_FILE" \
-              --output "performance-regression-report.md" \
-              --threshold 0.2 || {
-              echo "⚠️  Performance regression detected, but continuing..."
-            }
-          else
-            echo "⚠️  dev binary not found, falling back to cargo run"
-            cargo run --bin dev --release -- performance analyze \
-              --current "$JSON_REPORT_FILE" \
-              --baseline "$BASELINE_FILE" \
-              --output "performance-regression-report.md" \
-              --threshold 0.2 || {
-              echo "⚠️  Performance regression detected, but continuing..."
-            }
-          fi
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py performance analyze \
+            --current "$JSON_REPORT_FILE" \
+            --baseline "$BASELINE_FILE" \
+            --output "performance-regression-report.md" \
+            --threshold 0.2 || {
+            echo "⚠️  Performance regression detected, but continuing..."
+          }
 
           # 更新基准（如果当前性能更好或首次运行）
           if [ ! -f "$BASELINE_FILE" ] || [ "${{ steps.test_run.outcome }}" == "success" ]; then
@@ -653,13 +615,12 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
-      - name: 📥 Download dev binary artifact
-        uses: actions/download-artifact@v4
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
         with:
-          name: dev-binary
-          path: target/release/
+          python-version: '3.13'
 
       - name: 📥 Download all test reports
         uses: actions/download-artifact@v4
@@ -701,17 +662,11 @@ jobs:
             CMD_ARGS="$CMD_ARGS --report $json_file"
           done
 
-          # 注意：tests report generate 命令尚未迁移到 Python，暂时使用 Rust 二进制
-          # TODO: 迁移 tests report generate 到 Python
-          if [ -f "./target/release/dev" ]; then
-            chmod +x ./target/release/dev
-            ./target/release/dev tests report generate $CMD_ARGS || {
-              echo "⚠️  Failed to generate PR comment, continuing..."
-              exit 0
-            }
-          else
-            echo "⚠️  dev binary not found, skipping PR comment generation"
-          fi
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py tests report generate $CMD_ARGS || {
+            echo "⚠️  Failed to generate PR comment, continuing..."
+            exit 0
+          }
 
           # 将评论内容保存到输出（用于后续步骤）
           echo "comment_file=$COMMENT_FILE" >> $GITHUB_OUTPUT
@@ -799,13 +754,12 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
-      - name: 📥 Download dev binary artifact
-        uses: actions/download-artifact@v4
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
         with:
-          name: dev-binary
-          path: target/release/
+          python-version: '3.13'
 
       - name: 📥 Download test metrics
         uses: actions/download-artifact@v4
@@ -835,24 +789,13 @@ jobs:
             exit 0
           fi
 
-          # 使用已下载的二进制文件，避免重新编译
-          if [ -f "./target/release/dev" ]; then
-            chmod +x ./target/release/dev
-            ./target/release/dev tests trends analyze \
-              --metrics-dir "$METRICS_DIR" \
-              --output "test-trends-report.md" || {
-              echo "⚠️  Failed to generate trend report, continuing..."
-              exit 0
-            }
-          else
-            echo "⚠️  dev binary not found, falling back to cargo run"
-            cargo run --bin dev --release -- tests trends analyze \
-              --metrics-dir "$METRICS_DIR" \
-              --output "test-trends-report.md" || {
-              echo "⚠️  Failed to generate trend report, continuing..."
-              exit 0
-            }
-          fi
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py tests trends analyze \
+            --metrics-dir "$METRICS_DIR" \
+            --output "test-trends-report.md" || {
+            echo "⚠️  Failed to generate trend report, continuing..."
+            exit 0
+          }
 
           echo "trend_report=test-trends-report.md" >> $GITHUB_OUTPUT
 
@@ -899,7 +842,7 @@ jobs:
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
-        run: bash scripts/dev/dependencies/install-basic.sh
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
       - name: 🐍 Setup Python 3.13
         uses: actions/setup-python@v5
@@ -915,6 +858,6 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
           # 使用 Python dev 工具
-          python3 scripts/dev/dev.py ci verify \
+          python3 scripts/dev/py/dev.py ci verify \
             --should-skip ${{ needs.check-skip-ci.outputs.should_skip == 'true' }} \
             --jobs "check-lint,tests,build"

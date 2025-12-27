@@ -1,3 +1,5 @@
+#![allow(clippy::field_reassign_with_default)]
+
 //! 测试数据缓存系统
 //!
 //! 提供测试数据缓存功能，优化测试数据生成性能。
@@ -24,12 +26,12 @@ pub struct CacheConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EvictionPolicy {
     /// 最近最少使用（LRU）
-    LRU,
+    Lru,
     /// 先进先出（FIFO）
-    FIFO,
+    Fifo,
     /// 基于时间（TTL）
     #[allow(dead_code)]
-    TTL,
+    Ttl,
 }
 
 impl Default for CacheConfig {
@@ -38,7 +40,7 @@ impl Default for CacheConfig {
             enabled: true,
             ttl: Some(Duration::from_secs(3600)), // 默认 1 小时
             max_size: Some(1000),
-            eviction_policy: EvictionPolicy::LRU,
+            eviction_policy: EvictionPolicy::Lru,
         }
     }
 }
@@ -176,10 +178,8 @@ impl TestDataCache {
         self.stats.size = self.cache.len();
 
         // 更新 FIFO 队列
-        if self.config.eviction_policy == EvictionPolicy::FIFO {
-            if !self.fifo_queue.contains(&key) {
-                self.fifo_queue.push(key);
-            }
+        if self.config.eviction_policy == EvictionPolicy::Fifo && !self.fifo_queue.contains(&key) {
+            self.fifo_queue.push(key);
         }
     }
 
@@ -205,18 +205,18 @@ impl TestDataCache {
     /// 执行缓存淘汰
     fn evict(&mut self) {
         let key_to_remove = match self.config.eviction_policy {
-            EvictionPolicy::LRU => {
+            EvictionPolicy::Lru => {
                 // 找到最近最少使用的项
                 self.cache
                     .iter()
                     .min_by_key(|(_, item)| item.last_accessed)
                     .map(|(key, _)| key.clone())
             }
-            EvictionPolicy::FIFO => {
+            EvictionPolicy::Fifo => {
                 // 移除队列中最旧的项
                 self.fifo_queue.pop()
             }
-            EvictionPolicy::TTL => {
+            EvictionPolicy::Ttl => {
                 // 找到第一个过期的项
                 self.cache.iter().find_map(|(key, item)| {
                     if item.is_expired(self.config.ttl) {
@@ -317,7 +317,7 @@ mod tests {
     fn test_cache_max_size() {
         let mut config = CacheConfig::default();
         config.max_size = Some(2);
-        config.eviction_policy = EvictionPolicy::FIFO;
+        config.eviction_policy = EvictionPolicy::Fifo;
 
         let mut cache = TestDataCache::new(config);
 

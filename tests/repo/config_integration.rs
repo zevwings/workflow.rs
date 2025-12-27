@@ -1,3 +1,5 @@
+#![allow(clippy::field_reassign_with_default)]
+
 //! 仓库配置集成测试
 //!
 //! 测试公共配置和私有配置的集成、配置迁移和边界情况。

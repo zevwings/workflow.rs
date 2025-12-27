@@ -87,7 +87,7 @@ impl GitHubPRValidator {
         // 验证必需字段
         let required_fields = ["number", "title", "state"];
         for field in &required_fields {
-            if !pr.get(field).is_some() {
+            if pr.get(field).is_none() {
                 return Err(color_eyre::eyre::eyre!("Missing required field: {}", field))
                     .wrap_err("GitHub PR validation failed");
             }
@@ -144,7 +144,7 @@ impl JiraIssueValidator {
         // 验证必需字段
         let required_fields = ["key", "fields"];
         for field in &required_fields {
-            if !issue.get(field).is_some() {
+            if issue.get(field).is_none() {
                 return Err(color_eyre::eyre::eyre!("Missing required field: {}", field))
                     .wrap_err("Jira Issue validation failed");
             }
@@ -160,7 +160,7 @@ impl JiraIssueValidator {
             // 验证 fields 中的必需字段
             let required_field_fields = ["summary", "status"];
             for field in &required_field_fields {
-                if !fields.get(field).is_some() {
+                if fields.get(field).is_none() {
                     return Err(color_eyre::eyre::eyre!(
                         "Missing required field in 'fields': {}",
                         field
@@ -198,7 +198,7 @@ impl GitCommitValidator {
         // 验证必需字段
         let required_fields = ["sha", "commit"];
         for field in &required_fields {
-            if !commit.get(field).is_some() {
+            if commit.get(field).is_none() {
                 return Err(color_eyre::eyre::eyre!("Missing required field: {}", field))
                     .wrap_err("Git Commit validation failed");
             }
@@ -214,7 +214,7 @@ impl GitCommitValidator {
             // 验证 commit 中的必需字段
             let required_commit_fields = ["message", "author"];
             for field in &required_commit_fields {
-                if !commit_obj.get(field).is_some() {
+                if commit_obj.get(field).is_none() {
                     return Err(color_eyre::eyre::eyre!(
                         "Missing required field in 'commit': {}",
                         field

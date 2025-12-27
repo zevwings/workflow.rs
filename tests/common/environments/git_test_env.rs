@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! 统一Git测试环境
 //!
 //! 基于 TestIsolation 的 Git 测试环境，提供完全隔离的 Git 仓库操作。
@@ -300,8 +302,8 @@ impl GitTestEnv {
     /// ```
     pub fn current_branch(&self) -> Result<String> {
         let output = Command::new("git")
-            .args(&["branch", "--show-current"])
-            .current_dir(&self.path())
+            .args(["branch", "--show-current"])
+            .current_dir(self.path())
             .output()?;
 
         if !output.status.success() {
@@ -331,8 +333,8 @@ impl GitTestEnv {
     /// ```
     pub fn last_commit_sha(&self) -> Result<String> {
         let output = Command::new("git")
-            .args(&["rev-parse", "HEAD"])
-            .current_dir(&self.path())
+            .args(["rev-parse", "HEAD"])
+            .current_dir(self.path())
             .output()?;
 
         if !output.status.success() {

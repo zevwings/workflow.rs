@@ -1,3 +1,5 @@
+#![allow(clippy::assertions_on_constants)]
+
 //! Base/Dialog/Form Builder 模块测试
 //!
 //! 测试表单构建器的核心功能。
@@ -720,8 +722,10 @@ fn test_form_builder_step_conditional_evaluation_with_conditional_step_creates_c
     assert_eq!(builder.groups[0].steps.len(), 2);
     use workflow::base::dialog::StepType;
     match &builder.groups[0].steps[1].step_type {
-        StepType::Conditional(_) => assert!(true),
-        _ => assert!(false, "Expected conditional step"),
+        StepType::Conditional(_) => {
+            // 验证步骤类型正确
+        }
+        _ => panic!("Expected conditional step"),
     }
 }
 
@@ -755,8 +759,10 @@ fn test_form_builder_step_conditional_all_evaluation_with_multiple_conditions_cr
     assert!(!builder.groups[0].steps.is_empty());
     use workflow::base::dialog::StepType;
     match &builder.groups[0].steps[0].step_type {
-        StepType::ConditionalAll(_) => assert!(true),
-        _ => assert!(false, "Expected conditional all step"),
+        StepType::ConditionalAll(_) => {
+            // 验证步骤类型正确
+        }
+        _ => panic!("Expected conditional all step"),
     }
 }
 
@@ -790,8 +796,10 @@ fn test_form_builder_step_conditional_any_evaluation_with_multiple_conditions_cr
     assert!(!builder.groups[0].steps.is_empty());
     use workflow::base::dialog::StepType;
     match &builder.groups[0].steps[0].step_type {
-        StepType::ConditionalAny(_) => assert!(true),
-        _ => assert!(false, "Expected conditional any step"),
+        StepType::ConditionalAny(_) => {
+            // 验证步骤类型正确
+        }
+        _ => panic!("Expected conditional any step"),
     }
 }
 
@@ -824,8 +832,10 @@ fn test_form_builder_step_dynamic_condition_evaluation_with_dynamic_condition_cr
     assert!(!builder.groups[0].steps.is_empty());
     use workflow::base::dialog::StepType;
     match &builder.groups[0].steps[0].step_type {
-        StepType::DynamicCondition(_) => assert!(true),
-        _ => assert!(false, "Expected dynamic condition step"),
+        StepType::DynamicCondition(_) => {
+            // 验证步骤类型正确
+        }
+        _ => panic!("Expected dynamic condition step"),
     }
 }
 
@@ -866,8 +876,10 @@ fn test_form_builder_field_with_condition_creates_conditional_step() {
                                                             // Assert: 验证第二个步骤有条件（步骤类型是 Conditional，不是字段的条件）
     use workflow::base::dialog::StepType;
     match &builder.groups[0].steps[1].step_type {
-        StepType::Conditional(_) => assert!(true),
-        _ => assert!(false, "Expected conditional step"),
+        StepType::Conditional(_) => {
+            // 验证步骤类型正确
+        }
+        _ => panic!("Expected conditional step"),
     }
 }
 

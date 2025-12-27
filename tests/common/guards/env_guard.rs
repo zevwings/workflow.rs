@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! 环境变量隔离守卫
 //!
 //! 管理测试期间的环境变量修改，自动恢复原始值。

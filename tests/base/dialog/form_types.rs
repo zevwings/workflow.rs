@@ -558,7 +558,7 @@ fn test_form_result_get_required_bool_with_existing_field_return_ok() -> Result<
     result.values.insert("yes_field".to_string(), "yes".to_string());
 
     // Act & Assert: 测试 get_required_bool() 方法
-    assert_eq!(result.get_required_bool("yes_field")?, true);
+    assert!(result.get_required_bool("yes_field")?);
     assert!(result.get_required_bool("nonexistent").is_err());
 
     Ok(())

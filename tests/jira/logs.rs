@@ -78,7 +78,6 @@ fn test_jira_logs_get_log_file_path(
     } else {
         // 如果返回错误（例如目录读取失败），这也是可以接受的
         // 主要验证函数不会 panic
-        assert!(true, "Path building may fail if directory doesn't exist");
     }
 }
 
@@ -100,7 +99,6 @@ fn test_jira_logs_get_log_file_path_format(jira_logs: JiraLogs) {
         assert!(path_str.contains(jira_id), "Path should contain JIRA ID");
     } else {
         // 如果路径构建失败，这也是可以接受的（例如目录不存在）
-        assert!(true, "Path building may fail if directory doesn't exist");
     }
 }
 
@@ -123,7 +121,6 @@ fn test_jira_logs_path_consistency(jira_logs: JiraLogs) {
         }
         (Err(_), Err(_)) => {
             // 如果都失败，这也是可以接受的
-            assert!(true, "Both calls may fail consistently");
         }
         _ => {
             // 一个成功一个失败不应该发生
@@ -152,7 +149,6 @@ fn test_jira_logs_different_jira_ids(jira_logs: JiraLogs) {
         _ => {
             // 如果路径构建失败，这也是可以接受的
             // 主要验证函数不会 panic
-            assert!(true, "Path building may fail, but should not panic");
         }
     }
 }
@@ -315,12 +311,10 @@ fn test_jira_logs_clean_dir_empty_jira_id() {
     match result {
         Ok(_clean_result) => {
             // 如果成功，验证结果结构
-            assert!(true, "Should handle empty JIRA ID");
         }
         Err(_) => {
             // 如果失败（例如目录不存在），这也是可以接受的行为
             // 主要验证函数不会 panic
-            assert!(true, "Should handle empty JIRA ID gracefully");
         }
     }
 }
@@ -385,7 +379,6 @@ fn test_jira_logs_output_folder_name(jira_logs: JiraLogs) {
         assert!(!path_str.is_empty(), "Path should not be empty");
     } else {
         // 如果路径构建失败，这也是可以接受的
-        assert!(true, "Path building may fail if directory doesn't exist");
     }
 }
 
@@ -423,8 +416,6 @@ fn test_jira_logs_invalid_jira_id_format(jira_logs: JiraLogs, #[case] jira_id: &
     // 即使格式可能无效，路径构建应该仍然工作（或优雅地失败）
     let result = jira_logs.get_log_file_path(jira_id);
     // 路径构建可能成功或失败，主要验证不会 panic
-    match result {
-        Ok(_) => assert!(true, "Path building succeeded"),
-        Err(_) => assert!(true, "Path building failed gracefully"),
-    }
+    // 路径构建可能成功或失败，主要验证不会 panic
+    let _ = result;
 }

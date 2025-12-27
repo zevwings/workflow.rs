@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! Git配置隔离守卫
 //!
 //! 临时修改Git配置，测试结束后自动恢复。
@@ -132,7 +134,7 @@ impl GitConfigGuard {
                     .and_then(|d| d.canonicalize().ok())
                     .filter(|d| d.exists())
             })
-            .unwrap_or_else(|| std::env::temp_dir());
+            .unwrap_or_else(std::env::temp_dir);
 
         // 重试机制：处理锁文件冲突和短暂的并发锁定
         let config_path_str = self
@@ -278,7 +280,7 @@ mod tests {
                     .and_then(|d| d.canonicalize().ok())
                     .filter(|d| d.exists())
             })
-            .unwrap_or_else(|| std::env::temp_dir());
+            .unwrap_or_else(std::env::temp_dir);
 
         let config_path_str = guard
             .config_path()

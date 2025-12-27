@@ -32,12 +32,9 @@ fn test_detect_shell_from_env_with_env_var_returns_shell() {
     // Assert: 验证返回支持的shell类型或错误
     if let Ok(shell) = result {
         match shell {
-            Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {
-                assert!(true);
-            }
+            Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {}
             _ => {
                 // 如果检测到其他shell类型，也接受
-                assert!(true);
             }
         }
     } else {
@@ -98,12 +95,9 @@ fn test_detect_installed_shells_with_system_returns_shells() {
     let _shell_count = shells.len();
     for shell in &shells {
         match shell {
-            Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {
-                assert!(true);
-            }
+            Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {}
             _ => {
                 // 如果检测到其他shell类型，也接受
-                assert!(true);
             }
         }
     }
@@ -163,12 +157,9 @@ fn test_detect_shell_with_different_paths() {
         if let Some(shell) = Shell::from_shell_path(path) {
             // Assert: 验证可以解析 shell 类型
             match shell {
-                Shell::Bash | Shell::Zsh | Shell::Fish => {
-                    assert!(true);
-                }
+                Shell::Bash | Shell::Zsh | Shell::Fish => {}
                 _ => {
                     // 其他类型也接受
-                    assert!(true);
                 }
             }
         }
@@ -204,7 +195,6 @@ fn test_detect_shell_consistency() -> Result<()> {
     }
     // 如果两次都失败，也应该一致
     else if result1.is_err() && result2.is_err() {
-        assert!(true);
     }
     Ok(())
 }
@@ -275,7 +265,6 @@ fn test_detect_installed_shells_no_duplicates() {
     // Assert: 验证函数可以正常执行
     // 注意：检查重复需要复杂的逻辑，这里只验证函数可以正常执行
     let _shells_count = shells.len();
-    assert!(true);
 }
 
 /// 测试从SHELL环境变量解析的回退逻辑
@@ -401,12 +390,9 @@ fn test_detect_installed_shells_fallback_to_current() {
     // 如果检测到 shell，验证它们都是有效的 Shell 类型
     for shell in &shells {
         match shell {
-            Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {
-                assert!(true);
-            }
+            Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {}
             _ => {
                 // 其他类型也接受
-                assert!(true);
             }
         }
     }

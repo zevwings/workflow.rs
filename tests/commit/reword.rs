@@ -203,7 +203,7 @@ fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
     match result {
         Ok(is_pushed) => {
             // Assert: 验证返回值是布尔类型
-            assert!(is_pushed == true || is_pushed == false);
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
@@ -236,7 +236,7 @@ fn test_should_show_force_push_warning_with_not_pushed_commit_returns_bool() {
     // Assert: 验证返回布尔值（成功或失败都是可以接受的）
     match result {
         Ok(is_pushed) => {
-            assert!(is_pushed == true || is_pushed == false);
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的

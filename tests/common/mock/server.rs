@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! HTTP 测试工具
 //!
 //! 提供 HTTP Mock 测试的通用工具函数。
@@ -389,7 +391,7 @@ impl MockServer {
                     exp.status
                 );
             }
-            eprintln!("");
+            eprintln!();
         }
 
         // 验证所有 Mock
@@ -475,7 +477,7 @@ impl MockServer {
                     exp.status
                 );
             }
-            eprintln!("");
+            eprintln!();
         }
 
         // 尝试验证所有 Mock，收集错误
@@ -553,7 +555,7 @@ impl MockServer {
                 exp.status
             );
         }
-        eprintln!("");
+        eprintln!();
     }
 }
 

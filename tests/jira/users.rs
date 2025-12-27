@@ -457,7 +457,6 @@ fn test_jira_users_get_with_local_cache() {
         }
         Err(_) => {
             // API 调用失败是可以接受的（例如没有配置 Jira）
-            assert!(true, "JiraUsers::get() may fail if Jira is not configured");
         }
     }
 }
@@ -508,7 +507,6 @@ fn test_jira_users_get_without_local_cache() {
         }
         Err(_) => {
             // API 调用失败是可以接受的
-            assert!(true, "JiraUsers::get() may fail if Jira is not configured");
         }
     }
 }

@@ -48,7 +48,9 @@ fn test_http_method_from_str_with_valid_methods_parses_correctly(
         | (HttpMethod::Post, HttpMethod::Post)
         | (HttpMethod::Put, HttpMethod::Put)
         | (HttpMethod::Delete, HttpMethod::Delete)
-        | (HttpMethod::Patch, HttpMethod::Patch) => assert!(true),
+        | (HttpMethod::Patch, HttpMethod::Patch) => {
+            // 验证方法匹配
+        }
         _ => {
             return Err(color_eyre::eyre::eyre!(
                 "Failed to parse {} as {:?}",
@@ -178,7 +180,7 @@ fn test_http_method_debug() {
 #[test]
 fn test_http_method_clone() {
     let original = HttpMethod::Post;
-    let cloned = original.clone();
+    let cloned = original;
     assert_eq!(format!("{}", original), format!("{}", cloned));
 }
 

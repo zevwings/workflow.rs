@@ -451,7 +451,6 @@ fn test_configure_interactive_with_ticket() {
         }
         Err(_) => {
             // API 调用失败，这是可以接受的（例如没有配置 Jira 凭据）
-            assert!(true, "API call may fail if Jira is not configured");
         }
     }
 }
@@ -505,7 +504,6 @@ fn test_configure_interactive_with_project_name() {
         }
         Err(_) => {
             // API 调用失败，这是可以接受的（例如没有配置 Jira 凭据）
-            assert!(true, "API call may fail if Jira is not configured");
         }
     }
 }

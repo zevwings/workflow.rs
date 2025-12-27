@@ -191,7 +191,7 @@ fn test_completion_generator_generate_all_with_shell_generates_files(
     match result {
         Ok(generate_result) => {
             assert!(
-                generate_result.messages.len() > 0,
+                !generate_result.messages.is_empty(),
                 "Should have generation messages"
             );
             if shell == "zsh" {
@@ -206,7 +206,7 @@ fn test_completion_generator_generate_all_with_shell_generates_files(
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 assert!(
-                    files.len() > 0,
+                    !files.is_empty(),
                     "Should generate at least one completion file"
                 );
             }

@@ -7,11 +7,12 @@ use color_eyre::Result;
 use std::time::Duration;
 
 /// 清理策略
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CleanupStrategy {
     /// 永不清理
     Never,
     /// 测试后清理
+    #[default]
     AfterTest,
     /// 测试套件后清理
     #[allow(dead_code)]
@@ -20,13 +21,7 @@ pub enum CleanupStrategy {
     #[allow(dead_code)]
     Manual,
     /// 基于时间清理（TTL）
-    TTL(Duration),
-}
-
-impl Default for CleanupStrategy {
-    fn default() -> Self {
-        CleanupStrategy::AfterTest
-    }
+    Ttl(Duration),
 }
 
 /// 清理记录
@@ -188,7 +183,7 @@ impl TestDataCleanupManager {
             CleanupStrategy::Manual => false,
             CleanupStrategy::AfterTest => true,
             CleanupStrategy::AfterSuite => true,
-            CleanupStrategy::TTL(ttl) => {
+            CleanupStrategy::Ttl(ttl) => {
                 if let Some(last) = last_cleanup {
                     let elapsed =
                         Utc::now().signed_duration_since(last).to_std().unwrap_or_default();
@@ -253,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_should_cleanup_ttl() {
-        let manager = TestDataCleanupManager::new(CleanupStrategy::TTL(Duration::from_secs(60)));
+        let manager = TestDataCleanupManager::new(CleanupStrategy::Ttl(Duration::from_secs(60)));
 
         // 没有上次清理时间，应该清理
         assert!(manager.should_cleanup(None));

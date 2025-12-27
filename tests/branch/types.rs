@@ -367,7 +367,7 @@ fn test_branch_type_clone_with_valid_type_creates_clone() {
     let original = BranchType::Feature;
 
     // Act: 克隆分支类型
-    let cloned = original.clone();
+    let cloned = original;
 
     // Assert: 验证克隆后的值相等
     assert_eq!(original, cloned);

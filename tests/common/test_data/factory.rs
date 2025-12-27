@@ -717,8 +717,8 @@ impl ConfigBuilder {
     #[allow(dead_code)]
     #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
-        Ok(serde_json::to_string_pretty(&self.build())
-            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
+        serde_json::to_string_pretty(&self.build())
+            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))
     }
 }
 
@@ -801,8 +801,8 @@ impl BranchBuilder {
     /// 构建为 JSON 字符串
     #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
-        Ok(serde_json::to_string_pretty(&self.build())
-            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
+        serde_json::to_string_pretty(&self.build())
+            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))
     }
 }
 
@@ -937,12 +937,157 @@ impl UserBuilder {
     /// 构建为 JSON 字符串
     #[allow(dead_code)]
     pub fn build_string(&self) -> Result<String> {
-        Ok(serde_json::to_string_pretty(&self.build())
-            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
+        serde_json::to_string_pretty(&self.build())
+            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))
     }
 }
 
 impl Default for UserBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// 日期时间数据构建器
+///
+/// 用于生成测试用的日期时间字符串（ISO 8601 格式）。
+///
+/// ## 使用示例
+///
+/// ```rust
+/// let factory = TestDataFactory::new();
+///
+/// // 使用默认值（当前时间）
+/// let dt = factory.date_time().build();
+///
+/// // 使用自定义日期时间
+/// let custom_dt = DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+///     .unwrap()
+///     .with_timezone(&Utc);
+/// let dt = factory.date_time().datetime(custom_dt).build();
+/// ```
+pub struct DateTimeBuilder {
+    datetime: Option<DateTime<Utc>>,
+}
+
+impl DateTimeBuilder {
+    fn new() -> Self {
+        Self { datetime: None }
+    }
+
+    /// 设置日期时间
+    ///
+    /// # 参数
+    ///
+    /// * `datetime` - UTC 日期时间
+    pub fn datetime(mut self, datetime: DateTime<Utc>) -> Self {
+        self.datetime = Some(datetime);
+        self
+    }
+
+    /// 设置日期时间（从字符串解析）
+    ///
+    /// # 参数
+    ///
+    /// * `s` - RFC 3339 格式的日期时间字符串
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let dt = factory.date_time().from_str("2024-06-01T12:00:00Z").build();
+    /// ```
+    #[allow(dead_code, clippy::wrong_self_convention)]
+    pub fn from_str<S: AsRef<str>>(mut self, s: S) -> Self {
+        if let Ok(dt) = DateTime::parse_from_rfc3339(s.as_ref()) {
+            self.datetime = Some(dt.with_timezone(&Utc));
+        }
+        self
+    }
+
+    /// 构建日期时间字符串
+    ///
+    /// 返回 ISO 8601 格式的日期时间字符串（如 "2024-01-01T10:00:00Z"）。
+    pub fn build(&self) -> String {
+        let dt = self.datetime.unwrap_or_else(Utc::now);
+        dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    }
+}
+
+impl Default for DateTimeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// UUID 数据构建器
+///
+/// 用于生成测试用的 UUID 字符串。
+///
+/// ## 使用示例
+///
+/// ```rust
+/// let factory = TestDataFactory::new();
+///
+/// // 使用默认值（随机生成）
+/// let uuid = factory.uuid().build();
+///
+/// // 使用自定义UUID
+/// let uuid = factory.uuid().uuid("550e8400-e29b-41d4-a716-446655440000").build();
+/// ```
+pub struct UuidBuilder {
+    uuid: Option<String>,
+}
+
+impl UuidBuilder {
+    fn new() -> Self {
+        Self { uuid: None }
+    }
+
+    /// 设置 UUID
+    ///
+    /// # 参数
+    ///
+    /// * `uuid` - UUID 字符串
+    pub fn uuid<S: Into<String>>(mut self, uuid: S) -> Self {
+        self.uuid = Some(uuid.into());
+        self
+    }
+
+    /// 构建 UUID 字符串
+    ///
+    /// 如果没有设置自定义 UUID，则生成一个随机的 UUID v4。
+    pub fn build(&self) -> String {
+        self.uuid.clone().unwrap_or_else(|| {
+            // 生成简单的UUID v4格式字符串（用于测试）
+            // 注意：这不是真正的UUID生成，只是格式匹配
+            // 如果需要真正的UUID，可以使用uuid crate
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            std::sync::atomic::AtomicU64::fetch_add(
+                &std::sync::atomic::AtomicU64::new(0),
+                1,
+                std::sync::atomic::Ordering::Relaxed,
+            )
+            .hash(&mut hasher);
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                .hash(&mut hasher);
+            let hash = hasher.finish();
+
+            format!(
+                "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+                (hash >> 32) as u32,
+                (hash >> 16) as u16,
+                ((hash >> 16) as u16) | 0x4000,          // version 4
+                ((hash >> 16) as u16) & 0x3fff | 0x8000, // variant
+                hash & 0xffffffffffff,
+            )
+        })
+    }
+}
+
+impl Default for UuidBuilder {
     fn default() -> Self {
         Self::new()
     }
@@ -1400,150 +1545,5 @@ mod tests {
         let uuid = factory.uuid().uuid(custom_uuid).build();
 
         assert_eq!(uuid, custom_uuid);
-    }
-}
-
-/// 日期时间数据构建器
-///
-/// 用于生成测试用的日期时间字符串（ISO 8601 格式）。
-///
-/// ## 使用示例
-///
-/// ```rust
-/// let factory = TestDataFactory::new();
-///
-/// // 使用默认值（当前时间）
-/// let dt = factory.date_time().build();
-///
-/// // 使用自定义日期时间
-/// let custom_dt = DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
-///     .unwrap()
-///     .with_timezone(&Utc);
-/// let dt = factory.date_time().datetime(custom_dt).build();
-/// ```
-pub struct DateTimeBuilder {
-    datetime: Option<DateTime<Utc>>,
-}
-
-impl DateTimeBuilder {
-    fn new() -> Self {
-        Self { datetime: None }
-    }
-
-    /// 设置日期时间
-    ///
-    /// # 参数
-    ///
-    /// * `datetime` - UTC 日期时间
-    pub fn datetime(mut self, datetime: DateTime<Utc>) -> Self {
-        self.datetime = Some(datetime);
-        self
-    }
-
-    /// 设置日期时间（从字符串解析）
-    ///
-    /// # 参数
-    ///
-    /// * `s` - RFC 3339 格式的日期时间字符串
-    ///
-    /// # 示例
-    ///
-    /// ```rust
-    /// let dt = factory.date_time().from_str("2024-06-01T12:00:00Z").build();
-    /// ```
-    #[allow(dead_code)]
-    pub fn from_str<S: AsRef<str>>(mut self, s: S) -> Self {
-        if let Ok(dt) = DateTime::parse_from_rfc3339(s.as_ref()) {
-            self.datetime = Some(dt.with_timezone(&Utc));
-        }
-        self
-    }
-
-    /// 构建日期时间字符串
-    ///
-    /// 返回 ISO 8601 格式的日期时间字符串（如 "2024-01-01T10:00:00Z"）。
-    pub fn build(&self) -> String {
-        let dt = self.datetime.unwrap_or_else(|| Utc::now());
-        dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
-    }
-}
-
-impl Default for DateTimeBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// UUID 数据构建器
-///
-/// 用于生成测试用的 UUID 字符串。
-///
-/// ## 使用示例
-///
-/// ```rust
-/// let factory = TestDataFactory::new();
-///
-/// // 使用默认值（随机生成）
-/// let uuid = factory.uuid().build();
-///
-/// // 使用自定义UUID
-/// let uuid = factory.uuid().uuid("550e8400-e29b-41d4-a716-446655440000").build();
-/// ```
-pub struct UuidBuilder {
-    uuid: Option<String>,
-}
-
-impl UuidBuilder {
-    fn new() -> Self {
-        Self { uuid: None }
-    }
-
-    /// 设置 UUID
-    ///
-    /// # 参数
-    ///
-    /// * `uuid` - UUID 字符串
-    pub fn uuid<S: Into<String>>(mut self, uuid: S) -> Self {
-        self.uuid = Some(uuid.into());
-        self
-    }
-
-    /// 构建 UUID 字符串
-    ///
-    /// 如果没有设置自定义 UUID，则生成一个随机的 UUID v4。
-    pub fn build(&self) -> String {
-        self.uuid.clone().unwrap_or_else(|| {
-            // 生成简单的UUID v4格式字符串（用于测试）
-            // 注意：这不是真正的UUID生成，只是格式匹配
-            // 如果需要真正的UUID，可以使用uuid crate
-            let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            std::sync::atomic::AtomicU64::fetch_add(
-                &std::sync::atomic::AtomicU64::new(0),
-                1,
-                std::sync::atomic::Ordering::Relaxed,
-            )
-            .hash(&mut hasher);
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-                .hash(&mut hasher);
-            let hash = hasher.finish();
-
-            format!(
-                "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
-                (hash >> 32) as u32,
-                (hash >> 16) as u16,
-                ((hash >> 16) as u16) | 0x4000,          // version 4
-                ((hash >> 16) as u16) & 0x3fff | 0x8000, // variant
-                hash & 0xffffffffffff,
-            )
-        })
-    }
-}
-
-impl Default for UuidBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }

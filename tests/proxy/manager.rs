@@ -573,9 +573,9 @@ fn test_proxy_manager_static_methods() {
     // Arrange: 准备测试启用代理（在测试环境中可能会失败，但不应该 panic）
     let enable_result = ProxyManager::enable(false); // 非临时模式
     match enable_result {
-        Ok(result) => {
-            // 如果成功，验证结果结构
-            assert!(result.already_configured == true || result.already_configured == false);
+        Ok(_result) => {
+            // 如果成功，验证结果结构存在
+            // 验证结果结构存在（无论 already_configured 的值如何）
         }
         Err(_) => {
             // 在测试环境中失败是可以接受的（可能没有系统代理设置）
@@ -599,9 +599,8 @@ fn test_proxy_manager_static_methods() {
     // Arrange: 准备测试禁用代理
     let disable_result = ProxyManager::disable();
     match disable_result {
-        Ok(result) => {
-            // 如果成功，验证结果结构
-            assert!(result.found_proxy == true || result.found_proxy == false);
+        Ok(_result) => {
+            // 如果成功，验证结果结构存在
         }
         Err(_) => {
             // 在测试环境中失败是可以接受的
@@ -759,9 +758,8 @@ fn test_edge_cases_and_error_handling_return_false() -> Result<()> {
 
     // Arrange: 准备测试代理配置匹配
     let test_proxy_info = create_test_proxy_info();
-    let is_configured = ProxyManager::is_proxy_configured(&test_proxy_info);
+    let _is_configured = ProxyManager::is_proxy_configured(&test_proxy_info);
     // 在测试环境中，代理可能配置也可能未配置
-    assert!(is_configured == true || is_configured == false);
 
     // Arrange: 准备测试空结果结构体
     let empty_enable_result = ProxyEnableResult {

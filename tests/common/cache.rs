@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! 测试数据缓存
 //!
 //! 提供 fixture 文件的缓存机制，避免重复加载相同的测试数据文件。

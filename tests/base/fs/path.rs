@@ -36,7 +36,6 @@ fn test_path_access_new_with_string_path_creates_instance() {
     let _path_access = PathAccess::new("test/path");
 
     // Assert: 验证可以创建 PathAccess（不会panic）
-    assert!(true);
 }
 
 /// 测试使用 PathBuf 创建 PathAccess
@@ -59,7 +58,6 @@ fn test_path_access_new_with_pathbuf_creates_instance() {
     let _path_access = PathAccess::new(path);
 
     // Assert: 验证可以创建 PathAccess（不会panic）
-    assert!(true);
 }
 
 // ==================== Path Existence Tests ====================

@@ -155,11 +155,8 @@ impl JsonBodyValidator {
         // 将简单的模式转换为正则表达式
         // 例如: {"title": ".+"} -> \{"title"\s*:\s*".+"\}
         let pattern_clone = pattern.clone();
-        let regex_pattern = pattern_clone
-            .replace("{", r"\{")
-            .replace("}", r"\}")
-            .replace(".+", ".+")
-            .replace('"', r#"\""#);
+        let regex_pattern =
+            pattern_clone.replace("{", r"\{").replace("}", r"\}").replace('"', r#"\""#);
 
         Self {
             pattern,

@@ -4,5 +4,6 @@
 
 pub mod console;
 pub mod log_level;
+#[allow(clippy::module_inception)]
 pub mod logger;
 pub mod tracing;

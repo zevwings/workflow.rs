@@ -34,7 +34,6 @@ fn test_group_builder_step_with_unconditional_step_adds_step() {
     );
 
     // Assert: 验证可以创建组
-    assert!(true);
 }
 
 /// 测试FormGroupBuilder添加条件步骤
@@ -63,7 +62,6 @@ fn test_group_builder_step_if_with_condition_adds_conditional_step() {
     );
 
     // Assert: 验证可以创建条件步骤
-    assert!(true);
 }
 
 /// 测试FormGroupBuilder添加多条件步骤（AND逻辑）
@@ -91,7 +89,6 @@ fn test_group_builder_step_if_all_with_all_conditions_adds_step() {
     );
 
     // Assert: 验证可以创建多条件步骤
-    assert!(true);
 }
 
 /// 测试FormGroupBuilder添加多条件步骤（OR逻辑）
@@ -119,7 +116,6 @@ fn test_group_builder_step_if_any_with_any_condition_adds_step() {
     );
 
     // Assert: 验证可以创建多条件步骤
-    assert!(true);
 }
 
 /// 测试FormGroupBuilder添加动态条件步骤
@@ -146,7 +142,6 @@ fn test_group_builder_step_if_dynamic_with_dynamic_condition_adds_step() {
     );
 
     // Assert: 验证可以创建动态条件步骤
-    assert!(true);
 }
 
 /// 测试FormGroupBuilder添加多个步骤
@@ -178,5 +173,4 @@ fn test_group_builder_multiple_steps_with_multiple_steps_adds_all_steps() {
     );
 
     // Assert: 验证可以添加多个步骤
-    assert!(true);
 }

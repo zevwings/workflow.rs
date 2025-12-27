@@ -91,11 +91,9 @@ fn test_read_work_history_existing_entry() -> color_eyre::Result<()> {
         }
         Ok(None) => {
             // 文件不在预期位置，这是可以接受的
-            assert!(true, "File may not be in expected location");
         }
         Err(_) => {
             // 路径解析失败，这也是可以接受的
-            assert!(true, "Path resolution may fail");
         }
     }
 
@@ -138,16 +136,12 @@ fn test_read_work_history_nonexistent_entry() -> color_eyre::Result<()> {
 
     // 条目不存在时应该返回 Ok(None)
     match result {
-        Ok(None) => {
-            assert!(true, "Should return None when entry doesn't exist");
-        }
+        Ok(None) => {}
         Ok(Some(_)) => {
             // 如果找到了（可能是其他测试留下的数据），这也是可以接受的
-            assert!(true, "Entry may exist from other tests");
         }
         Err(_) => {
             // 路径解析失败，这也是可以接受的
-            assert!(true, "Path resolution may fail");
         }
     }
 
@@ -209,11 +203,9 @@ fn test_find_pr_id_by_branch_existing_branch() -> color_eyre::Result<()> {
         }
         Ok(None) => {
             // 文件不在预期位置，这是可以接受的
-            assert!(true, "File may not be in expected location");
         }
         Err(_) => {
             // 路径解析失败，这也是可以接受的
-            assert!(true, "Path resolution may fail");
         }
     }
 
@@ -259,16 +251,12 @@ fn test_find_pr_id_by_branch_nonexistent_branch() -> color_eyre::Result<()> {
 
     // 分支不存在时应该返回 Ok(None)
     match result {
-        Ok(None) => {
-            assert!(true, "Should return None when branch doesn't exist");
-        }
+        Ok(None) => {}
         Ok(Some(_)) => {
             // 如果找到了（可能是其他测试留下的数据），这也是可以接受的
-            assert!(true, "Branch may exist from other tests");
         }
         Err(_) => {
             // 路径解析失败，这也是可以接受的
-            assert!(true, "Path resolution may fail");
         }
     }
 
@@ -362,12 +350,9 @@ fn test_write_work_history(
 
     // 如果路径解析成功，应该能写入；否则返回错误
     match result {
-        Ok(_) => {
-            assert!(true, "Should succeed when path resolution works");
-        }
+        Ok(_) => {}
         Err(_) => {
             // 路径解析失败，这也是可以接受的
-            assert!(true, "Path resolution may fail");
         }
     }
 }
@@ -426,14 +411,10 @@ fn test_update_work_history_merged_basic() {
     // 如果路径解析成功，应该能更新；否则返回错误或 Ok（文件不存在）
     match result {
         Ok(_) => {
-            assert!(
-                true,
-                "Should succeed when path resolution works or file doesn't exist"
-            );
+            // 路径解析成功或文件不存在都是可以接受的
         }
         Err(_) => {
             // 路径解析失败，这也是可以接受的
-            assert!(true, "Path resolution may fail");
         }
     }
 }
@@ -509,12 +490,9 @@ fn test_delete_work_history_entry_basic() {
     match result {
         Ok(_delete_result) => {
             // Assert: 验证返回的结构体格式正确
-            assert!(true, "Messages should be a valid vector");
-            assert!(true, "Warnings should be a valid vector");
         }
         Err(_) => {
             // 路径解析失败，这也是可以接受的
-            assert!(true, "Path resolution may fail");
         }
     }
 }

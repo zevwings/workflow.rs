@@ -30,7 +30,6 @@ fn test_spinner_new_with_message_creates_spinner() {
     spinner.finish();
 
     // Assert: 验证可以创建 spinner
-    assert!(true);
 }
 
 /// 测试使用 String 创建 Spinner
@@ -55,7 +54,6 @@ fn test_spinner_new_with_string_with_string_message_creates_spinner() {
     spinner.finish();
 
     // Assert: 验证可以创建 spinner
-    assert!(true);
 }
 
 // ==================== Spinner Update Tests ====================
@@ -84,7 +82,6 @@ fn test_spinner_update_message_with_messages_updates_message() {
     spinner.finish();
 
     // Assert: 验证可以更新消息
-    assert!(true);
 }
 
 // ==================== Spinner Finish Tests ====================
@@ -110,7 +107,6 @@ fn test_spinner_finish_with_spinner_finishes_spinner() {
     spinner.finish();
 
     // Assert: 验证可以完成 spinner
-    assert!(true);
 }
 
 /// 测试使用消息完成 Spinner
@@ -135,7 +131,6 @@ fn test_spinner_finish_with_message_with_message_finishes_with_message() {
     spinner.finish_with_message(message);
 
     // Assert: 验证可以完成并显示消息
-    assert!(true);
 }
 
 /// 测试 Spinner::with() 方法成功场景
@@ -273,7 +268,6 @@ fn test_spinner_drop() {
         // spinner 会在作用域结束时自动 drop
     }
     // Assert: 验证可以正常 drop
-    assert!(true);
 }
 
 /// 测试 Spinner 消息参数的类型转换
@@ -292,9 +286,8 @@ fn test_spinner_drop() {
 fn test_spinner_message_types() {
     // Arrange: 准备测试消息参数的类型转换
     let _spinner1 = Spinner::new("String message");
-    let _spinner2 = Spinner::new("String message".to_string());
+    let _spinner2 = Spinner::new("String message");
     // Assert: 验证两种方式都可以创建 spinner
-    assert!(true);
 }
 
 /// 测试 Spinner 的多个操作组合
@@ -319,7 +312,6 @@ fn test_spinner_multiple_operations() {
     spinner.update_message("Step 3...");
     spinner.finish();
     // Assert: 验证可以执行多个操作
-    assert!(true);
 }
 
 /// 测试 finish_with_message 的消息类型转换
@@ -340,7 +332,6 @@ fn test_spinner_finish_with_message_types() {
     let spinner = Spinner::new("Creating PR...");
     spinner.finish_with_message("String message");
     let spinner2 = Spinner::new("Creating PR...");
-    spinner2.finish_with_message("String message".to_string());
+    spinner2.finish_with_message("String message");
     // Assert: 验证两种方式都可以完成并显示消息
-    assert!(true);
 }

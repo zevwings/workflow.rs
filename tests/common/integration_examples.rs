@@ -133,7 +133,7 @@ mod examples {
             enabled: true,
             ttl: Some(Duration::from_secs(3600)),
             max_size: Some(1000),
-            eviction_policy: EvictionPolicy::LRU,
+            eviction_policy: EvictionPolicy::Lru,
         };
         factory.enable_cache(cache_config);
 

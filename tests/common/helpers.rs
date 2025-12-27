@@ -1,8 +1,8 @@
+#![allow(dead_code, clippy::test_attr_in_doctest)] // 这些函数是为测试准备的公共 API
+
 //! 共享测试工具函数
 //!
 //! 提供测试中常用的辅助函数和工具。
-
-#![allow(dead_code)] // 这些函数是为测试准备的公共 API
 
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -378,7 +378,7 @@ fn test_template_engine_type_return_ok() -> Result<()> {
     assert_eq!(debug_str, "Handlebars");
 
     // Arrange: 准备测试 Clone 实现
-    let cloned_type = engine_type.clone();
+    let cloned_type = engine_type;
     assert!(matches!(cloned_type, TemplateEngineType::Handlebars));
 
     // Arrange: 准备测试 Copy 实现

@@ -332,11 +332,9 @@ fn test_create_preview_with_empty_commits_handles_gracefully() {
     match CommitSquash::create_preview(&empty_commits, new_message, current_branch) {
         Ok(_) => {
             // Assert: 如果成功，验证行为
-            assert!(true);
         }
         Err(_) => {
             // Assert: 空提交列表应该导致错误，这是预期的
-            assert!(true);
         }
     }
 }
@@ -430,16 +428,14 @@ fn test_get_branch_commits_error_handling_with_invalid_environment_handles_grace
     match std::env::current_dir() {
         Ok(_) => {
             // 如果能获取当前目录，说明基本环境正常
-            assert!(true);
         }
         Err(_) => {
             // 如果连当前目录都获取不到，说明环境有问题
-            assert!(true);
         }
     }
 
-    // Assert: 验证分支名称不为空
-    assert!(!branch_name.is_empty());
+    // Assert: 验证分支名称不为空（branch_name 是字符串字面量，总是非空）
+    let _ = branch_name;
 }
 
 /// 测试 Git 仓库集成

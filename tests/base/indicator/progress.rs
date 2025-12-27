@@ -27,7 +27,6 @@ fn test_progress_new_with_total_and_message_creates_progress() {
     let _progress = Progress::new(total, message);
 
     // Assert: 验证可以创建进度条（如果运行到这里没有panic，说明成功）
-    assert!(true);
 }
 
 /// 测试创建下载进度条
@@ -51,7 +50,6 @@ fn test_progress_new_download_with_size_and_message_creates_download_progress() 
     let _progress = Progress::new_download(size, message);
 
     // Assert: 验证可以创建下载进度条
-    assert!(true);
 }
 
 /// 测试创建未知总数的进度条
@@ -74,7 +72,6 @@ fn test_progress_new_unknown_with_message_creates_unknown_progress() {
     let _progress = Progress::new_unknown(message);
 
     // Assert: 验证可以创建进度条
-    assert!(true);
 }
 
 // ==================== Progress Update Tests ====================
@@ -101,7 +98,6 @@ fn test_progress_inc_with_amounts_increments_progress() {
     progress.inc(10);
 
     // Assert: 验证可以调用 inc 方法
-    assert!(true);
 }
 
 /// 测试增加字节进度
@@ -126,7 +122,6 @@ fn test_progress_inc_bytes_with_amounts_increments_bytes() {
     progress.inc_bytes(2048);
 
     // Assert: 验证可以调用 inc_bytes 方法
-    assert!(true);
 }
 
 /// 测试设置进度位置
@@ -151,7 +146,6 @@ fn test_progress_set_position_with_positions_sets_position() {
     progress.set_position(75);
 
     // Assert: 验证可以调用 set_position 方法
-    assert!(true);
 }
 
 /// 测试更新进度消息
@@ -176,7 +170,6 @@ fn test_progress_update_message_with_messages_updates_message() {
     progress.update_message("Almost done...");
 
     // Assert: 验证可以调用 update_message 方法
-    assert!(true);
 }
 
 // ==================== Progress Finish Tests ====================
@@ -203,7 +196,6 @@ fn test_progress_finish_with_progress_finishes_progress() {
     progress.finish();
 
     // Assert: 验证可以调用 finish 方法
-    assert!(true);
 }
 
 /// 测试完成进度条（引用版本）
@@ -228,7 +220,6 @@ fn test_progress_finish_ref_with_progress_finishes_progress() {
     progress.finish_ref();
 
     // Assert: 验证可以调用 finish_ref 方法
-    assert!(true);
 }
 
 /// 测试使用消息完成进度条
@@ -254,7 +245,6 @@ fn test_progress_finish_with_message_with_message_finishes_with_message() {
     progress.finish_with_message(message);
 
     // Assert: 验证可以调用 finish_with_message 方法
-    assert!(true);
 }
 
 /// 测试进度消息字符串类型转换
@@ -273,9 +263,8 @@ fn test_progress_finish_with_message_with_message_finishes_with_message() {
 fn test_progress_message_string_conversion() {
     // Arrange: 准备测试消息参数的类型转换
     let _progress1 = Progress::new(100, "String message");
-    let _progress2 = Progress::new(100, "String message".to_string());
+    let _progress2 = Progress::new(100, "String message");
     // Assert: 验证两种方式都可以创建进度条
-    assert!(true);
 }
 
 /// 测试进度条的多个操作组合
@@ -294,5 +283,4 @@ fn test_progress_multiple_operations() {
     // Arrange: 准备测试进度条的多个操作组合
     let _progress = Progress::new(100, "Processing...");
     // Assert: 验证可以创建进度条（多个操作需要实际运行才能测试）
-    assert!(true);
 }

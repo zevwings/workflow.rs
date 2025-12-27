@@ -443,7 +443,7 @@ fn test_pr_comment_command_with_pr_id_and_message_parses_correctly() -> Result<(
 /// - 测试通过，无错误
 #[test]
 fn test_pr_comment_command_with_multiple_words_parses_correctly() -> Result<()> {
-    let cli = TestPRCli::try_parse_from(&[
+    let cli = TestPRCli::try_parse_from([
         "test-pr",
         "comment",
         "123",
@@ -483,7 +483,7 @@ fn test_pr_comment_command_with_multiple_words_parses_correctly() -> Result<()> 
 #[test]
 fn test_pr_comment_command_without_id() -> Result<()> {
     // Arrange: 准备测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "single-arg"])?;
+    let cli = TestPRCli::try_parse_from(["test-pr", "comment", "single-arg"])?;
 
     match cli.command {
         PRCommands::Comment {
@@ -644,7 +644,7 @@ fn test_pr_commands_enum_all_variants(
 #[test]
 fn test_pr_commands_error_handling_invalid_subcommand() -> Result<()> {
     // Arrange: 准备测试无效子命令的错误处理
-    let result = TestPRCli::try_parse_from(&["test-pr", "invalid"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 
     Ok(())
@@ -667,21 +667,21 @@ fn test_pr_commands_required_parameters() -> Result<()> {
     // Arrange: 准备测试必需参数的错误处理
 
     // Sync 需要 source_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "sync"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "sync"]);
     assert!(result.is_err(), "Sync should require source_branch");
 
     // Rebase 需要 target_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "rebase"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "rebase"]);
     assert!(result.is_err(), "Rebase should require target_branch");
 
     // Pick 需要 from_branch 和 to_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "pick"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "pick"]);
     assert!(
         result.is_err(),
         "Pick should require from_branch and to_branch"
     );
 
-    let result = TestPRCli::try_parse_from(&["test-pr", "pick", "from"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "pick", "from"]);
     assert!(result.is_err(), "Pick should require to_branch");
 
     Ok(())
@@ -705,7 +705,7 @@ fn test_pr_commands_required_parameters() -> Result<()> {
 fn test_pr_create_command_empty_jira_id() -> Result<()> {
     // Arrange: 准备测试空字符串 JIRA ID（应该被验证器拒绝）
     // 这是正确的行为：JIRA ID 验证器不允许空字符串
-    let result = TestPRCli::try_parse_from(&["test-pr", "create", ""]);
+    let result = TestPRCli::try_parse_from(["test-pr", "create", ""]);
 
     // Assert: 验证解析失败（空字符串被验证器拒绝）
     match result {
@@ -747,8 +747,7 @@ fn test_pr_create_command_empty_jira_id() -> Result<()> {
 fn test_pr_create_command_very_long_title() -> Result<()> {
     // Arrange: 准备测试超长标题（边界情况）
     let long_title = "a".repeat(1000);
-    let cli =
-        TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", &long_title])?;
+    let cli = TestPRCli::try_parse_from(["test-pr", "create", "PROJ-123", "--title", &long_title])?;
 
     match cli.command {
         PRCommands::Create { title, .. } => {
@@ -777,7 +776,7 @@ fn test_pr_create_command_special_characters_in_title() -> Result<()> {
     // Arrange: 准备测试标题中的特殊字符
     let special_title = "Test PR: Fix bug #123 (urgent!)";
     let cli =
-        TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", special_title])?;
+        TestPRCli::try_parse_from(["test-pr", "create", "PROJ-123", "--title", special_title])?;
 
     match cli.command {
         PRCommands::Create { title, .. } => {
@@ -804,7 +803,7 @@ fn test_pr_create_command_special_characters_in_title() -> Result<()> {
 #[test]
 fn test_pr_comment_command_empty_message() -> Result<()> {
     // Arrange: 准备测试空消息的情况
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "123"])?;
+    let cli = TestPRCli::try_parse_from(["test-pr", "comment", "123"])?;
 
     match cli.command {
         PRCommands::Comment { message, .. } => {
@@ -834,7 +833,7 @@ fn test_pr_comment_command_empty_message() -> Result<()> {
 #[test]
 fn test_pr_list_command_zero_limit() -> Result<()> {
     // Arrange: 准备测试 limit 为 0 的情况（边界值）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "0"])?;
+    let cli = TestPRCli::try_parse_from(["test-pr", "list", "--limit", "0"])?;
 
     match cli.command {
         PRCommands::List { pagination, .. } => {
@@ -861,7 +860,7 @@ fn test_pr_list_command_zero_limit() -> Result<()> {
 #[test]
 fn test_pr_list_command_very_large_limit() -> Result<()> {
     // Arrange: 准备测试非常大的 limit 值（边界情况）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "999999"])?;
+    let cli = TestPRCli::try_parse_from(["test-pr", "list", "--limit", "999999"])?;
 
     match cli.command {
         PRCommands::List { pagination, .. } => {

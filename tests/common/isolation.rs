@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! 统一测试隔离管理器
 //!
 //! 提供完全隔离的测试环境，包括工作目录、环境变量、Git配置和Mock服务器。

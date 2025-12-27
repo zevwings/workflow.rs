@@ -25,7 +25,6 @@ fn test_clipboard_copy_structure_with_no_parameters_creates_clipboard() {
     let _clipboard = Clipboard;
 
     // Assert: 验证可以创建
-    assert!(true);
 }
 
 // ==================== Clipboard Copy Tests ====================

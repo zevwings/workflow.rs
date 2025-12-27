@@ -1,3 +1,12 @@
+#![allow(
+    clippy::overly_complex_bool_expr,
+    clippy::module_inception,
+    clippy::collapsible_match,
+    clippy::to_string_trait_impl,
+    clippy::unnecessary_unwrap,
+    clippy::bool_comparison
+)]
+
 //! 集成测试入口文件
 //!
 //! 此文件用于组织 tests/ 目录下的所有模块化测试。

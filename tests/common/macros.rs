@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! 测试辅助宏
 //!
 //! 提供测试中常用的宏，简化错误处理和断言操作。

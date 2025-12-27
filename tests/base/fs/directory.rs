@@ -37,7 +37,6 @@ fn test_directory_walker_new_with_string_path_creates_instance() {
     let _walker = DirectoryWalker::new("test/path");
 
     // Assert: 验证可以创建 DirectoryWalker（不会panic）
-    assert!(true);
 }
 
 /// 测试使用PathBuf路径创建DirectoryWalker实例
@@ -60,7 +59,6 @@ fn test_directory_walker_new_with_pathbuf_creates_instance() {
     let _walker = DirectoryWalker::new(path);
 
     // Assert: 验证可以创建 DirectoryWalker（不会panic）
-    assert!(true);
 }
 
 // ==================== Directory Creation Tests ====================
@@ -572,7 +570,7 @@ fn test_directory_walker_list_dirs_with_empty_directory_return_collect(
     let dirs = walker.list_dirs()?;
 
     // Assert: 验证只包含根目录本身
-    assert!(dirs.len() >= 1);
+    assert!(!dirs.is_empty());
     assert!(dirs.contains(&dir_path));
 
     Ok(())
@@ -938,7 +936,7 @@ fn test_directory_walker_list_dirs_error_in_loop_return_false(
     let walker = DirectoryWalker::new(&dir_path);
     // 正常情况应该成功
     let dirs = walker.list_dirs()?;
-    assert!(dirs.len() >= 1);
+    assert!(!dirs.is_empty());
 
     Ok(())
 }

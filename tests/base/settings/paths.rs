@@ -75,7 +75,7 @@ fn test_paths_expand_with_tilde_only_return_ok() -> Result<()> {
     let result = Paths::expand("~")?;
 
     // Assert: 验证返回主目录路径
-    assert!(result.to_string_lossy().len() > 0);
+    assert!(!result.to_string_lossy().is_empty());
 
     Ok(())
 }
@@ -497,7 +497,7 @@ fn test_paths_expand_complex_path_return_ok() -> Result<()> {
     let result = Paths::expand("~/path/../another/./test")?;
 
     // Assert: 验证展开波浪号，但保留相对路径符号
-    assert!(result.to_string_lossy().len() > 0);
+    assert!(!result.to_string_lossy().is_empty());
 
     Ok(())
 }

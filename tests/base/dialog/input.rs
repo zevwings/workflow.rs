@@ -26,7 +26,6 @@ fn test_input_dialog_creation_with_message_creates_dialog() {
     let _dialog = InputDialog::new(message);
 
     // Assert: 验证对话框已创建（通过编译和运行验证）
-    assert!(true, "InputDialog should be created");
 }
 
 /// 测试创建带默认值的输入对话框
@@ -51,7 +50,6 @@ fn test_input_dialog_with_default_with_default_value_creates_dialog() {
     let _dialog = InputDialog::new(message).with_default(default_value);
 
     // Assert: 验证链式调用成功
-    assert!(true, "InputDialog with default should be created");
 }
 
 /// 测试创建带验证器的输入对话框
@@ -82,7 +80,6 @@ fn test_input_dialog_with_validator_with_validator_function_creates_dialog() {
     let _dialog = InputDialog::new(message).with_validator(validator);
 
     // Assert: 验证验证器已设置
-    assert!(true, "InputDialog with validator should be created");
 }
 
 /// 测试创建允许空值的输入对话框
@@ -106,7 +103,6 @@ fn test_input_dialog_allow_empty_with_allow_empty_flag_creates_dialog() {
     let _dialog = InputDialog::new(message).allow_empty(true);
 
     // Assert: 验证配置成功
-    assert!(true, "InputDialog with allow_empty should be created");
 }
 
 /// 测试输入对话框的链式调用
@@ -141,7 +137,6 @@ fn test_input_dialog_chain_calls_with_multiple_methods_chains_successfully() {
         .allow_empty(false);
 
     // Assert: 验证所有链式调用成功
-    assert!(true, "InputDialog chain calls should work");
 }
 
 // ==================== InputDialog Validator Logic Tests ====================
@@ -200,7 +195,6 @@ fn test_input_dialog_validator_with_allow_empty() {
         })
         .allow_empty(true);
     // Assert: 验证对话框创建成功
-    assert!(true);
 }
 
 /// 测试没有验证器但允许空值的情况
@@ -220,7 +214,6 @@ fn test_input_dialog_no_validator_allow_empty() {
     // Arrange: 准备测试没有验证器但允许空值的情况（覆盖 input.rs:161-167）
     let _dialog = InputDialog::new("Enter value (optional)").allow_empty(true);
     // Assert: 验证对话框创建成功
-    assert!(true);
 }
 
 /// 测试没有验证器但不允许空值的情况
@@ -240,7 +233,6 @@ fn test_input_dialog_no_validator_not_allow_empty() {
     // Arrange: 准备测试没有验证器但不允许空值的情况（覆盖 input.rs:150-160）
     let _dialog = InputDialog::new("Enter value").allow_empty(false);
     // Assert: 验证对话框创建成功，默认验证器会被添加
-    assert!(true);
 }
 
 /// 测试验证器错误处理
@@ -266,7 +258,6 @@ fn test_input_dialog_validator_error_handling() {
         }
     });
     // Assert: 验证对话框创建成功，验证器错误处理逻辑存在
-    assert!(true);
 }
 
 /// 测试 prompt 错误处理
@@ -286,7 +277,6 @@ fn test_input_dialog_prompt_error_handling() {
     // 注意：这个测试主要验证错误处理代码路径
     let _dialog = InputDialog::new("Enter value");
     // Assert: 验证对话框创建成功，错误处理逻辑存在
-    assert!(true);
 }
 
 /// 测试输出被修剪
@@ -306,7 +296,6 @@ fn test_input_dialog_trim_output() {
     // 注意：这个测试主要验证 trim 逻辑存在
     let _dialog = InputDialog::new("Enter value");
     // Assert: 验证对话框创建成功，trim 逻辑存在
-    assert!(true);
 }
 
 /// 测试 default 参数的类型转换
@@ -327,7 +316,6 @@ fn test_input_dialog_default_string_conversion() {
     let _dialog1 = InputDialog::new("Enter value").with_default("default");
     let _dialog2 = InputDialog::new("Enter value").with_default("default".to_string());
     // Assert: 验证两种方式都可以创建对话框
-    assert!(true);
 }
 
 /// 测试验证器的克隆
@@ -354,5 +342,4 @@ fn test_input_dialog_validator_clone() {
     };
     let _dialog = InputDialog::new("Enter value").with_validator(validator);
     // Assert: 验证对话框创建成功，验证器可以被克隆
-    assert!(true);
 }

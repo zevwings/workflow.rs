@@ -216,11 +216,9 @@ fn test_format_completion_message_with_valid_input_returns_message() {
         }
         Ok(None) => {
             // 某些情况下可能返回 None，这也是有效的
-            assert!(true);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
@@ -250,11 +248,10 @@ fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
     match result {
         Ok(is_pushed) => {
             // Assert: 验证返回值是布尔类型
-            assert!(is_pushed == true || is_pushed == false);
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
@@ -281,11 +278,10 @@ fn test_should_show_force_push_warning_with_not_pushed_commit_returns_bool() {
     match result {
         Ok(is_pushed) => {
             // Assert: 验证返回值是布尔类型
-            assert!(is_pushed == true || is_pushed == false);
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }

@@ -668,7 +668,6 @@ fn test_request_type_safety() {
     };
 
     // Assert: 验证类型正确（通过编译验证）
-    assert!(true, "Types should be type-safe");
 
     // Assert: 验证可以分别序列化
     assert!(serde_json::to_string(&create_request).is_ok());
@@ -712,5 +711,4 @@ fn test_response_type_safety() {
     };
 
     // Assert: 验证类型正确（通过编译验证）
-    assert!(true, "Types should be type-safe");
 }

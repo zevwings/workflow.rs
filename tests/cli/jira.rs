@@ -61,7 +61,7 @@ fn test_jira_command_with_id_return_ok(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id])?;
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id])?;
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -284,7 +284,7 @@ fn test_jira_command_output_format_markdown_return_ok(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--markdown"])?;
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id, "--markdown"])?;
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -325,7 +325,7 @@ fn test_jira_command_output_format_all_flags_return_ok(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         subcommand,
         jira_id,
@@ -376,7 +376,7 @@ fn test_jira_command_output_format_all_flags_return_ok(
 #[test]
 fn test_jira_clean_command_structure_return_ok() -> Result<()> {
     // Arrange: 准备测试 Clean 命令结构（带所有参数）
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "clean",
         "PROJ-789",
@@ -470,7 +470,7 @@ fn test_jira_clean_command_flags_return_ok(
 #[test]
 fn test_jira_clean_command_short_flags_return_ok() -> Result<()> {
     // Arrange: 准备测试 Clean 命令的短标志
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "-a", "-n", "-l"])?;
+    let cli = TestJiraCli::try_parse_from(["test-jira", "clean", "-a", "-n", "-l"])?;
 
     match cli.command {
         JiraSubcommand::Clean {
@@ -505,7 +505,7 @@ fn test_jira_clean_command_short_flags_return_ok() -> Result<()> {
 /// - 测试通过，无错误
 #[test]
 fn test_jira_comments_command_with_limit_return_ok() -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])?;
+    let cli = TestJiraCli::try_parse_from(["test-jira", "comments", "PROJ-123", "--limit", "10"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.limit, Some(10)),
         _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
@@ -527,7 +527,7 @@ fn test_jira_comments_command_with_limit_return_ok() -> Result<()> {
 /// - 测试通过，无错误
 #[test]
 fn test_jira_comments_command_with_offset_return_ok() -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])?;
+    let cli = TestJiraCli::try_parse_from(["test-jira", "comments", "PROJ-123", "--offset", "5"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.offset, Some(5)),
         _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
@@ -549,7 +549,7 @@ fn test_jira_comments_command_with_offset_return_ok() -> Result<()> {
 /// - 测试通过，无错误
 #[test]
 fn test_jira_comments_command_with_author_return_ok() -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -579,7 +579,7 @@ fn test_jira_comments_command_with_author_return_ok() -> Result<()> {
 /// - 测试通过，无错误
 #[test]
 fn test_jira_comments_command_with_since_return_ok() -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -610,7 +610,7 @@ fn test_jira_comments_command_with_since_return_ok() -> Result<()> {
 #[test]
 fn test_jira_comments_command_all_filters_return_collect() -> Result<()> {
     // Arrange: 准备测试所有过滤参数组合
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -658,7 +658,7 @@ fn test_jira_comments_command_all_filters_return_collect() -> Result<()> {
 #[test]
 fn test_jira_comments_command_pagination_return_ok() -> Result<()> {
     // Arrange: 准备测试分页参数组合（limit + offset）
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -698,7 +698,7 @@ fn test_jira_command_parsing_all_subcommands(
     #[case] subcommand: &str,
     #[case] assert_fn: fn(&JiraSubcommand) -> bool,
 ) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand])?;
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand])?;
     assert!(
         assert_fn(&cli.command),
         "Command should match expected variant"
@@ -721,7 +721,7 @@ fn test_jira_command_parsing_all_subcommands(
 #[test]
 fn test_jira_command_error_handling_invalid_subcommand_return_false() -> Result<()> {
     // Arrange: 准备测试无效子命令的错误处理
-    let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
+    let result = TestJiraCli::try_parse_from(["test-jira", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
     Ok(())
 }
@@ -745,7 +745,7 @@ fn test_jira_changelog_command_with_field_filter_return_ok() -> Result<()> {
     // Arrange: 准备测试 --field 参数
     // 注意：当前 Changelog 命令的枚举定义中没有 field 字段
     // 如果将来添加了 field 字段，这个测试需要更新
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"])?;
+    let cli = TestJiraCli::try_parse_from(["test-jira", "changelog", "PROJ-123"])?;
 
     match cli.command {
         JiraSubcommand::Changelog { args, .. } => {

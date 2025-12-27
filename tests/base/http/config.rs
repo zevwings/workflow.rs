@@ -91,7 +91,7 @@ fn test_request_config_body_with_json_value_sets_body_return_ok() -> Result<()> 
 
     // Assert: 验证请求体已设置
     assert!(config.body.is_some());
-    if let Some(ref body) = config.body {
+    if let Some(body) = config.body {
         assert_eq!(body["key"], "value");
     }
     Ok(())

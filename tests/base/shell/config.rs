@@ -370,7 +370,6 @@ fn test_set_env_vars_multiple() {
 
     if result.is_ok() {
         // Assert: 验证可以设置多个变量
-        assert!(true);
 
         // 清理
         let _ = ShellConfigManager::remove_env_vars(&["MULTI_KEY1", "MULTI_KEY2", "MULTI_KEY3"]);

@@ -130,7 +130,7 @@ fn test_parse_change_types_from_body_with_markdown_list_returns_types() -> Resul
     // Assert: 验证解析成功且包含类型
     assert!(types.is_some());
     let types = types.ok_or_else(|| color_eyre::eyre::eyre!("change types should be parsed"))?;
-    assert!(types.len() > 0);
+    assert!(!types.is_empty());
     Ok(())
 }
 

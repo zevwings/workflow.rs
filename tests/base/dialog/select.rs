@@ -29,7 +29,6 @@ fn test_select_dialog_new_with_options_creates_dialog() {
     let _dialog = SelectDialog::new(message, options);
 
     // Assert: 验证可以创建对话框
-    assert!(true);
 }
 
 /// 测试创建带默认选项的选择对话框
@@ -58,7 +57,6 @@ fn test_select_dialog_with_default_with_default_index_creates_dialog() {
     let _dialog = SelectDialog::new(message, options).with_default(default_index);
 
     // Assert: 验证链式调用成功
-    assert!(true);
 }
 
 /// 测试空选项列表的错误处理
@@ -118,7 +116,6 @@ fn test_select_dialog_new_with_string_prompt_creates_dialog() {
     let _dialog2 = SelectDialog::new("String prompt".to_string(), options);
 
     // Assert: 验证两种方式都可以创建对话框
-    assert!(true);
 }
 
 /// 测试设置默认选项为第一个选项（索引0）
@@ -144,7 +141,6 @@ fn test_select_dialog_with_default_with_zero_index_sets_first_option() {
     let _dialog = SelectDialog::new("Choose an option", options).with_default(0);
 
     // Assert: 验证链式调用成功
-    assert!(true);
 }
 
 /// 测试模糊匹配评分器处理空输入
@@ -171,7 +167,6 @@ fn test_select_dialog_fuzzy_scorer_with_empty_input_handles_correctly() {
     let _dialog = SelectDialog::new("Choose an option", options).with_default(0);
 
     // Assert: 验证对话框创建成功
-    assert!(true);
 }
 
 /// 测试创建不设置默认值的选择对话框
@@ -197,7 +192,6 @@ fn test_select_dialog_new_without_default_creates_dialog() {
     let _dialog = SelectDialog::new("Choose an option", options);
 
     // Assert: 验证对话框创建成功
-    assert!(true);
 }
 
 // 注意：以下测试需要用户交互，在 CI 环境中会被忽略
@@ -263,7 +257,6 @@ fn test_select_dialog_fuzzy_scorer_non_empty_input() {
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = SelectDialog::new("Choose an option", options).with_default(0);
     // Assert: 验证对话框创建成功（fuzzy_scorer 会在 prompt 时被调用）
-    assert!(true);
 }
 
 /// 测试模糊匹配器的创建
@@ -286,7 +279,6 @@ fn test_select_dialog_fuzzy_scorer_matcher_creation() {
     let options = vec!["Option 1", "Option 2"];
     let _dialog = SelectDialog::new("Choose an option", options);
     // Assert: 验证对话框创建成功，matcher 创建逻辑存在
-    assert!(true);
 }
 
 /// 测试选项转换为字符串
@@ -309,7 +301,6 @@ fn test_select_dialog_fuzzy_scorer_option_to_string() {
     let options = vec!["Option 1", "Option 2"];
     let _dialog = SelectDialog::new("Choose an option", options);
     // Assert: 验证对话框创建成功，option.to_string() 逻辑存在
-    assert!(true);
 }
 
 /// 测试操作取消错误处理
@@ -333,7 +324,6 @@ fn test_select_dialog_error_handling_operation_canceled() {
     let options = vec!["Option 1"];
     let _dialog = SelectDialog::new("Choose an option", options);
     // Assert: 验证对话框创建成功，错误处理逻辑存在
-    assert!(true);
 }
 
 /// 测试其他错误处理
@@ -357,7 +347,6 @@ fn test_select_dialog_error_handling_other_errors() {
     let options = vec!["Option 1"];
     let _dialog = SelectDialog::new("Choose an option", options);
     // Assert: 验证对话框创建成功，错误处理逻辑存在
-    assert!(true);
 }
 
 /// 测试设置起始光标位置
@@ -380,7 +369,6 @@ fn test_select_dialog_with_starting_cursor() {
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = SelectDialog::new("Choose an option", options).with_default(2);
     // Assert: 验证对话框创建成功，starting_cursor 设置逻辑存在
-    assert!(true);
 }
 
 /// 测试设置评分器
@@ -403,5 +391,4 @@ fn test_select_dialog_with_scorer() {
     let options = vec!["Option 1", "Option 2"];
     let _dialog = SelectDialog::new("Choose an option", options);
     // Assert: 验证对话框创建成功，scorer 设置逻辑存在
-    assert!(true);
 }

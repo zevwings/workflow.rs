@@ -77,10 +77,6 @@ path = "src/bin/workflow.rs"
 name = "install"
 path = "src/bin/install.rs"
 
-[[bin]]
-name = "dev"
-path = "src/bin/dev.rs"
-
 [[bench]]
 name = "core_operations"
 harness = false

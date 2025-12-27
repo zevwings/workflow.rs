@@ -46,6 +46,3 @@ pub mod pr;
 pub mod repo;
 pub mod stash;
 pub mod tag;
-
-// 开发工具
-pub mod dev;

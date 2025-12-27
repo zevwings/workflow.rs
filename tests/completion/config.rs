@@ -108,7 +108,6 @@ fn test_get_completion_files(
     let files = Completion::get_completion_files(&shell);
 
     // 应该返回文件路径列表（可能为空）
-    assert!(true, "Should return a list of file paths");
     // 如果列表不为空，文件路径应该与 shell 相关
     for file in &files {
         let file_str = file.to_string_lossy();
@@ -221,9 +220,8 @@ fn test_remove_completion_files(#[case] shell: Shell) -> Result<()> {
     );
     let removal_result =
         result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
-    assert!(true, "Removed count should be non-negative");
     assert!(
-        removal_result.removed_files.len() == removal_result.removed_count as usize,
+        removal_result.removed_files.len() == removal_result.removed_count,
         "Removed files count should match removed count"
     );
     Ok(())
@@ -311,12 +309,9 @@ fn test_generate_all_completions_with_shell_type() {
 
     // 如果路径解析成功，应该能生成；否则返回错误
     match result {
-        Ok(_) => {
-            assert!(true, "Should succeed when path resolution works");
-        }
+        Ok(_) => {}
         Err(_) => {
             // 路径解析失败或目录创建失败，这也是可以接受的
-            assert!(true, "Path resolution or directory creation may fail");
         }
     }
 }
@@ -339,12 +334,9 @@ fn test_generate_all_completions_auto_detect() {
 
     // 如果路径解析成功，应该能生成；否则返回错误
     match result {
-        Ok(_) => {
-            assert!(true, "Should succeed when path resolution works");
-        }
+        Ok(_) => {}
         Err(_) => {
             // 路径解析失败或 shell 检测失败，这也是可以接受的
-            assert!(true, "Path resolution or shell detection may fail");
         }
     }
 }
@@ -371,12 +363,9 @@ fn test_generate_all_completions_with_output_dir() -> color_eyre::Result<()> {
 
     // 如果目录创建成功，应该能生成；否则返回错误
     match result {
-        Ok(_) => {
-            assert!(true, "Should succeed when directory creation works");
-        }
+        Ok(_) => {}
         Err(_) => {
             // 目录创建失败，这也是可以接受的
-            assert!(true, "Directory creation may fail");
         }
     }
 

@@ -45,7 +45,7 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
-        run: bash scripts/dev/dependencies/install-basic.sh
+        run: bash scripts/dev/shell/dependencies/install-basic.sh
 
       - name: ⚡ Run performance benchmarks
         timeout-minutes: 40

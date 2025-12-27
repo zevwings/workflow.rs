@@ -29,28 +29,24 @@ fn test_dialog_configuration_completeness_with_all_dialogs_configures_correctly(
     let _input = InputDialog::new("Enter value")
         .with_default("default")
         .with_validator(|s: &str| {
-            if s.len() > 0 {
+            if !s.is_empty() {
                 Ok(())
             } else {
                 Err("Empty".to_string())
             }
         })
         .allow_empty(false);
-    assert!(true, "InputDialog full configuration should work");
 
     // SelectDialog完整配置
     let _select = SelectDialog::new("Choose", vec!["A", "B", "C"]).with_default(0);
-    assert!(true, "SelectDialog full configuration should work");
 
     // MultiSelectDialog完整配置
     let _multi = MultiSelectDialog::new("Choose", vec!["A", "B", "C"]).with_default(vec![0]);
-    assert!(true, "MultiSelectDialog full configuration should work");
 
     // ConfirmDialog完整配置
     let _confirm = ConfirmDialog::new("Continue?")
         .with_default(true)
         .with_cancel_message("Cancelled");
-    assert!(true, "ConfirmDialog full configuration should work");
 }
 
 /// 测试不同对话框类型保持类型安全
@@ -76,7 +72,6 @@ fn test_dialog_type_safety_with_different_types_maintains_type_safety() {
     let _confirm: ConfirmDialog = ConfirmDialog::new("Confirm");
 
     // Assert: 验证类型正确（通过编译验证）
-    assert!(true, "Dialog types should be type-safe");
 }
 
 /// 测试对话框错误处理结构存在
@@ -105,5 +100,4 @@ fn test_dialog_error_handling_structure_with_dialog_has_error_handling() {
     let _dialog = InputDialog::new("Test");
 
     // Assert: 验证对话框可以创建，错误处理结构存在
-    assert!(true, "Dialog error handling structure should exist");
 }

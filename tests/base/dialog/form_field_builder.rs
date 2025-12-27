@@ -27,7 +27,6 @@ fn test_field_builder_new() {
         workflow::base::dialog::GroupConfig::required(),
     );
     // Assert: 验证可以创建字段构建器
-    assert!(true);
 }
 
 // ==================== FormFieldBuilder Field Addition Tests ====================
@@ -289,7 +288,7 @@ fn test_field_builder_validate() {
         |g| {
             g.step(|f| {
                 f.add_text("field1", "Field 1").validate(|s| {
-                    if s.len() > 0 {
+                    if !s.is_empty() {
                         Ok(())
                     } else {
                         Err("Field cannot be empty".to_string())
@@ -355,7 +354,7 @@ fn test_field_builder_chain_all() {
                     .default("default")
                     .allow_empty(false)
                     .validate(|s| {
-                        if s.len() > 0 {
+                        if !s.is_empty() {
                             Ok(())
                         } else {
                             Err("Cannot be empty".to_string())
@@ -428,5 +427,4 @@ fn test_field_builder_default_impl() {
         workflow::base::dialog::GroupConfig::required(),
     );
     // Assert: 验证可以创建字段构建器
-    assert!(true);
 }

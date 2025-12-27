@@ -790,7 +790,7 @@ fn test_read_corrupted_json_config_return_ok(cli_env: CliTestEnv) -> Result<()> 
     std::fs::create_dir_all(parent_dir)?;
 
     // Arrange: 准备测试用例：不完整的 JSON
-    let invalid_json_cases = vec![
+    let invalid_json_cases = [
         "{ \"mcpServers\": ",                  // 不完整的 JSON
         "{ \"mcpServers\": { \"server\": } }", // 无效的对象值
         "not json at all",                     // 完全不是 JSON

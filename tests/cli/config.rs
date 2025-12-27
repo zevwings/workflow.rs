@@ -40,9 +40,7 @@ fn test_config_show_command_with_valid_input_parses_successfully() -> Result<()>
 
     // Assert: 验证 Show 命令可以正确解析（没有参数）
     match cli.command {
-        ConfigSubcommand::Show => {
-            assert!(true);
-        }
+        ConfigSubcommand::Show => {}
         _ => return Err(color_eyre::eyre::eyre!("Expected Show command")),
     }
 

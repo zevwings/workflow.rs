@@ -61,7 +61,7 @@ pub struct CompatibilityResult {
 /// 迁移 trait
 pub trait Migration: Send + Sync {
     /// 源版本
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::wrong_self_convention)]
     fn from_version(&self) -> &str;
     /// 目标版本
     #[allow(dead_code)]

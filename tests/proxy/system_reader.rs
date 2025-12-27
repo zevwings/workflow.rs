@@ -245,16 +245,10 @@ fn test_system_proxy_reader_read_with_system_config_returns_proxy_info() {
     // Assert: 验证返回结果（成功或失败都是可以接受的）
     match read_result {
         Ok(proxy_info) => {
-            // 如果成功读取，验证 ProxyInfo 结构
-            if let Some(http_config) = proxy_info.get_config(ProxyType::Http) {
-                assert!(http_config.enable == true || http_config.enable == false);
-            }
-            if let Some(https_config) = proxy_info.get_config(ProxyType::Https) {
-                assert!(https_config.enable == true || https_config.enable == false);
-            }
-            if let Some(socks_config) = proxy_info.get_config(ProxyType::Socks) {
-                assert!(socks_config.enable == true || socks_config.enable == false);
-            }
+            // 如果成功读取，验证 ProxyInfo 结构存在
+            let _ = proxy_info.get_config(ProxyType::Http);
+            let _ = proxy_info.get_config(ProxyType::Https);
+            let _ = proxy_info.get_config(ProxyType::Socks);
         }
         Err(_) => {
             // 在测试环境中失败是可以接受的（可能没有 scutil 命令或权限问题）

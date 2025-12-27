@@ -1,3 +1,5 @@
+#![allow(clippy::field_reassign_with_default)]
+
 //! PrivateRepoConfig 完整测试
 //!
 //! 包含数据结构测试、文件系统集成测试和错误场景测试

@@ -1,3 +1,5 @@
+#![allow(clippy::test_attr_in_doctest)]
+
 //! 统一CLI测试环境
 //!
 //! 基于 TestIsolation 的 CLI 测试环境，提供完全隔离的 CLI 测试环境。
@@ -169,7 +171,7 @@ impl CliTestEnv {
 
         let output = std::process::Command::new("git")
             .args(["init", "-b", "main"])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to init git repo: {}", e))?;
         if !output.status.success() {
@@ -190,7 +192,7 @@ impl CliTestEnv {
 
         let output = std::process::Command::new("git")
             .args(["config", "--local", "user.name", "Test User"])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user name: {}", e))?;
         if !output.status.success() {
@@ -207,7 +209,7 @@ impl CliTestEnv {
 
         let output = std::process::Command::new("git")
             .args(["config", "--local", "user.email", "test@example.com"])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to set git user email: {}", e))?;
         if !output.status.success() {
@@ -235,7 +237,7 @@ impl CliTestEnv {
                 "url.insteadOf",
                 "https://github.com/test/test-repo.git",
             ])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .ok(); // 允许失败
 
@@ -247,7 +249,7 @@ impl CliTestEnv {
                 "origin",
                 "https://github.com/test/test-repo.git",
             ])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote origin: {}", e))?;
 
@@ -277,14 +279,14 @@ impl CliTestEnv {
         // 1. 创建假的远程分支引用（指向当前HEAD）
         std::process::Command::new("git")
             .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .map_err(|e| color_eyre::eyre::eyre!("Failed to create remote ref: {}", e))?;
 
         // 2. 删除可能存在的旧引用（如origin/master）
         std::process::Command::new("git")
             .args(["update-ref", "-d", "refs/remotes/origin/master"])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .ok(); // 允许失败，因为可能不存在
 
@@ -295,7 +297,7 @@ impl CliTestEnv {
                 "refs/remotes/origin/HEAD",
                 "refs/remotes/origin/main",
             ])
-            .current_dir(&work_dir)
+            .current_dir(work_dir)
             .output()
             .ok(); // 允许失败，某些Git版本可能不支持
 

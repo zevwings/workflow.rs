@@ -304,7 +304,7 @@ fn test_pull_request_row_merged_state() {
 #[test]
 fn test_pull_request_row_vector() {
     // Arrange: 准备测试创建 PullRequestRow 向量
-    let rows = vec![
+    let rows = [
         PullRequestRow {
             number: "123".to_string(),
             state: "open".to_string(),

@@ -1,3 +1,5 @@
+#![allow(clippy::field_reassign_with_default)]
+
 //! RepoConfig 完整测试
 //!
 //! 包含数据结构测试、文件系统集成测试和错误场景测试
@@ -342,7 +344,7 @@ fn test_get_auto_accept_change_type_with_no_config_returns_bool() {
 
     // Assert: 验证返回布尔值
     // 默认应该是 false，或者根据配置返回 true
-    assert!(!auto_accept || auto_accept);
+    let _ = auto_accept;
 }
 
 /// 测试获取commit模板配置（无配置时返回Map）

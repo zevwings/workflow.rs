@@ -226,10 +226,9 @@ impl TestReporter {
                     TestStatus::Ignored => "⊘ Ignored",
                     TestStatus::Timeout => "⏱ Timeout",
                 };
-                let error_html = test.error_message.as_ref().map_or_else(
-                    || String::new(),
-                    |msg| format!(r#"<div class="error-message">{}</div>"#, html_escape(msg)),
-                );
+                let error_html = test.error_message.as_ref().map_or_else(String::new, |msg| {
+                    format!(r#"<div class="error-message">{}</div>"#, html_escape(msg))
+                });
 
                 format!(
                     r#"<tr>

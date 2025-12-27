@@ -15,9 +15,9 @@ use crate::common::fixtures::cli_env;
 use crate::common::fixtures::cli_env_with_git;
 #[cfg(not(target_os = "windows"))]
 use crate::common::mock::server::MockServer;
+use rstest::rstest;
 #[cfg(not(target_os = "windows"))]
 use std::collections::HashMap;
-use rstest::rstest;
 
 // ==================== Basic Command Tests ====================
 
