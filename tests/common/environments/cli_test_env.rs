@@ -554,6 +554,42 @@ impl CliTestEnv {
         Ok(config_file)
     }
 
+    /// 创建用户级 workflow.toml 配置文件
+    ///
+    /// 在用户路径（HOME）下创建 `.workflow/config/workflow.toml` 配置文件（主配置文件）。
+    /// 用于设置 LLM、Jira、GitHub 等全局配置。
+    ///
+    /// # 参数
+    ///
+    /// * `content` - 配置文件内容
+    ///
+    /// # 返回
+    ///
+    /// 返回创建的配置文件路径
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::environments::CliTestEnv;
+    ///
+    /// let env = CliTestEnv::new()?;
+    /// let config_path = env.create_home_workflow_config(r#"[llm]
+    /// provider = "invalid_provider"
+    /// "#)?;
+    /// ```
+    pub fn create_home_workflow_config(&self, content: &str) -> Result<PathBuf> {
+        let config_dir = self.home_path.join(".workflow").join("config");
+        fs::create_dir_all(&config_dir).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to create home config directory: {}", e)
+        })?;
+
+        let config_file = config_dir.join("workflow.toml");
+        fs::write(&config_file, content)
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to write home workflow config file: {}", e))?;
+
+        Ok(config_file)
+    }
+
     /// 获取临时目录路径（向后兼容）
     ///
     /// 返回项目路径（仓库根目录），用于向后兼容。

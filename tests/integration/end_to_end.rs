@@ -32,6 +32,14 @@ fn test_pr_creation_workflow() -> Result<()> {
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
 
+    // 禁用 LLM 调用以避免网络请求超时（在用户级配置中设置无效 provider）
+    env.create_home_workflow_config(
+        r#"
+[llm]
+provider = "invalid_provider"
+"#,
+    )?;
+
     // 1. 创建初始提交（PR需要至少一个提交）
     env.create_file("README.md", "# Test Project")?
         .create_commit("Initial commit")?;
@@ -43,11 +51,10 @@ fn test_pr_creation_workflow() -> Result<()> {
     env.create_file("test.txt", "test content")?.create_commit("feat: add test")?;
 
     // 4. 创建PR（dry-run模式，避免实际创建）
-    // 禁用 LLM 调用以避免网络请求超时（设置无效 provider 让 LLM 快速失败并回退）
+    // LLM 调用会在 build_url() 阶段快速失败，不会等待网络超时
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
         .current_dir(env.path())
-        .env("WORKFLOW_LLM_PROVIDER", "invalid_provider") // 禁用 LLM，让其在配置阶段失败
         .assert();
     let output = binding.get_output();
 
@@ -122,6 +129,14 @@ token = "test_token"
         mock_server.base_url()
     ))?;
 
+    // 禁用 LLM 调用以避免网络请求超时（在用户级配置中设置无效 provider）
+    env.create_home_workflow_config(
+        r#"
+[llm]
+provider = "invalid_provider"
+"#,
+    )?;
+
     // 1. 创建初始提交
     env.create_file("README.md", "# Test Project")?
         .create_commit("Initial commit")?;
@@ -134,11 +149,10 @@ token = "test_token"
         .create_commit("feat(PROJ-123): add new feature")?;
 
     // 4. 创建PR（dry-run模式）
-    // 禁用 LLM 调用以避免网络请求超时（设置无效 provider 让 LLM 快速失败并回退）
+    // LLM 调用会在 build_url() 阶段快速失败，不会等待网络超时
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
         .current_dir(env.path())
-        .env("WORKFLOW_LLM_PROVIDER", "invalid_provider") // 禁用 LLM，让其在配置阶段失败
         .assert();
     let output = binding.get_output();
 
