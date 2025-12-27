@@ -28,7 +28,6 @@ use color_eyre::Result;
 /// - PR创建命令能够识别Git仓库和分支
 /// - 输出包含PR相关信息
 #[test]
-#[ignore]
 fn test_pr_creation_workflow() -> Result<()> {
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -109,7 +108,6 @@ auto_accept_change_type = true
 /// - PR描述中包含Jira ticket信息（如果支持）
 /// - 使用Mock API，不会阻塞
 #[test]
-#[ignore]
 fn test_pr_creation_with_jira_workflow() -> Result<()> {
     // 设置Mock Jira API
     let mut mock_server = MockServer::new();

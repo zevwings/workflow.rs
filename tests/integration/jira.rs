@@ -74,7 +74,6 @@ username = "test@example.com"
 /// 4. 创建PR（dry-run模式）
 /// 5. 验证Jira状态同步逻辑
 #[test]
-#[ignore]
 fn test_jira_status_sync_on_pr_creation() -> Result<()> {
     // 设置Mock Jira API
     let mut mock_server = MockServer::new();
