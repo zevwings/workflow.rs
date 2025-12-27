@@ -6,10 +6,8 @@ use crate::{log_break, log_info, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 关闭命令
-#[allow(dead_code)]
 pub struct PullRequestCloseCommand;
 
-#[allow(dead_code)]
 impl PullRequestCloseCommand {
     /// 关闭 PR
     pub fn close(pull_request_id: Option<String>) -> Result<()> {

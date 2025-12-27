@@ -9,10 +9,8 @@ use serde_json::Value;
 use std::time::Duration;
 
 /// 环境检查命令
-#[allow(dead_code)]
 pub struct CheckCommand;
 
-#[allow(dead_code)]
 impl CheckCommand {
     /// 执行综合环境检查
     ///

@@ -9,8 +9,8 @@
 use color_eyre::{eyre::WrapErr, Result};
 
 use super::GitAuth;
-use crate::git::helpers::open_repo;
-use git2::{Oid, PushOptions};
+use super::GitRepository;
+use git2::Oid;
 
 /// Tag 信息
 #[derive(Debug, Clone)]
@@ -46,18 +46,19 @@ impl GitTag {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn list_local_tags() -> Result<Vec<String>> {
-        let repo = crate::git::helpers::open_repo()?;
+        let repo = GitRepository::open()?;
 
         let mut tags = Vec::new();
-        repo.tag_foreach(|_id, name| {
-            if let Ok(name_str) = std::str::from_utf8(name) {
-                // 移除 "refs/tags/" 前缀
-                let tag_name = name_str.strip_prefix("refs/tags/").unwrap_or(name_str);
-                tags.push(tag_name.to_string());
-            }
-            true
-        })
-        .wrap_err("Failed to iterate tags")?;
+        repo.as_inner()
+            .tag_foreach(|_id, name| {
+                if let Ok(name_str) = std::str::from_utf8(name) {
+                    // 移除 "refs/tags/" 前缀
+                    let tag_name = name_str.strip_prefix("refs/tags/").unwrap_or(name_str);
+                    tags.push(tag_name.to_string());
+                }
+                true
+            })
+            .wrap_err("Failed to iterate tags")?;
 
         tags.sort();
         Ok(tags)
@@ -75,18 +76,19 @@ impl GitTag {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn list_remote_tags() -> Result<Vec<String>> {
-        let repo = open_repo()?;
-        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+        let mut repo = GitRepository::open()?;
+        let mut remote = repo.find_origin_remote()?;
 
         // 获取认证回调
         let callbacks = GitAuth::get_remote_callbacks();
 
         // 连接远程并获取引用列表
         remote
+            .as_inner_mut()
             .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
             .wrap_err("Failed to connect to remote")?;
 
-        let remote_refs = remote.list().wrap_err("Failed to list remote references")?;
+        let remote_refs = remote.as_inner().list().wrap_err("Failed to list remote references")?;
 
         let mut tags = Vec::new();
         for remote_ref in remote_refs {
@@ -131,7 +133,7 @@ impl GitTag {
 
             // 获取 tag 指向的 commit hash
             let commit_hash = if exists_local {
-                open_repo()
+                GitRepository::open()
                     .ok()
                     .and_then(|r| {
                         r.find_reference(&format!("refs/tags/{}", tag_name))
@@ -143,11 +145,14 @@ impl GitTag {
             } else if exists_remote {
                 // 从远程获取 commit hash（使用 git2）
                 (|| -> Option<String> {
-                    let r = open_repo().ok()?;
-                    let mut remote = r.find_remote("origin").ok()?;
+                    let mut r = GitRepository::open().ok()?;
+                    let mut remote = r.find_origin_remote().ok()?;
                     let callbacks = GitAuth::get_remote_callbacks();
-                    remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None).ok()?;
-                    let remote_refs = remote.list().ok()?;
+                    remote
+                        .as_inner_mut()
+                        .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
+                        .ok()?;
+                    let remote_refs = remote.as_inner().list().ok()?;
                     // 收集名称和 OID 到 Vec 以避免生命周期问题
                     let refs_info: Vec<(String, git2::Oid)> =
                         remote_refs.iter().map(|r| (r.name().to_string(), r.oid())).collect();
@@ -195,7 +200,7 @@ impl GitTag {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn is_tag_exists(tag_name: &str) -> Result<(bool, bool)> {
-        let repo = crate::git::helpers::open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 检查本地 tag
         let tag_ref = format!("refs/tags/{}", tag_name);
@@ -232,7 +237,7 @@ impl GitTag {
             return Err(color_eyre::eyre::eyre!("Tag '{}' does not exist", tag_name));
         }
 
-        let repo = crate::git::helpers::open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 获取 commit hash
         let commit_hash = if exists_local {
@@ -245,13 +250,15 @@ impl GitTag {
                 .to_string()
         } else {
             // 从远程获取（使用 git2）
-            let mut remote =
-                repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+            let mut repo = GitRepository::open()?;
+            let mut remote = repo.find_origin_remote()?;
             let callbacks = GitAuth::get_remote_callbacks();
             remote
+                .as_inner_mut()
                 .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
                 .wrap_err("Failed to connect to remote")?;
-            let remote_refs = remote.list().wrap_err("Failed to list remote references")?;
+            let remote_refs =
+                remote.as_inner().list().wrap_err("Failed to list remote references")?;
             // 收集名称和 OID 到 Vec 以避免生命周期问题
             let refs_info: Vec<(String, git2::Oid)> =
                 remote_refs.iter().map(|r| (r.name().to_string(), r.oid())).collect();
@@ -282,7 +289,7 @@ impl GitTag {
     ///
     /// 如果 tag 不存在或删除失败，返回相应的错误信息。
     pub fn delete_local(tag_name: &str) -> Result<()> {
-        let repo = crate::git::helpers::open_repo()?;
+        let repo = GitRepository::open()?;
         let tag_ref = format!("refs/tags/{}", tag_name);
 
         let mut reference = repo
@@ -309,15 +316,11 @@ impl GitTag {
     ///
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete_remote(tag_name: &str) -> Result<()> {
-        let repo = open_repo()?;
-        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
-
-        // 获取认证回调
-        let callbacks = GitAuth::get_remote_callbacks();
+        let mut repo = GitRepository::open()?;
+        let mut remote = repo.find_origin_remote()?;
 
         // 配置推送选项
-        let mut push_options = PushOptions::new();
-        push_options.remote_callbacks(callbacks);
+        let mut push_options = GitRepository::get_push_options();
 
         // 构建空的 refspec 来删除远程 tag
         // 格式：:refs/tags/<tag_name> 表示删除远程 tag
@@ -376,26 +379,33 @@ impl GitTag {
     ///
     /// 如果 tag 创建失败，返回相应的错误信息。
     pub fn create(tag_name: &str, commit_sha: Option<&str>) -> Result<()> {
-        let repo = crate::git::helpers::open_repo()?;
+        let mut repo = GitRepository::open()?;
 
-        // 获取目标 commit
-        let commit = if let Some(sha) = commit_sha {
-            let oid =
-                Oid::from_str(sha).wrap_err_with(|| format!("Invalid commit SHA: {}", sha))?;
-            repo.find_commit(oid).wrap_err_with(|| format!("Commit '{}' not found", sha))?
+        // 获取目标 commit OID（在获取可变引用之前）
+        let commit_oid = if let Some(sha) = commit_sha {
+            Oid::from_str(sha).wrap_err_with(|| format!("Invalid commit SHA: {}", sha))?
         } else {
             // 使用当前 HEAD
-            repo.head()?.peel_to_commit().wrap_err("Failed to get HEAD commit")?
+            repo.head()?.target().ok_or_else(|| {
+                color_eyre::eyre::eyre!("HEAD reference does not point to a commit")
+            })?
         };
 
         // 创建 lightweight tag（指向 commit）
-        repo.reference(
-            &format!("refs/tags/{}", tag_name),
-            commit.id(),
-            true,
-            &format!("Create tag: {}", tag_name),
-        )
-        .wrap_err_with(|| format!("Failed to create tag: {}", tag_name))?;
+        let repo_inner = repo.as_inner_mut();
+        // 获取 commit（使用可变引用）
+        let commit = repo_inner
+            .find_commit(commit_oid)
+            .wrap_err_with(|| format!("Commit '{}' not found", commit_sha.unwrap_or("HEAD")))?;
+
+        repo_inner
+            .reference(
+                &format!("refs/tags/{}", tag_name),
+                commit.id(),
+                true,
+                &format!("Create tag: {}", tag_name),
+            )
+            .wrap_err_with(|| format!("Failed to create tag: {}", tag_name))?;
 
         Ok(())
     }
@@ -413,15 +423,11 @@ impl GitTag {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push(tag_name: &str) -> Result<()> {
-        let repo = open_repo()?;
-        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
-
-        // 获取认证回调
-        let callbacks = GitAuth::get_remote_callbacks();
+        let mut repo = GitRepository::open()?;
+        let mut remote = repo.find_origin_remote()?;
 
         // 配置推送选项
-        let mut push_options = PushOptions::new();
-        push_options.remote_callbacks(callbacks);
+        let mut push_options = GitRepository::get_push_options();
 
         // 构建 refspec
         let refspec = format!("refs/tags/{}:refs/tags/{}", tag_name, tag_name);
@@ -452,7 +458,7 @@ impl GitTag {
             // 获取现有 tag 的 commit SHA
             let existing_tag_info = Self::get_tag_info(tag_name)?;
             let target_sha = commit_sha.map(|s| s.to_string()).unwrap_or_else(|| {
-                open_repo()
+                GitRepository::open()
                     .ok()
                     .and_then(|r| r.head().ok().and_then(|h| h.target()).map(|oid| oid.to_string()))
                     .unwrap_or_default()
@@ -506,7 +512,7 @@ impl GitTag {
     ///
     /// 如果 `commit_sha` 是 `ancestor_sha` 的祖先，返回 `true`。
     pub fn is_ancestor(commit_sha: &str, ancestor_sha: &str) -> bool {
-        let repo = match open_repo() {
+        let repo = match GitRepository::open() {
             Ok(r) => r,
             Err(_) => return false,
         };
@@ -518,7 +524,7 @@ impl GitTag {
             Ok(oid) => oid,
             Err(_) => return false,
         };
-        match repo.merge_base(commit_oid, ancestor_oid) {
+        match repo.as_inner().merge_base(commit_oid, ancestor_oid) {
             Ok(base) => base == ancestor_oid,
             Err(_) => false,
         }

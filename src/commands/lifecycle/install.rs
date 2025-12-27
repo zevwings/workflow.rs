@@ -18,10 +18,8 @@ use crate::base::shell::Detect;
 use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 
 /// 安装命令
-#[allow(dead_code)]
 pub struct InstallCommand;
 
-#[allow(dead_code)]
 impl InstallCommand {
     /// 安装 shell completion 脚本（公共方法）
     ///

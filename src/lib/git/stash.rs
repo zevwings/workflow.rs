@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset, Local, TimeZone};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-use super::helpers::open_repo;
+use super::GitRepository;
 use crate::trace_warn;
 
 /// Stash 条目信息
@@ -78,10 +78,7 @@ impl GitStash {
     ///
     /// 如果 stash 操作失败，返回相应的错误信息。
     pub fn stash_push(message: Option<&str>) -> Result<()> {
-        let mut repo = open_repo()?;
-
-        // 获取签名
-        let signature = repo.signature().wrap_err("Failed to get repository signature")?;
+        let mut repo = GitRepository::open()?;
 
         // 构建 stash 消息
         let stash_message = if let Some(msg) = message {
@@ -97,8 +94,11 @@ impl GitStash {
             )
         };
 
-        // 保存 stash
-        repo.stash_save(&signature, &stash_message, None)
+        // 获取签名并保存 stash
+        let repo_inner = repo.as_inner_mut();
+        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
+        repo_inner
+            .stash_save(&signature, &stash_message, None)
             .wrap_err("Failed to stash changes")?;
 
         Ok(())
@@ -109,10 +109,10 @@ impl GitStash {
     /// 使用 git2 库检查是否有未合并的路径（冲突文件）。
     /// 返回 true 如果有冲突文件，false 如果没有
     pub fn has_unmerged() -> Result<bool> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 使用 index 检查未合并的文件
-        let _index = repo.index().wrap_err("Failed to open repository index")?;
+        let _index = repo.index()?;
 
         // 遍历索引条目，查找未合并的文件
         // git2 的 IndexEntry 不直接暴露 stage，我们使用 statuses 检查冲突
@@ -123,6 +123,7 @@ impl GitStash {
         status_options.include_ignored(false);
 
         let statuses = repo
+            .as_inner()
             .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
@@ -146,7 +147,7 @@ impl GitStash {
     ///
     /// 返回所有 stash 条目的列表，按索引从新到旧排列（stash@{0} 在第一个）。
     pub fn stash_list() -> Result<Vec<StashEntry>> {
-        let mut repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
         let mut entries = Vec::new();
 
         // 使用 stash_foreach 遍历所有 stash
@@ -154,17 +155,19 @@ impl GitStash {
         let mut stash_oids = Vec::new();
         let mut stash_messages = Vec::new();
 
-        repo.stash_foreach(|_stash_index, message, stash_oid| {
-            stash_oids.push(*stash_oid);
-            stash_messages.push(message.to_string());
-            true // 继续遍历
-        })
-        .wrap_err("Failed to list stash entries")?;
+        repo.as_inner_mut()
+            .stash_foreach(|_stash_index, message, stash_oid| {
+                stash_oids.push(*stash_oid);
+                stash_messages.push(message.to_string());
+                true // 继续遍历
+            })
+            .wrap_err("Failed to list stash entries")?;
 
         // 现在处理每个 stash
         for (idx, stash_oid) in stash_oids.iter().enumerate() {
             // 获取 commit 对象以获取更多信息
-            if let Ok(commit) = repo.find_commit(*stash_oid) {
+            let repo_inner = repo.as_inner();
+            if let Ok(commit) = repo_inner.find_commit(*stash_oid) {
                 // 获取时间戳（使用与 commit.rs 相同的方式）
                 let time = commit.time();
                 let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
@@ -235,7 +238,7 @@ impl GitStash {
     ///
     /// 返回 `StashApplyResult`，包含应用状态、冲突信息和警告。
     pub fn stash_apply(stash_ref: Option<&str>) -> Result<StashApplyResult> {
-        let mut repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 解析 stash 索引
         let stash_index = if let Some(ref_str) = stash_ref {
@@ -254,7 +257,8 @@ impl GitStash {
         // 注意：git2 0.18 版本中 StashApplyOptions 没有 reinstate_index 方法
         // 默认行为是不恢复索引状态
 
-        let result = repo.stash_apply(stash_index, Some(&mut apply_options));
+        let repo_inner = repo.as_inner_mut();
+        let result = repo_inner.stash_apply(stash_index, Some(&mut apply_options));
 
         match result {
             Ok(_) => {
@@ -312,7 +316,7 @@ impl GitStash {
     ///
     /// 如果删除失败，返回相应的错误信息。
     pub fn stash_drop(stash_ref: Option<&str>) -> Result<()> {
-        let mut repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 解析 stash 索引
         let stash_index = if let Some(ref_str) = stash_ref {
@@ -327,7 +331,8 @@ impl GitStash {
         };
 
         // 删除 stash
-        repo.stash_drop(stash_index)
+        repo.as_inner_mut()
+            .stash_drop(stash_index)
             .wrap_err_with(|| format!("Failed to drop stash {}", stash_ref.unwrap_or("stash@{0}")))
     }
 
@@ -344,7 +349,7 @@ impl GitStash {
     ///
     /// 返回 `StashPopResult`，包含恢复状态、消息和警告信息。
     pub fn stash_pop(stash_ref: Option<&str>) -> Result<StashPopResult> {
-        let mut repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 解析 stash 索引
         let stash_index = if let Some(ref_str) = stash_ref {
@@ -363,12 +368,14 @@ impl GitStash {
         // 注意：git2 0.18 版本中 StashApplyOptions 没有 reinstate_index 方法
         // 默认行为是不恢复索引状态
 
-        let apply_result = repo.stash_apply(stash_index, Some(&mut apply_options));
+        let repo_inner = repo.as_inner_mut();
+        let apply_result = repo_inner.stash_apply(stash_index, Some(&mut apply_options));
 
         match apply_result {
             Ok(_) => {
                 // 应用成功，删除 stash
-                repo.stash_drop(stash_index)
+                repo_inner
+                    .stash_drop(stash_index)
                     .wrap_err("Failed to drop stash after successful apply")?;
 
                 Ok(StashPopResult {
@@ -443,7 +450,7 @@ impl GitStash {
     ///
     /// 返回 `StashStat`，包含文件变更统计信息。
     pub fn stash_show_stat(stash_ref: &str) -> Result<StashStat> {
-        let mut repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 解析 stash 索引
         let stash_index = stash_ref
@@ -454,19 +461,21 @@ impl GitStash {
 
         // 获取 stash commit OID
         let mut stash_oid = None;
-        repo.stash_foreach(|index, _message, oid| {
-            if index == stash_index {
-                stash_oid = Some(*oid);
-                false // 停止遍历
-            } else {
-                true // 继续遍历
-            }
-        })
-        .wrap_err("Failed to find stash entry")?;
+        repo.as_inner_mut()
+            .stash_foreach(|index, _message, oid| {
+                if index == stash_index {
+                    stash_oid = Some(*oid);
+                    false // 停止遍历
+                } else {
+                    true // 继续遍历
+                }
+            })
+            .wrap_err("Failed to find stash entry")?;
 
         let stash_oid =
             stash_oid.ok_or_else(|| color_eyre::eyre::eyre!("Stash {} not found", stash_ref))?;
-        let stash_commit = repo
+        let repo_inner = repo.as_inner();
+        let stash_commit = repo_inner
             .find_commit(stash_oid)
             .wrap_err_with(|| format!("Failed to find stash commit: {}", stash_ref))?;
 
@@ -484,12 +493,14 @@ impl GitStash {
 
         // 如果有父提交，计算相对于父提交的 diff
         // 通常 stash 的第一个父提交是 WIP commit
+        let repo_inner = repo.as_inner();
         if stash_commit.parent_count() > 0 {
             if let Ok(parent_commit) = stash_commit.parent(0) {
                 let parent_tree = parent_commit.tree()?;
 
                 // 计算 diff
-                let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None)?;
+                let diff =
+                    repo_inner.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None)?;
 
                 diff.foreach(
                     &mut |delta, _progress| {
@@ -519,7 +530,7 @@ impl GitStash {
             }
         } else {
             // 如果没有父提交，计算相对于空树的 diff（新文件）
-            let diff = repo.diff_tree_to_tree(None, Some(&stash_tree), None)?;
+            let diff = repo_inner.diff_tree_to_tree(None, Some(&stash_tree), None)?;
 
             diff.foreach(
                 &mut |delta, _progress| {

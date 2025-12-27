@@ -79,7 +79,7 @@ impl RepoConfig {
     pub fn exists_in(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<bool> {
         let repo_path = repo_path.as_ref();
         // Check if the path is a Git repository using git2 (instead of shell git command)
-        let is_git_repo = git2::Repository::open(repo_path).is_ok();
+        let is_git_repo = crate::git::GitRepo::is_git_repo_at(repo_path);
 
         if !is_git_repo {
             return Ok(true); // Not in Git repository, consider as "configured" (skip check)

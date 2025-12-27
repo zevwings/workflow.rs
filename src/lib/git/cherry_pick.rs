@@ -8,7 +8,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use super::helpers::open_repo;
+use super::GitRepository;
 
 /// Git Cherry-pick 管理
 ///
@@ -36,19 +36,24 @@ impl GitCherryPick {
     ///
     /// 如果遇到冲突，cherry-pick 会暂停，需要用户手动解决冲突后继续。
     pub fn cherry_pick(commit: &str) -> Result<()> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 解析提交哈希
         let commit_oid = git2::Oid::from_str(commit)
             .wrap_err_with(|| format!("Invalid commit SHA: {}", commit))?;
 
-        // 获取要 cherry-pick 的提交
-        let cherry_commit = repo
+        // 获取当前 HEAD OID（在获取可变引用之前）
+        let head_oid = repo
+            .head()?
+            .target()
+            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD reference does not point to a commit"))?;
+
+        // 获取要 cherry-pick 的提交和当前 HEAD（使用可变引用）
+        let repo_inner = repo.as_inner_mut();
+        let cherry_commit = repo_inner
             .find_commit(commit_oid)
             .wrap_err_with(|| format!("Commit '{}' not found", commit))?;
-
-        // 获取当前 HEAD
-        let head = repo.head()?.peel_to_commit()?;
+        let head = repo_inner.find_commit(head_oid).wrap_err("Failed to get HEAD commit")?;
 
         // 获取提交的父提交（cherry-pick 的基础）
         let parent = cherry_commit.parent(0).ok();
@@ -60,10 +65,10 @@ impl GitCherryPick {
 
         // 合并树（cherry-pick 本质上是三路合并：parent -> cherry_commit 应用到 head）
         let mut merge_result = if let Some(parent_tree) = parent_tree {
-            repo.merge_trees(&parent_tree, &head_tree, &cherry_tree, None)?
+            repo_inner.merge_trees(&parent_tree, &head_tree, &cherry_tree, None)?
         } else {
             // 如果没有父提交（根提交），直接合并两个树
-            repo.merge_trees(&head_tree, &head_tree, &cherry_tree, None)?
+            repo_inner.merge_trees(&head_tree, &head_tree, &cherry_tree, None)?
         };
 
         // 检查是否有冲突
@@ -71,7 +76,7 @@ impl GitCherryPick {
             // 写入索引以便用户解决冲突
             merge_result.write()?;
             // 创建 CHERRY_PICK_HEAD 文件以标记正在进行 cherry-pick
-            let git_dir = repo.path();
+            let git_dir = repo_inner.path();
             std::fs::write(git_dir.join("CHERRY_PICK_HEAD"), commit_oid.to_string())?;
             color_eyre::eyre::bail!(
                 "Cherry-pick conflict detected. Please resolve conflicts manually and continue."
@@ -79,14 +84,14 @@ impl GitCherryPick {
         }
 
         // 写入合并后的树到索引
-        let tree_id = merge_result.write_tree_to(&repo)?;
-        let tree = repo.find_tree(tree_id)?;
+        let tree_id = merge_result.write_tree_to(repo_inner)?;
+        let tree = repo_inner.find_tree(tree_id)?;
 
         // 创建新提交
-        let signature = repo.signature()?;
+        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
         let message = cherry_commit.message().unwrap_or("Cherry-pick commit");
 
-        repo.commit(
+        repo_inner.commit(
             Some("HEAD"),
             &signature,
             &signature,
@@ -116,19 +121,24 @@ impl GitCherryPick {
     /// - 如果遇到冲突，cherry-pick 会暂停，需要用户手动解决冲突后继续
     /// - 修改会保留在工作区，需要手动提交
     pub fn cherry_pick_no_commit(commit: &str) -> Result<()> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 解析提交哈希
         let commit_oid = git2::Oid::from_str(commit)
             .wrap_err_with(|| format!("Invalid commit SHA: {}", commit))?;
 
-        // 获取要 cherry-pick 的提交
-        let cherry_commit = repo
+        // 获取当前 HEAD OID（在获取可变引用之前）
+        let head_oid = repo
+            .head()?
+            .target()
+            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD reference does not point to a commit"))?;
+
+        // 获取要 cherry-pick 的提交和当前 HEAD（使用可变引用）
+        let repo_inner = repo.as_inner_mut();
+        let cherry_commit = repo_inner
             .find_commit(commit_oid)
             .wrap_err_with(|| format!("Commit '{}' not found", commit))?;
-
-        // 获取当前 HEAD
-        let head = repo.head()?.peel_to_commit()?;
+        let head = repo_inner.find_commit(head_oid).wrap_err("Failed to get HEAD commit")?;
 
         // 获取提交的父提交（cherry-pick 的基础）
         let parent = cherry_commit.parent(0).ok();
@@ -140,10 +150,10 @@ impl GitCherryPick {
 
         // 合并树（cherry-pick 本质上是三路合并：parent -> cherry_commit 应用到 head）
         let mut merge_result = if let Some(parent_tree) = parent_tree {
-            repo.merge_trees(&parent_tree, &head_tree, &cherry_tree, None)?
+            repo_inner.merge_trees(&parent_tree, &head_tree, &cherry_tree, None)?
         } else {
             // 如果没有父提交（根提交），直接合并两个树
-            repo.merge_trees(&head_tree, &head_tree, &cherry_tree, None)?
+            repo_inner.merge_trees(&head_tree, &head_tree, &cherry_tree, None)?
         };
 
         // 检查是否有冲突
@@ -151,7 +161,7 @@ impl GitCherryPick {
             // 写入索引以便用户解决冲突
             merge_result.write()?;
             // 创建 CHERRY_PICK_HEAD 文件以标记正在进行 cherry-pick
-            let git_dir = repo.path();
+            let git_dir = repo_inner.path();
             std::fs::write(git_dir.join("CHERRY_PICK_HEAD"), commit_oid.to_string())?;
             color_eyre::eyre::bail!(
                 "Cherry-pick conflict detected. Please resolve conflicts manually and continue."
@@ -162,9 +172,9 @@ impl GitCherryPick {
         merge_result.write()?;
 
         // 将索引内容 checkout 到工作区
-        let tree_id = merge_result.write_tree_to(&repo)?;
-        let tree = repo.find_tree(tree_id)?;
-        repo.checkout_tree(
+        let tree_id = merge_result.write_tree_to(repo_inner)?;
+        let tree = repo_inner.find_tree(tree_id)?;
+        repo_inner.checkout_tree(
             &tree.into_object(),
             Some(
                 git2::build::CheckoutBuilder::default()
@@ -175,7 +185,7 @@ impl GitCherryPick {
         )?;
 
         // 创建 CHERRY_PICK_HEAD 文件以标记正在进行 cherry-pick（no-commit 模式）
-        let git_dir = repo.path();
+        let git_dir = repo_inner.path();
         std::fs::write(git_dir.join("CHERRY_PICK_HEAD"), commit_oid.to_string())?;
 
         Ok(())
@@ -189,10 +199,10 @@ impl GitCherryPick {
     ///
     /// 如果继续操作失败，返回相应的错误信息。
     pub fn cherry_pick_continue() -> Result<()> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 检查是否正在进行 cherry-pick
-        let git_dir = repo.path();
+        let git_dir = repo.as_inner().path();
         let cherry_pick_head_path = git_dir.join("CHERRY_PICK_HEAD");
         if !cherry_pick_head_path.exists() {
             color_eyre::eyre::bail!("No cherry-pick in progress");
@@ -212,20 +222,25 @@ impl GitCherryPick {
             );
         }
 
-        // 获取要应用的提交
-        let cherry_commit = repo.find_commit(commit_oid)?;
+        // 获取当前 HEAD OID（在获取可变引用之前）
+        let head_oid = repo
+            .head()?
+            .target()
+            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD reference does not point to a commit"))?;
 
-        // 获取当前 HEAD
-        let head = repo.head()?.peel_to_commit()?;
+        // 获取要应用的提交和当前 HEAD（使用可变引用）
+        let repo_inner = repo.as_inner_mut();
+        let cherry_commit = repo_inner.find_commit(commit_oid)?;
+        let head = repo_inner.find_commit(head_oid).wrap_err("Failed to get HEAD commit")?;
 
         // 写入树并创建提交
-        let tree_id = index.write_tree_to(&repo)?;
-        let tree = repo.find_tree(tree_id)?;
+        let tree_id = index.write_tree_to(repo_inner)?;
+        let tree = repo_inner.find_tree(tree_id)?;
 
-        let signature = repo.signature()?;
+        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
         let message = cherry_commit.message().unwrap_or("Cherry-pick commit");
 
-        repo.commit(
+        repo_inner.commit(
             Some("HEAD"),
             &signature,
             &signature,
@@ -249,20 +264,27 @@ impl GitCherryPick {
     ///
     /// 如果中止操作失败，返回相应的错误信息。
     pub fn cherry_pick_abort() -> Result<()> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         // 检查是否正在进行 cherry-pick
-        let git_dir = repo.path();
+        let git_dir = repo.as_inner().path();
         let cherry_pick_head_path = git_dir.join("CHERRY_PICK_HEAD");
         if !cherry_pick_head_path.exists() {
             color_eyre::eyre::bail!("No cherry-pick in progress");
         }
 
         // 重置索引和工作区到 HEAD
-        let head = repo.head()?.peel_to_commit()?;
+        let head_oid = repo
+            .head()?
+            .target()
+            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD reference does not point to a commit"))?;
+
+        // 获取 HEAD commit（使用可变引用）
+        let repo_inner = repo.as_inner_mut();
+        let head = repo_inner.find_commit(head_oid).wrap_err("Failed to get HEAD commit")?;
 
         // 重置索引
-        repo.reset(
+        repo_inner.reset(
             &head.into_object(),
             git2::ResetType::Mixed,
             Some(
@@ -288,10 +310,10 @@ impl GitCherryPick {
     ///
     /// 如果正在进行 cherry-pick 操作，返回 `true`，否则返回 `false`。
     pub fn is_cherry_pick_in_progress() -> bool {
-        open_repo()
+        GitRepository::open()
             .ok()
             .map(|repo| {
-                let git_dir = repo.path();
+                let git_dir = repo.as_inner().path();
                 git_dir.join("CHERRY_PICK_HEAD").exists()
             })
             .unwrap_or(false)

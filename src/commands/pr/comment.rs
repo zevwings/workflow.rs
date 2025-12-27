@@ -4,10 +4,8 @@ use crate::pr::helpers::resolve_pull_request_id;
 use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 评论命令
-#[allow(dead_code)]
 pub struct PullRequestCommentCommand;
 
-#[allow(dead_code)]
 impl PullRequestCommentCommand {
     /// 添加评论到 Pull Request
     pub fn comment(pull_request_id: Option<String>, message: Vec<String>) -> Result<()> {

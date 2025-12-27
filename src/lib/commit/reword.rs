@@ -6,8 +6,7 @@
 //! - 历史 commit reword 执行
 //! - Rebase 相关操作
 
-use crate::git::open_repo_at;
-use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
+use crate::git::{CommitInfo, GitBranch, GitCommit, GitRepository, GitStash};
 use color_eyre::{eyre::WrapErr, Result};
 use git2::Oid;
 
@@ -196,7 +195,7 @@ impl CommitReword {
         target_commit_sha: &str,
         new_message: &str,
     ) -> Result<()> {
-        let repo = open_repo_at(".")?;
+        let repo = GitRepository::open()?;
 
         // 解析 commit SHA
         let parent_oid = Oid::from_str(parent_sha)
@@ -204,26 +203,32 @@ impl CommitReword {
         let target_oid = Oid::from_str(target_commit_sha)
             .wrap_err_with(|| format!("Invalid target commit SHA: {}", target_commit_sha))?;
 
-        // 获取 HEAD commit
-        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
+        // 获取 HEAD commit（在获取可变引用之前）
+        let head_commit_id = {
+            let head = repo.head()?;
+            let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
+            head_commit.id()
+        };
 
         // 转换为 AnnotatedCommit（rebase 需要）
-        let head_annotated = repo
-            .find_annotated_commit(head_commit.id())
+        let mut repo = repo;
+        let repo_inner = repo.as_inner_mut();
+        let head_annotated = repo_inner
+            .find_annotated_commit(head_commit_id)
             .wrap_err("Failed to create annotated commit from HEAD")?;
-        let parent_annotated = repo.find_annotated_commit(parent_oid).wrap_err_with(|| {
-            format!(
-                "Failed to create annotated commit from parent: {}",
-                parent_sha
-            )
-        })?;
+        let parent_annotated =
+            repo_inner.find_annotated_commit(parent_oid).wrap_err_with(|| {
+                format!(
+                    "Failed to create annotated commit from parent: {}",
+                    parent_sha
+                )
+            })?;
 
         // 初始化 rebase
         let mut rebase_opts = git2::RebaseOptions::new();
         // 不使用 inmemory 模式，因为我们需要修改工作目录
 
-        let mut rebase = repo
+        let mut rebase = repo_inner
             .rebase(
                 Some(&head_annotated),
                 Some(&parent_annotated),
@@ -233,14 +238,14 @@ impl CommitReword {
             .wrap_err_with(|| format!("Failed to initialize rebase from parent: {}", parent_sha))?;
 
         // 获取签名
-        let signature = repo.signature().wrap_err("Failed to get signature")?;
+        let signature = repo_inner.signature().wrap_err("Failed to get signature")?;
 
         // 应用所有 rebase 操作
         while let Some(op) = rebase.next() {
             let op = op.wrap_err("Failed to get next rebase operation")?;
 
             // 检查是否有冲突
-            if repo.index()?.has_conflicts() {
+            if repo_inner.index()?.has_conflicts() {
                 rebase.abort().ok();
                 color_eyre::eyre::bail!(
                     "Rebase conflicts detected. Please resolve manually:\n  1. Review conflicted files\n  2. Resolve conflicts\n  3. Stage resolved files: git add <files>\n  4. Continue rebase: git rebase --continue\n  5. Or abort rebase: git rebase --abort"
@@ -250,20 +255,20 @@ impl CommitReword {
             // 如果是目标 commit，需要手动创建新的 commit 使用新消息
             if op.id() == target_oid {
                 // 获取当前 index 的 tree
-                let mut index = repo.index().wrap_err("Failed to get index")?;
+                let mut index = repo_inner.index()?;
                 let tree_id = index.write_tree().wrap_err("Failed to write tree")?;
-                let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
+                let tree = repo_inner.find_tree(tree_id).wrap_err("Failed to find tree")?;
 
                 // 获取 rebase 的当前 HEAD（父 commit）
-                let head_ref = repo.find_reference("HEAD").ok();
+                let head_ref = repo_inner.find_reference("HEAD").ok();
                 let parent_commit = head_ref.and_then(|r| r.peel_to_commit().ok());
 
                 // 创建新的 commit，使用新消息
                 let new_commit_oid = if let Some(parent) = parent_commit.as_ref() {
-                    repo.commit(None, &signature, &signature, new_message, &tree, &[parent])
+                    repo_inner.commit(None, &signature, &signature, new_message, &tree, &[parent])
                 } else {
                     // 如果没有父 commit（根 commit），创建没有父的 commit
-                    repo.commit(None, &signature, &signature, new_message, &tree, &[])
+                    repo_inner.commit(None, &signature, &signature, new_message, &tree, &[])
                 }
                 .wrap_err_with(|| {
                     format!(
@@ -273,7 +278,7 @@ impl CommitReword {
                 })?;
 
                 // 更新 HEAD 指向新创建的 commit
-                repo.set_head_detached(new_commit_oid).wrap_err("Failed to update HEAD")?;
+                repo_inner.set_head_detached(new_commit_oid).wrap_err("Failed to update HEAD")?;
 
                 // 注意：我们已经手动创建了 commit，但 rebase 仍然需要知道操作已完成
                 // 由于 git2 rebase API 的限制，我们需要使用 rebase.commit() 来标记操作完成
@@ -333,12 +338,13 @@ impl CommitReword {
         };
 
         // 步骤3: 验证目标 commit 存在
-        let repo = open_repo_at(".")?;
+        let repo = GitRepository::open()?;
         let target_oid = git2::Oid::from_str(&options.commit_sha)
             .wrap_err_with(|| format!("Invalid commit SHA: {}", options.commit_sha))?;
 
         // 检查 commit 是否存在
-        repo.find_commit(target_oid)
+        repo.as_inner()
+            .find_commit(target_oid)
             .wrap_err_with(|| format!("Commit not found: {}", options.commit_sha))?;
 
         // 步骤4: 使用 git2 rebase API 执行 reword

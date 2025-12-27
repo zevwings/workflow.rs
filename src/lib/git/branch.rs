@@ -2,7 +2,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashSet;
 
 use super::GitAuth;
-use crate::git::helpers::open_repo;
+use super::GitRepository;
 use git2::{FetchOptions, PushOptions};
 
 const COMMON_DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
@@ -59,16 +59,8 @@ impl GitBranch {
     ///
     /// 如果不在 Git 仓库中或操作失败，返回相应的错误信息。
     pub fn current_branch() -> Result<String> {
-        let repo = open_repo()?;
-        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-
-        // 获取分支名称（去掉 refs/heads/ 前缀）
-        let branch_name = head
-            .name()
-            .and_then(|name| name.strip_prefix("refs/heads/"))
-            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD is not pointing to a branch"))?;
-
-        Ok(branch_name.to_string())
+        let repo = GitRepository::open()?;
+        repo.current_branch_name()
     }
 
     /// 获取当前分支名（指定仓库路径）
@@ -87,17 +79,8 @@ impl GitBranch {
     ///
     /// 如果不在 Git 仓库中或操作失败，返回相应的错误信息。
     pub fn current_branch_in(repo_path: impl AsRef<std::path::Path>) -> Result<String> {
-        let repo =
-            git2::Repository::open(repo_path.as_ref()).wrap_err("Failed to open repository")?;
-        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-
-        // 获取分支名称（去掉 refs/heads/ 前缀）
-        let branch_name = head
-            .name()
-            .and_then(|name| name.strip_prefix("refs/heads/"))
-            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD is not pointing to a branch"))?;
-
-        Ok(branch_name.to_string())
+        let repo = GitRepository::open_at(repo_path)?;
+        repo.current_branch_name()
     }
 
     /// 检查分支是否存在（本地或远程）
@@ -120,7 +103,7 @@ impl GitBranch {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn is_branch_exists(branch_name: &str) -> Result<(bool, bool)> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 检查本地分支
         let local_ref = format!("refs/heads/{}", branch_name);
@@ -206,34 +189,51 @@ impl GitBranch {
         // 检查分支是否存在
         let (exists_local, exists_remote) = Self::is_branch_exists(branch_name)?;
 
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
         if exists_local {
             // 分支已存在于本地，切换到它
             let refname = format!("refs/heads/{}", branch_name);
-            repo.set_head(&refname)
+            let repo_inner = repo.as_inner_mut();
+            repo_inner
+                .set_head(&refname)
                 .wrap_err_with(|| format!("Failed to set HEAD to branch: {}", branch_name))?;
-            repo.checkout_head(Some(
-                git2::build::CheckoutBuilder::default()
-                    .force()
-                    .remove_ignored(false)
-                    .remove_untracked(false),
-            ))
-            .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
+            repo_inner
+                .checkout_head(Some(
+                    git2::build::CheckoutBuilder::default()
+                        .force()
+                        .remove_ignored(false)
+                        .remove_untracked(false),
+                ))
+                .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
         } else if exists_remote {
             // 分支只存在于远程，创建本地分支并跟踪远程分支
             let remote_ref = format!("refs/remotes/origin/{}", branch_name);
-            let remote_branch = repo
-                .find_reference(&remote_ref)
-                .wrap_err_with(|| format!("Failed to find remote branch: {}", branch_name))?;
-            let remote_commit = remote_branch.peel_to_commit().wrap_err_with(|| {
-                format!("Failed to get commit from remote branch: {}", branch_name)
-            })?;
+            // 先提取 OID，然后释放 remote_branch 的借用
+            let remote_commit_oid = {
+                let remote_branch = repo
+                    .find_reference(&remote_ref)
+                    .wrap_err_with(|| format!("Failed to find remote branch: {}", branch_name))?;
+                remote_branch.target().ok_or_else(|| {
+                    color_eyre::eyre::eyre!("Remote branch reference does not point to a commit")
+                })?
+            };
 
-            // 创建本地分支指向远程分支的提交
-            let mut local_branch = repo
-                .branch(branch_name, &remote_commit, false)
+            // 创建本地分支指向远程分支的提交（使用 reference 方法避免借用问题）
+            let repo_inner = repo.as_inner_mut();
+            repo_inner
+                .reference(
+                    &format!("refs/heads/{}", branch_name),
+                    remote_commit_oid,
+                    true,
+                    &format!("Create branch {} from remote", branch_name),
+                )
                 .wrap_err_with(|| format!("Failed to create local branch: {}", branch_name))?;
+
+            // 获取分支对象以设置上游跟踪
+            let mut local_branch = repo_inner
+                .find_branch(branch_name, git2::BranchType::Local)
+                .wrap_err_with(|| format!("Failed to find branch: {}", branch_name))?;
 
             // 设置上游跟踪
             local_branch
@@ -242,36 +242,166 @@ impl GitBranch {
 
             // 切换到新创建的分支
             let local_refname = format!("refs/heads/{}", branch_name);
-            repo.set_head(&local_refname)
+            repo_inner
+                .set_head(&local_refname)
                 .wrap_err_with(|| format!("Failed to set HEAD to branch: {}", branch_name))?;
-            repo.checkout_head(Some(
-                git2::build::CheckoutBuilder::default()
-                    .force()
-                    .remove_ignored(false)
-                    .remove_untracked(false),
-            ))
-            .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
+            repo_inner
+                .checkout_head(Some(
+                    git2::build::CheckoutBuilder::default()
+                        .force()
+                        .remove_ignored(false)
+                        .remove_untracked(false),
+                ))
+                .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
         } else {
             // 分支不存在，创建新分支
-            let head = repo.head().wrap_err("Failed to get HEAD")?;
-            let head_commit = head.peel_to_commit().wrap_err("Failed to get HEAD commit")?;
+            // 先提取 OID，然后释放 head 的借用
+            let head_commit_oid = {
+                let head = repo.head()?;
+                head.target().ok_or_else(|| {
+                    color_eyre::eyre::eyre!("HEAD reference does not point to a commit")
+                })?
+            };
 
-            // 创建新分支
-            repo.branch(branch_name, &head_commit, false)
+            // 创建新分支（使用 reference 方法避免借用问题）
+            let repo_inner = repo.as_inner_mut();
+            repo_inner
+                .reference(
+                    &format!("refs/heads/{}", branch_name),
+                    head_commit_oid,
+                    true,
+                    &format!("Create branch {}", branch_name),
+                )
                 .wrap_err_with(|| format!("Failed to create branch: {}", branch_name))?;
 
             // 切换到新创建的分支
             let refname = format!("refs/heads/{}", branch_name);
-            repo.set_head(&refname)
+            repo_inner
+                .set_head(&refname)
                 .wrap_err_with(|| format!("Failed to set HEAD to branch: {}", branch_name))?;
-            repo.checkout_head(Some(
+            repo_inner
+                .checkout_head(Some(
+                    git2::build::CheckoutBuilder::default()
+                        .force()
+                        .remove_ignored(false)
+                        .remove_untracked(false),
+                ))
+                .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
+        }
+        Ok(())
+    }
+
+    /// 在指定路径创建分支
+    ///
+    /// 在指定路径的 Git 仓库中创建新分支，不依赖当前工作目录。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库路径
+    /// * `branch_name` - 要创建的分支名称
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回 `Ok(())`，失败时返回错误。
+    ///
+    /// # 错误
+    ///
+    /// 如果分支创建失败，返回相应的错误信息。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::git::GitBranch;
+    /// # use color_eyre::Result;
+    /// # fn main() -> Result<()> {
+    /// GitBranch::create_branch_at("/path/to/repo", "feature/new")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn create_branch_at(
+        repo_path: impl AsRef<std::path::Path>,
+        branch_name: &str,
+    ) -> Result<()> {
+        // 验证分支名不为空
+        if branch_name.is_empty() {
+            return Err(color_eyre::eyre::eyre!("Branch name cannot be empty"));
+        }
+
+        let mut repo = GitRepository::open_at(repo_path)?;
+
+        // 获取 HEAD 提交 OID（在获取可变引用之前）
+        let head_commit_oid = {
+            let head = repo.head()?;
+            head.target().ok_or_else(|| {
+                color_eyre::eyre::eyre!("HEAD reference does not point to a commit")
+            })?
+        };
+
+        // 查找 HEAD 提交对象并创建新分支
+        let repo_inner = repo.as_inner_mut();
+        let head_commit =
+            repo_inner.find_commit(head_commit_oid).wrap_err("Failed to find HEAD commit")?;
+        repo_inner
+            .branch(branch_name, &head_commit, false)
+            .wrap_err_with(|| format!("Failed to create branch: {}", branch_name))?;
+
+        Ok(())
+    }
+
+    /// 在指定路径切换分支
+    ///
+    /// 在指定路径的 Git 仓库中切换到指定分支，不依赖当前工作目录。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库路径
+    /// * `branch_name` - 要切换到的分支名称
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回 `Ok(())`，失败时返回错误。
+    ///
+    /// # 错误
+    ///
+    /// 如果分支切换失败，返回相应的错误信息。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::git::GitBranch;
+    /// # use color_eyre::Result;
+    /// # fn main() -> Result<()> {
+    /// GitBranch::checkout_branch_at("/path/to/repo", "feature/new")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn checkout_branch_at(
+        repo_path: impl AsRef<std::path::Path>,
+        branch_name: &str,
+    ) -> Result<()> {
+        // 验证分支名不为空
+        if branch_name.is_empty() {
+            return Err(color_eyre::eyre::eyre!("Branch name cannot be empty"));
+        }
+
+        let mut repo = GitRepository::open_at(repo_path)?;
+
+        // 设置 HEAD 指向分支
+        let refname = format!("refs/heads/{}", branch_name);
+        repo.as_inner_mut()
+            .set_head(&refname)
+            .wrap_err_with(|| format!("Failed to set HEAD to branch: {}", branch_name))?;
+
+        // 检出工作目录
+        repo.as_inner_mut()
+            .checkout_head(Some(
                 git2::build::CheckoutBuilder::default()
                     .force()
                     .remove_ignored(false)
                     .remove_untracked(false),
             ))
             .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
-        }
+
         Ok(())
     }
 
@@ -429,11 +559,12 @@ impl GitBranch {
     /// # }
     /// ```
     pub fn get_all_branches(remove_prefix: bool) -> Result<Vec<String>> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut branch_set = HashSet::new();
 
         // 获取本地分支
-        repo.references()?
+        repo.as_inner()
+            .references()?
             .filter_map(|reference| {
                 reference.ok().and_then(|ref_| {
                     ref_.name()
@@ -446,7 +577,8 @@ impl GitBranch {
             });
 
         // 获取远程分支
-        repo.references()?
+        repo.as_inner()
+            .references()?
             .filter_map(|reference| {
                 reference.ok().and_then(|ref_| {
                     ref_.name().and_then(|name| name.strip_prefix("refs/remotes/")).and_then(
@@ -485,11 +617,12 @@ impl GitBranch {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn get_local_branches() -> Result<Vec<String>> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut branches = Vec::new();
 
         // 遍历所有引用，查找本地分支
-        repo.references()?
+        repo.as_inner()
+            .references()?
             .filter_map(|reference| {
                 reference.ok().and_then(|ref_| {
                     ref_.name()
@@ -501,45 +634,6 @@ impl GitBranch {
 
         branches.sort();
         Ok(branches)
-    }
-
-    /// 解析本地分支列表
-    #[allow(dead_code)]
-    fn parse_local_branches(output: &str, branch_set: &mut HashSet<String>) {
-        for line in output.lines() {
-            let line = line.trim();
-            // 跳过空行和 HEAD 指向的行（如 "  remotes/origin/HEAD -> origin/main"）
-            if line.is_empty() || line.contains("->") {
-                continue;
-            }
-            // 移除 `*` 标记（当前分支）和首尾空白
-            let branch_name = line.trim_start_matches('*').trim();
-            if !branch_name.is_empty() {
-                branch_set.insert(branch_name.to_string());
-            }
-        }
-    }
-
-    /// 解析远程分支列表
-    #[allow(dead_code)]
-    fn parse_remote_branches(output: &str, branch_set: &mut HashSet<String>) {
-        for line in output.lines() {
-            let line = line.trim();
-            // 跳过空行和 HEAD 指向的行
-            if line.is_empty() || line.contains("->") {
-                continue;
-            }
-            // 移除 `origin/` 前缀
-            let branch_name = if let Some(name) = line.strip_prefix("origin/") {
-                name.trim()
-            } else {
-                // 如果不是 origin/ 开头，尝试移除其他远程名称
-                line.split('/').nth(1).unwrap_or(line).trim()
-            };
-            if !branch_name.is_empty() {
-                branch_set.insert(branch_name.to_string());
-            }
-        }
     }
 
     /// 提取分支的基础名称（去掉前缀）
@@ -594,7 +688,7 @@ impl GitBranch {
     ///
     /// 如果分支不存在或命令执行失败，返回相应的错误信息。
     pub fn is_branch_ahead(branch_name: &str, base_branch: &str) -> Result<bool> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 解析分支引用
         let branch_ref = repo
@@ -614,7 +708,7 @@ impl GitBranch {
             .wrap_err_with(|| format!("Failed to get commit from base branch: {}", base_branch))?;
 
         // 使用 revwalk 检查是否有新提交
-        let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+        let mut revwalk = repo.as_inner().revwalk().wrap_err("Failed to create revwalk")?;
         revwalk
             .push(branch_commit.id())
             .wrap_err("Failed to push branch commit to revwalk")?;
@@ -641,8 +735,8 @@ impl GitBranch {
     /// 如果拉取失败，返回相应的错误信息。
     /// 如果检测到合并冲突，会返回错误，需要用户手动解决。
     pub fn pull(branch_name: &str) -> Result<()> {
-        let repo = open_repo()?;
-        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+        let mut repo = GitRepository::open()?;
+        let mut remote = repo.find_remote("origin")?;
 
         // 获取认证回调
         let callbacks = GitAuth::get_remote_callbacks();
@@ -661,34 +755,52 @@ impl GitBranch {
             .wrap_err("Failed to fetch from origin")?;
 
         // 更新远程引用后，查找远程分支的提交
-        let remote_ref = repo
-            .find_reference(&format!("refs/remotes/origin/{}", branch_name))
-            .wrap_err_with(|| format!("Failed to find remote branch: origin/{}", branch_name))?;
+        // 释放 remote 的借用
+        drop(remote);
+        let remote_commit_id = {
+            let remote_ref = repo
+                .find_reference(&format!("refs/remotes/origin/{}", branch_name))
+                .wrap_err_with(|| {
+                format!("Failed to find remote branch: origin/{}", branch_name)
+            })?;
 
-        let remote_commit = remote_ref.peel_to_commit().wrap_err_with(|| {
-            format!(
-                "Failed to get commit from remote branch: origin/{}",
-                branch_name
-            )
-        })?;
+            let remote_commit = remote_ref.peel_to_commit().wrap_err_with(|| {
+                format!(
+                    "Failed to get commit from remote branch: origin/{}",
+                    branch_name
+                )
+            })?;
+            remote_commit.id()
+        };
 
         // 查找本地分支（如果存在）
-        let local_branch_ref = repo.find_reference(&format!("refs/heads/{}", branch_name));
+        // 先查找本地分支引用，提取 commit ID，然后获取可变引用
+        let local_commit_id_result =
+            repo.find_reference(&format!("refs/heads/{}", branch_name)).map(|ref_| {
+                ref_.target()
+                    .and_then(|_oid| ref_.peel_to_commit().ok().map(|commit| commit.id()))
+            });
 
-        match local_branch_ref {
-            Ok(local_ref) => {
+        // 获取可变引用
+        let repo_inner = repo.as_inner_mut();
+        let remote_commit = repo_inner
+            .find_commit(remote_commit_id)
+            .wrap_err_with(|| format!("Failed to find remote commit: origin/{}", branch_name))?;
+
+        match local_commit_id_result {
+            Ok(Some(local_commit_id)) => {
                 // 本地分支存在，需要合并
-                let local_commit = local_ref.peel_to_commit().wrap_err_with(|| {
+                let local_commit = repo_inner.find_commit(local_commit_id).wrap_err_with(|| {
                     format!("Failed to get commit from local branch: {}", branch_name)
                 })?;
 
                 // 创建 annotated commit 用于合并分析
-                let remote_annotated = repo
+                let remote_annotated = repo_inner
                     .find_annotated_commit(remote_commit.id())
                     .wrap_err("Failed to create annotated commit from remote")?;
 
                 // 分析合并情况
-                let (analysis, _) = repo
+                let (analysis, _) = repo_inner
                     .merge_analysis(&[&remote_annotated])
                     .wrap_err("Failed to analyze merge")?;
 
@@ -697,25 +809,28 @@ impl GitBranch {
                     return Ok(());
                 } else if analysis.is_fast_forward() {
                     // Fast-forward 合并
-                    let mut local_ref =
-                        repo.find_reference(&format!("refs/heads/{}", branch_name)).wrap_err_with(
-                            || format!("Failed to find local branch: {}", branch_name),
-                        )?;
+                    let mut local_ref = repo_inner
+                        .find_reference(&format!("refs/heads/{}", branch_name))
+                        .wrap_err_with(|| {
+                            format!("Failed to find local branch: {}", branch_name)
+                        })?;
                     local_ref
                         .set_target(remote_commit.id(), "Fast-forward")
                         .wrap_err("Failed to update branch reference")?;
 
                     // 更新工作目录
-                    repo.set_head(&format!("refs/heads/{}", branch_name))
+                    repo_inner
+                        .set_head(&format!("refs/heads/{}", branch_name))
                         .wrap_err("Failed to set HEAD")?;
-                    repo.checkout_head(Some(
-                        git2::build::CheckoutBuilder::default().force().remove_untracked(true),
-                    ))
-                    .wrap_err("Failed to checkout HEAD")?;
+                    repo_inner
+                        .checkout_head(Some(
+                            git2::build::CheckoutBuilder::default().force().remove_untracked(true),
+                        ))
+                        .wrap_err("Failed to checkout HEAD")?;
                 } else {
                     // 需要合并
                     // merge_commits 需要 Commit 而不是 AnnotatedCommit
-                    let mut index = repo
+                    let mut index = repo_inner
                         .merge_commits(&local_commit, &remote_commit, None)
                         .wrap_err("Failed to merge commits")?;
 
@@ -729,45 +844,50 @@ impl GitBranch {
 
                     // 没有冲突，创建合并提交
                     let tree_id =
-                        index.write_tree_to(&repo).wrap_err("Failed to write merge tree")?;
-                    let tree = repo.find_tree(tree_id).wrap_err("Failed to find merge tree")?;
+                        index.write_tree_to(repo_inner).wrap_err("Failed to write merge tree")?;
+                    let tree =
+                        repo_inner.find_tree(tree_id).wrap_err("Failed to find merge tree")?;
 
                     let signature =
-                        repo.signature().wrap_err("Failed to get repository signature")?;
+                        repo_inner.signature().wrap_err("Failed to get repository signature")?;
 
                     let message = format!(
                         "Merge branch '{}' of origin into {}",
                         branch_name, branch_name
                     );
 
-                    repo.commit(
-                        Some(&format!("refs/heads/{}", branch_name)),
-                        &signature,
-                        &signature,
-                        &message,
-                        &tree,
-                        &[&local_commit, &remote_commit],
-                    )
-                    .wrap_err("Failed to create merge commit")?;
+                    repo_inner
+                        .commit(
+                            Some(&format!("refs/heads/{}", branch_name)),
+                            &signature,
+                            &signature,
+                            &message,
+                            &tree,
+                            &[&local_commit, &remote_commit],
+                        )
+                        .wrap_err("Failed to create merge commit")?;
                 }
             }
-            Err(_) => {
+            Ok(None) | Err(_) => {
                 // 本地分支不存在，创建新分支指向远程分支
-                repo.reference(
-                    &format!("refs/heads/{}", branch_name),
-                    remote_commit.id(),
-                    true,
-                    "Pull: create local branch from remote",
-                )
-                .wrap_err_with(|| format!("Failed to create local branch: {}", branch_name))?;
+                repo_inner
+                    .reference(
+                        &format!("refs/heads/{}", branch_name),
+                        remote_commit.id(),
+                        true,
+                        "Pull: create local branch from remote",
+                    )
+                    .wrap_err_with(|| format!("Failed to create local branch: {}", branch_name))?;
 
                 // 设置 HEAD 并检出
-                repo.set_head(&format!("refs/heads/{}", branch_name))
+                repo_inner
+                    .set_head(&format!("refs/heads/{}", branch_name))
                     .wrap_err("Failed to set HEAD")?;
-                repo.checkout_head(Some(
-                    git2::build::CheckoutBuilder::default().force().remove_untracked(true),
-                ))
-                .wrap_err("Failed to checkout HEAD")?;
+                repo_inner
+                    .checkout_head(Some(
+                        git2::build::CheckoutBuilder::default().force().remove_untracked(true),
+                    ))
+                    .wrap_err("Failed to checkout HEAD")?;
             }
         }
 
@@ -787,15 +907,11 @@ impl GitBranch {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push(branch_name: &str, set_upstream: bool) -> Result<()> {
-        let repo = open_repo()?;
-        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
-
-        // 获取认证回调
-        let callbacks = GitAuth::get_remote_callbacks();
+        let mut repo = GitRepository::open()?;
+        let mut remote = repo.find_origin_remote()?;
 
         // 配置推送选项
-        let mut push_options = PushOptions::new();
-        push_options.remote_callbacks(callbacks);
+        let mut push_options = GitRepository::get_push_options();
 
         // 构建 refspec
         let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
@@ -806,8 +922,12 @@ impl GitBranch {
             .wrap_err_with(|| format!("Failed to push branch: {}", branch_name))?;
 
         // 如果设置了 upstream，更新本地分支的上游跟踪
+        // 注意：需要在 remote 使用完后才能获取 repo 的可变引用
+        drop(remote);
+
         if set_upstream {
-            let mut branch = repo
+            let repo_inner = repo.as_inner_mut();
+            let mut branch = repo_inner
                 .find_branch(branch_name, git2::BranchType::Local)
                 .wrap_err_with(|| format!("Failed to find branch: {}", branch_name))?;
             branch
@@ -831,8 +951,8 @@ impl GitBranch {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push_force_with_lease(branch_name: &str) -> Result<()> {
-        let repo = open_repo()?;
-        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+        let mut repo = GitRepository::open()?;
+        let mut remote = repo.find_remote("origin")?;
 
         // 获取认证回调
         let callbacks = GitAuth::get_remote_callbacks();
@@ -868,27 +988,34 @@ impl GitBranch {
     ///
     /// 如果遇到冲突，rebase 会暂停，需要用户手动解决冲突后继续。
     pub fn rebase_onto(target_branch: &str) -> Result<()> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
-        // 获取当前分支的 HEAD commit
-        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
+        // 获取当前分支的 HEAD commit（在获取可变引用之前）
+        let head_commit_id = {
+            let head = repo.head().wrap_err("Failed to get HEAD reference")?;
+            let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
+            head_commit.id()
+        };
 
         // 解析目标分支（支持本地分支或远程分支）
-        let target_ref = repo
-            .find_reference(&format!("refs/heads/{}", target_branch))
-            .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", target_branch)))
-            .wrap_err_with(|| format!("Failed to find branch: {}", target_branch))?;
-        let target_commit = target_ref
-            .peel_to_commit()
-            .wrap_err_with(|| format!("Failed to get commit from branch: {}", target_branch))?;
+        let target_commit_id = {
+            let target_ref = repo
+                .find_reference(&format!("refs/heads/{}", target_branch))
+                .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", target_branch)))
+                .wrap_err_with(|| format!("Failed to find branch: {}", target_branch))?;
+            let target_commit = target_ref
+                .peel_to_commit()
+                .wrap_err_with(|| format!("Failed to get commit from branch: {}", target_branch))?;
+            target_commit.id()
+        };
 
         // 转换为 AnnotatedCommit（rebase 需要）
-        let head_annotated = repo
-            .find_annotated_commit(head_commit.id())
+        let repo_inner = repo.as_inner_mut();
+        let head_annotated = repo_inner
+            .find_annotated_commit(head_commit_id)
             .wrap_err("Failed to create annotated commit from HEAD")?;
         let target_annotated =
-            repo.find_annotated_commit(target_commit.id()).wrap_err_with(|| {
+            repo_inner.find_annotated_commit(target_commit_id).wrap_err_with(|| {
                 format!(
                     "Failed to create annotated commit from branch: {}",
                     target_branch
@@ -899,7 +1026,7 @@ impl GitBranch {
         let mut rebase_opts = git2::RebaseOptions::new();
         rebase_opts.inmemory(true); // 使用内存模式，避免修改工作目录
 
-        let mut rebase = repo
+        let mut rebase = repo_inner
             .rebase(
                 Some(&head_annotated),
                 Some(&target_annotated),
@@ -915,7 +1042,7 @@ impl GitBranch {
             let _op = _op.wrap_err("Failed to get next rebase operation")?;
 
             // 检查是否有冲突
-            if repo.index()?.has_conflicts() {
+            if repo_inner.index()?.has_conflicts() {
                 rebase.abort().ok(); // 尝试中止 rebase
                 color_eyre::eyre::bail!(
                     "Rebase conflict detected. Please resolve conflicts manually and continue."
@@ -923,7 +1050,7 @@ impl GitBranch {
             }
 
             // 提交 rebase 操作
-            let signature = repo.signature().wrap_err("Failed to get signature")?;
+            let signature = repo_inner.signature().wrap_err("Failed to get signature")?;
             rebase
                 .commit(None, &signature, None)
                 .wrap_err("Failed to commit rebase operation")?;
@@ -970,7 +1097,7 @@ impl GitBranch {
     /// # }
     /// ```
     pub fn rebase_onto_with_upstream(newbase: &str, upstream: &str, branch: &str) -> Result<()> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 解析分支引用（支持本地分支或远程分支）
         let branch_ref = repo
@@ -999,20 +1126,35 @@ impl GitBranch {
             .peel_to_commit()
             .wrap_err_with(|| format!("Failed to get commit from newbase branch: {}", newbase))?;
 
+        // 提取 commit IDs（在获取可变引用之前）
+        let branch_commit_id = branch_commit.id();
+        let upstream_commit_id = upstream_commit.id();
+        let newbase_commit_id = newbase_commit.id();
+
+        // 释放所有对 repo 的借用（在获取可变引用之前）
+        drop(branch_ref);
+        drop(upstream_ref);
+        drop(newbase_ref);
+        drop(branch_commit);
+        drop(upstream_commit);
+        drop(newbase_commit);
+
         // 转换为 AnnotatedCommit（rebase 需要）
+        let mut repo = repo;
+        let repo_inner = repo.as_inner_mut();
         let branch_annotated =
-            repo.find_annotated_commit(branch_commit.id()).wrap_err_with(|| {
+            repo_inner.find_annotated_commit(branch_commit_id).wrap_err_with(|| {
                 format!("Failed to create annotated commit from branch: {}", branch)
             })?;
         let upstream_annotated =
-            repo.find_annotated_commit(upstream_commit.id()).wrap_err_with(|| {
+            repo_inner.find_annotated_commit(upstream_commit_id).wrap_err_with(|| {
                 format!(
                     "Failed to create annotated commit from upstream branch: {}",
                     upstream
                 )
             })?;
         let newbase_annotated =
-            repo.find_annotated_commit(newbase_commit.id()).wrap_err_with(|| {
+            repo_inner.find_annotated_commit(newbase_commit_id).wrap_err_with(|| {
                 format!(
                     "Failed to create annotated commit from newbase branch: {}",
                     newbase
@@ -1023,7 +1165,7 @@ impl GitBranch {
         let mut rebase_opts = git2::RebaseOptions::new();
         rebase_opts.inmemory(true); // 使用内存模式，避免修改工作目录
 
-        let mut rebase = repo
+        let mut rebase = repo_inner
             .rebase(
                 Some(&branch_annotated),
                 Some(&upstream_annotated),
@@ -1042,7 +1184,7 @@ impl GitBranch {
             let _op = _op.wrap_err("Failed to get next rebase operation")?;
 
             // 检查是否有冲突
-            if repo.index()?.has_conflicts() {
+            if repo_inner.index()?.has_conflicts() {
                 rebase.abort().ok(); // 尝试中止 rebase
                 color_eyre::eyre::bail!(
                     "Rebase conflict detected. Please resolve conflicts manually and continue."
@@ -1050,7 +1192,7 @@ impl GitBranch {
             }
 
             // 提交 rebase 操作
-            let signature = repo.signature().wrap_err("Failed to get signature")?;
+            let signature = repo_inner.signature().wrap_err("Failed to get signature")?;
             rebase
                 .commit(None, &signature, None)
                 .wrap_err("Failed to commit rebase operation")?;
@@ -1080,7 +1222,7 @@ impl GitBranch {
     ///
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete(branch_name: &str, force: bool) -> Result<()> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let refname = format!("refs/heads/{}", branch_name);
 
         // 查找分支引用
@@ -1101,6 +1243,7 @@ impl GitBranch {
 
             // 检查分支是否已合并到当前分支
             let merge_base = repo
+                .as_inner()
                 .merge_base(head_commit.id(), branch_commit.id())
                 .wrap_err("Failed to find merge base")?;
 
@@ -1134,7 +1277,7 @@ impl GitBranch {
     ///
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete_remote(branch_name: &str) -> Result<()> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
         let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
         // 获取认证回调
@@ -1169,7 +1312,7 @@ impl GitBranch {
     ///
     /// 如果重命名失败，返回相应的错误信息。
     pub fn rename(old_name: Option<&str>, new_name: &str) -> Result<()> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 确定要重命名的分支引用路径
         let old_ref_path = if let Some(old) = old_name {
@@ -1193,7 +1336,7 @@ impl GitBranch {
         }
 
         // 找到旧分支引用
-        let mut old_ref = repo.find_reference(&old_ref_path).wrap_err_with(|| {
+        let old_ref = repo.find_reference(&old_ref_path).wrap_err_with(|| {
             if let Some(old) = old_name {
                 format!("Branch '{}' does not exist", old)
             } else {
@@ -1206,23 +1349,47 @@ impl GitBranch {
             .target()
             .ok_or_else(|| color_eyre::eyre::eyre!("Branch reference has no target"))?;
 
+        // 获取当前 HEAD 名称（如果需要）
+        let head_ref = repo.head()?;
+        let head_name = head_ref.name().map(|s| s.to_string());
+        let is_current_branch =
+            head_name.as_ref().map(|s| old_ref_path == s.as_str()).unwrap_or(false);
+
+        // 保存 old_ref 以便后续删除（在获取可变引用之前）
+        // 注意：old_ref 持有对 repo 的借用，我们需要先 drop 它
+        drop(old_ref);
+
+        // 释放所有对 repo 的借用（在获取可变引用之前）
+        drop(head_ref);
+        drop(head_name);
+
         // 创建新分支引用
-        repo.reference(
-            &new_ref_path,
-            target_oid,
-            true,
-            &format!("Rename branch to {}", new_name),
-        )
-        .wrap_err_with(|| format!("Failed to create new branch reference '{}'", new_ref_path))?;
+        let mut repo = repo;
+        let repo_inner = repo.as_inner_mut();
+        repo_inner
+            .reference(
+                &new_ref_path,
+                target_oid,
+                true,
+                &format!("Rename branch to {}", new_name),
+            )
+            .wrap_err_with(|| {
+                format!("Failed to create new branch reference '{}'", new_ref_path)
+            })?;
 
         // 如果重命名的是当前分支，更新 HEAD
-        if old_ref_path == repo.head()?.name().unwrap_or("") {
-            repo.set_head(&new_ref_path)
+        if is_current_branch {
+            repo_inner
+                .set_head(&new_ref_path)
                 .wrap_err_with(|| format!("Failed to update HEAD to '{}'", new_ref_path))?;
         }
 
         // 删除旧分支引用
-        old_ref.delete().wrap_err_with(|| {
+        // 注意：我们需要重新获取 old_ref，因为之前的 old_ref 已经被 drop
+        let mut old_ref_to_delete = repo_inner
+            .find_reference(&old_ref_path)
+            .wrap_err_with(|| format!("Failed to find old branch reference '{}'", old_ref_path))?;
+        old_ref_to_delete.delete().wrap_err_with(|| {
             format!("Failed to delete old branch reference '{}'", old_ref_path)
         })?;
 
@@ -1265,45 +1432,70 @@ impl GitBranch {
     ///
     /// 如果合并失败（包括冲突），返回相应的错误信息。
     pub fn merge_branch(source_branch: &str, strategy: MergeStrategy) -> Result<()> {
-        let repo = open_repo()?;
+        let mut repo = GitRepository::open()?;
 
-        // 获取当前分支的 commit
-        let head = repo.head().wrap_err("Failed to get HEAD reference")?;
-        let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
+        // 获取当前分支的 commit（在获取可变引用之前）
+        let (head_name, head_commit_oid) = {
+            let head = repo.head()?;
+            (
+                head.name().unwrap().to_string(),
+                head.target().ok_or_else(|| {
+                    color_eyre::eyre::eyre!("HEAD reference does not point to a commit")
+                })?,
+            )
+        };
 
-        // 获取源分支的 commit
-        let source_ref = repo
-            .find_reference(&format!("refs/heads/{}", source_branch))
-            .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", source_branch)))
-            .wrap_err_with(|| format!("Failed to find branch: {}", source_branch))?;
-        let source_commit = source_ref
-            .peel_to_commit()
+        // 获取源分支的 commit（在获取可变引用之前）
+        let source_commit_oid = {
+            let source_ref = repo
+                .find_reference(&format!("refs/heads/{}", source_branch))
+                .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", source_branch)))
+                .wrap_err_with(|| format!("Failed to find branch: {}", source_branch))?;
+            source_ref.target().ok_or_else(|| {
+                color_eyre::eyre::eyre!("Source branch reference does not point to a commit")
+            })?
+        };
+
+        // 现在获取可变引用，并在需要时重新获取 commit 和 signature
+        let repo_inner = repo.as_inner_mut();
+
+        // 重新获取 commit（使用可变引用）
+        let head_commit = repo_inner
+            .find_commit(head_commit_oid)
+            .wrap_err("Failed to get commit from HEAD")?;
+        let source_commit = repo_inner
+            .find_commit(source_commit_oid)
             .wrap_err_with(|| format!("Failed to get commit from branch: {}", source_branch))?;
 
+        // 重新获取 signature（使用可变引用）
+        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
+
         // 分析合并情况（需要 AnnotatedCommit）
-        let source_annotated = repo
+        let source_annotated = repo_inner
             .find_annotated_commit(source_commit.id())
             .wrap_err("Failed to create annotated commit")?;
-        let (merge_analysis, _) =
-            repo.merge_analysis(&[&source_annotated]).wrap_err("Failed to analyze merge")?;
+        let (merge_analysis, _) = repo_inner
+            .merge_analysis(&[&source_annotated])
+            .wrap_err("Failed to analyze merge")?;
 
         match strategy {
             MergeStrategy::FastForwardOnly => {
                 if merge_analysis.is_fast_forward() {
                     // Fast-forward 合并
-                    let mut head_ref = repo
-                        .find_reference(head.name().unwrap())
+                    let mut head_ref = repo_inner
+                        .find_reference(&head_name)
                         .wrap_err("Failed to find HEAD reference")?;
                     head_ref
                         .set_target(source_commit.id(), "Fast-forward merge")
                         .wrap_err("Failed to update HEAD reference")?;
 
                     // 更新工作目录
-                    repo.set_head(head.name().unwrap()).wrap_err("Failed to set HEAD")?;
-                    repo.checkout_head(Some(
-                        git2::build::CheckoutBuilder::default().force().remove_untracked(true),
-                    ))
-                    .wrap_err("Failed to checkout HEAD")?;
+                    repo_inner.set_head(&head_name).wrap_err("Failed to set HEAD")?;
+                    repo_inner
+                        .checkout_head(Some(
+                            git2::build::CheckoutBuilder::default().force().remove_untracked(true),
+                        ))
+                        .wrap_err("Failed to checkout HEAD")?;
                 } else {
                     return Err(color_eyre::eyre::eyre!(
                         "Cannot fast-forward merge. Use a different merge strategy."
@@ -1313,7 +1505,7 @@ impl GitBranch {
             MergeStrategy::Squash => {
                 // Squash 合并：将所有提交压缩为一个提交
                 // 获取源分支的所有提交
-                let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+                let mut revwalk = repo_inner.revwalk().wrap_err("Failed to create revwalk")?;
                 revwalk
                     .push(source_commit.id())
                     .wrap_err("Failed to push source commit to revwalk")?;
@@ -1325,7 +1517,7 @@ impl GitBranch {
                 let mut commits_to_squash = Vec::new();
                 for oid in revwalk {
                     let oid = oid.wrap_err("Failed to get commit OID from revwalk")?;
-                    let commit = repo
+                    let commit = repo_inner
                         .find_commit(oid)
                         .wrap_err_with(|| format!("Failed to find commit: {}", oid))?;
                     commits_to_squash.push(commit);
@@ -1344,7 +1536,7 @@ impl GitBranch {
 
                 // 创建 squash 提交（需要手动实现，git2 不直接支持 squash）
                 // 这里我们使用 merge_commits 然后手动创建提交
-                let mut merge_index = repo
+                let mut merge_index = repo_inner
                     .merge_commits(&head_commit, &source_commit, None)
                     .wrap_err("Failed to merge commits for squash")?;
 
@@ -1356,10 +1548,8 @@ impl GitBranch {
                 }
 
                 let tree_id =
-                    merge_index.write_tree_to(&repo).wrap_err("Failed to write merge tree")?;
-                let tree = repo.find_tree(tree_id).wrap_err("Failed to find merge tree")?;
-
-                let signature = repo.signature().wrap_err("Failed to get repository signature")?;
+                    merge_index.write_tree_to(repo_inner).wrap_err("Failed to write merge tree")?;
+                let tree = repo_inner.find_tree(tree_id).wrap_err("Failed to find merge tree")?;
 
                 // 创建 squash 提交消息
                 let mut message = format!("Squashed commit of branch '{}'\n\n", source_branch);
@@ -1369,35 +1559,37 @@ impl GitBranch {
                     }
                 }
 
-                repo.commit(
-                    Some("HEAD"),
-                    &signature,
-                    &signature,
-                    &message,
-                    &tree,
-                    &[&head_commit],
-                )
-                .wrap_err("Failed to create squash commit")?;
+                repo_inner
+                    .commit(
+                        Some("HEAD"),
+                        &signature,
+                        &signature,
+                        &message,
+                        &tree,
+                        &[&head_commit],
+                    )
+                    .wrap_err("Failed to create squash commit")?;
             }
             MergeStrategy::Merge => {
                 if merge_analysis.is_fast_forward() {
                     // Fast-forward 合并
-                    let mut head_ref = repo
-                        .find_reference(head.name().unwrap())
+                    let mut head_ref = repo_inner
+                        .find_reference(&head_name)
                         .wrap_err("Failed to find HEAD reference")?;
                     head_ref
                         .set_target(source_commit.id(), "Fast-forward merge")
                         .wrap_err("Failed to update HEAD reference")?;
 
                     // 更新工作目录
-                    repo.set_head(head.name().unwrap()).wrap_err("Failed to set HEAD")?;
-                    repo.checkout_head(Some(
-                        git2::build::CheckoutBuilder::default().force().remove_untracked(true),
-                    ))
-                    .wrap_err("Failed to checkout HEAD")?;
+                    repo_inner.set_head(&head_name).wrap_err("Failed to set HEAD")?;
+                    repo_inner
+                        .checkout_head(Some(
+                            git2::build::CheckoutBuilder::default().force().remove_untracked(true),
+                        ))
+                        .wrap_err("Failed to checkout HEAD")?;
                 } else {
                     // 普通合并
-                    let mut merge_index = repo
+                    let mut merge_index = repo_inner
                         .merge_commits(&head_commit, &source_commit, None)
                         .wrap_err("Failed to merge commits")?;
 
@@ -1408,24 +1600,24 @@ impl GitBranch {
                         ));
                     }
 
-                    let tree_id =
-                        merge_index.write_tree_to(&repo).wrap_err("Failed to write merge tree")?;
-                    let tree = repo.find_tree(tree_id).wrap_err("Failed to find merge tree")?;
-
-                    let signature =
-                        repo.signature().wrap_err("Failed to get repository signature")?;
+                    let tree_id = merge_index
+                        .write_tree_to(repo_inner)
+                        .wrap_err("Failed to write merge tree")?;
+                    let tree =
+                        repo_inner.find_tree(tree_id).wrap_err("Failed to find merge tree")?;
 
                     let message = format!("Merge branch '{}'", source_branch);
 
-                    repo.commit(
-                        Some("HEAD"),
-                        &signature,
-                        &signature,
-                        &message,
-                        &tree,
-                        &[&head_commit, &source_commit],
-                    )
-                    .wrap_err("Failed to create merge commit")?;
+                    repo_inner
+                        .commit(
+                            Some("HEAD"),
+                            &signature,
+                            &signature,
+                            &message,
+                            &tree,
+                            &[&head_commit, &source_commit],
+                        )
+                        .wrap_err("Failed to create merge commit")?;
                 }
             }
         }
@@ -1446,22 +1638,22 @@ impl GitBranch {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn has_merge_conflicts() -> Result<bool> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 检查索引是否有冲突
-        let index = repo.index().wrap_err("Failed to open repository index")?;
+        let index = repo.as_inner().index().wrap_err("Failed to open repository index")?;
         if index.has_conflicts() {
             return Ok(true);
         }
 
         // 检查 MERGE_HEAD 是否存在（表示正在进行合并）
-        let git_dir = repo.path();
+        let git_dir = repo.as_inner().path();
         let merge_head_path = git_dir.join("MERGE_HEAD");
         if merge_head_path.exists() {
             // 如果 MERGE_HEAD 存在，检查工作区是否有冲突标记
             // 使用 git2 diff API 检查工作区和索引之间的差异
             let head = repo.head()?.peel_to_tree()?;
-            let diff = repo.diff_tree_to_index(Some(&head), Some(&index), None)?;
+            let diff = repo.as_inner().diff_tree_to_index(Some(&head), Some(&index), None)?;
 
             // 检查是否有冲突标记（<<<<<<, ======, >>>>>>）
             let mut has_conflict_markers = false;
@@ -1512,7 +1704,7 @@ impl GitBranch {
     ///
     /// 如果分支不存在或操作失败，返回相应的错误信息。
     pub fn is_branch_merged(branch: &str, base_branch: &str) -> Result<bool> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 解析分支引用
         let branch_ref = repo
@@ -1533,6 +1725,7 @@ impl GitBranch {
 
         // 获取 merge-base
         let merge_base_oid = repo
+            .as_inner()
             .merge_base(branch_commit.id(), base_commit.id())
             .wrap_err("Failed to get merge base")?;
 
@@ -1557,7 +1750,7 @@ impl GitBranch {
     ///
     /// 如果分支不存在或操作失败，返回相应的错误信息。
     pub fn get_commits_between(base_branch: &str, head_branch: &str) -> Result<Vec<String>> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 解析分支引用
         let base_ref = repo
@@ -1577,7 +1770,7 @@ impl GitBranch {
             .wrap_err_with(|| format!("Failed to get commit from head branch: {}", head_branch))?;
 
         // 使用 revwalk 获取提交列表
-        let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+        let mut revwalk = repo.as_inner().revwalk().wrap_err("Failed to create revwalk")?;
         revwalk
             .push(head_commit.id())
             .wrap_err("Failed to push head commit to revwalk")?;
@@ -1612,7 +1805,7 @@ impl GitBranch {
     ///
     /// 如果分支不存在或操作失败，返回相应的错误信息。
     pub fn merge_base(branch1: &str, branch2: &str) -> Result<String> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 解析分支引用
         let branch1_ref = repo
@@ -1632,13 +1825,15 @@ impl GitBranch {
             .wrap_err_with(|| format!("Failed to get commit from branch: {}", branch2))?;
 
         // 使用 git2 的 merge_base 方法
-        let merge_base_oid =
-            repo.merge_base(branch1_commit.id(), branch2_commit.id()).wrap_err_with(|| {
-                format!(
-                    "Failed to get merge base between '{}' and '{}'",
-                    branch1, branch2
-                )
-            })?;
+        let merge_base_oid = repo
+            .as_inner()
+            .merge_base(branch1_commit.id(), branch2_commit.id())
+            .wrap_err_with(|| {
+            format!(
+                "Failed to get merge base between '{}' and '{}'",
+                branch1, branch2
+            )
+        })?;
 
         Ok(merge_base_oid.to_string())
     }
@@ -1667,7 +1862,7 @@ impl GitBranch {
             return Ok(false);
         }
 
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 获取 merge-base
         let merge_base_oid = match Self::merge_base(from_branch, candidate_branch) {
@@ -1715,7 +1910,7 @@ impl GitBranch {
             return Ok(false);
         }
 
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 解析 commit SHA
         let commit_oid = git2::Oid::from_str(commit_sha)
@@ -1730,7 +1925,7 @@ impl GitBranch {
         })?;
 
         // 使用 revwalk 检查 commit 是否在远程分支的历史中
-        let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+        let mut revwalk = repo.as_inner().revwalk().wrap_err("Failed to create revwalk")?;
         revwalk
             .push(remote_commit.id())
             .wrap_err("Failed to push remote commit to revwalk")?;

@@ -342,7 +342,6 @@ Clipboard::copy(&pr_url)?;
 - [主架构文档](./architecture.md)
 - [Lifecycle 模块架构文档](./lifecycle.md) - 使用平台检测匹配 GitHub Releases
 - [PR 模块架构文档](./pr.md) - 使用浏览器和剪贴板操作
-- [Tools 模块架构文档](./tools.md) - 工具函数总览
 
 ---
 

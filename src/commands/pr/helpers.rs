@@ -57,7 +57,6 @@ pub fn handle_stash_pop_result(result: Result<crate::git::StashPopResult>) {
 /// # 返回
 ///
 /// 如果错误表示 PR 已合并，返回 `true`，否则返回 `false`
-#[allow(dead_code)]
 pub fn is_pr_already_merged_error(error: &Report) -> bool {
     let error_msg = error.to_string().to_lowercase();
 
@@ -96,7 +95,6 @@ pub fn is_pr_already_merged_error(error: &Report) -> bool {
 /// # 返回
 ///
 /// 如果错误表示 PR 已关闭，返回 `true`，否则返回 `false`
-#[allow(dead_code)]
 pub fn is_pr_already_closed_error(error: &Report) -> bool {
     let error_msg = error.to_string().to_lowercase();
 

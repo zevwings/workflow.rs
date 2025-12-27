@@ -52,26 +52,4 @@ impl AttachmentFilter {
 
         log_attachments
     }
-
-    /// 检查是否为日志附件
-    ///
-    /// 判断给定的文件名是否为日志附件。
-    ///
-    /// 这是一个便捷方法，提供与 `filter_log_attachments()` 相同的判断逻辑。
-    /// 虽然当前代码中未使用，但保留作为公共 API 以供外部调用。
-    ///
-    /// # 参数
-    ///
-    /// * `filename` - 文件名
-    ///
-    /// # 返回
-    ///
-    /// 返回 `true` 如果是日志附件，否则返回 `false`。
-    #[allow(dead_code)]
-    pub fn is_log_attachment(filename: &str) -> bool {
-        let log_zip_pattern = Regex::new(r"^log\.(zip|z\d+)$").unwrap();
-        log_zip_pattern.is_match(filename)
-            || filename.ends_with(".log")
-            || filename.ends_with(".txt")
-    }
 }

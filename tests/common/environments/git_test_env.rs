@@ -22,8 +22,9 @@
 //! ```
 
 use color_eyre::{eyre::WrapErr, Result};
-use git2::{IndexAddOption, Repository, Signature};
+use git2::Repository;
 use std::path::PathBuf;
+use workflow::git::{GitBranch, GitCommit, GitRepository};
 
 use crate::common::isolation::TestIsolation;
 
@@ -88,52 +89,16 @@ impl GitTestEnv {
         // 获取工作目录绝对路径
         let work_dir = isolation.work_dir().to_path_buf();
 
-        // 确保.git目录不存在（如果存在则删除）
-        let git_dir = work_dir.join(".git");
-        if git_dir.exists() {
-            std::fs::remove_dir_all(&git_dir).map_err(|e| {
-                color_eyre::eyre::eyre!("Failed to remove existing .git directory: {}", e)
-            })?;
-        }
-
-        // 初始化Git仓库，设置默认分支为main
-        let mut init_opts = git2::RepositoryInitOptions::new();
-        init_opts.initial_head("main");
-        let repo = Repository::init_opts(&work_dir, &init_opts)
-            .wrap_err("Failed to initialize git repository")?;
-
-        // 在仓库的配置文件中设置Git用户配置
-        // 使用 git2 API 设置本地配置，避免 GIT_CONFIG 环境变量冲突
-        let mut config = repo.config().wrap_err("Failed to open repository config")?;
-        config.set_str("user.name", "Test User").wrap_err("Failed to set user.name")?;
-        config
-            .set_str("user.email", "test@example.com")
-            .wrap_err("Failed to set user.email")?;
-
-        // 创建初始提交
-        std::fs::write(work_dir.join("README.md"), "# Test Repository\n")?;
-
-        // 添加所有文件到索引
-        let mut index = repo.index().wrap_err("Failed to open repository index")?;
-        index
-            .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
-            .wrap_err("Failed to add files to index")?;
-        let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
-        index.write().wrap_err("Failed to write index")?;
-
-        // 创建提交
-        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
-        let signature = Signature::now("Test User", "test@example.com")
-            .wrap_err("Failed to create signature")?;
-        repo.commit(
-            Some("HEAD"),
-            &signature,
-            &signature,
-            "Initial commit",
-            &tree,
-            &[],
-        )
-        .wrap_err("Failed to create initial commit")?;
+        // 初始化Git仓库并创建初始提交（使用封装工具）
+        let _repo = GitRepository::init_with_commit(
+            &work_dir,
+            Some("main"),
+            Some("Test User"),
+            Some("test@example.com"),
+            Some("README.md"),
+            Some("# Test Repository\n"),
+            Some("Initial commit"),
+        )?;
 
         Ok(Self { isolation })
     }
@@ -175,12 +140,7 @@ impl GitTestEnv {
     /// env.create_branch("feature/test")?;
     /// ```
     pub fn create_branch(&self, branch_name: &str) -> Result<()> {
-        let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
-        let head = repo.head().wrap_err("Failed to get HEAD")?;
-        let head_commit = repo
-            .find_commit(head.target().unwrap())
-            .wrap_err("Failed to find HEAD commit")?;
-        repo.branch(branch_name, &head_commit, false)
+        GitBranch::create_branch_at(self.path(), branch_name)
             .wrap_err_with(|| format!("Failed to create branch: {}", branch_name))?;
         Ok(())
     }
@@ -204,17 +164,8 @@ impl GitTestEnv {
     /// env.checkout("feature/test")?;
     /// ```
     pub fn checkout(&self, branch_name: &str) -> Result<()> {
-        let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
-        let refname = format!("refs/heads/{}", branch_name);
-        repo.set_head(&refname)
+        GitBranch::checkout_branch_at(self.path(), branch_name)
             .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
-        repo.checkout_head(Some(
-            git2::build::CheckoutBuilder::default()
-                .force()
-                .remove_ignored(false)
-                .remove_untracked(false),
-        ))
-        .wrap_err_with(|| format!("Failed to checkout HEAD for branch: {}", branch_name))?;
         Ok(())
     }
 
@@ -302,38 +253,8 @@ impl GitTestEnv {
     /// env.add_and_commit("Add test file")?;
     /// ```
     pub fn add_and_commit(&self, message: &str) -> Result<()> {
-        let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
-
-        // 添加所有文件到索引
-        let mut index = repo.index().wrap_err("Failed to open repository index")?;
-        index
-            .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
-            .wrap_err("Failed to add files to index")?;
-        let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
-        index.write().wrap_err("Failed to write index")?;
-
-        // 创建提交
-        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
-        let signature = Signature::now("Test User", "test@example.com")
-            .wrap_err("Failed to create signature")?;
-
-        // 获取父提交（如果有）
-        let parent_commit = repo
-            .head()
-            .ok()
-            .and_then(|head| head.target().and_then(|oid| repo.find_commit(oid).ok()));
-        let parents: Vec<&git2::Commit> = parent_commit.iter().collect();
-
-        repo.commit(
-            Some("HEAD"),
-            &signature,
-            &signature,
-            message,
-            &tree,
-            &parents,
-        )
-        .wrap_err_with(|| format!("Failed to create commit: {}", message))?;
-
+        GitCommit::commit_at(self.path(), message, true)
+            .wrap_err_with(|| format!("Failed to create commit: {}", message))?;
         Ok(())
     }
 
@@ -408,8 +329,8 @@ impl GitTestEnv {
     /// let sha = env.last_commit_sha()?;
     /// ```
     pub fn last_commit_sha(&self) -> Result<String> {
-        let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
-        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let repo = GitRepository::open_at(self.path())?;
+        let head = repo.head()?;
         let oid = head
             .target()
             .ok_or_else(|| color_eyre::eyre::eyre!("HEAD does not point to a valid commit"))?;

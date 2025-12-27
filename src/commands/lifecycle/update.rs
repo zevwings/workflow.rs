@@ -38,21 +38,8 @@ use std::os::unix::fs::PermissionsExt;
 
 /// GitHub Release 信息
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct GitHubRelease {
     tag_name: String,
-    #[allow(dead_code)]
-    assets: Vec<ReleaseAsset>,
-}
-
-/// Release 资源文件
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct ReleaseAsset {
-    #[allow(dead_code)]
-    name: String,
-    #[allow(dead_code)]
-    browser_download_url: String,
 }
 
 /// 版本比较结果
@@ -83,8 +70,6 @@ struct BinaryStatus {
 struct VerificationResult {
     #[allow(dead_code)]
     binaries: Vec<BinaryStatus>,
-    #[allow(dead_code)]
-    completions_installed: bool,
     all_checks_passed: bool,
 }
 
@@ -118,10 +103,8 @@ impl TempDirManager {
 }
 
 /// 更新命令
-#[allow(dead_code)]
 pub struct UpdateCommand;
 
-#[allow(dead_code)]
 impl UpdateCommand {
     // ==================== 版本管理 ====================
 
@@ -708,7 +691,6 @@ impl UpdateCommand {
 
         Ok(VerificationResult {
             binaries,
-            completions_installed,
             all_checks_passed,
         })
     }

@@ -21,10 +21,8 @@ use crate::repo::RepoConfig;
 use crate::{log_break, log_info, log_success, log_warning};
 
 /// PR 创建命令
-#[allow(dead_code)]
 pub struct PullRequestCreateCommand;
 
-#[allow(dead_code)]
 impl PullRequestCreateCommand {
     /// 创建 PR（完整流程）
     pub fn create(

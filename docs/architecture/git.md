@@ -10,10 +10,10 @@ Git 模块是 Workflow CLI 的核心功能之一，提供完整的 Git 仓库操
 - **性能优化**：直接使用 git2 API，消除了进程启动开销，性能提升 10-100 倍
 
 **模块统计：**
-- 总代码行数：约 2000+ 行
-- 文件数量：11 个
-- 主要结构体：8 个（GitBranch, GitCommit, GitRepo, GitStash, GitConfig, GitPreCommit, GitCherryPick, GitAuth）
-- 辅助模块：2 个（helpers.rs, auth.rs）
+- 总代码行数：约 2500+ 行
+- 文件数量：13 个（包括 client 子模块）
+- 主要结构体：10 个（GitBranch, GitCommit, GitRepo, GitStash, GitConfig, GitPreCommit, GitCherryPick, GitAuth, GitRepository, GitRemote）
+- 核心封装层：client 模块（GitRepository, GitRemote）
 
 ---
 
@@ -23,17 +23,21 @@ Git 模块是 Workflow CLI 的核心功能之一，提供完整的 Git 仓库操
 
 ```
 src/lib/git/
-├── mod.rs          # Git 模块声明和导出 (66行)
+├── mod.rs          # Git 模块声明和导出 (62行)
 ├── auth.rs         # 认证回调机制 (400+行)
-├── branch.rs       # 分支管理操作 (1000+行)
-├── commit.rs       # 提交相关操作 (400+行)
+├── branch.rs       # 分支管理操作 (1800+行)
+├── commit.rs       # 提交相关操作 (1100+行)
 ├── repo.rs         # 仓库检测和类型识别 (200+行)
 ├── stash.rs        # 暂存管理 (550+行)
 ├── config.rs       # Git 配置管理 (75行)
 ├── pre_commit.rs   # Pre-commit hooks 支持 (100+行)
 ├── cherry_pick.rs  # Cherry-pick 操作 (200+行)
-├── helpers.rs      # Git 操作辅助函数 (43行)
+├── client/         # Git2 封装层（核心抽象）
+│   ├── mod.rs      # 模块声明
+│   ├── repository.rs  # GitRepository 封装 (400+行)
+│   └── remote.rs      # GitRemote 封装 (200+行)
 ├── table.rs        # 表格格式化
+├── tag.rs          # Tag 管理
 └── types.rs        # 类型定义 (15行)
 ```
 
@@ -95,8 +99,8 @@ Git 模块是 Workflow CLI 的核心功能模块，为所有需要 Git 操作的
 
 1. **模块化设计**：每个功能领域有独立的结构体，职责清晰
 2. **零大小结构体**：使用 unit struct 组织相关函数，符合 Rust 最佳实践
-3. **统一辅助函数**：通过 `helpers.rs` 提供统一的 Git 命令执行接口
-4. **错误处理统一**：使用 `anyhow::Result` 和 `context` 提供清晰的错误信息
+3. **统一封装层**：通过 `client` 模块提供统一的 `GitRepository` 和 `GitRemote` 封装，统一管理 git2 API
+4. **错误处理统一**：使用 `color_eyre::Result` 和 `wrap_err` 提供清晰的错误信息
 5. **类型安全**：使用枚举类型（`RepoType`, `MergeStrategy`）提高类型安全性
 
 ### 核心组件
@@ -107,33 +111,18 @@ Git 模块是 Workflow CLI 的核心功能模块，为所有需要 Git 操作的
 
 - **`GitBranch`**：分支管理结构体（零大小结构体）
 
-**主要方法**：
-- `current-_branch()` - 获取当前分支名
-- `is-_branch-_exists()` - 检查分支是否存在（本地或远程）
-- `has-_local-_branch()` - 检查本地分支是否存在
-- `has-_remote-_branch()` - 检查远程分支是否存在
-- `checkout-_branch()` - 创建或切换到分支
-- `get-_default-_branch()` - 获取默认分支
-- `get-_all-_branches()` - 获取所有分支（本地和远程）
-- `extract-_base-_branch-_names()` - 提取分支基础名称（去掉前缀）
-- `is-_branch-_ahead()` - 检查分支是否领先于指定分支
-- `pull()` - 从远程拉取分支
+**核心方法**：
+- `current_branch()` - 获取当前分支名
+- `checkout_branch()` - 创建或切换到分支
 - `push()` - 推送到远程仓库
-- `delete()` - 删除本地分支
-- `delete-_remote()` - 删除远程分支
-- `merge-_branch()` - 合并分支
-- `has-_merge-_conflicts()` - 检查是否有合并冲突
+- `merge_branch()` - 合并分支（支持多种策略）
+- `delete()` / `delete_remote()` - 删除本地/远程分支
 
 **关键特性**：
 - 支持 `git switch` 和 `git checkout` 的自动回退
 - 多种合并策略（Merge, Squash, FastForwardOnly）
-- 智能的默认分支检测（支持多种方法）
+- 智能的默认分支检测
 
-**使用场景**：
-- PR 创建时创建和切换分支
-- PR 合并时合并分支和清理
-- 分支列表查询
-- 分支清理操作
 
 #### 2. 提交管理 (`commit.rs`)
 
@@ -141,23 +130,15 @@ Git 模块是 Workflow CLI 的核心功能模块，为所有需要 Git 操作的
 
 - **`GitCommit`**：提交管理结构体（零大小结构体）
 
-**主要方法**：
+**核心方法**：
 - `status()` - 检查 Git 状态
-- `has-_commit()` - 检查是否有未提交的更改
-- `has-_staged()` - 检查是否有暂存的文件
-- `add-_all()` - 添加所有文件到暂存区
 - `commit()` - 提交更改（支持 pre-commit hooks）
-- `get-_diff()` - 获取 Git 修改内容（工作区和暂存区）
+- `get_diff()` - 获取 Git 修改内容
 
 **关键特性**：
 - 自动暂存所有更改
 - 集成 pre-commit hooks 支持
 - 提供 diff 内容用于 LLM 生成
-
-**使用场景**：
-- PR 创建时提交更改
-- PR 更新时提交更改
-- 环境检查时检查状态
 
 #### 3. 仓库检测 (`repo.rs`)
 
@@ -165,22 +146,14 @@ Git 模块是 Workflow CLI 的核心功能模块，为所有需要 Git 操作的
 
 - **`GitRepo`**：仓库检测结构体（零大小结构体）
 
-**主要方法**：
-- `is-_git-_repo()` - 检查是否在 Git 仓库中
-- `detect-_repo-_type()` - 检测远程仓库类型（GitHub、Codeup 等）
-- `get-_remote-_url()` - 获取远程仓库 URL
-- `get-_git-_dir()` - 获取 Git 目录路径
+**核心方法**：
+- `is_git_repo()` - 检查是否在 Git 仓库中
+- `detect_repo_type()` - 检测远程仓库类型（GitHub、Codeup 等）
 - `fetch()` - 从远程获取更新
-- `prune-_remote()` - 清理远程分支引用
 
 **关键特性**：
 - 支持 GitHub 和 Codeup 仓库类型识别
 - 支持 SSH Host 别名识别
-
-**使用场景**：
-- PR 操作前检测仓库类型
-- 环境检查时验证 Git 仓库
-- 自动识别平台类型
 
 #### 4. 暂存管理 (`stash.rs`)
 
@@ -188,18 +161,13 @@ Git 模块是 Workflow CLI 的核心功能模块，为所有需要 Git 操作的
 
 - **`GitStash`**：暂存管理结构体（零大小结构体）
 
-**主要方法**：
-- `stash-_push()` - 保存未提交的修改到 stash
-- `stash-_pop()` - 恢复 stash 中的修改
-- `has-_unmerged()` - 检查是否有未合并的文件（冲突）
+**核心方法**：
+- `stash_push()` - 保存未提交的修改到 stash
+- `stash_pop()` - 恢复 stash 中的修改
 
 **关键特性**：
 - 自动检测合并冲突
 - 提供详细的冲突解决提示
-
-**使用场景**：
-- PR 集成分支时保存工作区更改
-- 切换分支前保存更改
 
 #### 5. 配置管理 (`config.rs`)
 
@@ -233,32 +201,20 @@ Git 模块是 Workflow CLI 的核心功能模块，为所有需要 Git 操作的
 - 提交前自动执行 hooks
 - 支持代码质量检查
 
-#### 7. Cherry-pick 操作 (`cherry-_pick.rs`)
+#### 7. Cherry-pick 操作 (`cherry_pick.rs`)
 
 **职责**：提供 Git cherry-pick 相关的完整功能
 
 - **`GitCherryPick`**：Cherry-pick 管理结构体（零大小结构体）
 
-**主要方法**：
-- `cherry-_pick(commit)` - Cherry-pick 提交到当前分支
-- `cherry-_pick-_no-_commit(commit)` - Cherry-pick 但不提交（保留在工作区）
-- `cherry-_pick-_continue()` - 继续 cherry-pick 操作
-- `cherry-_pick-_abort()` - 中止 cherry-pick 操作
-- `is-_cherry-_pick-_in-_progress()` - 检查是否正在进行 cherry-pick 操作
+**核心方法**：
+- `cherry_pick(commit)` - Cherry-pick 提交到当前分支
+- `cherry_pick_no_commit(commit)` - Cherry-pick 但不提交
+- `cherry_pick_continue()` / `cherry_pick_abort()` - 继续/中止操作
 
 **关键特性**：
 - 支持普通 cherry-pick 和 no-commit 模式
-- 支持继续和中止操作
 - 自动检测 cherry-pick 状态
-
-**使用场景**：
-- PR pick 命令：从源 PR 提取提交并应用到新分支
-- 提交迁移：将提交从一个分支应用到另一个分支
-- 冲突处理：检测和处理 cherry-pick 冲突
-
-**注意**：
-- 如果遇到冲突，cherry-pick 会暂停，需要用户手动解决冲突后继续
-- `cherry-_pick-_no-_commit()` 会将修改保留在工作区，需要手动提交
 
 #### 8. 认证管理 (`auth.rs`)
 
@@ -296,18 +252,171 @@ let mut push_options = PushOptions::new();
 push_options.remote_callbacks(callbacks);
 ```
 
-#### 9. 辅助函数 (`helpers.rs`)
+#### 9. Git2 封装层 (`client/`)
 
-**职责**：提供 git2 相关的工具函数
+**职责**：提供统一的 git2 API 封装，简化 git2 的使用
 
-**主要函数**：
-- `open_repo()` - 打开当前目录的 Git 仓库
-- `open_repo_at()` - 打开指定路径的 Git 仓库
+**设计目标**：
+- 统一错误处理格式
+- 简化仓库和远程操作
+- 提供清晰的错误信息
+- 封装 git2 的复杂生命周期管理
+- 支持高级操作（通过 `as_inner()` 访问底层 API）
+
+**核心结构体**：
+
+##### GitRepository 封装
+
+**结构体定义**：
+```rust
+pub struct GitRepository {
+    inner: Repository,
+}
+```
+
+**主要方法**：
+
+**打开仓库**：
+- `open() -> Result<Self>` - 打开当前目录的 Git 仓库
+  - 自动检测当前目录是否为 Git 仓库
+  - 提供清晰的错误信息（"Failed to open Git repository. Make sure you're in a Git repository."）
+
+- `open_at(path: impl AsRef<Path>) -> Result<Self>` - 打开指定路径的 Git 仓库
+  - 支持任意路径的仓库打开
+  - 错误信息包含路径信息，便于调试
+
+**基本信息**：
+- `signature() -> Result<Signature>` - 获取仓库签名（作者信息）
+  - 自动从 Git 配置中读取用户信息
+  - 统一错误处理（"Failed to get repository signature"）
+
+- `head() -> Result<Reference>` - 获取 HEAD 引用
+  - 统一错误处理（"Failed to get HEAD reference"）
+
+- `current_branch_name() -> Result<String>` - 获取当前分支名
+  - 自动从 HEAD 引用中提取分支名
+  - 去除 `refs/heads/` 前缀
+  - 如果 HEAD 不在分支上，返回清晰的错误信息
+
+**远程操作**：
+- `find_origin_remote() -> Result<GitRemote>` - 查找 origin 远程仓库
+  - 常用操作的便捷方法
+  - 统一错误处理（"Failed to find remote 'origin'"）
+
+- `find_remote(name: &str) -> Result<GitRemote>` - 查找指定名称的远程仓库
+  - 支持查找任意名称的远程仓库
+  - 错误信息包含远程名称，便于调试
+
+**引用和索引操作**：
+- `find_reference(name: &str) -> Result<Reference>` - 查找引用
+  - 支持查找任意引用（分支、tag 等）
+  - 错误信息包含引用名称
+
+- `index() -> Result<Index>` - 获取索引
+  - 用于暂存区操作
+  - 统一错误处理（"Failed to get repository index"）
+
+**配置选项**：
+- `get_fetch_options() -> FetchOptions` - 获取配置好的 FetchOptions（包含认证）
+  - 静态方法，无需仓库实例
+  - 自动配置认证回调（`GitAuth::get_remote_callbacks()`）
+  - 简化远程获取操作
+
+- `get_push_options() -> PushOptions` - 获取配置好的 PushOptions（包含认证）
+  - 静态方法，无需仓库实例
+  - 自动配置认证回调（`GitAuth::get_remote_callbacks()`）
+  - 简化远程推送操作
+
+**逃生舱机制**：
+- `as_inner() -> &Repository` - 直接访问底层 Repository（不可变）
+  - 用于需要 git2 高级功能的场景
+  - 保持封装层的灵活性
+  - 允许访问所有 git2 API
+
+- `as_inner_mut() -> &mut Repository` - 直接访问底层 Repository（可变）
+  - 用于需要修改仓库状态的场景
+  - 保持封装层的灵活性
+
+##### GitRemote 封装
+
+**结构体定义**：
+```rust
+pub struct GitRemote {
+    inner: Remote,
+}
+```
+
+**主要方法**：
+
+**基本信息**：
+- `url() -> Option<&str>` - 获取远程 URL
+  - 返回 `Option`，因为远程可能没有配置 URL
+  - 直接返回底层 `Remote::url()` 的结果
+
+**操作**：
+- `push(refspecs: &[&str], options: Option<&mut PushOptions>) -> Result<()>` - 推送到远程
+  - 封装 git2 的 push 操作
+  - 统一错误处理（"Failed to push to remote"）
+  - 支持自定义 PushOptions（通常使用 `GitRepository::get_push_options()`）
+
+- `fetch(refspecs: &[&str], options: Option<&mut FetchOptions>, reflog_message: Option<&str>) -> Result<()>` - 从远程获取
+  - 封装 git2 的 fetch 操作
+  - 统一错误处理（"Failed to fetch from remote"）
+  - 支持自定义 FetchOptions（通常使用 `GitRepository::get_fetch_options()`）
+  - 支持自定义 reflog 消息
+
+**逃生舱机制**：
+- `as_inner() -> &Remote` - 直接访问底层 Remote（不可变）
+  - 用于需要 git2 高级功能的场景
+  - 保持封装层的灵活性
+
+- `as_inner_mut() -> &mut Remote` - 直接访问底层 Remote（可变）
+  - 用于需要修改远程配置的场景
+  - 保持封装层的灵活性
 
 **设计优势**：
-- 统一错误处理格式
-- 简化仓库打开操作
-- 提供清晰的错误信息
+
+1. **统一错误处理**：
+   - 所有方法都使用 `wrap_err` 或 `wrap_err_with` 提供清晰的错误信息
+   - 错误信息包含上下文，便于调试
+
+2. **简化常用操作**：
+   - `find_origin_remote()` 提供便捷方法，避免重复查找 "origin"
+   - `get_fetch_options()` 和 `get_push_options()` 自动配置认证
+
+3. **类型安全**：
+   - 封装 git2 的类型，提供更清晰的 API
+   - 编译时类型检查，减少运行时错误
+
+4. **灵活性**：
+   - 通过逃生舱机制（`as_inner()`）支持高级操作
+   - 不限制 git2 的功能，只是简化常用操作
+
+5. **生命周期管理**：
+   - 封装 git2 的复杂生命周期管理
+   - 自动处理资源释放
+
+**使用示例**：
+```rust
+use workflow::git::client::GitRepository;
+
+// 打开仓库
+let repo = GitRepository::open()?;
+
+// 获取当前分支
+let branch_name = repo.current_branch_name()?;
+
+// 查找远程仓库
+let mut remote = repo.find_origin_remote()?;
+
+// 使用配置好的 FetchOptions 获取更新
+let mut fetch_options = GitRepository::get_fetch_options();
+remote.fetch(&[], Some(&mut fetch_options), None)?;
+
+// 需要高级功能时，使用逃生舱
+let inner_repo = repo.as_inner();
+let config = inner_repo.config()?;
+```
 
 #### 10. 类型定义 (`types.rs`)
 
@@ -439,9 +548,10 @@ lib/git/*.rs (核心业务逻辑层)
   ├── GitCherryPick::xxx()  # Cherry-pick 操作
   └── GitAuth::xxx()        # 认证回调
   ↓
-helpers.rs (辅助函数层)
-  ├── open_repo()           # 打开仓库
-  └── open_repo_at()         # 打开指定路径仓库
+client/ (Git2 封装层)
+  ├── GitRepository::open() / open_at()  # 打开仓库
+  ├── GitRepository::find_remote()        # 查找远程
+  └── GitRemote::fetch() / push()         # 远程操作
   ↓
 git2 API (底层实现)
   ├── Repository            # 仓库操作
@@ -459,11 +569,11 @@ git2 API (底层实现)
 ```
 GitBranch::checkout_branch(branch_name)
   ↓
-helpers::open_repo()  # 打开仓库
+GitRepository::open()  # 打开仓库
   ↓
-repo.find_reference()  # 查找分支引用
+repo.find_reference()  # 查找分支引用（通过 as_inner()）
   ↓
-repo.set_head() + repo.checkout_head()  # 切换分支
+repo.set_head() + repo.checkout_head()  # 切换分支（通过 as_inner_mut()）
 ```
 
 #### 2. 提交操作（使用 git2）
@@ -483,13 +593,13 @@ index.write_tree() + repo.commit()  # 创建提交
 ```
 GitBranch::push(branch_name, force)
   ↓
-helpers::open_repo()  # 打开仓库
+GitRepository::open()  # 打开仓库
   ↓
-repo.find_remote("origin")  # 查找远程
+repo.find_origin_remote()  # 查找远程（返回 GitRemote）
   ↓
 GitAuth::get_remote_callbacks()  # 获取认证回调
   ↓
-remote.push() + PushOptions  # 推送到远程
+remote.push() + PushOptions  # 推送到远程（通过 GitRemote）
 ```
 
 #### 4. 合并操作（使用 git2）
@@ -515,7 +625,7 @@ repo.commit()  # 创建合并提交
   ↓
 GitBranch::checkout_branch()
   ↓
-helpers::open_repo()  # 打开 git2 Repository
+GitRepository::open()  # 打开 GitRepository 封装
   ↓
 repo.find_reference()  # 检查分支存在性
   ↓
@@ -551,9 +661,9 @@ index.write_tree() + repo.commit()  # 创建提交
   ↓
 GitBranch::push() / GitRepo::fetch()
   ↓
-helpers::open_repo()  # 打开 git2 Repository
+GitRepository::open()  # 打开 GitRepository 封装
   ↓
-repo.find_remote("origin")  # 查找远程
+repo.find_origin_remote()  # 查找远程（返回 GitRemote）
   ↓
 GitAuth::get_remote_callbacks()  # 获取认证回调
   ↓
@@ -705,71 +815,80 @@ remote.push(&["refs/heads/main:refs/heads/main"], Some(&mut push_options))?;
 
 ## 📋 使用示例
 
-### 基本使用
+### 🚀 快速开始
+
+#### 导入 Git 模块
+
+```rust
+// Git2 封装层（推荐）
+use workflow::git::client::GitRepository;
+use workflow::git::client::GitRemote;
+
+// 高级封装（业务逻辑层）
+use workflow::git::{GitBranch, GitCommit, GitRepo, GitStash, GitCherryPick};
+```
+
+#### Git2 封装层基本用法
+
+```rust
+use workflow::git::client::GitRepository;
+
+// 打开仓库
+let repo = GitRepository::open()?;                    // 当前目录
+let repo = GitRepository::open_at("/path/to/repo")?;   // 指定路径
+
+// 获取签名
+let signature = repo.signature()?;
+
+// 查找远程
+let mut remote = repo.find_origin_remote()?;
+
+// 获取当前分支
+let branch = repo.current_branch_name()?;
+```
+
+### 核心示例
+
+#### 示例 1: 基本使用（高级封装）
 
 ```rust
 use workflow::git::{GitBranch, GitCommit, GitRepo, GitStash};
 
 // 获取当前分支
-let branch = GitBranch::current-_branch()?;
-
-// 检查分支是否存在
-let (local, remote) = GitBranch::is-_branch-_exists("feature/new")?;
+let branch = GitBranch::current_branch()?;
 
 // 创建或切换分支
-GitBranch::checkout-_branch("feature/new")?;
+GitBranch::checkout_branch("feature/new")?;
 
 // 提交更改
 GitCommit::commit("Fix bug", false)?;
 
 // 推送到远程
 GitBranch::push("feature/new", true)?;
-
-// 检测仓库类型
-let repo-_type = GitRepo::detect-_repo-_type()?;
-
-// 保存工作区更改
-GitStash::stash-_push(Some("WIP: working on feature"))?;
-
-// Cherry-pick 提交
-GitCherryPick::cherry-_pick("abc123")?;
-
-// Cherry-pick 但不提交
-GitCherryPick::cherry-_pick-_no-_commit("abc123")?;
-
-// 检查是否正在进行 cherry-pick
-if GitCherryPick::is-_cherry-_pick-_in-_progress() {
-    // 解决冲突后继续
-    GitCherryPick::cherry-_pick-_continue()?;
-    // 或中止操作
-    // GitCherryPick::cherry-_pick-_abort()?;
-}
 ```
 
-### 合并分支
+#### 示例 2: 合并分支
 
 ```rust
 use workflow::git::{GitBranch, MergeStrategy};
 
 // 普通合并
-GitBranch::merge-_branch("feature/new", MergeStrategy::Merge)?;
+GitBranch::merge_branch("feature/new", MergeStrategy::Merge)?;
 
 // Squash 合并
-GitBranch::merge-_branch("feature/new", MergeStrategy::Squash)?;
-
-// 只允许 fast-forward
-GitBranch::merge-_branch("feature/new", MergeStrategy::FastForwardOnly)?;
+GitBranch::merge_branch("feature/new", MergeStrategy::Squash)?;
 ```
 
-### 检查冲突
+#### 示例 3: 推送操作（使用 Git2 封装层）
 
 ```rust
-use workflow::git::GitBranch;
+use workflow::git::client::GitRepository;
 
-// 检查是否有合并冲突
-if GitBranch::has-_merge-_conflicts()? {
-    // 处理冲突
-}
+let mut repo = GitRepository::open()?;
+let mut remote = repo.find_origin_remote()?;
+
+let mut push_options = GitRepository::get_push_options();
+remote.push(&["refs/heads/main:refs/heads/main"], Some(&mut push_options))?;
 ```
 
 ---
@@ -779,28 +898,28 @@ if GitBranch::has-_merge-_conflicts()? {
 ### 添加新的 Git 操作
 
 1. 在对应的模块文件中添加方法
-2. 使用 `helpers.rs` 中的 `open_repo()` 打开仓库
-3. 使用 git2 API 进行操作
-4. 如果是远程操作，使用 `GitAuth::get_remote_callbacks()` 进行认证
-5. 添加文档注释
-6. 在 `mod.rs` 中导出（如需要）
+2. 使用 `GitRepository::open()` 或 `GitRepository::open_at()` 打开仓库
+3. 使用 `GitRepository` 和 `GitRemote` 封装的方法进行操作
+4. 对于高级操作，使用 `as_inner()` 或 `as_inner_mut()` 访问底层 git2 API
+5. 如果是远程操作，使用 `GitAuth::get_remote_callbacks()` 进行认证
+6. 添加文档注释
+7. 在 `mod.rs` 中导出（如需要）
 
 **示例**：
 ```rust
 // branch.rs
-use git2::Repository;
-use super::helpers::open_repo;
+use crate::git::GitRepository;
 
 impl GitBranch {
     pub fn rename_branch(old_name: &str, new_name: &str) -> Result<()> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 查找旧分支引用
         let old_ref = repo.find_reference(&format!("refs/heads/{}", old_name))?;
         let target = old_ref.target().ok_or_else(|| eyre!("Invalid reference"))?;
 
-        // 创建新分支引用
-        repo.reference(&format!("refs/heads/{}", new_name), target, true, "Rename branch")?;
+        // 创建新分支引用（使用 as_inner_mut() 访问底层 API）
+        repo.as_inner_mut().reference(&format!("refs/heads/{}", new_name), target, true, "Rename branch")?;
 
         // 如果是当前分支，更新 HEAD
         if repo.head()?.shorthand() == Some(old_name) {
@@ -876,4 +995,4 @@ Git 模块采用清晰的模块化设计，基于 git2 库实现：
 
 ---
 
-**最后更新**: 2025-12-27
+**最后更新**: 2025-01-27

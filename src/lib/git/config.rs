@@ -85,4 +85,29 @@ impl GitConfig {
 
         Ok((email, name))
     }
+
+    /// 读取 Git 配置项
+    ///
+    /// 使用 git2 库读取指定配置项的值。
+    ///
+    /// # 参数
+    ///
+    /// * `key` - 配置项键名（如 "branch.main.remote"）
+    ///
+    /// # 返回
+    ///
+    /// 返回配置项的值，如果配置不存在则返回 `None`。
+    ///
+    /// # 错误
+    ///
+    /// 如果操作失败，返回相应的错误信息。
+    pub fn get_config_string(key: &str) -> Result<Option<String>> {
+        let config = git2::Config::open_default().wrap_err("Failed to open Git config")?;
+
+        match config.get_string(key) {
+            Ok(value) => Ok(Some(value)),
+            Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
+            Err(e) => Err(e).wrap_err_with(|| format!("Failed to read config: {}", key)),
+        }
+    }
 }

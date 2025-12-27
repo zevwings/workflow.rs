@@ -9,9 +9,10 @@
 
 use chrono::{FixedOffset, TimeZone};
 use color_eyre::{eyre::WrapErr, Result};
+use std::path::Path;
 
-use super::helpers::open_repo;
 use super::pre_commit::GitPreCommit;
+use super::GitRepository;
 
 /// Git 提交结果
 #[derive(Debug, Clone)]
@@ -64,12 +65,13 @@ impl GitCommit {
     ///
     /// 返回 Git 状态的简洁输出字符串（porcelain 格式）。
     pub fn status() -> Result<String> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut status_options = git2::StatusOptions::new();
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
         let statuses = repo
+            .as_inner()
             .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
@@ -128,12 +130,13 @@ impl GitCommit {
     /// - `Ok(true)` - 如果有未提交的更改（工作区或暂存区）
     /// - `Ok(false)` - 如果没有未提交的更改
     pub fn has_commit() -> Result<bool> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut status_options = git2::StatusOptions::new();
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
         let statuses = repo
+            .as_inner()
             .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
@@ -141,6 +144,45 @@ impl GitCommit {
         for entry in statuses.iter() {
             let status = entry.status();
             // 如果有任何非忽略的状态，说明有未提交的更改
+            if !status.is_ignored() && status != git2::Status::CURRENT {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// 检查指定路径的仓库是否有未提交的更改
+    ///
+    /// 使用 git2 库检查指定路径的 Git 仓库是否有未提交的更改
+    /// （工作区或暂存区）。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 有未提交的更改
+    /// - `Ok(false)` - 没有未提交的更改
+    ///
+    /// # 错误
+    ///
+    /// 如果操作失败，返回相应的错误信息。
+    pub fn has_commit_in(repo_path: impl AsRef<std::path::Path>) -> Result<bool> {
+        let repo = GitRepository::open_at(repo_path)?;
+        let mut status_options = git2::StatusOptions::new();
+        status_options.include_untracked(true);
+        status_options.include_ignored(false);
+
+        let statuses = repo
+            .as_inner()
+            .statuses(Some(&mut status_options))
+            .wrap_err("Failed to get repository statuses")?;
+
+        // 检查是否有任何更改（工作区或暂存区）
+        for entry in statuses.iter() {
+            let status = entry.status();
             if !status.is_ignored() && status != git2::Status::CURRENT {
                 return Ok(true);
             }
@@ -159,12 +201,13 @@ impl GitCommit {
     /// - `Ok(true)` - 如果有暂存的文件
     /// - `Ok(false)` - 如果没有暂存的文件
     pub(crate) fn has_staged() -> Result<bool> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut status_options = git2::StatusOptions::new();
         status_options.include_untracked(false);
         status_options.include_ignored(false);
 
         let statuses = repo
+            .as_inner()
             .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
@@ -187,8 +230,8 @@ impl GitCommit {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn add_all() -> Result<()> {
-        let repo = open_repo()?;
-        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        let mut repo = GitRepository::open()?;
+        let mut index = repo.index()?;
 
         // 添加所有文件（包括修改、新增和删除的文件）
         index
@@ -239,25 +282,25 @@ impl GitCommit {
         }
 
         // 使用 git2 创建提交
-        let repo = open_repo()?;
-        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        let mut repo = GitRepository::open()?;
+        let mut index = repo.index()?;
 
         // 将索引写入树
         let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
-        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
 
-        // 获取签名（作者和提交者）
-        let signature = repo.signature().wrap_err("Failed to get repository signature")?;
+        // 获取父提交 OID（在获取可变引用之前）
+        let head_oid = repo.head().ok().and_then(|head| head.target());
 
-        // 获取父提交（如果有）
-        let parent_commit = repo
-            .head()
-            .ok()
-            .and_then(|head| head.target().and_then(|oid| repo.find_commit(oid).ok()));
+        // 获取树、签名和创建提交（使用可变引用）
+        let repo_inner = repo.as_inner_mut();
+        let tree = repo_inner.find_tree(tree_id).wrap_err("Failed to find tree")?;
+        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
+
+        // 获取父提交（如果有）- 在获取可变引用后重新获取
+        let parent_commit = head_oid.and_then(|oid| repo_inner.find_commit(oid).ok());
         let parents: Vec<&git2::Commit> = parent_commit.iter().collect();
 
-        // 创建提交
-        let _commit_oid = repo
+        let _commit_oid = repo_inner
             .commit(
                 Some("HEAD"),
                 &signature,
@@ -267,6 +310,124 @@ impl GitCommit {
                 &parents,
             )
             .wrap_err("Failed to create commit")?;
+
+        Ok(CommitResult {
+            committed: true,
+            message: None,
+        })
+    }
+
+    /// 在指定路径创建提交
+    ///
+    /// 在指定路径的 Git 仓库中创建提交，不依赖当前工作目录。
+    /// 如果 `auto_stage` 为 `true`，会自动暂存所有已修改的文件。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库路径
+    /// * `message` - 提交消息
+    /// * `auto_stage` - 是否自动暂存所有文件
+    ///
+    /// # 返回
+    ///
+    /// 返回 `CommitResult`，包含提交状态和消息。
+    ///
+    /// # 错误
+    ///
+    /// 如果操作失败，返回相应的错误信息。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::git::GitCommit;
+    /// # use color_eyre::Result;
+    /// # fn main() -> Result<()> {
+    /// let result = GitCommit::commit_at("/path/to/repo", "Add new feature", true)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn commit_at(
+        repo_path: impl AsRef<Path>,
+        message: &str,
+        auto_stage: bool,
+    ) -> Result<CommitResult> {
+        let repo_path = repo_path.as_ref();
+
+        // 打开仓库
+        let mut repo = GitRepository::open_at(repo_path)?;
+
+        // 检查是否有未提交的更改
+        let has_changes = {
+            let mut status_options = git2::StatusOptions::new();
+            status_options.include_untracked(true);
+            status_options.include_ignored(false);
+
+            let statuses = repo
+                .as_inner()
+                .statuses(Some(&mut status_options))
+                .wrap_err("Failed to get repository statuses")?;
+
+            statuses.iter().any(|entry| {
+                let status = entry.status();
+                !status.is_ignored() && status != git2::Status::CURRENT
+            })
+        };
+
+        if !has_changes {
+            return Ok(CommitResult {
+                committed: false,
+                message: Some("Nothing to commit, working tree clean".to_string()),
+            });
+        }
+
+        // 自动暂存（如果需要）
+        if auto_stage {
+            let mut index = repo.index()?;
+            index
+                .add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None)
+                .wrap_err("Failed to add all files to index")?;
+            index.write().wrap_err("Failed to write index")?;
+        }
+
+        // 创建提交
+        let tree_id = {
+            let mut index = repo.index()?;
+            index.write_tree().wrap_err("Failed to write index to tree")?
+        };
+
+        // 获取父提交 OID（在获取可变引用之前）
+        let head_oid = repo.head().ok().and_then(|head| head.target());
+
+        // 获取签名和树并创建提交（使用可变引用）
+        let repo_inner = repo.as_inner_mut();
+        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
+        let tree = repo_inner.find_tree(tree_id).wrap_err("Failed to find tree")?;
+
+        // 获取父提交（如果有）并创建提交
+        let commit_oid = if let Some(oid) = head_oid {
+            if let Ok(parent_commit) = repo_inner.find_commit(oid) {
+                repo_inner
+                    .commit(
+                        Some("HEAD"),
+                        &signature,
+                        &signature,
+                        message,
+                        &tree,
+                        &[&parent_commit],
+                    )
+                    .wrap_err("Failed to create commit")?
+            } else {
+                repo_inner
+                    .commit(Some("HEAD"), &signature, &signature, message, &tree, &[])
+                    .wrap_err("Failed to create commit")?
+            }
+        } else {
+            repo_inner
+                .commit(Some("HEAD"), &signature, &signature, message, &tree, &[])
+                .wrap_err("Failed to create commit")?
+        };
+
+        let _ = commit_oid; // 使用 commit_oid 以避免未使用变量警告
 
         Ok(CommitResult {
             committed: true,
@@ -295,16 +456,16 @@ impl GitCommit {
     /// {worktree diff content}
     /// ```
     pub fn get_diff() -> Option<String> {
-        let repo = open_repo().ok()?;
+        let repo = GitRepository::open().ok()?;
         let mut diff_parts = Vec::new();
 
         // 获取 HEAD 树和索引
         let head_tree = repo.head().ok()?.peel_to_tree().ok();
-        let index = repo.index().ok()?;
+        let index = repo.as_inner().index().ok()?;
 
         // 获取暂存区的修改（HEAD -> Index）
         if let Some(ref tree) = head_tree {
-            if let Ok(diff) = repo.diff_tree_to_index(Some(tree), Some(&index), None) {
+            if let Ok(diff) = repo.as_inner().diff_tree_to_index(Some(tree), Some(&index), None) {
                 let mut staged_output = Vec::new();
                 if diff
                     .print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
@@ -323,7 +484,7 @@ impl GitCommit {
             }
         } else {
             // 如果没有 HEAD（新仓库），获取索引中的所有文件
-            if let Ok(diff) = repo.diff_tree_to_index(None, Some(&index), None) {
+            if let Ok(diff) = repo.as_inner().diff_tree_to_index(None, Some(&index), None) {
                 let mut staged_output = Vec::new();
                 if diff
                     .print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
@@ -343,7 +504,7 @@ impl GitCommit {
         }
 
         // 获取工作区的修改（Index -> Workdir）
-        if let Ok(diff) = repo.diff_index_to_workdir(Some(&index), None) {
+        if let Ok(diff) = repo.as_inner().diff_index_to_workdir(Some(&index), None) {
             let mut worktree_output = Vec::new();
             if diff
                 .print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
@@ -386,26 +547,29 @@ impl GitCommit {
     ///
     /// 如果重置失败，返回相应的错误信息。
     pub fn reset_hard(target: Option<&str>) -> Result<()> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let target_ref = target.unwrap_or("HEAD");
 
         // 解析目标引用
-        let obj = repo
+        let mut repo = repo;
+        let repo_inner = repo.as_inner_mut();
+        let obj = repo_inner
             .revparse_single(target_ref)
             .wrap_err_with(|| format!("Failed to parse target reference: {}", target_ref))?;
 
         // 执行硬重置（重置索引和工作区）
-        repo.reset(
-            &obj,
-            git2::ResetType::Hard,
-            Some(
-                git2::build::CheckoutBuilder::default()
-                    .force()
-                    .remove_ignored(false)
-                    .remove_untracked(false),
-            ),
-        )
-        .wrap_err_with(|| format!("Failed to reset working directory to {}", target_ref))?;
+        repo_inner
+            .reset(
+                &obj,
+                git2::ResetType::Hard,
+                Some(
+                    git2::build::CheckoutBuilder::default()
+                        .force()
+                        .remove_ignored(false)
+                        .remove_untracked(false),
+                ),
+            )
+            .wrap_err_with(|| format!("Failed to reset working directory to {}", target_ref))?;
 
         Ok(())
     }
@@ -419,7 +583,7 @@ impl GitCommit {
     /// - `Ok(true)` - 如果有 commit
     /// - `Ok(false)` - 如果没有 commit
     pub fn has_last_commit() -> Result<bool> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let head_result = repo.head();
         match head_result {
             Ok(head) => {
@@ -463,7 +627,7 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的详细信息。
     pub fn get_last_commit_info() -> Result<CommitInfo> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
         let commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
 
@@ -505,7 +669,7 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的完整 SHA。
     pub fn get_last_commit_sha() -> Result<String> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
         let oid = head
             .target()
@@ -521,7 +685,7 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的提交消息。
     pub fn get_last_commit_message() -> Result<String> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
         let commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
         Ok(commit
@@ -538,12 +702,13 @@ impl GitCommit {
     ///
     /// 返回已修改但未暂存的文件路径列表。
     pub fn get_modified_files() -> Result<Vec<String>> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut status_options = git2::StatusOptions::new();
         status_options.include_untracked(false);
         status_options.include_ignored(false);
 
         let statuses = repo
+            .as_inner()
             .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
@@ -569,12 +734,13 @@ impl GitCommit {
     ///
     /// 返回未跟踪的文件路径列表。
     pub fn get_untracked_files() -> Result<Vec<String>> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut status_options = git2::StatusOptions::new();
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
         let statuses = repo
+            .as_inner()
             .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
@@ -608,8 +774,8 @@ impl GitCommit {
             return Ok(());
         }
 
-        let repo = open_repo()?;
-        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        let repo = GitRepository::open()?;
+        let mut index = repo.as_inner().index().wrap_err("Failed to open repository index")?;
 
         for file in files {
             index
@@ -645,19 +811,16 @@ impl GitCommit {
             GitPreCommit::run_pre_commit()?;
         }
 
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 获取当前 HEAD 提交
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
         let parent_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
 
         // 获取索引并写入树
-        let mut index = repo.index().wrap_err("Failed to open repository index")?;
-        let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
-        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
-
-        // 获取签名
-        let signature = repo.signature().wrap_err("Failed to get repository signature")?;
+        let mut index = repo.as_inner().index()?;
+        let tree_oid = index.write_tree().wrap_err("Failed to write index to tree")?;
+        drop(index); // 释放 index 的借用
 
         // 确定提交消息
         let commit_message = if no_edit {
@@ -677,25 +840,47 @@ impl GitCommit {
         };
 
         // 获取父提交（amend 的父提交是原提交的父提交）
-        // 需要先获取父提交，然后构建向量
-        let parent_commit_ref = parent_commit.parent(0).ok();
-        let parents: Vec<&git2::Commit> = if let Some(ref parent) = parent_commit_ref {
-            vec![parent]
-        } else {
-            Vec::new()
-        };
+        // 需要先提取 parent commit ID，然后 drop parent_commit
+        let parent_commit_id = parent_commit.parent(0).ok().map(|p| p.id());
+
+        // 释放所有对 repo 的借用（在获取可变引用之前）
+        drop(head);
+        drop(parent_commit);
 
         // 创建新的提交（amend）
-        let commit_oid = repo
-            .commit(
-                Some("HEAD"),
-                &signature,
-                &signature,
-                &commit_message,
-                &tree,
-                &parents,
-            )
-            .wrap_err("Failed to amend commit")?;
+        let mut repo = repo;
+        let repo_inner = repo.as_inner_mut();
+        let tree = repo_inner.find_tree(tree_oid).wrap_err("Failed to find tree")?;
+        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
+
+        // 重新构建 parents 向量
+        // 注意：find_commit 返回的是 git2::Commit（拥有所有权），我们需要获取引用
+        // 使用作用域来管理 parent_commit 的生命周期
+        let commit_oid = if let Some(parent_id) = parent_commit_id {
+            let parent_commit =
+                repo_inner.find_commit(parent_id).wrap_err("Failed to find parent commit")?;
+            repo_inner
+                .commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    &commit_message,
+                    &tree,
+                    &[&parent_commit],
+                )
+                .wrap_err("Failed to amend commit")?
+        } else {
+            repo_inner
+                .commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    &commit_message,
+                    &tree,
+                    &[],
+                )
+                .wrap_err("Failed to amend commit")?
+        };
 
         Ok(commit_oid.to_string())
     }
@@ -713,8 +898,9 @@ impl GitCommit {
     ///
     /// 返回完整的 commit SHA（40 个字符）。
     pub fn parse_commit_ref(reference: &str) -> Result<String> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let obj = repo
+            .as_inner()
             .revparse_single(reference)
             .wrap_err_with(|| format!("Failed to parse commit reference: {}", reference))?;
 
@@ -748,8 +934,9 @@ impl GitCommit {
     ///
     /// 返回指定 commit 的详细信息。
     pub fn get_commit_info(commit_ref: &str) -> Result<CommitInfo> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let obj = repo
+            .as_inner()
             .revparse_single(commit_ref)
             .wrap_err_with(|| format!("Failed to parse commit reference: {}", commit_ref))?;
         let commit = obj
@@ -818,11 +1005,11 @@ impl GitCommit {
         // 使用 git merge-base --is-ancestor <commit_sha> HEAD
         // 如果 commit_sha 是 HEAD 的祖先，返回 true
         // 注意：如果 commit_sha == HEAD，也返回 true
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let commit_oid = git2::Oid::from_str(commit_sha)
             .wrap_err_with(|| format!("Invalid commit SHA: {}", commit_sha))?;
         let head = repo.head()?.peel_to_commit()?;
-        let merge_base = repo.merge_base(commit_oid, head.id())?;
+        let merge_base = repo.as_inner().merge_base(commit_oid, head.id())?;
         Ok(merge_base == head.id())
     }
 
@@ -838,14 +1025,14 @@ impl GitCommit {
     ///
     /// 返回 CommitInfo 列表，按时间顺序排列（从新到旧，HEAD 在第一个）。
     pub fn get_branch_commits(count: usize) -> Result<Vec<CommitInfo>> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 获取 HEAD commit
         let head = repo.head().wrap_err("Failed to get HEAD reference")?;
         let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
 
         // 使用 revwalk 遍历提交历史
-        let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+        let mut revwalk = repo.as_inner().revwalk().wrap_err("Failed to create revwalk")?;
         revwalk.push(head_commit.id()).wrap_err("Failed to push HEAD to revwalk")?;
 
         let mut commits = Vec::new();
@@ -856,6 +1043,7 @@ impl GitCommit {
 
             let oid = oid.wrap_err("Failed to get commit OID from revwalk")?;
             let commit = repo
+                .as_inner()
                 .find_commit(oid)
                 .wrap_err_with(|| format!("Failed to find commit: {}", oid))?;
 
@@ -905,10 +1093,11 @@ impl GitCommit {
     ///
     /// 返回父 commit 的完整 SHA。如果 commit 没有父 commit（根 commit），返回错误。
     pub fn get_parent_commit(commit_sha: &str) -> Result<String> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let commit_oid = git2::Oid::from_str(commit_sha)
             .wrap_err_with(|| format!("Invalid commit SHA: {}", commit_sha))?;
         let commit = repo
+            .as_inner()
             .find_commit(commit_oid)
             .wrap_err_with(|| format!("Failed to find commit: {}", commit_sha))?;
 
@@ -931,12 +1120,13 @@ impl GitCommit {
     ///
     /// 返回 CommitInfo 列表，按时间顺序排列（从旧到新，第一个是最接近 from_commit 的 commit）。
     pub fn get_commits_from_to_head(from_commit: &str) -> Result<Vec<CommitInfo>> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
 
         // 解析 from_commit SHA
         let from_oid = git2::Oid::from_str(from_commit)
             .wrap_err_with(|| format!("Invalid commit SHA: {}", from_commit))?;
         let from_commit_obj = repo
+            .as_inner()
             .find_commit(from_oid)
             .wrap_err_with(|| format!("Failed to find commit: {}", from_commit))?;
 
@@ -950,7 +1140,7 @@ impl GitCommit {
         }
 
         // 使用 revwalk 遍历从 from_commit 到 HEAD 的所有 commits
-        let mut revwalk = repo.revwalk().wrap_err("Failed to create revwalk")?;
+        let mut revwalk = repo.as_inner().revwalk().wrap_err("Failed to create revwalk")?;
         revwalk.push(head_commit.id()).wrap_err("Failed to push HEAD to revwalk")?;
         revwalk.hide(from_oid).wrap_err("Failed to hide from_commit from revwalk")?;
 
@@ -958,6 +1148,7 @@ impl GitCommit {
         for oid in revwalk {
             let oid = oid.wrap_err("Failed to get commit OID from revwalk")?;
             let commit = repo
+                .as_inner()
                 .find_commit(oid)
                 .wrap_err_with(|| format!("Failed to find commit: {}", oid))?;
 
@@ -1006,12 +1197,13 @@ impl GitCommit {
     ///
     /// 返回工作区状态统计信息。
     pub fn get_worktree_status() -> Result<WorktreeStatus> {
-        let repo = open_repo()?;
+        let repo = GitRepository::open()?;
         let mut status_options = git2::StatusOptions::new();
         status_options.include_untracked(true);
         status_options.include_ignored(false);
 
         let statuses = repo
+            .as_inner()
             .statuses(Some(&mut status_options))
             .wrap_err("Failed to get repository statuses")?;
 
