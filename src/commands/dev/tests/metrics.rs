@@ -3,10 +3,10 @@
 //! 提供测试指标收集等功能。
 
 use crate::base::util::file::{FileReader, FileWriter};
+use crate::{log_break, log_info, log_success};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::{log_info, log_success, log_break};
 
 /// 测试报告摘要
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -95,9 +95,13 @@ impl TestsMetricsCollectCommand {
 
     /// 收集测试指标
     pub fn collect(&self) -> Result<()> {
-        let report_path = self.report.as_ref()
+        let report_path = self
+            .report
+            .as_ref()
             .ok_or_else(|| color_eyre::eyre::eyre!("--report 参数是必需的"))?;
-        let output_path = self.output.as_ref()
+        let output_path = self
+            .output
+            .as_ref()
             .ok_or_else(|| color_eyre::eyre::eyre!("--output 参数是必需的"))?;
 
         log_break!('=');
@@ -108,7 +112,8 @@ impl TestsMetricsCollectCommand {
         // 读取测试报告
         log_info!("读取测试报告: {}", report_path);
         let reader = FileReader::new(report_path);
-        let report: TestReport = reader.json()
+        let report: TestReport = reader
+            .json()
             .wrap_err_with(|| format!("Failed to parse test report: {}", report_path))?;
 
         // 收集指标
@@ -118,9 +123,10 @@ impl TestsMetricsCollectCommand {
         // 保存指标文件
         log_info!("保存指标文件: {}", output_path);
         let writer = FileWriter::new(output_path);
-        let json_content = serde_json::to_string_pretty(&metrics)
-            .wrap_err("Failed to serialize metrics")?;
-        writer.write_str_with_dir(&json_content)
+        let json_content =
+            serde_json::to_string_pretty(&metrics).wrap_err("Failed to serialize metrics")?;
+        writer
+            .write_str_with_dir(&json_content)
             .wrap_err_with(|| format!("Failed to write metrics file: {}", output_path))?;
 
         log_break!();

@@ -18,4 +18,3 @@ pub use docs::TestsDocsCheckCommand;
 pub use metrics::TestsMetricsCollectCommand;
 pub use report::TestsReportGenerateCommand;
 pub use trends::TestsTrendsAnalyzeCommand;
-

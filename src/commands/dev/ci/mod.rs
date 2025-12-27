@@ -7,4 +7,3 @@ mod verify;
 
 pub use check_skip::CiSkipCommand;
 pub use verify::CiVerifyCommand;
-

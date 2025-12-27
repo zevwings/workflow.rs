@@ -9,4 +9,3 @@ pub mod report;
 pub use integrity::DocsIntegrityCheckCommand;
 pub use links::DocsLinksCheckCommand;
 pub use report::DocsReportGenerateCommand;
-

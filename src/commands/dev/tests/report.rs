@@ -3,11 +3,11 @@
 //! 提供测试报告生成、PR 评论生成等功能。
 
 use crate::base::util::file::FileWriter;
+use crate::{log_break, log_info, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, BufRead};
-use crate::{log_info, log_success, log_warning, log_break};
 
 /// 测试状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -135,7 +135,8 @@ impl TestsReportGenerateCommand {
         if let Some(ref output_path) = self.output {
             log_info!("保存报告到: {}", output_path);
             let writer = FileWriter::new(output_path);
-            writer.write_str_with_dir(&report_content)
+            writer
+                .write_str_with_dir(&report_content)
                 .wrap_err_with(|| format!("Failed to write report to: {}", output_path))?;
             log_success!("报告已保存");
 
@@ -184,7 +185,8 @@ impl TestsReportGenerateCommand {
         for report_path in &reports {
             log_info!("加载报告: {}", report_path);
             let reader = crate::base::util::file::FileReader::new(report_path);
-            let report: TestReport = reader.json()
+            let report: TestReport = reader
+                .json()
                 .wrap_err_with(|| format!("Failed to parse report: {}", report_path))?;
 
             merged_report = self.merge_reports(vec![merged_report, report])?;
@@ -197,7 +199,8 @@ impl TestsReportGenerateCommand {
         if let Some(ref output_path) = self.output {
             log_info!("保存 PR 评论到: {}", output_path);
             let writer = FileWriter::new(output_path);
-            writer.write_str_with_dir(&comment_content)
+            writer
+                .write_str_with_dir(&comment_content)
                 .wrap_err_with(|| format!("Failed to write PR comment to: {}", output_path))?;
             log_success!("PR 评论已保存");
         } else {
@@ -263,7 +266,7 @@ impl TestsReportGenerateCommand {
     /// 提取模块名
     fn extract_module(&self, test_name: &str) -> String {
         if let Some(pos) = test_name.rfind("::") {
-            test_name[..pos].replace("::", "::")
+            test_name[..pos].to_string()
         } else {
             "unknown".to_string()
         }
@@ -314,20 +317,24 @@ impl TestsReportGenerateCommand {
             // 合并测试用例（去重，保留失败或超时的测试）
             for test_case in report.test_cases {
                 let test_name = test_case.name.clone();
-                if test_case_map.contains_key(&test_name) {
-                    // 如果当前测试失败或超时，优先保留
-                    if test_case.status == "Failed" || test_case.status == "Timeout" {
-                        test_case_map.insert(test_name, test_case);
+                match test_case_map.entry(test_name) {
+                    std::collections::hash_map::Entry::Occupied(mut e) => {
+                        // 如果当前测试失败或超时，优先保留
+                        if test_case.status == "Failed" || test_case.status == "Timeout" {
+                            e.insert(test_case);
+                        }
                     }
-                } else {
-                    test_case_map.insert(test_name, test_case);
+                    std::collections::hash_map::Entry::Vacant(e) => {
+                        e.insert(test_case);
+                    }
                 }
             }
         }
 
         merged_summary.total = test_case_map.len();
         if merged_summary.total > 0 {
-            merged_summary.success_rate = (merged_summary.passed as f64 / merged_summary.total as f64) * 100.0;
+            merged_summary.success_rate =
+                (merged_summary.passed as f64 / merged_summary.total as f64) * 100.0;
         }
 
         Ok(TestReport {
@@ -443,8 +450,7 @@ impl TestReporter {
             test_cases: self.test_cases.clone(),
         };
 
-        serde_json::to_string_pretty(&report)
-            .unwrap_or_else(|_| "{}".to_string())
+        serde_json::to_string_pretty(&report).unwrap_or_else(|_| "{}".to_string())
     }
 
     fn generate_html_report(&self) -> String {
@@ -452,7 +458,8 @@ impl TestReporter {
         let success_rate = self.success_rate();
         let test_rows = self.generate_test_rows_html();
 
-        format!(r#"<!DOCTYPE html>
+        format!(
+            r#"<!DOCTYPE html>
 <html>
 <head>
     <title>Test Report</title>
@@ -574,7 +581,10 @@ impl TestReporter {
 
             // 慢测试高亮
             let (duration_class, duration_text) = if test_case.duration_secs > slow_threshold {
-                (" class=\"slow-test\"", format!("{:.3}s ⚠", test_case.duration_secs))
+                (
+                    " class=\"slow-test\"",
+                    format!("{:.3}s ⚠", test_case.duration_secs),
+                )
             } else {
                 ("", format!("{:.3}s", test_case.duration_secs))
             };
@@ -597,7 +607,13 @@ impl TestReporter {
                     <td{}>{}</td>
                     <td>{}</td>
                 </tr>"#,
-                escaped_name, escaped_module, status_class, status_text, duration_class, duration_text, error_html
+                escaped_name,
+                escaped_module,
+                status_class,
+                status_text,
+                duration_class,
+                duration_text,
+                error_html
             ));
         }
 
@@ -624,7 +640,10 @@ impl TestReporter {
         let mut lines = Vec::new();
         lines.push("# Test Execution Report".to_string());
         lines.push(String::new());
-        lines.push(format!("**Generated**: {}", self.start_time.format("%Y-%m-%d %H:%M:%S")));
+        lines.push(format!(
+            "**Generated**: {}",
+            self.start_time.format("%Y-%m-%d %H:%M:%S")
+        ));
         lines.push(String::new());
         lines.push("## Summary".to_string());
         lines.push(String::new());
@@ -669,9 +688,10 @@ impl TestReporter {
         ));
 
         // 按模块分组
-        let mut module_tests: std::collections::HashMap<String, Vec<&TestCaseResult>> = std::collections::HashMap::new();
+        let mut module_tests: std::collections::HashMap<String, Vec<&TestCaseResult>> =
+            std::collections::HashMap::new();
         for test_case in &self.test_cases {
-            module_tests.entry(test_case.module.clone()).or_insert_with(Vec::new).push(test_case);
+            module_tests.entry(test_case.module.clone()).or_default().push(test_case);
         }
 
         for (module, tests) in module_tests {
@@ -681,18 +701,28 @@ impl TestReporter {
 
             xml.push(format!(
                 r#"  <testsuite name="{}" tests="{}" failures="{}" skipped="{}" time="{:.3}">"#,
-                Self::xml_escape(&module), tests.len(), module_failures, module_skipped, module_time
+                Self::xml_escape(&module),
+                tests.len(),
+                module_failures,
+                module_skipped,
+                module_time
             ));
 
             for test_case in tests {
-                let classname = format!("{}.{}", test_case.module, test_case.name.split("::").next().unwrap_or(&test_case.name));
+                let classname = format!(
+                    "{}.{}",
+                    test_case.module,
+                    test_case.name.split("::").next().unwrap_or(&test_case.name)
+                );
                 let name = test_case.name.split("::").last().unwrap_or(&test_case.name);
                 let time = test_case.duration_secs;
 
                 if test_case.status == "Failed" {
                     xml.push(format!(
                         r#"    <testcase classname="{}" name="{}" time="{:.3}">"#,
-                        Self::xml_escape(&classname), Self::xml_escape(name), time
+                        Self::xml_escape(&classname),
+                        Self::xml_escape(name),
+                        time
                     ));
                     if let Some(ref error) = test_case.error_message {
                         xml.push(format!(
@@ -706,14 +736,18 @@ impl TestReporter {
                 } else if test_case.status == "Ignored" {
                     xml.push(format!(
                         r#"    <testcase classname="{}" name="{}" time="{:.3}">"#,
-                        Self::xml_escape(&classname), Self::xml_escape(name), time
+                        Self::xml_escape(&classname),
+                        Self::xml_escape(name),
+                        time
                     ));
                     xml.push("      <skipped/>".to_string());
                     xml.push("    </testcase>".to_string());
                 } else {
                     xml.push(format!(
                         r#"    <testcase classname="{}" name="{}" time="{:.3}"/>"#,
-                        Self::xml_escape(&classname), Self::xml_escape(name), time
+                        Self::xml_escape(&classname),
+                        Self::xml_escape(name),
+                        time
                     ));
                 }
             }

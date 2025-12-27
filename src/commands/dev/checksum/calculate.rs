@@ -1,10 +1,10 @@
 //! 文件哈希计算实现
 
+use crate::{log_info, log_success};
 use color_eyre::{eyre::WrapErr, Result};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
-use crate::{log_info, log_success};
 
 /// 文件哈希计算命令
 pub struct ChecksumCalculateCommand {
@@ -27,8 +27,8 @@ impl ChecksumCalculateCommand {
         }
 
         // 读取文件内容
-        let file_content = fs::read(file_path)
-            .wrap_err_with(|| format!("Failed to read file: {}", self.file))?;
+        let file_content =
+            fs::read(file_path).wrap_err_with(|| format!("Failed to read file: {}", self.file))?;
 
         // 计算 SHA256 哈希
         let mut hasher = Sha256::new();
@@ -49,4 +49,3 @@ impl ChecksumCalculateCommand {
         Ok(hash_hex)
     }
 }
-

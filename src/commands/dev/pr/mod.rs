@@ -7,4 +7,3 @@ pub mod merge;
 
 pub use create::PrCreateCommand;
 pub use merge::PrMergeCommand;
-

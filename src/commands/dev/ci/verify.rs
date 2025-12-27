@@ -1,8 +1,8 @@
 //! CI 检查验证实现
 
-use color_eyre::{Result};
+use crate::{log_error, log_info, log_success};
+use color_eyre::Result;
 use std::env;
-use crate::{log_info, log_success, log_error};
 
 /// CI 检查验证命令
 pub struct CiVerifyCommand {
@@ -16,7 +16,12 @@ impl CiVerifyCommand {
         let jobs_list = if let Some(ref jobs_str) = jobs {
             jobs_str.split(',').map(|s| s.trim().to_string()).collect()
         } else {
-            vec!["check-lint".to_string(), "tests".to_string(), "doctests".to_string(), "build".to_string()]
+            vec![
+                "check-lint".to_string(),
+                "tests".to_string(),
+                "doctests".to_string(),
+                "build".to_string(),
+            ]
         };
 
         Self {
@@ -122,4 +127,3 @@ impl JobResult {
         }
     }
 }
-

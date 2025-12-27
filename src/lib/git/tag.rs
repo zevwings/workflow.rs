@@ -313,8 +313,7 @@ impl GitTag {
         if let Some(sha) = commit_sha {
             cmd = GitCommand::new(["tag", tag_name, sha]);
         }
-        cmd.run()
-            .wrap_err_with(|| format!("Failed to create tag: {}", tag_name))
+        cmd.run().wrap_err_with(|| format!("Failed to create tag: {}", tag_name))
     }
 
     /// 推送 tag 到远程
@@ -349,9 +348,9 @@ impl GitTag {
         if exists_local || exists_remote {
             // 获取现有 tag 的 commit SHA
             let existing_tag_info = Self::get_tag_info(tag_name)?;
-            let target_sha = commit_sha
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| GitCommand::new(["rev-parse", "HEAD"]).read().unwrap_or_default());
+            let target_sha = commit_sha.map(|s| s.to_string()).unwrap_or_else(|| {
+                GitCommand::new(["rev-parse", "HEAD"]).read().unwrap_or_default()
+            });
 
             if existing_tag_info.commit_hash == target_sha {
                 // Tag 已存在且指向正确的 commit
@@ -385,10 +384,8 @@ impl GitTag {
     /// 返回所有 alpha tag 名称的列表（已排序）。
     pub fn list_alpha_tags() -> Result<Vec<String>> {
         let all_tags = Self::list_local_tags()?;
-        let alpha_tags: Vec<String> = all_tags
-            .into_iter()
-            .filter(|tag| tag.contains(".alpha-"))
-            .collect();
+        let alpha_tags: Vec<String> =
+            all_tags.into_iter().filter(|tag| tag.contains(".alpha-")).collect();
         Ok(alpha_tags)
     }
 
@@ -403,8 +400,7 @@ impl GitTag {
     ///
     /// 如果 `commit_sha` 是 `ancestor_sha` 的祖先，返回 `true`。
     pub fn is_ancestor(commit_sha: &str, ancestor_sha: &str) -> bool {
-        GitCommand::new(["merge-base", "--is-ancestor", commit_sha, ancestor_sha])
-            .quiet_success()
+        GitCommand::new(["merge-base", "--is-ancestor", commit_sha, ancestor_sha]).quiet_success()
     }
 
     /// 提取 tag 的版本号

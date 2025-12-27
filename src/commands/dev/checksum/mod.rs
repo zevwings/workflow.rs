@@ -5,4 +5,3 @@
 mod calculate;
 
 pub use calculate::ChecksumCalculateCommand;
-

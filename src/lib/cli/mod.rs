@@ -46,11 +46,11 @@ pub use tag::TagSubcommand;
 
 // Dev 工具 CLI
 pub use dev::{
-    DevCommands, DevSubcommand, DocsSubcommand, DocsCheckSubcommand, DocsReportSubcommand,
-    TestsSubcommand, TestsCheckSubcommand, TestsDocsSubcommand, TestsMetricsSubcommand,
-    TestsReportSubcommand, TestsTrendsSubcommand, PerformanceSubcommand,
-    VersionSubcommand, CiSubcommand, ChecksumSubcommand, HomebrewSubcommand,
-    DevTagSubcommand, PrSubcommand,
+    ChecksumSubcommand, CiSubcommand, DevCommands, DevSubcommand, DevTagSubcommand,
+    DocsCheckSubcommand, DocsReportSubcommand, DocsSubcommand, HomebrewSubcommand,
+    PerformanceSubcommand, PrSubcommand, TestsCheckSubcommand, TestsDocsSubcommand,
+    TestsMetricsSubcommand, TestsReportSubcommand, TestsSubcommand, TestsTrendsSubcommand,
+    VersionSubcommand,
 };
 
 /// CLI 主结构体

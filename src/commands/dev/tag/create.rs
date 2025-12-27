@@ -2,9 +2,9 @@
 //!
 //! 提供创建和推送 Git tag 的功能。
 
-use color_eyre::{eyre::WrapErr, Result};
 use crate::git::{GitCommand, GitTag};
-use crate::{log_info, log_success, log_error, log_warning, log_break};
+use crate::{log_break, log_error, log_info, log_success, log_warning};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Git Tag 创建命令
 pub struct TagCreateCommand {
@@ -88,8 +88,10 @@ impl TagCreateCommand {
                 if let Ok(remote_tags) = GitTag::list_remote_tags() {
                     if remote_tags.contains(&tag_name.to_string()) {
                         let remote_tag_info = GitTag::get_tag_info(tag_name)?;
-                        let current_head = GitCommand::new(["rev-parse", "HEAD"]).read().unwrap_or_default();
-                        let target_sha = self.commit_sha.as_deref().unwrap_or(current_head.as_str());
+                        let current_head =
+                            GitCommand::new(["rev-parse", "HEAD"]).read().unwrap_or_default();
+                        let target_sha =
+                            self.commit_sha.as_deref().unwrap_or(current_head.as_str());
 
                         if remote_tag_info.commit_hash == target_sha {
                             log_success!("Tag 已存在于远程且指向正确的 commit");
@@ -140,13 +142,10 @@ impl TagCreateCommand {
                 .open(&output_file)
                 .wrap_err_with(|| format!("Failed to open GITHUB_OUTPUT: {}", output_file))?;
 
-            writeln!(file, "tag={}", tag_name)
-                .wrap_err("Failed to write tag")?;
-            writeln!(file, "tag_created={}", success)
-                .wrap_err("Failed to write tag_created")?;
+            writeln!(file, "tag={}", tag_name).wrap_err("Failed to write tag")?;
+            writeln!(file, "tag_created={}", success).wrap_err("Failed to write tag_created")?;
         }
 
         Ok(())
     }
 }
-

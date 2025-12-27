@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::git::GitCommand;
-use crate::{log_info, log_success, log_warning, log_error};
+use crate::{log_error, log_info, log_success, log_warning};
 
 /// Homebrew Formula 更新命令
 pub struct HomebrewUpdateCommand {
@@ -33,8 +33,7 @@ impl HomebrewUpdateCommand {
     ) -> Self {
         let formula_path = formula_path.unwrap_or_else(|| "Formula/workflow.rb".to_string());
         let repo = repo.unwrap_or_else(|| {
-            std::env::var("GITHUB_REPOSITORY")
-                .unwrap_or_else(|_| "unknown/repo".to_string())
+            std::env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| "unknown/repo".to_string())
         });
 
         Self {
@@ -55,8 +54,7 @@ impl HomebrewUpdateCommand {
         // 备份原始文件
         if formula_path.exists() {
             let backup_path = format!("{}.bak", self.formula_path);
-            fs::copy(&self.formula_path, &backup_path)
-                .wrap_err("Failed to backup Formula file")?;
+            fs::copy(&self.formula_path, &backup_path).wrap_err("Failed to backup Formula file")?;
             log_info!("📝 Backed up Formula file to {}", backup_path);
         }
 
@@ -67,7 +65,10 @@ impl HomebrewUpdateCommand {
                 self.generate_from_template(template_path, &self.formula_path)?;
                 log_success!("Formula file generated from template");
             } else {
-                log_warning!("Template file not found: {}, updating existing file", template_path);
+                log_warning!(
+                    "Template file not found: {}, updating existing file",
+                    template_path
+                );
                 self.update_existing_file(&self.formula_path)?;
             }
         } else {
@@ -142,10 +143,7 @@ impl HomebrewUpdateCommand {
         log_info!("🔍 Validating Formula file structure...");
 
         // 尝试使用 ruby -c 验证语法
-        let result = Command::new("ruby")
-            .arg("-c")
-            .arg(formula_path)
-            .output();
+        let result = Command::new("ruby").arg("-c").arg(formula_path).output();
 
         match result {
             Ok(output) if output.status.success() => {
@@ -156,7 +154,9 @@ impl HomebrewUpdateCommand {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 log_error!("Formula file has syntax errors");
                 log_error!("{}", stderr);
-                Err(color_eyre::eyre::eyre!("Formula file syntax validation failed"))
+                Err(color_eyre::eyre::eyre!(
+                    "Formula file syntax validation failed"
+                ))
             }
             Err(_) => {
                 // Ruby 未安装，跳过验证
@@ -170,7 +170,12 @@ impl HomebrewUpdateCommand {
     fn git_operations(&self) -> Result<()> {
         // 配置 Git
         GitCommand::new(["config", "user.name", "github-actions[bot]"]).run()?;
-        GitCommand::new(["config", "user.email", "github-actions[bot]@users.noreply.github.com"]).run()?;
+        GitCommand::new([
+            "config",
+            "user.email",
+            "github-actions[bot]@users.noreply.github.com",
+        ])
+        .run()?;
 
         // 添加文件
         GitCommand::new(["add", &self.formula_path]).run()?;
@@ -184,9 +189,8 @@ impl HomebrewUpdateCommand {
 
         // 验证 Formula 文件格式（可选）
         if Command::new("brew").arg("--version").output().is_ok() {
-            let audit_result = Command::new("brew")
-                .args(["audit", "--strict", &self.formula_path])
-                .output();
+            let audit_result =
+                Command::new("brew").args(["audit", "--strict", &self.formula_path]).output();
 
             if let Ok(output) = audit_result {
                 if !output.status.success() {
@@ -207,7 +211,8 @@ impl HomebrewUpdateCommand {
             let current_branch = GitCommand::new(["branch", "--show-current"]).read()?;
             log_info!("Pushing to branch: {}", current_branch);
 
-            GitCommand::new(["push", "origin", &current_branch]).run()
+            GitCommand::new(["push", "origin", &current_branch])
+                .run()
                 .wrap_err_with(|| format!("Failed to push to branch: {}", current_branch))?;
 
             log_success!("Successfully pushed to {} branch", current_branch);
@@ -216,4 +221,3 @@ impl HomebrewUpdateCommand {
         Ok(())
     }
 }
-

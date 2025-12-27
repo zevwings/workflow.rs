@@ -4,12 +4,12 @@
 
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileReader;
+use crate::{log_break, log_info, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
-use crate::{log_info, log_warning, log_break};
+use std::path::{Path, PathBuf};
 
 /// 文件统计信息
 #[derive(Debug, Default, Clone)]
@@ -74,8 +74,7 @@ impl TestsDocsCheckCommand {
         let test_files: Vec<PathBuf> = all_files
             .into_iter()
             .filter(|f| {
-                f.extension().map(|e| e == "rs").unwrap_or(false)
-                    && !self.should_skip_file(f)
+                f.extension().map(|e| e == "rs").unwrap_or(false) && !self.should_skip_file(f)
             })
             .collect();
 
@@ -106,13 +105,25 @@ impl TestsDocsCheckCommand {
                 stats.files_0 += 1;
                 if file_stat.test_count >= 20 {
                     stats.high_priority_0 += 1;
-                    low_0_files.push(format!("{} - 0/{} (0%)", file_stat.path.display(), file_stat.test_count));
+                    low_0_files.push(format!(
+                        "{} - 0/{} (0%)",
+                        file_stat.path.display(),
+                        file_stat.test_count
+                    ));
                 } else if file_stat.test_count >= 10 {
                     stats.medium_priority_0 += 1;
-                    low_0_files.push(format!("{} - 0/{} (0%)", file_stat.path.display(), file_stat.test_count));
+                    low_0_files.push(format!(
+                        "{} - 0/{} (0%)",
+                        file_stat.path.display(),
+                        file_stat.test_count
+                    ));
                 } else {
                     stats.low_priority_0 += 1;
-                    low_0_files.push(format!("{} - 0/{} (0%)", file_stat.path.display(), file_stat.test_count));
+                    low_0_files.push(format!(
+                        "{} - 0/{} (0%)",
+                        file_stat.path.display(),
+                        file_stat.test_count
+                    ));
                 }
             } else {
                 stats.files_partial += 1;
@@ -155,7 +166,13 @@ impl TestsDocsCheckCommand {
         }
 
         // 输出统计结果
-        self.print_summary(&stats, &high_partial_files, &medium_partial_files, &low_0_files, &low_partial_files);
+        self.print_summary(
+            &stats,
+            &high_partial_files,
+            &medium_partial_files,
+            &low_0_files,
+            &low_partial_files,
+        );
 
         // CI 模式：输出到 GITHUB_OUTPUT
         if self.ci {
@@ -166,7 +183,7 @@ impl TestsDocsCheckCommand {
     }
 
     /// 判断是否应该跳过文件
-    fn should_skip_file(&self, path: &PathBuf) -> bool {
+    fn should_skip_file(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy();
         path_str.contains("/common/")
             || path_str.contains("/utils/")
@@ -176,14 +193,17 @@ impl TestsDocsCheckCommand {
     /// 分析测试文件
     fn analyze_test_file(&self, file_path: &PathBuf) -> Result<FileStats> {
         let reader = FileReader::new(file_path);
-        let content = reader.to_string()
+        let content = reader
+            .to_string()
             .wrap_err_with(|| format!("Failed to read file: {:?}", file_path))?;
 
         let lines: Vec<&str> = content.lines().collect();
 
         // 匹配测试函数：`#[test]` 或 `fn test_`
         let test_pattern = Regex::new(r"^\s*#\[test\]|^\s*fn\s+test_").unwrap();
-        let doc_pattern = Regex::new(r"///.*(测试目的|测试场景|预期结果|## 测试目的|## 测试场景|## 预期结果)").unwrap();
+        let doc_pattern =
+            Regex::new(r"///.*(测试目的|测试场景|预期结果|## 测试目的|## 测试场景|## 预期结果)")
+                .unwrap();
 
         let mut test_count = 0;
         let mut documented_count = 0;
@@ -194,14 +214,8 @@ impl TestsDocsCheckCommand {
 
                 // 向前查找最多50行，看是否有文档注释
                 let start = i.saturating_sub(50);
-                let mut has_doc = false;
-
-                for j in start..i {
-                    if doc_pattern.is_match(lines[j]) {
-                        has_doc = true;
-                        break;
-                    }
-                }
+                let has_doc =
+                    lines.iter().take(i).skip(start).any(|line| doc_pattern.is_match(line));
 
                 if has_doc {
                     documented_count += 1;
@@ -242,15 +256,29 @@ impl TestsDocsCheckCommand {
         log_info!("- ✅ 100%完成：{} 个文件", stats.files_100);
         log_info!("- 🚧 部分完成：{} 个文件", stats.files_partial);
         log_info!("- ❌ 0%完成：{} 个文件", stats.files_0);
-        log_info!("- **总计**: {} 个文件，{} 个测试函数", stats.total_files, stats.total_tests);
-        log_info!("- **已添加文档注释**: {} 个测试函数", stats.total_documented);
-        log_info!("- **缺少文档注释**: {} 个测试函数", stats.total_tests - stats.total_documented);
+        log_info!(
+            "- **总计**: {} 个文件，{} 个测试函数",
+            stats.total_files,
+            stats.total_tests
+        );
+        log_info!(
+            "- **已添加文档注释**: {} 个测试函数",
+            stats.total_documented
+        );
+        log_info!(
+            "- **缺少文档注释**: {} 个测试函数",
+            stats.total_tests - stats.total_documented
+        );
         log_info!("- **覆盖率**: {:.1}%", total_percent);
         log_break!();
 
         log_info!("**高优先级文件（≥20个测试）**:");
         log_info!("- 0%完成：{} 个文件", stats.high_priority_0);
-        log_info!("- 部分完成：{} 个文件，缺少 {} 个文档注释", stats.high_priority_partial, stats.high_priority_missing);
+        log_info!(
+            "- 部分完成：{} 个文件，缺少 {} 个文档注释",
+            stats.high_priority_partial,
+            stats.high_priority_missing
+        );
         if !high_partial.is_empty() {
             log_break!();
             log_info!("部分完成的文件：");
@@ -262,7 +290,11 @@ impl TestsDocsCheckCommand {
 
         log_info!("**中优先级文件（10-19个测试）**:");
         log_info!("- 0%完成：{} 个文件", stats.medium_priority_0);
-        log_info!("- 部分完成：{} 个文件，缺少 {} 个文档注释", stats.medium_priority_partial, stats.medium_priority_missing);
+        log_info!(
+            "- 部分完成：{} 个文件，缺少 {} 个文档注释",
+            stats.medium_priority_partial,
+            stats.medium_priority_missing
+        );
         if !medium_partial.is_empty() {
             log_break!();
             log_info!("部分完成的文件：");
@@ -274,7 +306,11 @@ impl TestsDocsCheckCommand {
 
         log_info!("**低优先级文件（<10个测试）**:");
         log_info!("- 0%完成：{} 个文件", stats.low_priority_0);
-        log_info!("- 部分完成：{} 个文件，缺少 {} 个文档注释", stats.low_priority_partial, stats.low_priority_missing);
+        log_info!(
+            "- 部分完成：{} 个文件，缺少 {} 个文档注释",
+            stats.low_priority_partial,
+            stats.low_priority_missing
+        );
         if stats.low_priority_0 <= 20 && !low_0.is_empty() {
             log_break!();
             log_info!("0%完成的文件：");

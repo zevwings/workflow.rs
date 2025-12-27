@@ -6,7 +6,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 use crate::git::GitBranch;
-use crate::{log_info, log_success, log_error};
+use crate::{log_error, log_info, log_success};
 
 /// CI 跳过检查命令
 pub struct CiSkipCommand {
@@ -46,7 +46,10 @@ impl CiSkipCommand {
         };
 
         log_info!("🔍 Checking branch: {}", branch_name);
-        log_info!("   Event: {}", env::var("GITHUB_EVENT_NAME").unwrap_or_else(|_| "unknown".to_string()));
+        log_info!(
+            "   Event: {}",
+            env::var("GITHUB_EVENT_NAME").unwrap_or_else(|_| "unknown".to_string())
+        );
 
         // 检查是否是版本更新分支（bump-version-*）
         if branch_name.starts_with("bump-version-") {
@@ -68,10 +71,27 @@ impl CiSkipCommand {
                     env::var("WORKFLOW_USER_NAME").unwrap_or_default()
                 };
 
-                log_info!("   PR creator: {}", if pr_creator.is_empty() { "unknown" } else { &pr_creator });
-                log_info!("   Expected user: {}", if expected_user.is_empty() { "unknown" } else { &expected_user });
+                log_info!(
+                    "   PR creator: {}",
+                    if pr_creator.is_empty() {
+                        "unknown"
+                    } else {
+                        &pr_creator
+                    }
+                );
+                log_info!(
+                    "   Expected user: {}",
+                    if expected_user.is_empty() {
+                        "unknown"
+                    } else {
+                        &expected_user
+                    }
+                );
 
-                if !pr_creator.is_empty() && !expected_user.is_empty() && pr_creator != expected_user {
+                if !pr_creator.is_empty()
+                    && !expected_user.is_empty()
+                    && pr_creator != expected_user
+                {
                     log_error!("bump-version-* branches can only be created by authorized user");
                     log_error!("   PR creator: {}, expected: {}", pr_creator, expected_user);
                     return Err(color_eyre::eyre::eyre!(
@@ -120,4 +140,3 @@ impl CiSkipCommand {
         Ok(())
     }
 }
-

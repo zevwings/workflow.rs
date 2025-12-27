@@ -2,12 +2,12 @@
 //!
 //! 提供创建版本更新 PR 的功能。
 
-use color_eyre::{eyre::WrapErr, Result};
-use reqwest::header::HeaderMap;
 use crate::git::{GitBranch, GitCommand};
 use crate::pr::github::platform::GitHub;
 use crate::pr::platform::PlatformProvider;
-use crate::{log_info, log_success, log_warning, log_break};
+use crate::{log_break, log_info, log_success, log_warning};
+use color_eyre::{eyre::WrapErr, Result};
+use reqwest::header::HeaderMap;
 
 /// PR 创建命令
 pub struct PrCreateCommand {
@@ -19,7 +19,12 @@ pub struct PrCreateCommand {
 
 impl PrCreateCommand {
     /// 创建新的 PR 创建命令
-    pub fn new(version: String, branch_name: Option<String>, base_branch: Option<String>, ci: bool) -> Self {
+    pub fn new(
+        version: String,
+        branch_name: Option<String>,
+        base_branch: Option<String>,
+        ci: bool,
+    ) -> Self {
         Self {
             version,
             branch_name,
@@ -36,8 +41,7 @@ impl PrCreateCommand {
         log_break!();
 
         let default_branch = format!("bump-version-{}", self.version);
-        let branch_name = self.branch_name.as_deref()
-            .unwrap_or(&default_branch);
+        let branch_name = self.branch_name.as_deref().unwrap_or(&default_branch);
 
         log_info!("版本: {}", self.version);
         log_info!("分支: {}", branch_name);
@@ -78,13 +82,19 @@ impl PrCreateCommand {
         );
 
         let github = GitHub;
-        match <GitHub as PlatformProvider>::create_pull_request(&github, &title, &body, branch_name, Some(base_branch)) {
+        match <GitHub as PlatformProvider>::create_pull_request(
+            &github,
+            &title,
+            &body,
+            branch_name,
+            Some(base_branch),
+        ) {
             Ok(pr_url) => {
                 log_success!("PR 创建成功");
                 log_info!("   URL: {}", pr_url);
 
                 // 提取 PR 编号
-                if let Some(pr_number) = pr_url.split('/').last() {
+                if let Some(pr_number) = pr_url.split('/').next_back() {
                     log_info!("   PR 编号: {}", pr_number);
                     if self.ci {
                         self.output_ci_result(Some(pr_number), Some(&pr_url))?;
@@ -118,10 +128,10 @@ impl PrCreateCommand {
 
     /// 查找现有的 PR
     fn find_existing_pr(&self, branch_name: &str, base_branch: &str) -> Result<(String, String)> {
-        use crate::pr::github::platform::GitHub;
         use crate::base::http::{HttpClient, RequestConfig};
-        use crate::pr::github::responses::PullRequestInfo;
         use crate::pr::github::errors::handle_github_error;
+        use crate::pr::github::platform::GitHub;
+        use crate::pr::github::responses::PullRequestInfo;
         use serde_json::Value;
 
         let (owner, repo_name) = GitHub::get_owner_and_repo()?;
@@ -139,13 +149,18 @@ impl PrCreateCommand {
         let mut headers = HeaderMap::new();
         headers.insert(
             "Authorization",
-            format!("Bearer {}", std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?)
-                .parse()
-                .wrap_err("Failed to parse Authorization header")?,
+            format!(
+                "Bearer {}",
+                std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?
+            )
+            .parse()
+            .wrap_err("Failed to parse Authorization header")?,
         );
         headers.insert(
             "Accept",
-            "application/vnd.github+json".parse().wrap_err("Failed to parse Accept header")?,
+            "application/vnd.github+json"
+                .parse()
+                .wrap_err("Failed to parse Accept header")?,
         );
         headers.insert(
             "X-GitHub-Api-Version",
@@ -154,9 +169,8 @@ impl PrCreateCommand {
 
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
         let response = client.get(&url, config)?;
-        let prs: Vec<PullRequestInfo> = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let prs: Vec<PullRequestInfo> =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
 
         if let Some(pr) = prs.first() {
             Ok((pr.html_url.clone(), pr.number.to_string()))
@@ -178,16 +192,13 @@ impl PrCreateCommand {
                 .wrap_err_with(|| format!("Failed to open GITHUB_OUTPUT: {}", output_file))?;
 
             if let Some(number) = pr_number {
-                writeln!(file, "pr_number={}", number)
-                    .wrap_err("Failed to write pr_number")?;
+                writeln!(file, "pr_number={}", number).wrap_err("Failed to write pr_number")?;
             }
             if let Some(url) = pr_url {
-                writeln!(file, "pr_url={}", url)
-                    .wrap_err("Failed to write pr_url")?;
+                writeln!(file, "pr_url={}", url).wrap_err("Failed to write pr_url")?;
             }
         }
 
         Ok(())
     }
 }
-

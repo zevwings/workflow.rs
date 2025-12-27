@@ -57,7 +57,11 @@ impl VersionGenerateCommand {
             self.generate_prerelease_version(&latest_version)?
         };
 
-        log_success!("Generated version {} ({})", version_info.version, version_info.tag);
+        log_success!(
+            "Generated version {} ({})",
+            version_info.version,
+            version_info.tag
+        );
 
         if self.update_cargo {
             self.update_cargo_files(&version_info.version)?;
@@ -92,19 +96,21 @@ impl VersionGenerateCommand {
             .collect();
 
         // 按版本号排序（从高到低）
-        version_tags.sort_by(|a, b| {
-            match b.1 .0.cmp(&a.1 .0) {
-                Ordering::Equal => match b.1 .1.cmp(&a.1 .1) {
-                    Ordering::Equal => b.1 .2.cmp(&a.1 .2),
-                    other => other,
-                },
+        version_tags.sort_by(|a, b| match b.1 .0.cmp(&a.1 .0) {
+            Ordering::Equal => match b.1 .1.cmp(&a.1 .1) {
+                Ordering::Equal => b.1 .2.cmp(&a.1 .2),
                 other => other,
-            }
+            },
+            other => other,
         });
 
         if let Some((latest_tag, (major, minor, patch))) = version_tags.first() {
             let version = format!("{}.{}.{}", major, minor, patch);
-            log_success!("Latest standard version from git tags: {} ({})", latest_tag, version);
+            log_success!(
+                "Latest standard version from git tags: {} ({})",
+                latest_tag,
+                version
+            );
             Ok(VersionInfo {
                 version,
                 tag: latest_tag.clone(),
@@ -120,16 +126,13 @@ impl VersionGenerateCommand {
                 needs_increment: false,
             })
         }
-}
+    }
 
     /// 生成 master 分支版本号
     fn generate_master_version(&self, latest: &VersionInfo) -> Result<VersionInfo> {
         // 解析最新版本号
-        let mut parts: Vec<u32> = latest
-            .version
-            .split('.')
-            .map(|s| s.parse::<u32>().unwrap_or(0))
-            .collect();
+        let mut parts: Vec<u32> =
+            latest.version.split('.').map(|s| s.parse::<u32>().unwrap_or(0)).collect();
 
         while parts.len() < 3 {
             parts.push(0);
@@ -145,13 +148,13 @@ impl VersionGenerateCommand {
 
         // 查找标准版本 tag
         let version_regex = Regex::new(r"^v(\d+)\.(\d+)\.(\d+)$")?;
-        if let Some(existing_tag) = tags_at_head
-            .iter()
-            .find(|tag| version_regex.is_match(tag))
-        {
+        if let Some(existing_tag) = tags_at_head.iter().find(|tag| version_regex.is_match(tag)) {
             // 当前 commit 已经有 tag，使用该 tag 的版本号
             let version = existing_tag.strip_prefix('v').unwrap_or(existing_tag).to_string();
-            log_success!("Found existing tag {} on current commit, reusing it", existing_tag);
+            log_success!(
+                "Found existing tag {} on current commit, reusing it",
+                existing_tag
+            );
             return Ok(VersionInfo {
                 version,
                 tag: existing_tag.clone(),
@@ -161,7 +164,9 @@ impl VersionGenerateCommand {
 
         // 当前 commit 没有 tag，需要根据 Conventional Commits 规范确定版本更新类型
         let latest_tag = &latest.tag;
-        let commits = if !latest_tag.is_empty() && GitCommand::new(["rev-parse", latest_tag]).quiet_success() {
+        let commits = if !latest_tag.is_empty()
+            && GitCommand::new(["rev-parse", latest_tag]).quiet_success()
+        {
             // 从最新 tag 到当前 commit 的所有提交
             self.get_commits_between(latest_tag, "HEAD")?
         } else {
@@ -195,7 +200,11 @@ impl VersionGenerateCommand {
         let tag = format!("v{}", version);
 
         log_success!("Version increment type: {:?}", increment_type);
-        log_success!("Generated version {} ({}) based on Conventional Commits", version, tag);
+        log_success!(
+            "Generated version {} ({}) based on Conventional Commits",
+            version,
+            tag
+        );
 
         Ok(VersionInfo {
             version,
@@ -207,11 +216,8 @@ impl VersionGenerateCommand {
     /// 生成预发布版本号
     fn generate_prerelease_version(&self, latest: &VersionInfo) -> Result<VersionInfo> {
         // 解析最新版本号
-        let mut parts: Vec<u32> = latest
-            .version
-            .split('.')
-            .map(|s| s.parse::<u32>().unwrap_or(0))
-            .collect();
+        let mut parts: Vec<u32> =
+            latest.version.split('.').map(|s| s.parse::<u32>().unwrap_or(0)).collect();
 
         while parts.len() < 3 {
             parts.push(0);
@@ -223,7 +229,9 @@ impl VersionGenerateCommand {
 
         // 获取从最新 tag 到当前 commit 的所有 commit messages
         let latest_tag = &latest.tag;
-        let commits = if !latest_tag.is_empty() && GitCommand::new(["rev-parse", latest_tag]).quiet_success() {
+        let commits = if !latest_tag.is_empty()
+            && GitCommand::new(["rev-parse", latest_tag]).quiet_success()
+        {
             self.get_commits_between(latest_tag, "HEAD")?
         } else {
             GitCommit::get_branch_commits(10)?
@@ -259,7 +267,11 @@ impl VersionGenerateCommand {
         let version = format!("{}.alpha-{}", base_version, timestamp);
         let tag = format!("v{}", version);
 
-        log_success!("Non-master branch: Generated pre-release version {} ({})", version, tag);
+        log_success!(
+            "Non-master branch: Generated pre-release version {} ({})",
+            version,
+            tag
+        );
         log_info!("   Timestamp format: YYYYMMDDHHmmssSSS");
         log_info!("   Example: v1.6.1.alpha-20251216101712000");
 
@@ -271,7 +283,11 @@ impl VersionGenerateCommand {
     }
 
     /// 确定版本递增类型
-    fn determine_version_increment(&self, commits: &[crate::git::CommitInfo], current_patch: u32) -> Result<VersionIncrementType> {
+    fn determine_version_increment(
+        &self,
+        commits: &[crate::git::CommitInfo],
+        current_patch: u32,
+    ) -> Result<VersionIncrementType> {
         // 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
         let mut has_breaking = false;
         let mut has_feat = false;
@@ -388,20 +404,19 @@ impl VersionGenerateCommand {
             return Err(color_eyre::eyre::eyre!("Cargo.toml not found"));
         }
 
-        let content = fs::read_to_string(cargo_toml_path)
-            .wrap_err("Failed to read Cargo.toml")?;
+        let content = fs::read_to_string(cargo_toml_path).wrap_err("Failed to read Cargo.toml")?;
 
         // 更新版本号（简单替换，可能需要更复杂的解析）
         let version_regex = Regex::new(r#"version\s*=\s*"[^"]+""#)?;
         let updated = version_regex.replace(&content, &format!(r#"version = "{}""#, version));
 
-        fs::write(cargo_toml_path, updated.as_ref())
-            .wrap_err("Failed to write Cargo.toml")?;
+        fs::write(cargo_toml_path, updated.as_ref()).wrap_err("Failed to write Cargo.toml")?;
 
         log_success!("Updated Cargo.toml to version {}", version);
 
         // 运行 cargo update 更新 Cargo.lock
-        GitCommand::new(["cargo", "update", "--workspace"]).run()
+        GitCommand::new(["cargo", "update", "--workspace"])
+            .run()
             .wrap_err("Failed to update Cargo.lock")?;
 
         log_success!("Updated Cargo.lock");
@@ -427,8 +442,7 @@ impl VersionGenerateCommand {
 
         writeln!(file, "version={}", info.version)
             .wrap_err("Failed to write version to GITHUB_OUTPUT")?;
-        writeln!(file, "tag={}", info.tag)
-            .wrap_err("Failed to write tag to GITHUB_OUTPUT")?;
+        writeln!(file, "tag={}", info.tag).wrap_err("Failed to write tag to GITHUB_OUTPUT")?;
         writeln!(file, "needs_increment={}", info.needs_increment)
             .wrap_err("Failed to write needs_increment to GITHUB_OUTPUT")?;
 
@@ -437,4 +451,3 @@ impl VersionGenerateCommand {
         Ok(())
     }
 }
-

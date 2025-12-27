@@ -4,13 +4,13 @@
 
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileReader;
+use crate::{log_break, log_error, log_info, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 use regex::Regex;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use crate::{log_info, log_success, log_warning, log_error, log_break};
 
 /// 断链信息
 #[derive(Debug, Clone)]
@@ -111,8 +111,7 @@ impl DocsLinksCheckCommand {
         let doc_files: Vec<PathBuf> = all_files
             .into_iter()
             .filter(|f| {
-                f.extension().map(|e| e == "md").unwrap_or(false)
-                    && !self.should_skip_file(f)
+                f.extension().map(|e| e == "md").unwrap_or(false) && !self.should_skip_file(f)
             })
             .collect();
 
@@ -164,13 +163,13 @@ impl DocsLinksCheckCommand {
         // 移除锚点部分（#anchor）
         let link_without_anchor = link.split('#').next().unwrap_or(link);
 
-        let target_file = if link_without_anchor.starts_with('/') {
+        let target_file = if let Some(stripped) = link_without_anchor.strip_prefix('/') {
             // 绝对路径（从项目根目录开始）
-            PathBuf::from(&link_without_anchor[1..])
+            PathBuf::from(stripped)
         } else {
             // 相对路径
-            let file_dir = file_path.parent()
-                .ok_or_else(|| color_eyre::eyre::eyre!("Invalid file path"))?;
+            let file_dir =
+                file_path.parent().ok_or_else(|| color_eyre::eyre::eyre!("Invalid file path"))?;
             file_dir.join(link_without_anchor)
         };
 
@@ -194,7 +193,7 @@ impl DocsLinksCheckCommand {
     }
 
     /// 判断是否应该跳过文件
-    fn should_skip_file(&self, path: &PathBuf) -> bool {
+    fn should_skip_file(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy();
         path_str.contains("/templates/")
     }
@@ -202,11 +201,8 @@ impl DocsLinksCheckCommand {
     /// 检查外部链接
     fn check_external_links(&self) -> Result<()> {
         // 检查 lychee 是否安装
-        let lychee_check = cmd("lychee", ["--version"])
-            .stdout_null()
-            .stderr_null()
-            .unchecked()
-            .run();
+        let lychee_check =
+            cmd("lychee", ["--version"]).stdout_null().stderr_null().unchecked().run();
 
         if lychee_check.is_err() || !lychee_check?.status.success() {
             log_warning!("lychee 未安装，跳过外部链接检查");
@@ -218,11 +214,18 @@ impl DocsLinksCheckCommand {
         log_success!("lychee 已安装");
 
         // 运行 lychee 检查外部链接
-        let result = cmd("lychee", ["docs/**/*.md", "--exclude-all-private", "--exclude-loopback"])
-            .stderr_capture()
-            .unchecked()
-            .run()
-            .wrap_err("Failed to run lychee")?;
+        let result = cmd(
+            "lychee",
+            [
+                "docs/**/*.md",
+                "--exclude-all-private",
+                "--exclude-loopback",
+            ],
+        )
+        .stderr_capture()
+        .unchecked()
+        .run()
+        .wrap_err("Failed to run lychee")?;
 
         if !result.status.success() {
             let stderr = String::from_utf8_lossy(&result.stderr);

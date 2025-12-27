@@ -119,11 +119,22 @@ jobs:
           TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
           REPORT_FILE="report/coverage-check-${TIMESTAMP}.md"
 
-          cargo run --bin dev --release tests check coverage \
-            --threshold 80.0 \
-            --ci \
-            --output "$REPORT_FILE" \
-            --check-type "定期审查" || true
+          # 使用已下载的二进制文件，避免重新编译
+          if [ -f "./target/release/dev" ]; then
+            chmod +x ./target/release/dev
+            ./target/release/dev tests check coverage \
+              --threshold 80.0 \
+              --ci \
+              --output "$REPORT_FILE" \
+              --check-type "定期审查" || true
+          else
+            echo "⚠️  dev binary not found, falling back to cargo run"
+            cargo run --bin dev --release -- tests check coverage \
+              --threshold 80.0 \
+              --ci \
+              --output "$REPORT_FILE" \
+              --check-type "定期审查" || true
+          fi
 
           if [ -f "$REPORT_FILE" ]; then
             echo "📄 Report generated: $REPORT_FILE"

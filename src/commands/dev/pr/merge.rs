@@ -2,10 +2,10 @@
 //!
 //! 提供检查 PR 状态、等待 CI 完成和合并 PR 的功能。
 
+use crate::{log_break, log_error, log_info, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use reqwest::header::HeaderMap;
 use std::time::Duration;
-use crate::{log_info, log_success, log_error, log_warning, log_break};
 
 /// PR 合并命令
 pub struct PrMergeCommand {
@@ -98,15 +98,18 @@ impl PrMergeCommand {
         if self.ci {
             self.output_ci_result(false, Some("timeout"))?;
         }
-        Err(color_eyre::eyre::eyre!("PR did not become mergeable within {}s", self.max_wait))
+        Err(color_eyre::eyre::eyre!(
+            "PR did not become mergeable within {}s",
+            self.max_wait
+        ))
     }
 
     /// 检查 PR 状态
     fn check_pr_status(&self) -> Result<PrStatus> {
-        use crate::pr::github::platform::GitHub;
         use crate::base::http::{HttpClient, RequestConfig};
-        use crate::pr::github::responses::PullRequestInfo;
         use crate::pr::github::errors::handle_github_error;
+        use crate::pr::github::platform::GitHub;
+        use crate::pr::github::responses::PullRequestInfo;
         use serde_json::Value;
 
         let (owner, repo_name) = GitHub::get_owner_and_repo()?;
@@ -122,13 +125,18 @@ impl PrMergeCommand {
         let mut headers = HeaderMap::new();
         headers.insert(
             "Authorization",
-            format!("Bearer {}", std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?)
-                .parse()
-                .wrap_err("Failed to parse Authorization header")?,
+            format!(
+                "Bearer {}",
+                std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?
+            )
+            .parse()
+            .wrap_err("Failed to parse Authorization header")?,
         );
         headers.insert(
             "Accept",
-            "application/vnd.github+json".parse().wrap_err("Failed to parse Accept header")?,
+            "application/vnd.github+json"
+                .parse()
+                .wrap_err("Failed to parse Accept header")?,
         );
         headers.insert(
             "X-GitHub-Api-Version",
@@ -137,9 +145,8 @@ impl PrMergeCommand {
 
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
         let response = client.get(&url, config)?;
-        let pr_info: PullRequestInfo = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let pr_info: PullRequestInfo =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
 
         Ok(PrStatus {
             merged: pr_info.merged.unwrap_or(false),
@@ -149,9 +156,9 @@ impl PrMergeCommand {
 
     /// 执行合并
     fn perform_merge(&self) -> Result<()> {
+        use crate::base::http::{HttpClient, RequestConfig};
         use crate::pr::github::platform::GitHub;
         use crate::pr::github::requests::MergePullRequestRequest;
-        use crate::base::http::{HttpClient, RequestConfig};
         use serde_json::Value;
 
         let (owner, repo_name) = GitHub::get_owner_and_repo()?;
@@ -177,13 +184,18 @@ impl PrMergeCommand {
         let mut headers = HeaderMap::new();
         headers.insert(
             "Authorization",
-            format!("Bearer {}", std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?)
-                .parse()
-                .wrap_err("Failed to parse Authorization header")?,
+            format!(
+                "Bearer {}",
+                std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?
+            )
+            .parse()
+            .wrap_err("Failed to parse Authorization header")?,
         );
         headers.insert(
             "Accept",
-            "application/vnd.github+json".parse().wrap_err("Failed to parse Accept header")?,
+            "application/vnd.github+json"
+                .parse()
+                .wrap_err("Failed to parse Accept header")?,
         );
         headers.insert(
             "X-GitHub-Api-Version",
@@ -219,8 +231,8 @@ impl PrMergeCommand {
     /// 获取首选的合并方法
     fn get_preferred_merge_method(owner: &str, repo_name: &str) -> Result<String> {
         use crate::base::http::{HttpClient, RequestConfig};
-        use crate::pr::github::responses::RepositoryInfo;
         use crate::pr::github::errors::handle_github_error;
+        use crate::pr::github::responses::RepositoryInfo;
         use serde_json::Value;
 
         let url = format!(
@@ -234,13 +246,18 @@ impl PrMergeCommand {
         let mut headers = HeaderMap::new();
         headers.insert(
             "Authorization",
-            format!("Bearer {}", std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?)
-                .parse()
-                .wrap_err("Failed to parse Authorization header")?,
+            format!(
+                "Bearer {}",
+                std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("WORKFLOW_PAT"))?
+            )
+            .parse()
+            .wrap_err("Failed to parse Authorization header")?,
         );
         headers.insert(
             "Accept",
-            "application/vnd.github+json".parse().wrap_err("Failed to parse Accept header")?,
+            "application/vnd.github+json"
+                .parse()
+                .wrap_err("Failed to parse Accept header")?,
         );
         headers.insert(
             "X-GitHub-Api-Version",
@@ -249,9 +266,8 @@ impl PrMergeCommand {
 
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
         let response = client.get(&url, config)?;
-        let repo_info: RepositoryInfo = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let repo_info: RepositoryInfo =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
 
         // 优先级：squash > rebase > merge
         if repo_info.allow_squash_merge.unwrap_or(false) {
@@ -281,8 +297,7 @@ impl PrMergeCommand {
                 .open(&output_file)
                 .wrap_err_with(|| format!("Failed to open GITHUB_OUTPUT: {}", output_file))?;
 
-            writeln!(file, "pr_merged={}", merged)
-                .wrap_err("Failed to write pr_merged")?;
+            writeln!(file, "pr_merged={}", merged).wrap_err("Failed to write pr_merged")?;
             if let Some(e) = error {
                 writeln!(file, "pr_merge_error={}", e)
                     .wrap_err("Failed to write pr_merge_error")?;
@@ -298,4 +313,3 @@ struct PrStatus {
     merged: bool,
     mergeable: Option<bool>,
 }
-

@@ -2,9 +2,9 @@
 //!
 //! 清理已合并到 master 分支的 alpha tag。
 
-use color_eyre::{eyre::WrapErr, Result};
 use crate::git::{GitCommand, GitTag};
-use crate::{log_info, log_success, log_warning, log_break};
+use crate::{log_break, log_info, log_success, log_warning};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Alpha Tag 清理命令
 pub struct TagCleanupCommand {
@@ -34,7 +34,8 @@ impl TagCleanupCommand {
         log_info!("当前版本: {}", self.current_version);
 
         // 提取基础版本号（移除 'v' 前缀和 alpha 后缀）
-        let base_version = self.current_version
+        let base_version = self
+            .current_version
             .trim_start_matches('v')
             .split('.')
             .take(3)
@@ -92,13 +93,23 @@ impl TagCleanupCommand {
             // 检查 tag 是否在 master 分支的 first-parent 路径上
             if GitTag::is_ancestor(&tag_commit, &first_parent) {
                 // Tag 在 master 的 first-parent 路径上，保留它
-                log_info!("   ⏭️  Tag {} ({}) 在 master 分支 first-parent 路径上，保留", tag, tag_commit);
+                log_info!(
+                    "   ⏭️  Tag {} ({}) 在 master 分支 first-parent 路径上，保留",
+                    tag,
+                    tag_commit
+                );
             } else if GitTag::is_ancestor(&tag_commit, &master_head) {
                 // Tag 在合并提交的祖先中，但不在 first-parent 路径上
                 // 说明它来自已合并的分支，应该删除
                 if let Some(ref tv) = tag_version {
                     if tv == &base_version {
-                        log_info!("   ✅ Tag {} ({}) 版本 {} 匹配当前版本 {} 且来自已合并分支，将删除", tag, tag_commit, tv, base_version);
+                        log_info!(
+                            "   ✅ Tag {} ({}) 版本 {} 匹配当前版本 {} 且来自已合并分支，将删除",
+                            tag,
+                            tag_commit,
+                            tv,
+                            base_version
+                        );
                     } else {
                         log_info!("   ✅ Tag {} ({}) 来自已合并分支，将删除", tag, tag_commit);
                     }
@@ -110,7 +121,13 @@ impl TagCleanupCommand {
                 // Tag 不在合并提交的祖先中，检查版本号是否匹配
                 if let Some(ref tv) = tag_version {
                     if tv == &base_version {
-                        log_warning!("   ⚠️  Tag {} ({}) 版本 {} 匹配当前版本 {} 但 commit 不在合并祖先中", tag, tag_commit, tv, base_version);
+                        log_warning!(
+                            "   ⚠️  Tag {} ({}) 版本 {} 匹配当前版本 {} 但 commit 不在合并祖先中",
+                            tag,
+                            tag_commit,
+                            tv,
+                            base_version
+                        );
                         log_info!("   💡 由于版本号匹配，考虑删除...");
                         tags_to_delete.push(tag.clone());
                     } else {
@@ -185,4 +202,3 @@ impl TagCleanupCommand {
         Ok(())
     }
 }
-

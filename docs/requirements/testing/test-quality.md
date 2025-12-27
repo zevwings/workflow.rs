@@ -864,7 +864,7 @@ if __name__ == "__main__":
 
 ## 📚 相关文档
 
-- [测试架构分析](../../analysis/archive/test-architecture-analysis.md)
+- [测试架构分析](./test-architecture.md)
 - [测试覆盖率改进](./test-coverage-improvement.md)
 - [测试审查指南](../../guidelines/development/references/review-test-case.md)
 

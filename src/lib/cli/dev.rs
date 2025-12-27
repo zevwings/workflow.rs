@@ -318,7 +318,7 @@ pub enum VersionSubcommand {
         /// 更新 Cargo.toml 和 Cargo.lock
         #[arg(long)]
         update: bool,
-                /// CI 模式（输出到 GITHUB_OUTPUT）
+        /// CI 模式（输出到 GITHUB_OUTPUT）
         #[arg(long)]
         ci: bool,
     },

@@ -4,11 +4,11 @@
 
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::{FileReader, FileWriter};
+use crate::{log_break, log_info, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::{log_info, log_success, log_warning, log_break};
 
 /// 指标数据摘要
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -139,14 +139,21 @@ pub struct TestsTrendsAnalyzeCommand {
 impl TestsTrendsAnalyzeCommand {
     /// 创建新的测试趋势分析命令
     pub fn new(metrics_dir: Option<String>, output: Option<String>) -> Self {
-        Self { metrics_dir, output }
+        Self {
+            metrics_dir,
+            output,
+        }
     }
 
     /// 分析测试趋势
     pub fn analyze(&self) -> Result<()> {
-        let metrics_dir = self.metrics_dir.as_ref()
+        let metrics_dir = self
+            .metrics_dir
+            .as_ref()
             .ok_or_else(|| color_eyre::eyre::eyre!("--metrics-dir 参数是必需的"))?;
-        let output_path = self.output.as_ref()
+        let output_path = self
+            .output
+            .as_ref()
             .ok_or_else(|| color_eyre::eyre::eyre!("--output 参数是必需的"))?;
 
         log_break!('=');
@@ -175,7 +182,8 @@ impl TestsTrendsAnalyzeCommand {
         let report = self.generate_trend_report(&trends)?;
 
         let writer = FileWriter::new(output_path);
-        writer.write_str_with_dir(&report)
+        writer
+            .write_str_with_dir(&report)
             .wrap_err_with(|| format!("Failed to write trend report to: {}", output_path))?;
 
         log_break!();
@@ -251,7 +259,7 @@ impl TestsTrendsAnalyzeCommand {
 
             // 按模块统计
             for (module, stats) in &m.module_stats {
-                let module_trend = by_module.entry(module.clone()).or_insert_with(Vec::new);
+                let module_trend = by_module.entry(module.clone()).or_default();
                 module_trend.push(TrendDataPoint {
                     timestamp: m.timestamp.clone(),
                     failure_rate: stats.failure_rate,
@@ -261,10 +269,7 @@ impl TestsTrendsAnalyzeCommand {
             }
         }
 
-        FailureRateTrend {
-            overall,
-            by_module,
-        }
+        FailureRateTrend { overall, by_module }
     }
 
     /// 分析测试稳定性
@@ -292,7 +297,7 @@ impl TestsTrendsAnalyzeCommand {
             };
 
             // 失败率在 1%-50% 之间的测试被认为是不稳定的
-            if 1.0 <= failure_rate && failure_rate < 50.0 {
+            if (1.0..50.0).contains(&failure_rate) {
                 unstable_tests.push(UnstableTest {
                     name: test_name,
                     runs,
@@ -303,7 +308,9 @@ impl TestsTrendsAnalyzeCommand {
         }
 
         // 按失败率排序
-        unstable_tests.sort_by(|a, b| b.failure_rate.partial_cmp(&a.failure_rate).unwrap_or(std::cmp::Ordering::Equal));
+        unstable_tests.sort_by(|a, b| {
+            b.failure_rate.partial_cmp(&a.failure_rate).unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         Ok(StabilityAnalysis {
             total_unstable: unstable_tests.len(),
@@ -325,7 +332,7 @@ impl TestsTrendsAnalyzeCommand {
 
             // 按模块统计
             for (module, stats) in &m.module_stats {
-                let module_trend = by_module.entry(module.clone()).or_insert_with(Vec::new);
+                let module_trend = by_module.entry(module.clone()).or_default();
                 module_trend.push(DurationDataPoint {
                     timestamp: m.timestamp.clone(),
                     duration_secs: stats.total_duration,
@@ -333,10 +340,7 @@ impl TestsTrendsAnalyzeCommand {
             }
         }
 
-        DurationTrend {
-            overall,
-            by_module,
-        }
+        DurationTrend { overall, by_module }
     }
 
     /// 生成趋势报告
@@ -345,14 +349,20 @@ impl TestsTrendsAnalyzeCommand {
 
         lines.push("# Test Trends Report".to_string());
         lines.push(String::new());
-        lines.push(format!("**Generated**: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")));
+        lines.push(format!(
+            "**Generated**: {}",
+            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
+        ));
         lines.push(String::new());
 
         // 失败率趋势
         lines.push("## Failure Rate Trend".to_string());
         lines.push(String::new());
         if let Some(last) = trends.failure_rate.overall.last() {
-            lines.push(format!("**Latest Failure Rate**: {:.2}%", last.failure_rate));
+            lines.push(format!(
+                "**Latest Failure Rate**: {:.2}%",
+                last.failure_rate
+            ));
             lines.push(format!("**Total Tests**: {}", last.total));
             lines.push(format!("**Failed Tests**: {}", last.failed));
         }
@@ -361,7 +371,10 @@ impl TestsTrendsAnalyzeCommand {
         // 稳定性分析
         lines.push("## Test Stability Analysis".to_string());
         lines.push(String::new());
-        lines.push(format!("**Unstable Tests**: {}", trends.stability.total_unstable));
+        lines.push(format!(
+            "**Unstable Tests**: {}",
+            trends.stability.total_unstable
+        ));
         lines.push(String::new());
 
         if !trends.stability.unstable_tests.is_empty() {

@@ -4,12 +4,12 @@
 
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileReader;
+use crate::{log_break, log_info, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
-use crate::{log_info, log_success, log_warning, log_break};
+use std::path::{Path, PathBuf};
 
 /// 检查结果
 #[derive(Debug, Default)]
@@ -46,8 +46,8 @@ impl DocsIntegrityCheckCommand {
         let mut has_issues = false;
 
         // 如果未指定具体检查项，则检查所有项
-        let check_architecture = self.architecture || (!self.architecture && !self.timestamps);
-        let check_timestamps = self.timestamps || (!self.architecture && !self.timestamps);
+        let check_architecture = self.architecture || !self.timestamps;
+        let check_timestamps = self.timestamps || !self.architecture;
 
         // 检查架构文档存在性
         if check_architecture {
@@ -57,7 +57,10 @@ impl DocsIntegrityCheckCommand {
             if !result.missing_architecture_docs.is_empty() {
                 has_issues = true;
                 log_break!();
-                log_info!("📋 发现 {} 个缺失的架构文档:", result.missing_architecture_docs.len());
+                log_info!(
+                    "📋 发现 {} 个缺失的架构文档:",
+                    result.missing_architecture_docs.len()
+                );
                 for (module, doc_path) in &result.missing_architecture_docs {
                     log_warning!("  模块 '{}' 缺少架构文档: {}", module, doc_path.display());
                 }
@@ -75,7 +78,10 @@ impl DocsIntegrityCheckCommand {
             if !result.invalid_timestamps.is_empty() {
                 has_issues = true;
                 log_break!();
-                log_info!("📋 发现 {} 个文档的时间戳格式无效:", result.invalid_timestamps.len());
+                log_info!(
+                    "📋 发现 {} 个文档的时间戳格式无效:",
+                    result.invalid_timestamps.len()
+                );
                 for file in &result.invalid_timestamps {
                     log_warning!("  无效的时间戳格式: {}", file.display());
                 }
@@ -108,7 +114,8 @@ impl DocsIntegrityCheckCommand {
         let lib_dirs = lib_walker.list_direct_dirs()?;
 
         for dir in lib_dirs {
-            let module = dir.file_name()
+            let module = dir
+                .file_name()
                 .and_then(|n| n.to_str())
                 .ok_or_else(|| color_eyre::eyre::eyre!("Invalid module name"))?;
 
@@ -116,7 +123,11 @@ impl DocsIntegrityCheckCommand {
             if !doc_path.exists() {
                 let doc_path_clone = doc_path.clone();
                 result.missing_architecture_docs.push((module.to_string(), doc_path));
-                log_warning!("  Missing: {} (module: {})", doc_path_clone.display(), module);
+                log_warning!(
+                    "  Missing: {} (module: {})",
+                    doc_path_clone.display(),
+                    module
+                );
             } else {
                 log_success!("  {} -> {}", module, doc_path.display());
             }
@@ -129,7 +140,8 @@ impl DocsIntegrityCheckCommand {
         let cmd_dirs = cmd_walker.list_direct_dirs()?;
 
         for dir in cmd_dirs {
-            let module = dir.file_name()
+            let module = dir
+                .file_name()
                 .and_then(|n| n.to_str())
                 .ok_or_else(|| color_eyre::eyre::eyre!("Invalid module name"))?;
 
@@ -137,7 +149,11 @@ impl DocsIntegrityCheckCommand {
             if !doc_path.exists() {
                 let doc_path_clone = doc_path.clone();
                 result.missing_architecture_docs.push((module.to_string(), doc_path));
-                log_warning!("  Missing: {} (module: {})", doc_path_clone.display(), module);
+                log_warning!(
+                    "  Missing: {} (module: {})",
+                    doc_path_clone.display(),
+                    module
+                );
             } else {
                 log_success!("  {} -> {}", module, doc_path.display());
             }
@@ -157,8 +173,7 @@ impl DocsIntegrityCheckCommand {
         let doc_files: Vec<PathBuf> = all_files
             .into_iter()
             .filter(|f| {
-                f.extension().map(|e| e == "md").unwrap_or(false)
-                    && !self.should_skip_file(f)
+                f.extension().map(|e| e == "md").unwrap_or(false) && !self.should_skip_file(f)
             })
             .collect();
 
@@ -170,14 +185,10 @@ impl DocsIntegrityCheckCommand {
             let lines = reader.lines()?;
 
             // 检查最后5行
-            let last_lines: Vec<&str> = lines.iter()
-                .rev()
-                .take(5)
-                .map(|s| s.as_str())
-                .collect();
+            let last_lines: Vec<&str> = lines.iter().rev().take(5).map(|s| s.as_str()).collect();
 
-            let has_valid_timestamp = last_lines.iter()
-                .any(|line| timestamp_pattern.is_match(line));
+            let has_valid_timestamp =
+                last_lines.iter().any(|line| timestamp_pattern.is_match(line));
 
             if !has_valid_timestamp {
                 result.invalid_timestamps.push(file_path);
@@ -189,10 +200,11 @@ impl DocsIntegrityCheckCommand {
     }
 
     /// 判断是否应该跳过文件
-    fn should_skip_file(&self, path: &PathBuf) -> bool {
+    fn should_skip_file(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy();
         path_str.contains("/templates/")
-            || path.file_name()
+            || path
+                .file_name()
                 .and_then(|n| n.to_str())
                 .map(|n| n == "README.md")
                 .unwrap_or(false)
@@ -209,10 +221,18 @@ impl DocsIntegrityCheckCommand {
 
             writeln!(file, "docs_integrity_passed={}", !has_issues)
                 .wrap_err("Failed to write integrity_passed")?;
-            writeln!(file, "docs_missing_architecture={}", result.missing_architecture_docs.len())
-                .wrap_err("Failed to write missing_architecture")?;
-            writeln!(file, "docs_invalid_timestamps={}", result.invalid_timestamps.len())
-                .wrap_err("Failed to write invalid_timestamps")?;
+            writeln!(
+                file,
+                "docs_missing_architecture={}",
+                result.missing_architecture_docs.len()
+            )
+            .wrap_err("Failed to write missing_architecture")?;
+            writeln!(
+                file,
+                "docs_invalid_timestamps={}",
+                result.invalid_timestamps.len()
+            )
+            .wrap_err("Failed to write invalid_timestamps")?;
         }
 
         // CI 模式：非阻塞退出

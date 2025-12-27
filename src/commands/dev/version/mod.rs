@@ -5,4 +5,3 @@
 mod generate;
 
 pub use generate::{VersionGenerateCommand, VersionInfo};
-

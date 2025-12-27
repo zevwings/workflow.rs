@@ -1,11 +1,11 @@
 //! 文档检查报告生成实现
 
-use color_eyre::{eyre::WrapErr, Result};
+use crate::log_info;
 use chrono::Utc;
+use color_eyre::{eyre::WrapErr, Result};
 use std::env;
 use std::fs;
 use std::path::Path;
-use crate::log_info;
 
 /// 文档检查报告生成命令
 pub struct DocsReportGenerateCommand {
@@ -76,7 +76,8 @@ impl DocsReportGenerateCommand {
         let (links_passed, broken_links) = self.read_links_results();
 
         // 获取仓库信息
-        let repository = env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| "unknown/repo".to_string());
+        let repository =
+            env::var("GITHUB_REPOSITORY").unwrap_or_else(|_| "unknown/repo".to_string());
 
         let mut content = String::new();
         content.push_str("# 文档检查报告\n\n");
@@ -89,7 +90,10 @@ impl DocsReportGenerateCommand {
         if links_passed {
             content.push_str("✅ 已完成文档链接有效性检查，所有链接有效。\n\n");
         } else {
-            content.push_str(&format!("⚠️  已完成文档链接有效性检查，发现 {} 个无效链接。\n\n", broken_links));
+            content.push_str(&format!(
+                "⚠️  已完成文档链接有效性检查，发现 {} 个无效链接。\n\n",
+                broken_links
+            ));
         }
 
         // 架构文档存在性检查
@@ -97,7 +101,10 @@ impl DocsReportGenerateCommand {
         if integrity_passed && missing_architecture == 0 {
             content.push_str("✅ 已完成架构文档存在性检查，所有模块都有对应的架构文档。\n\n");
         } else {
-            content.push_str(&format!("⚠️  已完成架构文档存在性检查，发现 {} 个缺失的架构文档。\n\n", missing_architecture));
+            content.push_str(&format!(
+                "⚠️  已完成架构文档存在性检查，发现 {} 个缺失的架构文档。\n\n",
+                missing_architecture
+            ));
         }
 
         // 文档时间戳格式检查
@@ -105,7 +112,10 @@ impl DocsReportGenerateCommand {
         if integrity_passed && invalid_timestamps == 0 {
             content.push_str("✅ 已完成文档时间戳格式检查，所有文档都有正确的时间戳格式。\n\n");
         } else {
-            content.push_str(&format!("⚠️  已完成文档时间戳格式检查，发现 {} 个无效的时间戳格式。\n\n", invalid_timestamps));
+            content.push_str(&format!(
+                "⚠️  已完成文档时间戳格式检查，发现 {} 个无效的时间戳格式。\n\n",
+                invalid_timestamps
+            ));
         }
 
         // 问题汇总
@@ -179,4 +189,3 @@ impl DocsReportGenerateCommand {
         (passed, broken)
     }
 }
-

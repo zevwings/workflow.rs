@@ -5,4 +5,3 @@
 pub mod analyze;
 
 pub use analyze::PerformanceAnalyzeCommand;
-

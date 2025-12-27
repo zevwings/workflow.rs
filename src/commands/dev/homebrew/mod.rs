@@ -5,4 +5,3 @@
 mod update;
 
 pub use update::HomebrewUpdateCommand;
-

@@ -29,4 +29,3 @@ pub use tests::{
     TestsReportGenerateCommand, TestsTrendsAnalyzeCommand,
 };
 pub use version::{VersionGenerateCommand, VersionInfo};
-

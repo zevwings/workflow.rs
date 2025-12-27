@@ -2,12 +2,12 @@
 //!
 //! 对比当前性能与基准性能，检测性能回归。
 
+use crate::{log_error, log_success, log_warning};
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use crate::{log_error, log_warning, log_success};
 
 /// 性能数据摘要
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -85,7 +85,10 @@ impl PerformanceAnalyzeCommand {
         };
 
         if !current_path.exists() {
-            log_error!("Error: Current performance file not found: {}", current_path.display());
+            log_error!(
+                "Error: Current performance file not found: {}",
+                current_path.display()
+            );
             return Err(color_eyre::eyre::eyre!(
                 "Current performance file not found: {}",
                 current_path.display()
@@ -168,22 +171,13 @@ impl PerformanceAnalyzeCommand {
 
         // 按测试对比
         let mut test_changes = HashMap::new();
-        let current_tests: HashMap<String, &TestCase> = current
-            .test_cases
-            .iter()
-            .map(|t| (t.name.clone(), t))
-            .collect();
-        let baseline_tests: HashMap<String, &TestCase> = baseline
-            .test_cases
-            .iter()
-            .map(|t| (t.name.clone(), t))
-            .collect();
+        let current_tests: HashMap<String, &TestCase> =
+            current.test_cases.iter().map(|t| (t.name.clone(), t)).collect();
+        let baseline_tests: HashMap<String, &TestCase> =
+            baseline.test_cases.iter().map(|t| (t.name.clone(), t)).collect();
 
-        let all_tests: std::collections::HashSet<String> = current_tests
-            .keys()
-            .chain(baseline_tests.keys())
-            .cloned()
-            .collect();
+        let all_tests: std::collections::HashSet<String> =
+            current_tests.keys().chain(baseline_tests.keys()).cloned().collect();
 
         for test_name in all_tests {
             let current_test = current_tests.get(&test_name);
@@ -227,7 +221,11 @@ impl PerformanceAnalyzeCommand {
     }
 
     /// 生成性能回归报告
-    fn generate_performance_report(&self, comparison: &ComparisonResult, output: &Path) -> Result<()> {
+    fn generate_performance_report(
+        &self,
+        comparison: &ComparisonResult,
+        output: &Path,
+    ) -> Result<()> {
         let overall = &comparison.overall;
         let regression = comparison.regression;
 
@@ -251,10 +249,7 @@ impl PerformanceAnalyzeCommand {
             report_lines.extend(vec![
                 "## ⚠️ Performance Regression Detected".to_string(),
                 "".to_string(),
-                format!(
-                    "Performance degraded by {:.2}%.",
-                    overall.diff_percent
-                ),
+                format!("Performance degraded by {:.2}%.", overall.diff_percent),
                 "Please review and optimize slow tests.".to_string(),
                 "".to_string(),
             ]);
@@ -281,13 +276,12 @@ impl PerformanceAnalyzeCommand {
 
             let mut sorted_changes: Vec<(&String, &TestChange)> =
                 comparison.test_changes.iter().collect();
-            sorted_changes.sort_by(|a, b| b.1.diff.partial_cmp(&a.1.diff).unwrap_or(std::cmp::Ordering::Equal));
+            sorted_changes.sort_by(|a, b| {
+                b.1.diff.partial_cmp(&a.1.diff).unwrap_or(std::cmp::Ordering::Equal)
+            });
 
             for (test_name, change) in sorted_changes {
-                let diff_str = format!(
-                    "{:+.2}s ({:+.2}%)",
-                    change.diff, change.diff_percent
-                );
+                let diff_str = format!("{:+.2}s ({:+.2}%)", change.diff, change.diff_percent);
                 report_lines.push(format!(
                     "| `{}` | {:.2}s | {:.2}s | {} |",
                     test_name, change.current, change.baseline, diff_str

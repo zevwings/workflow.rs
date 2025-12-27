@@ -2,14 +2,14 @@
 //!
 //! 提供测试文档检查、覆盖率检查等功能。
 
+use crate::base::util::file::FileWriter;
+use crate::{log_break, log_error, log_info, log_success, log_warning};
+use chrono::Local;
 use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 use serde_json::Value;
 use std::fs::OpenOptions;
 use std::io::Write;
-use chrono::Local;
-use crate::{log_info, log_success, log_error, log_warning, log_break};
-use crate::base::util::file::FileWriter;
 
 /// 测试覆盖率检查命令
 pub struct TestsCoverageCheckCommand {
@@ -21,7 +21,12 @@ pub struct TestsCoverageCheckCommand {
 
 impl TestsCoverageCheckCommand {
     /// 创建新的测试覆盖率检查命令
-    pub fn new(threshold: Option<f64>, ci: bool, output: Option<String>, check_type: Option<String>) -> Self {
+    pub fn new(
+        threshold: Option<f64>,
+        ci: bool,
+        output: Option<String>,
+        check_type: Option<String>,
+    ) -> Self {
         Self {
             threshold: threshold.unwrap_or(80.0),
             ci,
@@ -59,15 +64,21 @@ impl TestsCoverageCheckCommand {
         std::fs::create_dir_all(coverage_dir)?;
 
         // 生成 JSON 格式的覆盖率报告
-        let coverage_output = cmd("cargo", ["tarpaulin", "--out", "Json", "--output-dir", coverage_dir])
-            .stderr_capture()
-            .unchecked()
-            .run()
-            .wrap_err("Failed to run cargo tarpaulin")?;
+        let coverage_output = cmd(
+            "cargo",
+            ["tarpaulin", "--out", "Json", "--output-dir", coverage_dir],
+        )
+        .stderr_capture()
+        .unchecked()
+        .run()
+        .wrap_err("Failed to run cargo tarpaulin")?;
 
         if !coverage_output.status.success() {
             log_error!("生成覆盖率报告失败");
-            log_error!("   错误: {}", String::from_utf8_lossy(&coverage_output.stderr));
+            log_error!(
+                "   错误: {}",
+                String::from_utf8_lossy(&coverage_output.stderr)
+            );
             if self.ci {
                 self.output_ci_result(false, 0.0)?;
                 return Ok(());
@@ -187,8 +198,12 @@ impl TestsCoverageCheckCommand {
                 .open(&output_file)
                 .wrap_err_with(|| format!("Failed to open GITHUB_OUTPUT: {}", output_file))?;
 
-            writeln!(file, "coverage_status={}", if passed { "pass" } else { "fail" })
-                .wrap_err("Failed to write coverage_status")?;
+            writeln!(
+                file,
+                "coverage_status={}",
+                if passed { "pass" } else { "fail" }
+            )
+            .wrap_err("Failed to write coverage_status")?;
             writeln!(file, "coverage_passed={}", passed)
                 .wrap_err("Failed to write coverage_passed")?;
             writeln!(file, "coverage_value={:.2}", coverage)
@@ -278,7 +293,8 @@ impl TestsCoverageCheckCommand {
 
         if let Some(ref output_path) = self.output {
             let writer = FileWriter::new(output_path);
-            writer.write_str_with_dir(&report_content)
+            writer
+                .write_str_with_dir(&report_content)
                 .wrap_err_with(|| format!("Failed to write report to: {}", output_path))?;
             log_success!("报告已保存到: {}", output_path);
         } else {

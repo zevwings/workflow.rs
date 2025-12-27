@@ -340,9 +340,18 @@ jobs:
       - name: 📦 Generate version number
         id: generate_version
         run: |
-          cargo run --bin dev --release version generate \
-            --master ${{ steps.detect_mode.outputs.is_master_branch == 'true' }} \
-            --ci
+          # 使用已下载的二进制文件，避免重新编译
+          if [ -f "./target/release/dev" ]; then
+            chmod +x ./target/release/dev
+            ./target/release/dev version generate \
+              --master ${{ steps.detect_mode.outputs.is_master_branch == 'true' }} \
+              --ci
+          else
+            echo "⚠️  dev binary not found, falling back to cargo run"
+            cargo run --bin dev --release -- version generate \
+              --master ${{ steps.detect_mode.outputs.is_master_branch == 'true' }} \
+              --ci
+          fi
 
       - name: 📝 Update Cargo.toml and Cargo.lock version
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
@@ -673,10 +682,27 @@ jobs:
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+            # Windows: 使用已下载的二进制文件或 fallback 到 cargo run
+            if [ -f "target/release/dev.exe" ]; then
+              DEV_CMD="target/release/dev.exe"
+            elif [ -f "target\\release\\dev.exe" ]; then
+              DEV_CMD="target\\release\\dev.exe"
+            else
+              echo "⚠️  dev binary not found, falling back to cargo run"
+              DEV_CMD="cargo run --bin dev --release --"
+            fi
           else
             ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+            # Linux/macOS: 使用已下载的二进制文件或 fallback 到 cargo run
+            if [ -f "./target/release/dev" ]; then
+              chmod +x ./target/release/dev
+              DEV_CMD="./target/release/dev"
+            else
+              echo "⚠️  dev binary not found, falling back to cargo run"
+              DEV_CMD="cargo run --bin dev --release --"
+            fi
           fi
-          SHA256=$(cargo run --bin dev --release checksum calculate "$ARCHIVE_NAME")
+          SHA256=$($DEV_CMD checksum calculate "$ARCHIVE_NAME")
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
           echo "$SHA256" > "sha256-${{ matrix.platform }}.txt"
 
@@ -783,10 +809,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          cargo run --bin dev --release pr create \
-            --version "${{ needs.update-version.outputs.version }}" \
-            --base master \
-            --ci
+          # 使用已下载的二进制文件，避免重新编译
+          if [ -f "./target/release/dev" ]; then
+            chmod +x ./target/release/dev
+            ./target/release/dev pr create \
+              --version "${{ needs.update-version.outputs.version }}" \
+              --base master \
+              --ci
+          else
+            echo "⚠️  dev binary not found, falling back to cargo run"
+            cargo run --bin dev --release -- pr create \
+              --version "${{ needs.update-version.outputs.version }}" \
+              --base master \
+              --ci
+          fi
 
       # Step 2: Merge version update PR (only if needs_increment is true and master branch and has changes)
       - name: ⏳ Wait for PR status update
@@ -896,11 +932,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cargo run --bin dev --release pr merge \
-            --pr-number "${{ steps.create_pr.outputs.pr_number }}" \
-            --commit-title "chore: bump version to ${{ needs.update-version.outputs.version }}" \
-            --commit-message "Automated version bump to ${{ needs.update-version.outputs.version }}\n\nMerged via GitHub Actions workflow" \
-            --ci || true
+          # 使用已下载的二进制文件，避免重新编译
+          if [ -f "./target/release/dev" ]; then
+            chmod +x ./target/release/dev
+            ./target/release/dev pr merge \
+              --pr-number "${{ steps.create_pr.outputs.pr_number }}" \
+              --commit-title "chore: bump version to ${{ needs.update-version.outputs.version }}" \
+              --commit-message "Automated version bump to ${{ needs.update-version.outputs.version }}\n\nMerged via GitHub Actions workflow" \
+              --ci || true
+          else
+            echo "⚠️  dev binary not found, falling back to cargo run"
+            cargo run --bin dev --release -- pr merge \
+              --pr-number "${{ steps.create_pr.outputs.pr_number }}" \
+              --commit-title "chore: bump version to ${{ needs.update-version.outputs.version }}" \
+              --commit-message "Automated version bump to ${{ needs.update-version.outputs.version }}\n\nMerged via GitHub Actions workflow" \
+              --ci || true
+          fi
 
       - name: 🔀 Merge version update PR
         id: merge_pr
@@ -1031,21 +1078,47 @@ jobs:
                 git fetch origin "$MERGE_COMMIT_SHA" 2>/dev/null || \
                 git fetch origin "+refs/heads/*:refs/remotes/origin/*" 2>/dev/null || true
               fi
-              cargo run --bin dev --release tag create \
-                --tag "$TAG" \
-                --commit "$MERGE_COMMIT_SHA" \
-                --ci
+              # 使用已下载的二进制文件，避免重新编译
+              if [ -f "./target/release/dev" ]; then
+                chmod +x ./target/release/dev
+                ./target/release/dev tag create \
+                  --tag "$TAG" \
+                  --commit "$MERGE_COMMIT_SHA" \
+                  --ci
+              else
+                echo "⚠️  dev binary not found, falling back to cargo run"
+                cargo run --bin dev --release -- tag create \
+                  --tag "$TAG" \
+                  --commit "$MERGE_COMMIT_SHA" \
+                  --ci
+              fi
             else
               # 如果没有 merge_commit_sha，使用当前 HEAD
-              cargo run --bin dev --release tag create \
-                --tag "$TAG" \
-                --ci
+              if [ -f "./target/release/dev" ]; then
+                chmod +x ./target/release/dev
+                ./target/release/dev tag create \
+                  --tag "$TAG" \
+                  --ci
+              else
+                echo "⚠️  dev binary not found, falling back to cargo run"
+                cargo run --bin dev --release -- tag create \
+                  --tag "$TAG" \
+                  --ci
+              fi
             fi
           else
             # 非 Master 分支：使用当前 HEAD
-            cargo run --bin dev --release tag create \
-              --tag "$TAG" \
-              --ci
+            if [ -f "./target/release/dev" ]; then
+              chmod +x ./target/release/dev
+              ./target/release/dev tag create \
+                --tag "$TAG" \
+                --ci
+            else
+              echo "⚠️  dev binary not found, falling back to cargo run"
+              cargo run --bin dev --release -- tag create \
+                --tag "$TAG" \
+                --ci
+            fi
           fi
 
       # Step 4: Set job outputs
@@ -1225,14 +1298,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          cargo run --bin dev --release homebrew update \
-            --version "${{ steps.version.outputs.version }}" \
-            --tag "${{ steps.version.outputs.tag }}" \
-            --formula-path Formula/workflow.rb \
-            --template-path Formula/workflow.rb.template \
-            --repo "${{ github.repository }}" \
-            --commit \
-            --push
+          # 使用已下载的二进制文件，避免重新编译
+          if [ -f "./target/release/dev" ]; then
+            chmod +x ./target/release/dev
+            ./target/release/dev homebrew update \
+              --version "${{ steps.version.outputs.version }}" \
+              --tag "${{ steps.version.outputs.tag }}" \
+              --formula-path Formula/workflow.rb \
+              --template-path Formula/workflow.rb.template \
+              --repo "${{ github.repository }}" \
+              --commit \
+              --push
+          else
+            echo "⚠️  dev binary not found, falling back to cargo run"
+            cargo run --bin dev --release -- homebrew update \
+              --version "${{ steps.version.outputs.version }}" \
+              --tag "${{ steps.version.outputs.tag }}" \
+              --formula-path Formula/workflow.rb \
+              --template-path Formula/workflow.rb.template \
+              --repo "${{ github.repository }}" \
+              --commit \
+              --push
+          fi
 
   # 清理已合并分支的 alpha tag
   # 当 PR 合并到 master 后，清理指向已合并提交的 alpha tag
@@ -1273,8 +1360,18 @@ jobs:
           fi
 
           CURRENT_VERSION="${{ needs.create-tag.outputs.version }}"
-          cargo run --bin dev --release tag cleanup \
-            --merge-commit "$MERGE_COMMIT_SHA" \
-            --version "$CURRENT_VERSION" \
-            --ci
+          # 使用已下载的二进制文件，避免重新编译
+          if [ -f "./target/release/dev" ]; then
+            chmod +x ./target/release/dev
+            ./target/release/dev tag cleanup \
+              --merge-commit "$MERGE_COMMIT_SHA" \
+              --version "$CURRENT_VERSION" \
+              --ci
+          else
+            echo "⚠️  dev binary not found, falling back to cargo run"
+            cargo run --bin dev --release -- tag cleanup \
+              --merge-commit "$MERGE_COMMIT_SHA" \
+              --version "$CURRENT_VERSION" \
+              --ci
+          fi
 
