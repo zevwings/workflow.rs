@@ -477,8 +477,7 @@ mod tests {
         }
 
         // 打开配置文件（使用绝对路径）
-        let abs_path = std::fs::canonicalize(&config_path)
-            .unwrap_or_else(|_| config_path.clone());
+        let abs_path = std::fs::canonicalize(config_path).unwrap_or_else(|_| config_path.clone());
         let config = Config::open(&abs_path)?;
 
         // 读取配置值
