@@ -1,6 +1,5 @@
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashSet;
-use std::str::FromStr;
 
 use super::{GitAuth, GitCommand};
 use crate::git::helpers::open_repo;
@@ -8,6 +7,7 @@ use git2::{FetchOptions, PushOptions};
 
 const COMMON_DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
 /// 尝试使用 git switch，失败时回退到 git checkout
+#[allow(dead_code)]
 fn switch_or_checkout(
     switch_args: &[&str],
     checkout_args: &[&str],
@@ -579,6 +579,7 @@ impl GitBranch {
     }
 
     /// 解析本地分支列表
+    #[allow(dead_code)]
     fn parse_local_branches(output: &str, branch_set: &mut HashSet<String>) {
         for line in output.lines() {
             let line = line.trim();
@@ -984,8 +985,8 @@ impl GitBranch {
             .wrap_err_with(|| format!("Failed to initialize rebase onto branch: {}", target_branch))?;
 
         // 应用所有 rebase 操作
-        while let Some(op) = rebase.next() {
-            let op = op.wrap_err("Failed to get next rebase operation")?;
+        while let Some(_op) = rebase.next() {
+            let _op = _op.wrap_err("Failed to get next rebase operation")?;
 
             // 检查是否有冲突
             if repo.index()?.has_conflicts() {
@@ -1102,8 +1103,8 @@ impl GitBranch {
             })?;
 
         // 应用所有 rebase 操作
-        while let Some(op) = rebase.next() {
-            let op = op.wrap_err("Failed to get next rebase operation")?;
+        while let Some(_op) = rebase.next() {
+            let _op = _op.wrap_err("Failed to get next rebase operation")?;
 
             // 检查是否有冲突
             if repo.index()?.has_conflicts() {
