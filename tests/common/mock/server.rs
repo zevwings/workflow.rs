@@ -825,7 +825,10 @@ mod tests {
         // 验证环境变量已设置且值正确
         let env_value = env::var("GITHUB_API_URL")
             .expect("GITHUB_API_URL should be set after setup_github_api()");
-        assert_eq!(env_value, base_url, "GITHUB_API_URL should match server base_url");
+        assert_eq!(
+            env_value, base_url,
+            "GITHUB_API_URL should match server base_url"
+        );
         // 确保 server 在验证完成前不被丢弃
         drop(server);
     }
@@ -848,9 +851,12 @@ mod tests {
         let base_url = server.base_url().to_string();
         server.setup_jira_api();
         // 验证环境变量已设置且值正确
-        let env_value = env::var("JIRA_API_URL")
-            .expect("JIRA_API_URL should be set after setup_jira_api()");
-        assert_eq!(env_value, base_url, "JIRA_API_URL should match server base_url");
+        let env_value =
+            env::var("JIRA_API_URL").expect("JIRA_API_URL should be set after setup_jira_api()");
+        assert_eq!(
+            env_value, base_url,
+            "JIRA_API_URL should match server base_url"
+        );
         // 确保 server 在验证完成前不被丢弃
         drop(server);
     }
