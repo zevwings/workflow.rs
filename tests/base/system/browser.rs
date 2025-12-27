@@ -93,13 +93,14 @@ fn test_browser_open_with_invalid_url_handles_gracefully() {
 /// - **可能实际打开浏览器**: 某些系统可能尝试用默认浏览器打开空URL
 /// - **可能导致阻塞**: 浏览器启动过程可能阻塞测试执行
 /// - **平台行为不一致**: 不同操作系统处理空URL的方式不同
+/// - **Windows特殊处理**: Windows上已通过#[cfg]跳过，避免弹出错误对话框
 /// - **影响测试速度**: 打开浏览器会显著增加测试时间
 ///
 /// ## 如何手动运行
 /// ```bash
 /// cargo test test_browser_open_with_empty_url_handles_gracefully -- --ignored
 /// ```
-/// 注意：此测试可能会实际启动浏览器
+/// 注意：此测试在非Windows平台上运行，可能会实际启动浏览器
 ///
 /// ## 测试场景
 /// 1. 调用 `Browser::open()` 传入空URL（""）
@@ -112,9 +113,13 @@ fn test_browser_open_with_invalid_url_handles_gracefully() {
 /// - 不会panic或无响应
 /// - 重要的是不会导致测试hang或crash
 #[test]
-#[ignore]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：可能阻塞或弹出错误对话框
+#[ignore] // 忽略：实际打开浏览器可能导致阻塞，影响测试速度
 fn test_browser_open_with_empty_url_handles_gracefully() {
     // Arrange: 准备空URL
+    // 注意：此测试在实际环境中可能会尝试打开浏览器，导致阻塞
+    // Windows 上已通过 #[cfg] 跳过，因为 Windows 可能会尝试用默认程序打开空 URL，导致阻塞
+    // 如果需要运行此测试，请使用: cargo test -- --ignored
     let empty_url = "";
 
     // Act: 尝试打开空URL

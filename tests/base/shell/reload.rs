@@ -296,6 +296,7 @@ fn test_reload_result_reload_hint_unix_format() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：Zsh 在 Windows 上不支持，会返回不同的消息格式
 fn test_reload_shell_returns_result() -> Result<()> {
     // Arrange: 准备测试 Reload::shell() 总是返回 Result（覆盖 reload.rs:41）
     // 即使失败，也应该返回 Ok(ReloadResult)，而不是 Err
@@ -430,9 +431,37 @@ fn test_reload_shell_all_shell_types() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：使用 Zsh，Windows 上不支持
 fn test_reload_shell_success_messages() {
     // Arrange: 准备测试成功重载时的消息格式（覆盖 reload.rs:76-83）
     let result = Reload::shell(&Shell::Zsh);
+
+    if let Ok(reload_result) = result {
+        if reload_result.reloaded {
+            // Assert: 验证成功消息格式
+            assert_eq!(reload_result.messages.len(), 2);
+            assert!(reload_result.messages[0].contains("reloaded"));
+            assert!(reload_result.messages[1].contains("current shell"));
+        }
+    }
+}
+
+/// 测试 Windows 上 PowerShell 成功重载时的消息格式
+///
+/// ## 测试目的
+/// 验证在 Windows 上使用 PowerShell 时，成功重载的消息格式正确。
+///
+/// ## 测试场景
+/// 1. 在 Windows 上调用 Reload::shell() 使用 PowerShell
+/// 2. 如果重载成功，验证成功消息格式
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+#[cfg(target_os = "windows")]
+fn test_reload_shell_success_messages_windows() {
+    // Arrange: 准备测试成功重载时的消息格式（Windows 版本）
+    let result = Reload::shell(&Shell::PowerShell);
 
     if let Ok(reload_result) = result {
         if reload_result.reloaded {
@@ -457,6 +486,7 @@ fn test_reload_shell_success_messages() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：Zsh 在 Windows 上不支持，会返回不同的消息格式
 fn test_reload_shell_failure_messages() {
     // Arrange: 准备测试失败重载时的消息格式（覆盖 reload.rs:84-91）
     // 注意：这个测试可能在某些环境中总是成功，这是正常的
@@ -484,6 +514,7 @@ fn test_reload_shell_failure_messages() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：Zsh 在 Windows 上不支持，会返回不同的 reload_hint 格式
 fn test_reload_shell_reload_hint_contains_config_path() {
     // Arrange: 准备测试 reload_hint 包含配置文件路径
     let result = Reload::shell(&Shell::Zsh);
@@ -494,6 +525,108 @@ fn test_reload_shell_reload_hint_contains_config_path() {
         assert!(
             reload_result.reload_hint.starts_with("source")
                 || reload_result.reload_hint.starts_with(".")
+        );
+    }
+}
+
+// ==================== Windows 特定测试 ====================
+
+/// 测试 Windows 上 PowerShell 的 Reload::shell() 总是返回 Result
+///
+/// ## 测试目的
+/// 验证在 Windows 上使用 PowerShell 时，Reload::shell() 总是返回 Result。
+///
+/// ## 测试场景
+/// 1. 在 Windows 上调用 Reload::shell() 使用 PowerShell
+/// 2. 验证返回的是 Ok(ReloadResult)
+/// 3. 验证结果结构正确
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+#[cfg(target_os = "windows")]
+fn test_reload_shell_returns_result_windows() -> Result<()> {
+    // Arrange: 准备测试 Reload::shell() 总是返回 Result（Windows 版本）
+    // 即使失败，也应该返回 Ok(ReloadResult)，而不是 Err
+    let result = Reload::shell(&Shell::PowerShell);
+
+    // Assert: 验证返回的是 Ok(ReloadResult)
+    assert!(result.is_ok());
+
+    let reload_result = result.map_err(|e| {
+        color_eyre::eyre::eyre!("Reload::shell should return Ok(ReloadResult): {}", e)
+    })?;
+    // Assert: 验证结果结构
+    // PowerShell 应该使用 "." 而不是 "source"
+    assert!(
+        reload_result.reload_hint.contains(".") || reload_result.reload_hint.contains("source")
+    );
+    Ok(())
+}
+
+/// 测试 Windows 上 PowerShell 失败重载时的消息格式
+///
+/// ## 测试目的
+/// 验证在 Windows 上使用 PowerShell 时，失败重载的消息格式正确。
+///
+/// ## 测试场景
+/// 1. 在 Windows 上调用 Reload::shell() 使用 PowerShell
+/// 2. 如果重载失败，验证失败消息格式
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+#[cfg(target_os = "windows")]
+fn test_reload_shell_failure_messages_windows() {
+    // Arrange: 准备测试失败重载时的消息格式（Windows 版本）
+    // 注意：这个测试可能在某些环境中总是成功，这是正常的
+    let result = Reload::shell(&Shell::PowerShell);
+
+    if let Ok(reload_result) = result {
+        if !reload_result.reloaded {
+            // Assert: 验证失败消息格式
+            // Windows 上可能返回 "Shell type PowerShell is not supported" 或 "Could not reload"
+            assert!(
+                reload_result.messages.len() >= 1,
+                "Should have at least one message"
+            );
+            // 消息可能包含 "not supported" 或 "Could not reload"
+            assert!(
+                reload_result.messages[0].contains("not supported")
+                    || reload_result.messages[0].contains("Could not reload"),
+                "Message should indicate failure: {:?}",
+                reload_result.messages
+            );
+        }
+    }
+}
+
+/// 测试 Windows 上 PowerShell 的 reload_hint 包含配置文件路径
+///
+/// ## 测试目的
+/// 验证在 Windows 上使用 PowerShell 时，reload_hint 包含配置文件路径。
+///
+/// ## 测试场景
+/// 1. 在 Windows 上调用 Reload::shell() 使用 PowerShell
+/// 2. 验证 reload_hint 格式正确
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+#[cfg(target_os = "windows")]
+fn test_reload_shell_reload_hint_contains_config_path_windows() {
+    // Arrange: 准备测试 reload_hint 包含配置文件路径（Windows 版本）
+    let result = Reload::shell(&Shell::PowerShell);
+
+    if let Ok(reload_result) = result {
+        // reload_hint 应该包含配置文件路径（可能是相对路径或绝对路径）
+        // 对于 PowerShell，应该是 "." 加上路径，或者如果不支持则返回提示信息
+        assert!(
+            reload_result.reload_hint.starts_with(".")
+                || reload_result.reload_hint.starts_with("source")
+                || reload_result.reload_hint.contains("manually reload"),
+            "reload_hint should start with '.' or 'source', or contain 'manually reload': {}",
+            reload_result.reload_hint
         );
     }
 }
@@ -511,10 +644,44 @@ fn test_reload_shell_reload_hint_contains_config_path() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：使用 Zsh，Windows 上不支持
 fn test_reload_shell_consistency() -> Result<()> {
     // Arrange: 准备测试多次调用的一致性
     let result1 = Reload::shell(&Shell::Zsh);
     let result2 = Reload::shell(&Shell::Zsh);
+
+    // 两次调用都应该返回结果
+    assert!(result1.is_ok());
+    assert!(result2.is_ok());
+
+    let reload_result1 = result1
+        .map_err(|e| color_eyre::eyre::eyre!("First call should return Ok(ReloadResult): {}", e))?;
+    let reload_result2 = result2.map_err(|e| {
+        color_eyre::eyre::eyre!("Second call should return Ok(ReloadResult): {}", e)
+    })?;
+
+    // reload_hint 应该相同（配置文件路径应该相同）
+    assert_eq!(reload_result1.reload_hint, reload_result2.reload_hint);
+    Ok(())
+}
+
+/// 测试 Windows 上 PowerShell 多次调用的一致性
+///
+/// ## 测试目的
+/// 验证在 Windows 上使用 PowerShell 时，多次调用的一致性。
+///
+/// ## 测试场景
+/// 1. 在 Windows 上多次调用 Reload::shell() 使用 PowerShell
+/// 2. 验证结果一致性
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+#[cfg(target_os = "windows")]
+fn test_reload_shell_consistency_windows() -> Result<()> {
+    // Arrange: 准备测试多次调用的一致性（Windows 版本）
+    let result1 = Reload::shell(&Shell::PowerShell);
+    let result2 = Reload::shell(&Shell::PowerShell);
 
     // 两次调用都应该返回结果
     assert!(result1.is_ok());

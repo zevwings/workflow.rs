@@ -139,6 +139,7 @@ fn test_detect_installed_shells_fallback_with_missing_etc_shells_handles_gracefu
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：使用 Unix 路径，Windows 上不存在这些路径
 fn test_detect_shell_with_different_paths() {
     // Arrange: 准备测试不同 shell 路径的检测
     // 这个测试验证 Shell::from_shell_path 的功能
@@ -280,6 +281,7 @@ fn test_detect_installed_shells_no_duplicates() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：使用 Unix 路径 /bin/zsh
 fn test_detect_shell_from_shell_path_fallback() -> Result<()> {
     // Arrange: 使用 EnvGuard 设置有效的 shell 路径（覆盖 detect.rs:26-29）
     let mut guard = EnvGuard::new();

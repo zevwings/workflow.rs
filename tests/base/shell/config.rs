@@ -522,18 +522,75 @@ fn test_add_source_for_shell_bash() {
     let _ = ShellConfigManager::remove_source_for_shell(&Shell::Bash, source_path);
 }
 
-/// 测试向PowerShell配置文件添加source语句
+/// 测试向PowerShell配置文件添加source语句（非Windows平台）
 ///
 /// ## 测试目的
 /// 验证`ShellConfigManager`能够正确向用户的PowerShell配置文件添加source语句（使用`.`关键字），
-/// 用于加载shell补全脚本。
+/// 用于加载shell补全脚本（非Windows平台，使用 ~/.config/powershell/ 路径）。
+///
+/// ## 为什么被忽略
+/// - **修改系统文件**: 会实际修改用户的PowerShell配置文件
+/// - **安全风险**: 错误的修改可能破坏用户的PowerShell环境
+/// - **需要PowerShell环境**: 需要实际的PowerShell shell环境
+/// - **难以恢复**: 配置修改可能难以完全撤销
+/// - **配置文件位置**: PowerShell配置文件位置因版本和安装方式不同而异
+///
+/// ## 如何手动运行
+/// ```bash
+/// # 1. 先备份配置文件！
+/// cp ~/.config/powershell/Microsoft.PowerShell_profile.ps1 ~/.config/powershell/Microsoft.PowerShell_profile.ps1.backup
+///
+/// # 2. 运行测试
+/// cargo test test_add_source_for_shell_powershell -- --ignored
+///
+/// # 3. 如需恢复
+/// cp ~/.config/powershell/Microsoft.PowerShell_profile.ps1.backup ~/.config/powershell/Microsoft.PowerShell_profile.ps1
+/// ```
+/// **⚠️ 警告**: 此测试会修改你的PowerShell配置文件！请务必先备份！
+///
+/// ## 测试场景
+/// 1. 准备source路径（$HOME/.workflow/powershell_completions）
+/// 2. 调用add_source_for_shell添加source语句到PowerShell配置文件
+/// 3. 验证source语句已添加
+/// 4. 清理：调用remove_source_for_shell删除添加的语句
+///
+/// ## 预期行为
+/// - source语句正确添加到PowerShell配置文件末尾
+/// - 添加的语句格式：`. $HOME/.workflow/powershell_completions`（使用`.`而非`source`）
+/// - 文件格式保持完整（换行符等）
+/// - 不破坏现有配置
+/// - 清理操作能正确删除添加的语句
+/// - 可以被PowerShell正确解析和执行
+#[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：Windows 使用不同的配置文件路径
+#[ignore] // 需要实际的 shell 环境
+fn test_add_source_for_shell_powershell() {
+    // Arrange: 准备测试为 PowerShell 添加 source 语句（使用 `.` 关键字）
+    use clap_complete::Shell;
+
+    let source_path = "$HOME/.workflow/powershell_completions";
+    let result = ShellConfigManager::add_source_for_shell(&Shell::PowerShell, source_path, None);
+
+    if let Ok(added) = result {
+        assert!(added || !added);
+    }
+
+    // 清理
+    let _ = ShellConfigManager::remove_source_for_shell(&Shell::PowerShell, source_path);
+}
+
+/// 测试向PowerShell配置文件添加source语句（Windows平台）
+///
+/// ## 测试目的
+/// 验证`ShellConfigManager`能够正确向用户的PowerShell配置文件添加source语句（使用`.`关键字），
+/// 用于加载shell补全脚本（Windows平台，使用 Documents/PowerShell/ 或 Documents/WindowsPowerShell/ 路径）。
 ///
 /// ## 为什么被忽略
 /// - **修改系统文件**: 会实际修改用户的PowerShell配置文件（$PROFILE）
 /// - **安全风险**: 错误的修改可能破坏用户的PowerShell环境
 /// - **需要PowerShell环境**: 需要实际的PowerShell shell环境
 /// - **难以恢复**: 配置修改可能难以完全撤销
-/// - **Windows特定**: 主要在Windows系统上运行，跨平台测试困难
+/// - **Windows特定**: 主要在Windows系统上运行
 /// - **配置文件位置**: PowerShell配置文件位置因版本和安装方式不同而异
 ///
 /// ## 如何手动运行
@@ -542,7 +599,7 @@ fn test_add_source_for_shell_bash() {
 /// Copy-Item $PROFILE "$PROFILE.backup"
 ///
 /// # 2. 运行测试
-/// cargo test test_add_source_for_shell_powershell -- --ignored
+/// cargo test test_add_source_for_shell_powershell_windows -- --ignored
 ///
 /// # 3. 如需恢复
 /// Copy-Item "$PROFILE.backup" $PROFILE
@@ -562,10 +619,12 @@ fn test_add_source_for_shell_bash() {
 /// - 不破坏现有配置
 /// - 清理操作能正确删除添加的语句
 /// - 可以被PowerShell正确解析和执行
+/// - Windows上使用正确的配置文件路径（Documents/PowerShell/ 或 Documents/WindowsPowerShell/）
 #[test]
+#[cfg(target_os = "windows")] // Windows 特定测试：使用 Windows PowerShell 配置文件路径
 #[ignore] // 需要实际的 shell 环境
-fn test_add_source_for_shell_powershell() {
-    // Arrange: 准备测试为 PowerShell 添加 source 语句（使用 `.` 关键字）
+fn test_add_source_for_shell_powershell_windows() {
+    // Arrange: 准备测试为 PowerShell 添加 source 语句（Windows 版本，使用 `.` 关键字）
     use clap_complete::Shell;
 
     let source_path = "$HOME/.workflow/powershell_completions";

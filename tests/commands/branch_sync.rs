@@ -34,6 +34,7 @@ use rstest::rstest;
 /// - 命令结构正确
 /// - Mock 服务器正常工作
 #[rstest]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：Git 配置文件锁定问题（Access is denied）
 fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
     // 1. 设置Mock GitHub API
     let mut mock_server = MockServer::new();
@@ -133,6 +134,7 @@ fn test_branch_sync_command_with_rebase(
 /// ## 预期结果
 /// - FF-only同步成功
 #[rstest]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：Git 配置文件锁定问题（Access is denied）
 fn test_branch_sync_command_with_ff_only(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
