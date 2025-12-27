@@ -21,9 +21,9 @@
 //! }
 //! ```
 
-use color_eyre::Result;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use color_eyre::{eyre::WrapErr, Result};
+use git2::{IndexAddOption, Repository, Signature};
+use std::path::PathBuf;
 
 use crate::common::isolation::TestIsolation;
 
@@ -97,24 +97,49 @@ impl GitTestEnv {
         }
 
         // 初始化Git仓库，设置默认分支为main
-        Self::run_git_command(&work_dir, &["init", "-b", "main"])?;
+        let mut init_opts = git2::RepositoryInitOptions::new();
+        init_opts.initial_head("main");
+        let repo = Repository::init_opts(&work_dir, &init_opts)
+            .wrap_err("Failed to initialize git repository")?;
 
         // 在仓库的配置文件中设置Git用户配置
-        // 使用 --local 选项设置配置，在 Command 中显式移除 GIT_CONFIG 环境变量
-        // 这样可以避免 "only one config file at a time" 错误
-        Self::run_git_command_without_git_config(
-            &work_dir,
-            &["config", "--local", "user.name", "Test User"],
-        )?;
-        Self::run_git_command_without_git_config(
-            &work_dir,
-            &["config", "--local", "user.email", "test@example.com"],
-        )?;
+        // 使用 git2 API 设置本地配置，避免 GIT_CONFIG 环境变量冲突
+        let mut config = repo
+            .config()
+            .wrap_err("Failed to open repository config")?;
+        config
+            .set_str("user.name", "Test User")
+            .wrap_err("Failed to set user.name")?;
+        config
+            .set_str("user.email", "test@example.com")
+            .wrap_err("Failed to set user.email")?;
 
         // 创建初始提交
         std::fs::write(work_dir.join("README.md"), "# Test Repository\n")?;
-        Self::run_git_command(&work_dir, &["add", "."])?;
-        Self::run_git_command(&work_dir, &["commit", "-m", "Initial commit"])?;
+
+        // 添加所有文件到索引
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        index
+            .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
+            .wrap_err("Failed to add files to index")?;
+        let tree_id = index
+            .write_tree()
+            .wrap_err("Failed to write index to tree")?;
+        index.write().wrap_err("Failed to write index")?;
+
+        // 创建提交
+        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
+        let signature = Signature::now("Test User", "test@example.com")
+            .wrap_err("Failed to create signature")?;
+        repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            "Initial commit",
+            &tree,
+            &[],
+        )
+        .wrap_err("Failed to create initial commit")?;
 
         Ok(Self { isolation })
     }
@@ -156,7 +181,14 @@ impl GitTestEnv {
     /// env.create_branch("feature/test")?;
     /// ```
     pub fn create_branch(&self, branch_name: &str) -> Result<()> {
-        Self::run_git_command(&self.path(), &["branch", branch_name])
+        let repo = Repository::open(&self.path()).wrap_err("Failed to open repository")?;
+        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let head_commit = repo
+            .find_commit(head.target().unwrap())
+            .wrap_err("Failed to find HEAD commit")?;
+        repo.branch(branch_name, &head_commit, false)
+            .wrap_err_with(|| format!("Failed to create branch: {}", branch_name))?;
+        Ok(())
     }
 
     /// 切换分支
@@ -178,7 +210,18 @@ impl GitTestEnv {
     /// env.checkout("feature/test")?;
     /// ```
     pub fn checkout(&self, branch_name: &str) -> Result<()> {
-        Self::run_git_command(&self.path(), &["checkout", branch_name])
+        let repo = Repository::open(&self.path()).wrap_err("Failed to open repository")?;
+        let refname = format!("refs/heads/{}", branch_name);
+        repo.set_head(&refname)
+            .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
+        repo.checkout_head(Some(
+            git2::build::CheckoutBuilder::default()
+                .force()
+                .remove_ignored(false)
+                .remove_untracked(false),
+        ))
+        .wrap_err_with(|| format!("Failed to checkout HEAD for branch: {}", branch_name))?;
+        Ok(())
     }
 
     /// 创建并切换到新分支
@@ -200,7 +243,24 @@ impl GitTestEnv {
     /// env.checkout_new_branch("feature/test")?;
     /// ```
     pub fn checkout_new_branch(&self, branch_name: &str) -> Result<()> {
-        Self::run_git_command(&self.path(), &["checkout", "-b", branch_name])
+        let repo = Repository::open(&self.path()).wrap_err("Failed to open repository")?;
+        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let head_commit = repo
+            .find_commit(head.target().unwrap())
+            .wrap_err("Failed to find HEAD commit")?;
+        repo.branch(branch_name, &head_commit, false)
+            .wrap_err_with(|| format!("Failed to create branch: {}", branch_name))?;
+        let refname = format!("refs/heads/{}", branch_name);
+        repo.set_head(&refname)
+            .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
+        repo.checkout_head(Some(
+            git2::build::CheckoutBuilder::default()
+                .force()
+                .remove_ignored(false)
+                .remove_untracked(false),
+        ))
+        .wrap_err_with(|| format!("Failed to checkout HEAD for branch: {}", branch_name))?;
+        Ok(())
     }
 
     /// 创建测试文件
@@ -248,8 +308,41 @@ impl GitTestEnv {
     /// env.add_and_commit("Add test file")?;
     /// ```
     pub fn add_and_commit(&self, message: &str) -> Result<()> {
-        Self::run_git_command(&self.path(), &["add", "."])?;
-        Self::run_git_command(&self.path(), &["commit", "-m", message])
+        let repo = Repository::open(&self.path()).wrap_err("Failed to open repository")?;
+
+        // 添加所有文件到索引
+        let mut index = repo.index().wrap_err("Failed to open repository index")?;
+        index
+            .add_all(["."].iter(), IndexAddOption::DEFAULT, None)
+            .wrap_err("Failed to add files to index")?;
+        let tree_id = index
+            .write_tree()
+            .wrap_err("Failed to write index to tree")?;
+        index.write().wrap_err("Failed to write index")?;
+
+        // 创建提交
+        let tree = repo.find_tree(tree_id).wrap_err("Failed to find tree")?;
+        let signature = Signature::now("Test User", "test@example.com")
+            .wrap_err("Failed to create signature")?;
+
+        // 获取父提交（如果有）
+        let parent_commit = repo.head().ok().and_then(|head| {
+            head.target()
+                .and_then(|oid| repo.find_commit(oid).ok())
+        });
+        let parents: Vec<&git2::Commit> = parent_commit.iter().collect();
+
+        repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            message,
+            &tree,
+            &parents,
+        )
+        .wrap_err_with(|| format!("Failed to create commit: {}", message))?;
+
+        Ok(())
     }
 
     /// 创建测试提交
@@ -295,20 +388,18 @@ impl GitTestEnv {
     /// assert_eq!(branch, "main");
     /// ```
     pub fn current_branch(&self) -> Result<String> {
-        let output = Command::new("git")
-            .args(["branch", "--show-current"])
-            .current_dir(self.path())
-            .output()?;
+        let repo = Repository::open(&self.path()).wrap_err("Failed to open repository")?;
+        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let branch_name = head
+            .name()
+            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD is not a branch"))?;
 
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to get current branch: {}",
-                error
-            ));
-        }
+        // 提取分支名（从 refs/heads/main -> main）
+        let branch_name = branch_name
+            .strip_prefix("refs/heads/")
+            .ok_or_else(|| color_eyre::eyre::eyre!("Invalid branch reference: {}", branch_name))?;
 
-        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+        Ok(branch_name.to_string())
     }
 
     /// 获取最后一次提交的SHA
@@ -326,20 +417,12 @@ impl GitTestEnv {
     /// let sha = env.last_commit_sha()?;
     /// ```
     pub fn last_commit_sha(&self) -> Result<String> {
-        let output = Command::new("git")
-            .args(["rev-parse", "HEAD"])
-            .current_dir(self.path())
-            .output()?;
-
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Failed to get commit SHA: {}",
-                error
-            ));
-        }
-
-        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+        let repo = Repository::open(&self.path()).wrap_err("Failed to open repository")?;
+        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let oid = head.target().ok_or_else(|| {
+            color_eyre::eyre::eyre!("HEAD does not point to a valid commit")
+        })?;
+        Ok(oid.to_string())
     }
 
     /// 添加假的远程仓库引用（用于测试需要远程分支的功能）
@@ -373,7 +456,7 @@ impl GitTestEnv {
     /// ```
     #[allow(dead_code)] // 这是一个公共API，可能被其他测试使用
     pub fn add_fake_remote(&self, remote_name: &str, remote_url: &str) -> Result<()> {
-        let repo_path = self.path();
+        let repo = Repository::open(&self.path()).wrap_err("Failed to open repository")?;
 
         // 1. 如果URL是https://，配置url.insteadOf避免真实网络请求
         if remote_url.starts_with("https://") {
@@ -383,53 +466,47 @@ impl GitTestEnv {
                 if let Some(path_start) = domain.find('/') {
                     let domain_only = &domain[..path_start];
                     // 配置所有该域名的请求都重定向到本地（避免网络请求）
-                    Self::run_git_command(
-                        &repo_path,
-                        &[
-                            "config",
-                            "url.file:///dev/null.insteadOf",
+                    let mut config = repo.config().ok();
+                    if let Some(ref mut config) = config {
+                        let _ = config.set_str(
+                            &format!("url.file:///dev/null.insteadOf"),
                             &format!("https://{}", domain_only),
-                        ],
-                    )
-                    .ok(); // 允许失败，因为可能已经配置过
+                        );
+                    }
                 }
             }
         }
 
         // 2. 添加远程URL（使用假的URL）
-        Self::run_git_command(&repo_path, &["remote", "add", remote_name, remote_url])?;
+        repo.remote(remote_name, remote_url)
+            .wrap_err_with(|| format!("Failed to add remote: {}", remote_name))?;
 
         // 3. 创建假的远程分支引用（指向当前HEAD）
-        Self::run_git_command(
-            &repo_path,
-            &[
-                "update-ref",
-                &format!("refs/remotes/{}/main", remote_name),
-                "HEAD",
-            ],
-        )?;
+        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let head_oid = head.target().ok_or_else(|| {
+            color_eyre::eyre::eyre!("HEAD does not point to a valid commit")
+        })?;
+        repo.reference(
+            &format!("refs/remotes/{}/main", remote_name),
+            head_oid,
+            true,
+            "fake remote ref",
+        )
+        .wrap_err_with(|| format!("Failed to create remote ref: refs/remotes/{}/main", remote_name))?;
 
         // 4. 删除可能存在的旧引用（如origin/master）
-        Self::run_git_command(
-            &repo_path,
-            &[
-                "update-ref",
-                "-d",
-                &format!("refs/remotes/{}/master", remote_name),
-            ],
-        )
-        .ok(); // 允许失败，因为可能不存在
+        let old_ref = format!("refs/remotes/{}/master", remote_name);
+        if let Ok(mut reference) = repo.find_reference(&old_ref) {
+            let _ = reference.delete();
+        }
 
         // 5. 设置远程HEAD引用指向main（让 git remote show origin 能工作）
-        Self::run_git_command(
-            &repo_path,
-            &[
-                "symbolic-ref",
-                &format!("refs/remotes/{}/HEAD", remote_name),
-                &format!("refs/remotes/{}/main", remote_name),
-            ],
-        )
-        .ok(); // 允许失败，某些Git版本可能不支持
+        let _ = repo.reference_symbolic(
+            &format!("refs/remotes/{}/HEAD", remote_name),
+            &format!("refs/remotes/{}/main", remote_name),
+            true,
+            "fake remote HEAD",
+        );
 
         Ok(())
     }
@@ -453,61 +530,6 @@ impl GitTestEnv {
         self.isolation.env_guard()
     }
 
-    /// 运行Git命令
-    ///
-    /// # 参数
-    ///
-    /// * `repo_path` - 仓库路径
-    /// * `args` - Git命令参数
-    ///
-    /// # 返回
-    ///
-    /// 成功时返回`Ok(())`，失败时返回错误
-    fn run_git_command(repo_path: &Path, args: &[&str]) -> Result<()> {
-        let output = Command::new("git").args(args).current_dir(repo_path).output()?;
-
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Git command failed: git {}\nError: {}",
-                args.join(" "),
-                error
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// 运行Git命令，但不使用GIT_CONFIG环境变量
-    ///
-    /// 用于在设置了GIT_CONFIG环境变量的情况下，仍然能够使用--local选项设置仓库本地配置。
-    ///
-    /// # 参数
-    ///
-    /// * `repo_path` - Git仓库路径
-    /// * `args` - Git命令参数
-    ///
-    /// # 返回
-    ///
-    /// 成功时返回`Ok(())`，失败时返回错误
-    fn run_git_command_without_git_config(repo_path: &Path, args: &[&str]) -> Result<()> {
-        let output = Command::new("git")
-            .args(args)
-            .current_dir(repo_path)
-            .env_remove("GIT_CONFIG")
-            .output()?;
-
-        if !output.status.success() {
-            let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!(
-                "Git command failed: git {}\nError: {}",
-                args.join(" "),
-                error
-            ));
-        }
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -621,14 +643,12 @@ mod tests {
         env.add_fake_remote("origin", "https://github.com/test/test-repo.git")?;
 
         // 验证远程引用已创建
-        let repo_path = env.path();
-        let output = Command::new("git")
-            .args(["show-ref", "refs/remotes/origin/main"])
-            .current_dir(&repo_path)
-            .output()?;
+        let repo = Repository::open(env.path()).unwrap();
+        let ref_name = "refs/remotes/origin/main";
+        let reference = repo.find_reference(ref_name);
 
         assert!(
-            output.status.success(),
+            reference.is_ok(),
             "Remote ref should exist after add_fake_remote"
         );
 

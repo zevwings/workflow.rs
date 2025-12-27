@@ -1,7 +1,9 @@
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashSet;
 
-use super::GitCommand;
+use super::{GitAuth, GitCommand};
+use crate::git::helpers::open_repo;
+use git2::PushOptions;
 
 const COMMON_DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
 /// 尝试使用 git switch，失败时回退到 git checkout
@@ -612,16 +614,37 @@ impl GitBranch {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push(branch_name: &str, set_upstream: bool) -> Result<()> {
-        let mut args = vec!["push"];
-        if set_upstream {
-            args.push("-u");
-        }
-        args.push("origin");
-        args.push(branch_name);
+        let repo = open_repo()?;
+        let mut remote = repo
+            .find_remote("origin")
+            .wrap_err("Failed to find remote 'origin'")?;
 
-        GitCommand::new(args)
-            .run()
-            .wrap_err_with(|| format!("Failed to push branch: {}", branch_name))
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置推送选项
+        let mut push_options = PushOptions::new();
+        push_options.remote_callbacks(callbacks);
+
+        // 构建 refspec
+        let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
+
+        // 推送
+        remote
+            .push(&[&refspec], Some(&mut push_options))
+            .wrap_err_with(|| format!("Failed to push branch: {}", branch_name))?;
+
+        // 如果设置了 upstream，更新本地分支的上游跟踪
+        if set_upstream {
+            let mut branch = repo
+                .find_branch(branch_name, git2::BranchType::Local)
+                .wrap_err_with(|| format!("Failed to find branch: {}", branch_name))?;
+            branch
+                .set_upstream(Some(&format!("origin/{}", branch_name)))
+                .wrap_err("Failed to set upstream")?;
+        }
+
+        Ok(())
     }
 
     /// 使用 force-with-lease 强制推送到远程仓库
@@ -637,9 +660,27 @@ impl GitBranch {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push_force_with_lease(branch_name: &str) -> Result<()> {
-        GitCommand::new(["push", "--force-with-lease", "origin", branch_name])
-            .run()
-            .wrap_err_with(|| format!("Failed to force push branch: {}", branch_name))
+        let repo = open_repo()?;
+        let mut remote = repo
+            .find_remote("origin")
+            .wrap_err("Failed to find remote 'origin'")?;
+
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置推送选项
+        let mut push_options = PushOptions::new();
+        push_options.remote_callbacks(callbacks);
+
+        // 构建 refspec（带 force-with-lease，使用 + 前缀）
+        let refspec = format!("+refs/heads/{}:refs/heads/{}", branch_name, branch_name);
+
+        // 推送
+        remote
+            .push(&[&refspec], Some(&mut push_options))
+            .wrap_err_with(|| format!("Failed to force push branch: {}", branch_name))?;
+
+        Ok(())
     }
 
     /// 将当前分支 rebase 到目标分支
