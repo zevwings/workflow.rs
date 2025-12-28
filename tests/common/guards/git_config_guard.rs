@@ -326,59 +326,60 @@ impl GitConfigGuard {
                         let mut file_check_retries = 0;
                         const FILE_CHECK_MAX_RETRIES: usize = 3;
                         const FILE_CHECK_DELAY_MS: u64 = 100;
-                        let mut should_retry_outer = false;
+                        let mut file_check_passed = false;
 
-                        loop {
+                        // 文件权限检查循环
+                        while !file_check_passed && file_check_retries < FILE_CHECK_MAX_RETRIES {
                             match std::fs::metadata(config_path) {
-                                Ok(metadata) => {
+                                Ok(_metadata) => {
                                     // 检查文件是否可写（通过尝试打开文件）
                                     match std::fs::OpenOptions::new().write(true).open(config_path)
                                     {
-                                        Ok(_) => break, // 文件可写，继续
-                                        Err(e)
+                                        Ok(_) => {
+                                            file_check_passed = true;
+                                            break; // 文件可写，继续
+                                        }
+                                        Err(_)
                                             if file_check_retries < FILE_CHECK_MAX_RETRIES - 1 =>
                                         {
-                                            drop(config);
+                                            // 文件不可写，等待后重试
                                             file_check_retries += 1;
                                             std::thread::sleep(std::time::Duration::from_millis(
                                                 FILE_CHECK_DELAY_MS * file_check_retries as u64,
                                             ));
-                                            // 重新打开 config（因为之前 drop 了）
+                                            // 重新打开 config（因为文件可能被其他进程锁定）
+                                            drop(config);
                                             match Config::open(config_path) {
                                                 Ok(new_config) => {
                                                     config = new_config;
                                                     continue;
                                                 }
                                                 Err(_) => {
-                                                    if attempt < MAX_RETRIES - 1 {
-                                                        should_retry_outer = true;
-                                                        break; // 跳出内层循环，继续外层重试
-                                                    }
-                                                    return Err(color_eyre::eyre::eyre!(
-                                                        "Config file is not writable and cannot reopen: {} (metadata: {:?})",
-                                                        e,
-                                                        metadata
-                                                    ));
+                                                    // 无法重新打开，跳出内层循环，在外层重试
+                                                    break;
                                                 }
                                             }
                                         }
                                         Err(e) => {
+                                            // 文件检查失败且重试次数用尽
                                             drop(config);
                                             if attempt < MAX_RETRIES - 1 {
-                                                should_retry_outer = true;
-                                                break; // 跳出内层循环，继续外层重试
+                                                std::thread::sleep(
+                                                    std::time::Duration::from_millis(
+                                                        RETRY_DELAY_MS * 2,
+                                                    ),
+                                                );
+                                                continue; // 继续外层重试
                                             }
                                             return Err(color_eyre::eyre::eyre!(
-                                                "Config file is not writable after {} retries: {} (metadata: {:?})",
+                                                "Config file is not writable after {} retries: {}",
                                                 FILE_CHECK_MAX_RETRIES,
-                                                e,
-                                                metadata
+                                                e
                                             ));
                                         }
                                     }
                                 }
                                 Err(e) if file_check_retries < FILE_CHECK_MAX_RETRIES - 1 => {
-                                    drop(config);
                                     // On Windows, file might not be immediately accessible after creation
                                     // Retry with exponential backoff
                                     file_check_retries += 1;
@@ -386,31 +387,26 @@ impl GitConfigGuard {
                                         FILE_CHECK_DELAY_MS * file_check_retries as u64,
                                     ));
                                     // 重新打开 config
+                                    drop(config);
                                     match Config::open(config_path) {
                                         Ok(new_config) => {
                                             config = new_config;
                                             continue;
                                         }
                                         Err(_) => {
-                                            if attempt < MAX_RETRIES - 1 {
-                                                should_retry_outer = true;
-                                                break; // 跳出内层循环，继续外层重试
-                                            }
-                                            let file_exists = config_path.exists();
-                                            return Err(color_eyre::eyre::eyre!(
-                                                "Failed to access config file {} and cannot reopen: {} (file exists: {})",
-                                                config_path.display(),
-                                                e,
-                                                file_exists
-                                            ));
+                                            // 无法重新打开，跳出内层循环，在外层重试
+                                            break;
                                         }
                                     }
                                 }
                                 Err(e) => {
+                                    // 文件访问失败且重试次数用尽
                                     drop(config);
                                     if attempt < MAX_RETRIES - 1 {
-                                        should_retry_outer = true;
-                                        break; // 跳出内层循环，继续外层重试
+                                        std::thread::sleep(std::time::Duration::from_millis(
+                                            RETRY_DELAY_MS * 2,
+                                        ));
+                                        continue; // 继续外层重试
                                     }
                                     // Provide more context about the error
                                     let file_exists = config_path.exists();
@@ -425,12 +421,19 @@ impl GitConfigGuard {
                             }
                         }
 
-                        // 如果需要外层重试，继续外层循环
-                        if should_retry_outer {
-                            std::thread::sleep(std::time::Duration::from_millis(
-                                RETRY_DELAY_MS * 2,
+                        // 如果文件检查未通过，继续外层重试
+                        if !file_check_passed {
+                            drop(config);
+                            if attempt < MAX_RETRIES - 1 {
+                                std::thread::sleep(std::time::Duration::from_millis(
+                                    RETRY_DELAY_MS * 2,
+                                ));
+                                continue; // 继续外层重试
+                            }
+                            return Err(color_eyre::eyre::eyre!(
+                                "Failed to verify config file accessibility after {} attempts",
+                                MAX_RETRIES
                             ));
-                            continue;
                         }
                     }
 
