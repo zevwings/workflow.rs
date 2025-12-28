@@ -177,8 +177,7 @@ Browser::open("https://github.com")?;
 
 **重要说明**：剪贴板功能在以下平台不可用（静默失败，不影响其他功能）：
 
-- **Linux ARM64** (`aarch64-unknown-linux-gnu`)：由于 XCB 库在 Ubuntu 源中不可用，交叉编译时无法链接 XCB 库
-- **musl 静态链接版本** (`*-unknown-linux-musl`)：musl 不支持 XCB 库
+- **musl 静态链接版本** (`*-unknown-linux-musl`)：musl 不支持 XCB 库（当前项目不支持 musl 构建）
 
 **支持平台**：
 - ✅ macOS (Intel 和 Apple Silicon)
