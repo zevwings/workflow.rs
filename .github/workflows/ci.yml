@@ -101,8 +101,7 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
 
-  # 运行单元测试和文档测试（跨平台并行执行，分层测试策略）
-  # 注意：集成测试暂时禁用，后续恢复
+  # 运行单元测试、集成测试和文档测试（跨平台并行执行，分层测试策略）
   tests:
     name: 🧪 Run Tests (${{ matrix.test_type }}) (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
@@ -131,21 +130,21 @@ jobs:
             test_timeout: 25
             test_command: cargo test --lib --verbose
           # 集成测试
-          # - os: ubuntu-latest
-          #   platform: Linux-x86_64
-          #   test_type: integration
-          #   test_timeout: 25
-          #   test_command: cargo test --test integration_test --verbose
-          # - os: macos-latest
-          #   platform: macOS
-          #   test_type: integration
-          #   test_timeout: 35
-          #   test_command: cargo test --test integration_test --verbose
-          # - os: windows-latest
-          #   platform: Windows-x86_64
-          #   test_type: integration
-          #   test_timeout: 30
-          #   test_command: cargo test --test integration_test --verbose
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+            test_type: integration
+            test_timeout: 25
+            test_command: cargo test --test integration_test --verbose
+          - os: macos-latest
+            platform: macOS
+            test_type: integration
+            test_timeout: 35
+            test_command: cargo test --test integration_test --verbose
+          - os: windows-latest
+            platform: Windows-x86_64
+            test_type: integration
+            test_timeout: 30
+            test_command: cargo test --test integration_test --verbose
           # 文档测试
           - os: ubuntu-latest
             platform: Linux-x86_64
