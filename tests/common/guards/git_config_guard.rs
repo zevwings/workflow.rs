@@ -109,6 +109,11 @@ impl GitConfigGuard {
                 canonical_path.clone()
             };
 
+            // 保存路径的显示字符串用于错误消息（在移动之前）
+            let path_without_prefix_display = path_without_prefix.display().to_string();
+            let canonical_path_display = canonical_path.display().to_string();
+            let original_path_display = original_path.display().to_string();
+
             // 确定最终使用的路径：优先使用不带前缀的路径，如果不存在则尝试其他选项
             let final_config_path = if path_without_prefix.exists() {
                 // 不带前缀的路径存在，使用它
@@ -129,9 +134,9 @@ impl GitConfigGuard {
                 color_eyre::eyre::eyre!(
                     "Failed to access config file {} (tried: without_prefix={}, original={}, canonical={}): {}",
                     final_config_path.display(),
-                    path_without_prefix.display(),
-                    original_path.display(),
-                    canonical_path.display(),
+                    path_without_prefix_display,
+                    original_path_display,
+                    canonical_path_display,
                     e
                 )
             })?;
