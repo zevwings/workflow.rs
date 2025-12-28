@@ -1,99 +1,12 @@
 //! CLI 测试辅助工具
 //!
 //! 提供 CLI 测试的常用辅助函数和工具。
+//!
+//! 注意：`CliTestEnv` 已迁移到 `tests/common/environments/cli_test_env.rs`。
+//! 本文件仅保留 `CliCommandBuilder` 和 `TestDataGenerator` 等辅助工具。
 
 use assert_cmd::Command;
-use std::fs;
 use std::path::Path;
-use tempfile::TempDir;
-
-/// CLI 测试环境
-pub struct CliTestEnv {
-    pub temp_dir: TempDir,
-}
-
-impl CliTestEnv {
-    /// 创建新的 CLI 测试环境
-    pub fn new() -> Self {
-        let temp_dir = tempfile::tempdir()
-            .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
-
-        Self { temp_dir }
-    }
-
-    /// 初始化 Git 仓库
-    pub fn init_git_repo(&self) -> &Self {
-        std::process::Command::new("git")
-            .args(["init"])
-            .current_dir(self.path())
-            .output()
-            .expect("Failed to init git repo");
-
-        std::process::Command::new("git")
-            .args(["config", "user.name", "Test User"])
-            .current_dir(self.path())
-            .output()
-            .expect("Failed to set git user name");
-
-        std::process::Command::new("git")
-            .args(["config", "user.email", "test@example.com"])
-            .current_dir(self.path())
-            .output()
-            .expect("Failed to set git user email");
-
-        self
-    }
-
-    /// 创建文件
-    pub fn create_file(&self, path: &str, content: &str) -> &Self {
-        let full_path = self.temp_dir.path().join(path);
-        if let Some(parent) = full_path.parent() {
-            fs::create_dir_all(parent).expect(
-                workflow::base::constants::errors::file_operations::CREATE_PARENT_DIR_FAILED,
-            );
-        }
-        fs::write(full_path, content)
-            .expect(workflow::base::constants::errors::file_operations::WRITE_FILE_FAILED);
-        self
-    }
-
-    /// 创建 Git 提交
-    pub fn create_commit(&self, message: &str) -> &Self {
-        std::process::Command::new("git")
-            .args(["add", "."])
-            .current_dir(self.path())
-            .output()
-            .expect("Failed to add files");
-
-        std::process::Command::new("git")
-            .args(["commit", "-m", message])
-            .current_dir(self.path())
-            .output()
-            .expect("Failed to commit");
-
-        self
-    }
-
-    /// 创建配置文件
-    pub fn create_config(&self, content: &str) -> &Self {
-        let config_dir = self.temp_dir.path().join(".workflow");
-        fs::create_dir_all(&config_dir)
-            .expect(workflow::base::constants::errors::file_operations::CREATE_CONFIG_DIR_FAILED);
-
-        let config_file = config_dir.join("workflow.toml");
-        fs::write(config_file, content)
-            .expect(workflow::base::constants::errors::file_operations::WRITE_CONFIG_FAILED);
-
-        self
-    }
-
-    /// 获取临时目录路径
-    pub fn path(&self) -> &Path {
-        self.temp_dir.path()
-    }
-}
-
-// 移除 Drop 实现，因为我们不再改变全局工作目录
 
 /// CLI 命令构建器
 pub struct CliCommandBuilder {
@@ -172,28 +85,6 @@ token = "test_token"
 "#
         .to_string()
     }
-}
-
-/// 简化的测试宏
-#[macro_export]
-macro_rules! with_cli_env {
-    ($env:ident, $block:block) => {
-        let $env = CliTestEnv::new();
-        $block
-    };
-}
-
-/// CLI 集成测试宏
-#[macro_export]
-macro_rules! cli_integration_test {
-    ($name:ident, $test_fn:expr) => {
-        #[test]
-        fn $name() {
-            with_cli_env!(env, {
-                $test_fn(env);
-            });
-        }
-    };
 }
 
 /// 辅助函数：检查输出是否包含错误消息

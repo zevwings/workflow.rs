@@ -195,8 +195,8 @@ impl Spinner {
 
     /// 使用 spinner 执行一个会产生输出的操作
     ///
-    /// 先显示 spinner 消息（250ms），然后完成 spinner，再执行操作。
-    /// 这样可以确保用户能看到消息，同时让子进程的输出正常显示。
+    /// 在操作执行期间保持 spinner 显示，操作完成后清除 spinner。
+    /// 这样可以确保用户能看到操作进度，同时让子进程的输出正常显示。
     ///
     /// 这个方法适用于执行会产生 stdout/stderr 输出的操作（如 `git push`），
     /// 可以避免子进程的输出与 spinner 动画混合。
@@ -232,12 +232,22 @@ impl Spinner {
     where
         F: FnOnce() -> Result<T, E>,
     {
-        let spinner = Self::new(message);
-        // 让 spinner 显示足够长的时间（250ms），确保用户能看到消息
-        std::thread::sleep(Duration::from_millis(250));
-        // 完成 spinner（清除它），然后执行操作
-        spinner.finish();
-        // 执行操作，让子进程的输出正常显示
-        operation()
+        let message_str = message.as_ref().to_string();
+        let spinner = Self::new(&message_str);
+        let start = std::time::Instant::now();
+        // 执行操作，spinner 在操作期间保持显示
+        let result = operation();
+        let elapsed = start.elapsed();
+
+        // 如果操作很快完成（< 100ms），使用 finish_with_message 显示消息
+        // 确保用户至少能看到一次输出
+        if elapsed < Duration::from_millis(100) {
+            spinner.finish_with_message(&message_str);
+        } else {
+            // 操作完成后清除 spinner，让后续输出正常显示
+            spinner.finish();
+        }
+
+        result
     }
 }

@@ -1,0 +1,29 @@
+{
+  "name": "network_timeout",
+  "description": "模拟网络超时场景",
+  "scenarios": [
+    {
+      "name": "github_api_timeout",
+      "method": "GET",
+      "path": "/repos/owner/repo/pulls",
+      "timeout": true,
+      "delay_ms": 10000,
+      "response": {
+        "message": "Request timeout"
+      }
+    },
+    {
+      "name": "jira_api_timeout",
+      "method": "GET",
+      "path": "/rest/api/3/issue/PROJ-123",
+      "timeout": true,
+      "delay_ms": 10000,
+      "response": {
+        "errorMessages": [
+          "Request timeout"
+        ]
+      }
+    }
+  ]
+}
+

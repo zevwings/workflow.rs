@@ -3,10 +3,8 @@ use crate::{log_break, log_message};
 use color_eyre::Result;
 
 /// PR 状态命令
-#[allow(dead_code)]
 pub struct PullRequestStatusCommand;
 
-#[allow(dead_code)]
 impl PullRequestStatusCommand {
     /// 显示 PR 状态信息
     pub fn show(pull_request_id_or_branch: Option<String>) -> Result<()> {

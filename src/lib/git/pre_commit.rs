@@ -6,9 +6,9 @@ use duct::cmd;
 
 use super::commit::GitCommit;
 use super::repo::GitRepo;
+use crate::base::fs::FileReader;
 use crate::base::indicator::Spinner;
-use crate::base::util::file::FileReader;
-use crate::{log_break, log_error, log_success, trace_debug};
+use crate::{log_error, log_success, trace_debug};
 
 /// Pre-commit 执行结果
 #[derive(Debug, Clone)]
@@ -54,6 +54,9 @@ impl GitPreCommit {
     }
 
     /// 获取 pre-commit hook 路径（如果存在）
+    ///
+    /// 使用 `get_git_dir()` 获取 `.git` 目录路径，然后拼接 `hooks/pre-commit`。
+    /// 对于标准的 git 仓库，pre-commit hook 总是在 `.git/hooks/pre-commit`。
     fn get_pre_commit_hook_path() -> Option<std::path::PathBuf> {
         if let Ok(git_dir) = GitRepo::get_git_dir() {
             let hooks_path = Path::new(&git_dir).join("hooks").join("pre-commit");
@@ -284,7 +287,6 @@ impl GitPreCommit {
             Spinner::with("Running pre-commit checks...", Self::run_pre_commit)?;
 
             log_success!("Pre-commit checks passed");
-            log_break!();
         }
         Ok(())
     }

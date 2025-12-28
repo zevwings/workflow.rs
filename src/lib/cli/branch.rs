@@ -105,6 +105,27 @@ pub enum BranchSubcommand {
         #[command(flatten)]
         force: ForceArgs,
     },
+    /// Push a branch to remote
+    ///
+    /// Push the specified branch (or current branch) to the remote repository.
+    ///
+    /// Examples:
+    ///   workflow branch push feature/new-feature       # Push specified branch
+    ///   workflow branch push                           # Push current branch
+    ///   workflow branch push feature/new-feature --set-upstream  # Push and set upstream
+    ///   workflow branch push feature/new-feature --force-with-lease  # Force push with lease
+    Push {
+        /// Branch name (optional, defaults to current branch)
+        branch_name: Option<String>,
+
+        /// Set upstream tracking branch
+        #[arg(long, short = 'u')]
+        set_upstream: bool,
+
+        /// Force push with lease (safer than --force)
+        #[arg(long)]
+        force_with_lease: bool,
+    },
 }
 
 /// Branch ignore list management subcommands

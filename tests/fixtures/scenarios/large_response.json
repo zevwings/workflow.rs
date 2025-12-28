@@ -1,0 +1,25 @@
+{
+  "name": "large_response",
+  "description": "模拟大响应数据场景",
+  "scenarios": [
+    {
+      "name": "github_pr_list_large",
+      "method": "GET",
+      "path": "/repos/owner/repo/pulls",
+      "status": 200,
+      "response_size": "large",
+      "item_count": 100,
+      "description": "返回大量 PR 列表"
+    },
+    {
+      "name": "jira_search_large",
+      "method": "POST",
+      "path": "/rest/api/3/search",
+      "status": 200,
+      "response_size": "large",
+      "item_count": 500,
+      "description": "返回大量 Issue 搜索结果"
+    }
+  ]
+}
+

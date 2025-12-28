@@ -9,10 +9,8 @@ use serde_json::Value;
 use std::time::Duration;
 
 /// 环境检查命令
-#[allow(dead_code)]
 pub struct CheckCommand;
 
-#[allow(dead_code)]
 impl CheckCommand {
     /// 执行综合环境检查
     ///
@@ -21,7 +19,6 @@ impl CheckCommand {
         log_message!("Running environment checks...");
         log_break!();
 
-        // 1. 检查 Git 状态
         log_message!("[1/2] Checking Git repository status...");
         if !GitRepo::is_git_repo() {
             log_error!("Not in a Git repository");
@@ -37,11 +34,17 @@ impl CheckCommand {
 
         log_break!();
 
-        // 2. 检查网络连接
         log_message!("[2/2] Checking network connection to GitHub...");
         let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
         let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
-        match client.stream(HttpMethod::Get, crate::git::github::BASE, config) {
+
+        // 支持从环境变量读取 GitHub URL（用于测试 Mock 服务器）
+        // 优先级：GITHUB_BASE_URL > GITHUB_API_URL > 硬编码 BASE
+        let github_url = std::env::var("GITHUB_BASE_URL")
+            .or_else(|_| std::env::var("GITHUB_API_URL"))
+            .unwrap_or_else(|_| crate::git::github::BASE.to_string());
+
+        match client.stream(HttpMethod::Get, &github_url, config) {
             Ok(response) => {
                 if response.status().is_success() {
                     log_success!("GitHub network is available");

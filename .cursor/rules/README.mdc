@@ -1,0 +1,45 @@
+---
+description: Cursor AI 规则文件说明和使用指南
+type: manual
+---
+
+# Cursor AI 规则
+
+> 本目录包含 Workflow CLI 项目的 Cursor AI 规则文件。这些规则指导 AI 助手（如 Cursor）理解项目结构、开发标准和最佳实践。
+
+---
+
+## 📋 概述
+
+本目录包含 Cursor IDE 自动加载的规则文件。每个规则文件专注于项目的特定方面。
+
+## 📂 规则文件
+
+| 文件 | 说明 | 类型 |
+|------|------|------|
+| `document.mdc` | 文档生成、分类和存储规则 | `always` |
+| `overview.mdc` | 项目概述、架构、修改规则、文档索引/删除规则和一般注意事项 | `always` |
+| `development.mdc` | 开发规范和指南 | `always` |
+
+## 📖 使用说明
+
+Cursor IDE 会自动加载本目录下的所有 `.mdc` 文件。这些文件使用 MDC（Markdown Component）格式，包含 YAML front matter 元数据来定义规则类型和行为。
+
+**规则类型**：
+- `always`: 始终包含在模型上下文中（核心规则的默认类型）
+- `auto-attach`: 当引用匹配 glob 模式的文件时自动附加
+- `agent-request`: 可供 AI 根据需要包含（需要提供描述）
+- `manual`: 只有在使用 `@ruleName` 明确引用时才会包含
+
+**注意**：本项目使用 `.mdc` 格式（Cursor 推荐），而不是传统的 `.cursorrules` 文件格式。
+
+## 📚 相关文档
+
+- [文档模板](../../docs/templates/cursorrules/README.md) - 创建新规则文件的模板
+- [文档编写指南](../../docs/guidelines/document.md) - 通用文档编写标准
+- [开发指南](../../docs/guidelines/development/README.md) - 完整的开发指南
+
+---
+
+**最后更新**: 2025-12-25
+

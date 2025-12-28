@@ -8,7 +8,6 @@ use crate::{log_break, log_debug, log_info, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 分支同步的命令（合并了 integrate 和 sync 的功能）
-#[allow(dead_code)]
 pub struct PullRequestSyncCommand;
 
 /// PR 同步回调实现

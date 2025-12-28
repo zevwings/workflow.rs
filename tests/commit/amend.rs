@@ -5,14 +5,21 @@
 //! - 完成消息生成
 //! - 强制推送警告检查
 //! - 提交信息详细格式化
+//!
+//! ## 测试策略
+//!
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - Fixture 函数中的 `expect()` 保留（fixture 失败应该panic）
+//! - 使用真实的Git仓库进行集成测试
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use serial_test::serial;
-use std::fs;
-use std::process::Command;
-use tempfile::TempDir;
 use workflow::commit::{AmendPreview, CommitAmend};
 use workflow::git::CommitInfo;
+
+use crate::common::environments::GitTestEnv;
+use crate::common::fixtures::git_repo_with_commit;
+use rstest::rstest;
 
 // ==================== Helper Functions ====================
 
@@ -26,101 +33,78 @@ fn create_sample_commit_info() -> CommitInfo {
     }
 }
 
-/// 创建带有初始提交的临时 Git 仓库
-fn create_git_repo_with_commit() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
-
-    // 初始化 Git 仓库
-    Command::new("git")
-        .args(["init"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to init git repo");
-
-    // 设置 Git 配置
-    Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
-
-    Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    // 创建初始文件并提交
-    let readme_path = temp_path.join("README.md");
-    fs::write(&readme_path, "# Test Repository\n").expect("Failed to write README");
-
-    Command::new("git")
-        .args(["add", "README.md"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to add file");
-
-    Command::new("git")
-        .args(["commit", "-m", "Initial commit"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to commit");
-
-    temp_dir
-}
-
-// ==================== 测试用例 ====================
+// ==================== Test Cases ====================
 
 /// 测试创建预览
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_create_preview() {
+fn test_create_preview() -> Result<()> {
     let commit_info = create_sample_commit_info();
     let new_message = Some("feat: implement advanced user authentication\n\nAdd comprehensive authentication with OAuth2 support.".to_string());
     let files_to_add = vec!["src/auth.rs".to_string(), "tests/auth_test.rs".to_string()];
     let operation_type = "amend";
     let current_branch = "main";
 
-    let result = CommitAmend::create_preview(
+    let preview = CommitAmend::create_preview(
         &commit_info,
         &new_message,
         &files_to_add,
         operation_type,
         current_branch,
-    );
-    assert!(result.is_ok());
+    )?;
 
-    let preview = result.unwrap();
     assert_eq!(
         preview.original_sha,
         "abc123def456789012345678901234567890abcd"
     );
     assert_eq!(preview.original_message, "feat: add user authentication system\n\nImplement comprehensive user authentication with JWT tokens and session management.");
     assert!(preview.new_message.is_some());
-    assert_eq!(preview.new_message.as_ref().unwrap(), "feat: implement advanced user authentication\n\nAdd comprehensive authentication with OAuth2 support.");
+    if let Some(ref msg) = preview.new_message {
+        assert_eq!(msg, "feat: implement advanced user authentication\n\nAdd comprehensive authentication with OAuth2 support.");
+    }
     assert_eq!(preview.files_to_add.len(), 2);
     assert_eq!(preview.operation_type, "amend");
+    Ok(())
 }
 
 /// 测试创建预览（无新消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_create_preview_without_new_message() {
+fn test_create_preview_without_new_message() -> Result<()> {
     let commit_info = create_sample_commit_info();
     let new_message = None;
     let files_to_add = vec![];
     let operation_type = "amend_files_only";
     let current_branch = "feature-branch";
 
-    let result = CommitAmend::create_preview(
+    let preview = CommitAmend::create_preview(
         &commit_info,
         &new_message,
         &files_to_add,
         operation_type,
         current_branch,
-    );
-    assert!(result.is_ok());
+    )?;
 
-    let preview = result.unwrap();
     assert_eq!(
         preview.original_sha,
         "abc123def456789012345678901234567890abcd"
@@ -129,11 +113,24 @@ fn test_create_preview_without_new_message() {
     assert!(preview.new_message.is_none());
     assert!(preview.files_to_add.is_empty());
     assert_eq!(preview.operation_type, "amend_files_only");
+    Ok(())
 }
 
 /// 测试格式化预览显示（有新消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_format_preview_display_with_new_message() {
+fn test_format_preview_display_with_new_message_returns_formatted_string() {
+    // Arrange: 准备有新消息的预览
     let preview = AmendPreview {
         original_sha: "abc123def456789012345678901234567890abcd".to_string(),
         original_message: "Original commit message".to_string(),
@@ -143,7 +140,10 @@ fn test_format_preview_display_with_new_message() {
         is_pushed: false,
     };
 
+    // Act: 格式化预览
     let formatted = CommitAmend::format_preview(&preview);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("Original Commit SHA"));
     assert!(formatted.contains("abc123de"));
     assert!(formatted.contains("Original commit message"));
@@ -154,8 +154,20 @@ fn test_format_preview_display_with_new_message() {
 }
 
 /// 测试格式化预览显示（无新消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_format_preview_display_without_new_message() {
+fn test_format_preview_display_without_new_message_returns_formatted_string() {
+    // Arrange: 准备无新消息的预览
     let preview = AmendPreview {
         original_sha: "def456abc789012345678901234567890abcdef12".to_string(),
         original_message: "Test commit".to_string(),
@@ -165,7 +177,10 @@ fn test_format_preview_display_without_new_message() {
         is_pushed: true,
     };
 
+    // Act: 格式化预览
     let formatted = CommitAmend::format_preview(&preview);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("Original Commit SHA"));
     assert!(formatted.contains("def456ab"));
     assert!(formatted.contains("Test commit"));
@@ -174,73 +189,126 @@ fn test_format_preview_display_without_new_message() {
 }
 
 /// 测试完成消息格式化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_format_completion_message() {
+fn test_format_completion_message_with_valid_input_returns_message() {
+    // Arrange: 准备分支名和 SHA
     let current_branch = "main";
     let old_sha = "abc123def456789012345678901234567890abcd";
 
+    // Act: 格式化完成消息
     let result = CommitAmend::format_completion_message(current_branch, old_sha);
+
+    // Assert: 验证返回结果（成功、None 或错误都是可以接受的）
     match result {
         Ok(Some(message)) => {
             assert!(message.contains("successfully") || message.contains("completed"));
         }
         Ok(None) => {
             // 某些情况下可能返回 None，这也是有效的
-            assert!(true);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
 
 /// 测试强制推送警告检查（已推送）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_should_show_force_push_warning_pushed() {
+fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
+    // Arrange: 准备分支名和 SHA（已推送的提交）
     let current_branch = "main";
     let old_sha = "test123456789012345678901234567890abcdef";
 
+    // Act: 检查是否应该显示强制推送警告
     let result = CommitAmend::should_show_force_push_warning(current_branch, old_sha);
+
+    // Assert: 验证返回布尔值（成功或失败都是可以接受的）
     match result {
         Ok(is_pushed) => {
-            // 验证返回值是布尔类型
-            assert!(is_pushed == true || is_pushed == false);
+            // Assert: 验证返回值是布尔类型
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
 
 /// 测试强制推送警告检查（未推送）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_should_show_force_push_warning_not_pushed() {
+fn test_should_show_force_push_warning_with_not_pushed_commit_returns_bool() {
+    // Arrange: 准备分支名和 SHA（未推送的提交）
     let current_branch = "feature";
     let old_sha = "test987654321098765432109876543210987654";
 
     let result = CommitAmend::should_show_force_push_warning(current_branch, old_sha);
     match result {
         Ok(is_pushed) => {
-            // 验证返回值是布尔类型
-            assert!(is_pushed == true || is_pushed == false);
+            // Assert: 验证返回值是布尔类型
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
 
 /// 测试详细提交信息格式化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_format_commit_info_detailed() {
+fn test_format_commit_info_detailed_with_valid_info_returns_formatted_string() {
+    // Arrange: 准备提交信息、分支名和状态
     let commit_info = create_sample_commit_info();
     let branch = "main";
     let status = None; // 不提供 WorktreeStatus
 
+    // Act: 格式化详细提交信息
     let formatted = CommitAmend::format_commit_info_detailed(&commit_info, branch, status);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("abc123de")); // 短 SHA
     assert!(formatted.contains("feat: add user authentication system"));
     assert!(formatted.contains("John Doe"));
@@ -250,30 +318,62 @@ fn test_format_commit_info_detailed() {
 }
 
 /// 测试 AmendPreview 结构体字段
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_amend_preview_struct() {
+fn test_amend_preview_struct_with_valid_fields_creates_preview() {
+    // Arrange: 准备预览字段值
+    let original_sha = "sha123";
+    let original_message = "original message";
+    let new_message = Some("new message".to_string());
+    let files_to_add = vec!["file.rs".to_string()];
+    let operation_type = "amend";
+    let is_pushed = false;
+
+    // Act: 创建 AmendPreview
     let preview = AmendPreview {
-        original_sha: "sha123".to_string(),
-        original_message: "original message".to_string(),
-        new_message: Some("new message".to_string()),
-        files_to_add: vec!["file.rs".to_string()],
-        operation_type: "amend".to_string(),
-        is_pushed: false,
+        original_sha: original_sha.to_string(),
+        original_message: original_message.to_string(),
+        new_message: new_message.clone(),
+        files_to_add: files_to_add.clone(),
+        operation_type: operation_type.to_string(),
+        is_pushed,
     };
 
-    // 验证所有字段
-    assert_eq!(preview.original_sha, "sha123");
-    assert_eq!(preview.original_message, "original message");
-    assert_eq!(preview.new_message, Some("new message".to_string()));
+    // Assert: 验证所有字段值正确
+    assert_eq!(preview.original_sha, original_sha);
+    assert_eq!(preview.original_message, original_message);
+    assert_eq!(preview.new_message, new_message);
     assert_eq!(preview.files_to_add.len(), 1);
     assert_eq!(preview.files_to_add[0], "file.rs");
-    assert_eq!(preview.operation_type, "amend");
+    assert_eq!(preview.operation_type, operation_type);
     assert_eq!(preview.is_pushed, false);
 }
 
 /// 测试 AmendPreview 克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_amend_preview_clone() {
+fn test_amend_preview_clone_with_valid_preview_creates_clone() {
+    // Arrange: 准备原始预览
     let original = AmendPreview {
         original_sha: "clone_test".to_string(),
         original_message: "clone message".to_string(),
@@ -283,7 +383,10 @@ fn test_amend_preview_clone() {
         is_pushed: true,
     };
 
+    // Act: 克隆预览
     let cloned = original.clone();
+
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(original.original_sha, cloned.original_sha);
     assert_eq!(original.original_message, cloned.original_message);
     assert_eq!(original.new_message, cloned.new_message);
@@ -293,12 +396,23 @@ fn test_amend_preview_clone() {
 }
 
 /// 测试 Git 仓库集成
-#[test]
-#[serial]
-fn test_git_integration() {
-    let _temp_dir = create_git_repo_with_commit();
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[rstest]
+fn test_git_integration_return_ok(_git_repo_with_commit: GitTestEnv) -> Result<()> {
+    // 使用 GitTestEnv 创建隔离的 Git 仓库
 
     // 这个测试主要验证 Git 仓库创建辅助函数工作正常
     // 实际的 Git 集成测试应该在更高级别的集成测试中进行
-    assert!(true);
+    // GitTestEnv 会在函数结束时自动清理
+    Ok(())
 }

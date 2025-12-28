@@ -1,0 +1,21 @@
+# Lychee 链接检查忽略文件
+# 忽略不需要检查的链接
+
+# 忽略模板占位符（这些不是真实的文件路径）
+.*\{MODULE\}.*
+.*\{TOPIC\}.*
+.*\{VERSION\}.*
+
+# 忽略不存在的分析文档（可能已被删除或重命名）
+.*RELEASE_WORKFLOW_ANALYSIS\.md
+
+# 忽略 GitHub 私有仓库链接（如果无法访问）
+# github.com/private-repo
+
+# 忽略本地开发链接
+^http://localhost
+^http://127\.0\.0\.1
+
+# 忽略特定域名（如果需要）
+# example\.com
+

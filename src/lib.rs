@@ -38,9 +38,11 @@ pub mod commands;
 
 // 重新导出所有公共 API，方便外部使用
 // 从 base 模块重新导出基础设施类型，保持向后兼容
+pub use base::checksum::Checksum;
 pub use base::format::DisplayFormatter;
 pub use base::settings::{LLMSettings, Paths, Settings};
-pub use base::util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
+pub use base::system::{Browser, Clipboard};
+pub use base::zip::Unzip;
 pub use base::{
     Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, LogLevel, Logger,
     Reload, ShellConfigManager, Tracer,

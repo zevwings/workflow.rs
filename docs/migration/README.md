@@ -20,7 +20,7 @@
 
 迁移系统采用版本化设计，每个配置格式变化都有对应的迁移版本。
 
-详细的技术实现说明请参考 [`src/commands/migrate/README.md`](../../src/commands/migrate/README.md)。
+详细的技术实现说明请参考 [`docs/architecture/migrate.md`](../../docs/architecture/migrate.md)。
 
 **注意**：分支配置已迁移到项目级配置（`.workflow/config.toml`），请使用 `workflow repo setup` 设置项目级配置。
 
@@ -56,21 +56,43 @@ workflow migrate cleanup
 
 ## 📝 迁移文档编写规范
 
+### 使用模板
+
+创建新的迁移文档时，请使用迁移文档模板：
+
+```bash
+# 复制迁移文档模板
+cp docs/templates/migration/migration.template docs/migration/{旧版本}-to-{新版本}.md
+
+# 然后编辑文件，替换所有 {占位符}
+```
+
+**模板位置**：`docs/templates/migration/migration.template`
+
+**对于 AI 助手（Cursor 等）**：
+- 参考模板结构和格式生成迁移文档
+- 根据实际迁移内容填写所有占位符
+- 确保包含所有必要的章节
+
+### 文档结构要求
+
 每个迁移文档应包含以下内容：
 
 1. **迁移概述** - 说明为什么需要迁移，迁移的背景
-2. **迁移内容** - 详细描述需要迁移的配置项和格式变化
-3. **迁移步骤** - 提供清晰的迁移步骤说明
-4. **迁移前后对比** - 展示配置格式的变化
+2. **配置变化** - 详细描述需要迁移的配置项和格式变化，包含配置格式对比
+3. **迁移步骤** - 提供清晰的迁移步骤说明（自动脚本和手动方式）
+4. **迁移验证** - 说明如何验证迁移是否成功
 5. **注意事项** - 迁移过程中需要注意的事项
 6. **回滚说明** - 如果需要，说明如何回滚迁移
+7. **常见问题** - 列出迁移过程中可能遇到的常见问题和解决方案
+8. **相关文档** - 链接到相关文档
 
 ---
 
 ## 🔗 相关文档
 
-- [迁移系统架构说明](../../src/commands/migrate/README.md) - 迁移系统的技术实现
-- [分支命令架构](../architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md) - 分支配置相关说明
+- [迁移系统架构说明](../../docs/architecture/migrate.md) - 迁移系统的技术实现
+- [分支命令架构](../architecture/branch.md) - 分支配置相关说明
 
 ---
 

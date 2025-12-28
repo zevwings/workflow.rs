@@ -4,10 +4,10 @@
 //! Similar to CheckCommand, provides a static method for other commands to call.
 
 use crate::base::dialog::{ConfirmDialog, FormBuilder, GroupConfig, InputDialog};
+use crate::base::fs::FileWriter;
 use crate::base::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
-use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
 use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning};

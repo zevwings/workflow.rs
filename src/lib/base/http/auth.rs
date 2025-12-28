@@ -31,3 +31,16 @@ impl Authorization {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_basic() {
+        // Basic validation that Authorization can be created
+        let auth = Authorization::new("user@example.com", "api_token");
+        assert_eq!(auth.username, "user@example.com");
+        assert_eq!(auth.password, "api_token");
+    }
+}

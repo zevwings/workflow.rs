@@ -24,14 +24,13 @@ pub enum TaskResult<T, E> {
 ///
 /// ```rust
 /// use workflow::base::concurrent::{ConcurrentExecutor, TaskResult};
-/// use color_eyre::Result;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let executor = ConcurrentExecutor::new(5); // 最大并发数 5
 ///
-/// let tasks: Vec<(String, Box<dyn Fn() -> Result<String> + Send + Sync>)> = vec![
-///     ("task1".to_string(), Box::new(|| -> Result<String> { Ok("result1".to_string()) })),
-///     ("task2".to_string(), Box::new(|| -> Result<String> { Ok("result2".to_string()) })),
+/// let tasks: Vec<(String, Box<dyn Fn() -> Result<String, String> + Send + Sync>)> = vec![
+///     ("task1".to_string(), Box::new(|| -> Result<String, String> { Ok("result1".to_string()) })),
+///     ("task2".to_string(), Box::new(|| -> Result<String, String> { Ok("result2".to_string()) })),
 /// ];
 ///
 /// let results = executor.execute(tasks)?;

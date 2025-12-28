@@ -3,8 +3,11 @@
 //! 本模块包含所有不关联业务的通用基础设施代码，包括：
 //! - HTTP 客户端和网络工具
 //! - 日志功能（LogLevel, Logger, Tracer）
-//! - 格式化工具（format - MessageFormatter, DisplayFormatter）
-//! - 工具函数（string, platform, browser, clipboard, checksum, unzip）
+//! - 格式化工具（format - MessageFormatter, DisplayFormatter, 日期时间格式化, 敏感字符串处理）
+//! - 文件系统操作（fs - 文件、路径、目录操作）
+//! - 校验和工具（checksum - SHA256 哈希计算和验证）
+//! - 解压工具（zip - tar.gz 和 zip 文件解压）
+//! - 工具函数（platform, browser, clipboard）
 //! - 交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
 //! - 进度指示器（Spinner, Progress）
 //! - 表格输出工具（TableBuilder, TableStyle）
@@ -14,10 +17,12 @@
 //! - Prompt 管理（统一管理 LLM Prompt）
 
 pub mod alias;
+pub mod checksum;
 pub mod concurrent;
 pub mod constants;
 pub mod dialog;
 pub mod format;
+pub mod fs;
 pub mod http;
 pub mod indicator;
 pub mod llm;
@@ -26,21 +31,28 @@ pub mod mcp;
 pub mod prompt;
 pub mod settings;
 pub mod shell;
+pub mod system;
 pub mod table;
-pub mod util;
+pub mod zip;
 
 // 重新导出常用类型，方便使用
 pub use alias::{AliasManager, CommandsConfig};
+pub use checksum::Checksum;
 pub use concurrent::{ConcurrentExecutor, TaskResult};
 pub use dialog::{
     ConfirmDialog, FormBuilder, FormResult, InputDialog, MultiSelectDialog, SelectDialog,
 };
-pub use format::DisplayFormatter;
+pub use format::{
+    format_document_timestamp, format_last_updated, format_last_updated_with_time, DateFormat,
+    DisplayFormatter, Sensitive, Timezone,
+};
+pub use fs::{DirectoryWalker, FileReader, FileWriter, PathAccess};
 pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};
 pub use indicator::{Progress, Spinner};
 pub use logger::{LogLevel, Logger, Tracer};
 pub use prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};
+pub use system::{Browser, Clipboard, Platform};
 pub use table::{TableBuilder, TableStyle};
-pub use util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
+pub use zip::Unzip;

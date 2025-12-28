@@ -1,8 +1,44 @@
+#![allow(dead_code, clippy::test_attr_in_doctest)] // 这些函数是为测试准备的公共 API
+
 //! 共享测试工具函数
 //!
 //! 提供测试中常用的辅助函数和工具。
-
-#![allow(dead_code)] // 这些函数是为测试准备的公共 API
+//!
+//! # 路径获取函数
+//!
+//! 本模块提供了统一的路径获取函数，使用 `dirs` crate 并支持测试环境隔离：
+//!
+//! - [`test_home_dir()`] - 获取主目录（测试环境感知）
+//! - [`test_config_dir()`] - 获取配置目录（测试环境感知）
+//! - [`test_data_dir()`] - 获取数据目录（测试环境感知）
+//! - [`test_cache_dir()`] - 获取缓存目录（测试环境感知）
+//!
+//! 这些函数优先使用环境变量（支持测试隔离），然后回退到 `dirs` crate 的标准目录。
+//! 与源代码中的 `Paths::home_dir()` 行为一致，确保测试环境的行为与生产环境一致。
+//!
+//! ## 使用示例
+//!
+//! ```no_run
+//! use tests::common::helpers::test_home_dir;
+//! use tests::common::guards::EnvGuard;
+//!
+//! #[test]
+//! fn test_example() -> color_eyre::Result<()> {
+//!     let mut guard = EnvGuard::new();
+//!     guard.set("HOME", "/test/isolated/home");
+//!
+//!     let home = test_home_dir()?;
+//!     assert_eq!(home, PathBuf::from("/test/isolated/home"));
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## 注意事项
+//!
+//! - **测试隔离**：使用 `EnvGuard` 设置环境变量后，这些函数会返回测试隔离的路径
+//! - **临时目录**：临时目录应继续使用 `std::env::temp_dir()` 或 `tempfile::tempdir()`
+//! - **当前目录**：当前目录应继续使用 `std::env::current_dir()`
+//! - **测试基础设施**：`TestIsolation` 和 `CliTestEnv` 创建的路径不需要使用这些函数
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,12 +78,13 @@ pub fn cleanup_test_env() {
 /// ```no_run
 /// use tests::common::helpers::create_temp_test_dir;
 ///
-/// let test_dir = create_temp_test_dir("my_test");
+/// let test_dir = create_temp_test_dir("my_test")?;
 /// // 使用 test_dir 进行测试
 /// ```
-pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
+pub fn create_temp_test_dir(prefix: &str) -> color_eyre::Result<PathBuf> {
+    use color_eyre::eyre::Context;
     let temp_dir = std::env::temp_dir();
-    let timestamp = workflow::base::util::date::get_unix_timestamp_nanos();
+    let timestamp = workflow::base::format::date::get_unix_timestamp_nanos();
     let random_suffix = random_string(8);
     let test_dir = temp_dir.join(format!(
         "workflow_test_{}_{}_{}",
@@ -60,8 +97,9 @@ pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
     }
 
     // 创建目录
-    fs::create_dir_all(&test_dir).expect("Failed to create test directory");
-    test_dir
+    fs::create_dir_all(&test_dir)
+        .wrap_err_with(|| format!("Failed to create test directory: {}", test_dir.display()))?;
+    Ok(test_dir)
 }
 
 /// 清理临时测试目录
@@ -137,10 +175,12 @@ pub fn fixture_path(name: &str) -> PathBuf {
 /// # 返回
 ///
 /// 返回创建的文件路径。
-pub fn create_test_file(dir: &Path, filename: &str, content: &str) -> PathBuf {
+pub fn create_test_file(dir: &Path, filename: &str, content: &str) -> color_eyre::Result<PathBuf> {
+    use color_eyre::eyre::Context;
     let file_path = dir.join(filename);
-    fs::write(&file_path, content).expect("Failed to write test file");
-    file_path
+    fs::write(&file_path, content)
+        .wrap_err_with(|| format!("Failed to write test file: {}", file_path.display()))?;
+    Ok(file_path)
 }
 
 /// 断言文件存在
@@ -250,4 +290,260 @@ pub fn assert_error_contains(error_msg: &str, keywords: &[&str]) {
         "Error message should contain at least one of {:?}: {}",
         keywords, error_msg
     );
+}
+
+/// 当前目录守卫
+///
+/// 使用 RAII 模式确保当前目录在作用域结束时恢复到原始值。
+/// 即使在测试失败（panic）时也能保证恢复，避免测试间的状态污染。
+///
+/// # 使用场景
+///
+/// - 需要临时切换到其他目录执行操作
+/// - 确保测试间的目录隔离
+/// - 避免全局状态污染
+///
+/// # 示例
+///
+/// ```no_run
+/// use tests::common::helpers::CurrentDirGuard;
+/// use std::path::Path;
+///
+/// #[test]
+/// fn my_test() -> color_eyre::Result<()> {
+///     // 自动恢复目录，即使测试失败
+///     let _guard = CurrentDirGuard::new("/tmp/test")?;
+///
+///     // 在新目录中执行操作
+///     assert_eq!(std::env::current_dir()?, Path::new("/tmp/test"));
+///
+///     // Drop 时自动恢复到原始目录
+///     Ok(())
+/// }
+/// ```
+///
+/// # 注意事项
+///
+/// - 必须保持`_guard`变量在作用域内，通常命名为`_guard`以表明其用途
+/// - 如果需要手动提前恢复，可以显式调用`drop(_guard)`
+/// - Drop 时的恢复失败会被忽略（避免 panic during panic）
+pub struct CurrentDirGuard {
+    original_dir: PathBuf,
+}
+
+impl CurrentDirGuard {
+    /// 创建目录守卫并切换到新目录
+    ///
+    /// # 参数
+    ///
+    /// * `new_dir` - 要切换到的目标目录
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回守卫实例，失败时返回错误
+    ///
+    /// # 错误
+    ///
+    /// - 无法获取当前目录
+    /// - 无法切换到目标目录
+    pub fn new(new_dir: impl AsRef<Path>) -> color_eyre::Result<Self> {
+        let original_dir = std::env::current_dir()?;
+        std::env::set_current_dir(new_dir)?;
+        Ok(Self { original_dir })
+    }
+}
+
+impl Drop for CurrentDirGuard {
+    fn drop(&mut self) {
+        // 忽略恢复失败，避免 panic during panic
+        let _ = std::env::set_current_dir(&self.original_dir);
+    }
+}
+
+// ==================== 统一路径获取函数（使用 dirs crate）====================
+
+/// 获取主目录（测试环境感知）
+///
+/// 优先使用环境变量（支持测试隔离），然后回退到 `dirs::home_dir()`。
+/// 这与源代码中的 `Paths::home_dir()` 行为一致，确保测试环境的行为与生产环境一致。
+///
+/// # 返回
+///
+/// 返回用户主目录的 `PathBuf`。
+///
+/// # 错误
+///
+/// 如果无法确定主目录，返回错误信息。
+///
+/// # 示例
+///
+/// ```no_run
+/// use tests::common::helpers::test_home_dir;
+/// use crate::common::guards::EnvGuard;
+///
+/// #[test]
+/// fn test_with_isolated_home() -> color_eyre::Result<()> {
+///     let mut guard = EnvGuard::new();
+///     guard.set("HOME", "/test/isolated/home");
+///
+///     let home = test_home_dir()?;
+///     assert_eq!(home, PathBuf::from("/test/isolated/home"));
+///     Ok(())
+/// }
+/// ```
+pub fn test_home_dir() -> color_eyre::Result<PathBuf> {
+    // 优先检查环境变量（确保测试环境中的 HOME 被正确使用）
+    #[cfg(unix)]
+    {
+        if let Ok(home) = std::env::var("HOME") {
+            let home_path = PathBuf::from(home);
+            if home_path.is_absolute() {
+                return Ok(home_path);
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(home) = std::env::var("USERPROFILE") {
+            let home_path = PathBuf::from(home);
+            if home_path.is_absolute() {
+                return Ok(home_path);
+            }
+        }
+    }
+
+    // 回退到 dirs::home_dir()
+    dirs::home_dir().ok_or_else(|| color_eyre::eyre::eyre!("Cannot determine home directory"))
+}
+
+/// 获取配置目录（测试环境感知）
+///
+/// 返回测试环境中的配置目录路径。
+/// 如果设置了 `WORKFLOW_CONFIG_DIR` 环境变量，使用该路径。
+/// 否则使用标准配置目录路径（`~/.workflow/config`）。
+///
+/// # 返回
+///
+/// 返回配置目录的 `PathBuf`。
+///
+/// # 错误
+///
+/// 如果无法确定主目录，返回错误信息。
+///
+/// # 示例
+///
+/// ```no_run
+/// use tests::common::helpers::test_config_dir;
+/// use crate::common::guards::EnvGuard;
+///
+/// #[test]
+/// fn test_with_isolated_config() -> color_eyre::Result<()> {
+///     let mut guard = EnvGuard::new();
+///     guard.set("HOME", "/test/home");
+///
+///     let config_dir = test_config_dir()?;
+///     assert!(config_dir.to_string_lossy().contains(".workflow"));
+///     assert!(config_dir.to_string_lossy().contains("config"));
+///     Ok(())
+/// }
+/// ```
+pub fn test_config_dir() -> color_eyre::Result<PathBuf> {
+    // 优先使用测试环境变量
+    if let Ok(config_dir) = std::env::var("WORKFLOW_CONFIG_DIR") {
+        return Ok(PathBuf::from(config_dir));
+    }
+
+    // 使用标准配置目录
+    let home = test_home_dir()?;
+    Ok(home.join(".workflow").join("config"))
+}
+
+/// 获取数据目录（测试环境感知）
+///
+/// 返回测试环境中的数据目录路径。
+/// 优先使用环境变量，然后回退到 `dirs` crate 的标准目录。
+///
+/// # 返回
+///
+/// 返回数据目录的 `PathBuf`。
+///
+/// # 错误
+///
+/// 如果无法确定主目录，返回错误信息。
+///
+/// # 平台差异
+///
+/// - **Windows**: `%LOCALAPPDATA%` 或 `dirs::data_local_dir()`
+/// - **Unix**: `$XDG_DATA_HOME` 或 `~/.local/share`
+pub fn test_data_dir() -> color_eyre::Result<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(data_dir) = std::env::var("LOCALAPPDATA") {
+            let data_path = PathBuf::from(data_dir);
+            if data_path.is_absolute() {
+                return Ok(data_path);
+            }
+        }
+        // 回退到 dirs
+        if let Some(data_dir) = dirs::data_local_dir() {
+            return Ok(data_dir);
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Unix: 使用 XDG_DATA_HOME 或默认 ~/.local/share
+        if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
+            let data_path = PathBuf::from(data_home);
+            if data_path.is_absolute() {
+                return Ok(data_path);
+            }
+        }
+        if let Some(data_dir) = dirs::data_dir() {
+            return Ok(data_dir);
+        }
+    }
+
+    // 回退到主目录下的标准位置
+    let home = test_home_dir()?;
+    Ok(home.join(".local").join("share"))
+}
+
+/// 获取缓存目录（测试环境感知）
+///
+/// 返回测试环境中的缓存目录路径。
+/// 优先使用环境变量，然后回退到 `dirs` crate 的标准目录。
+///
+/// # 返回
+///
+/// 返回缓存目录的 `PathBuf`。
+///
+/// # 错误
+///
+/// 如果无法确定主目录，返回错误信息。
+///
+/// # 平台差异
+///
+/// - **Unix**: `$XDG_CACHE_HOME` 或 `~/.cache`
+/// - **Windows**: `%LOCALAPPDATA%` 下的缓存目录
+pub fn test_cache_dir() -> color_eyre::Result<PathBuf> {
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Unix: 使用 XDG_CACHE_HOME 或默认 ~/.cache
+        if let Ok(cache_home) = std::env::var("XDG_CACHE_HOME") {
+            let cache_path = PathBuf::from(cache_home);
+            if cache_path.is_absolute() {
+                return Ok(cache_path);
+            }
+        }
+    }
+
+    if let Some(cache_dir) = dirs::cache_dir() {
+        return Ok(cache_dir);
+    }
+
+    // 回退到主目录下的标准位置
+    let home = test_home_dir()?;
+    Ok(home.join(".cache"))
 }

@@ -15,9 +15,11 @@ pub struct PullRequestInfo {
     pub body: Option<String>,
     pub state: String,
     #[serde(default)]
-    pub merged: bool,
+    pub merged: Option<bool>,
     #[serde(rename = "merged_at", default)]
     pub merged_at: Option<String>,
+    #[serde(default)]
+    pub mergeable: Option<bool>,
     pub html_url: String,
     pub head: PullRequestBranch,
     pub base: PullRequestBranch,

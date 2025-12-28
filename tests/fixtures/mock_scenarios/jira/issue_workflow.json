@@ -1,0 +1,38 @@
+{
+  "name": "jira_issue_workflow",
+  "description": "完整的Jira Issue工作流程场景",
+  "mocks": [
+    {
+      "method": "POST",
+      "path": "/rest/api/3/issue",
+      "response": {
+        "template": "{\"id\": \"{{issue_id}}\", \"key\": \"{{issue_key}}\", \"self\": \"https://jira.example.com/rest/api/3/issue/{{issue_id}}\"}",
+        "status": 201
+      },
+      "validation": {
+        "required_headers": ["authorization", "content-type"],
+        "required_body_fields": ["fields"]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/api/3/issue/{{issue_key}}",
+      "response": {
+        "file": "mock_responses/jira/issue.json",
+        "status": 200
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/rest/api/3/issue/{{issue_key}}/transitions",
+      "response": {
+        "body": "{}",
+        "status": 204
+      },
+      "validation": {
+        "required_body_fields": ["transition"]
+      }
+    }
+  ]
+}
+

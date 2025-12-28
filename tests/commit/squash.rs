@@ -7,12 +7,12 @@
 //! - 错误处理和边界情况
 
 use pretty_assertions::assert_eq;
-use serial_test::serial;
-use std::fs;
-use std::process::Command;
-use tempfile::TempDir;
 use workflow::commit::{CommitSquash, SquashOptions, SquashPreview, SquashResult};
 use workflow::git::CommitInfo;
+
+use crate::common::environments::GitTestEnv;
+use crate::common::fixtures::git_repo_with_commit;
+use rstest::rstest;
 
 // ==================== Helper Functions ====================
 
@@ -51,62 +51,26 @@ fn create_single_commit() -> CommitInfo {
     }
 }
 
-/// 创建带有多个提交的临时 Git 仓库
-fn create_git_repo_with_multiple_commits() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
-
-    // 初始化 Git 仓库
-    Command::new("git")
-        .args(["init"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to init git repo");
-
-    // 设置 Git 配置
-    Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
-
-    Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    // 创建多个提交
-    for i in 1..=5 {
-        let file_path = temp_path.join(format!("feature{}.txt", i));
-        fs::write(&file_path, format!("Feature {} implementation\n", i))
-            .expect("Failed to write file");
-
-        Command::new("git")
-            .args(["add", &format!("feature{}.txt", i)])
-            .current_dir(temp_path)
-            .output()
-            .expect("Failed to add file");
-
-        Command::new("git")
-            .args(["commit", "-m", &format!("feat: add feature {}", i)])
-            .current_dir(temp_path)
-            .output()
-            .expect("Failed to commit");
-    }
-
-    temp_dir
-}
-
-// ==================== 测试用例 ====================
+// ==================== Test Cases ====================
 
 /// 测试获取分支提交（多个提交）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_get_branch_commits_multiple() {
+fn test_get_branch_commits_with_multiple_commits_returns_all_commits() {
+    // Arrange: 准备多个提交
     let commits = create_sample_commits();
 
-    // 这里我们模拟 get_branch_commits 的行为
-    // 在实际实现中，这个方法会调用 Git 命令
+    // Act & Assert: 验证获取的提交数量和内容（这里我们模拟 get_branch_commits 的行为）
     assert_eq!(commits.len(), 3);
     assert!(commits[0].message.contains("feat: add user authentication"));
     assert!(commits[1].message.contains("fix: resolve authentication bug"));
@@ -114,15 +78,28 @@ fn test_get_branch_commits_multiple() {
 }
 
 /// 测试创建预览（多个提交）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_create_preview_multiple_commits() {
+fn test_create_preview_with_multiple_commits_creates_preview() {
+    // Arrange: 准备多个提交和新消息
     let commits = create_sample_commits();
     let new_message = "feat: implement complete authentication system\n\nThis includes user authentication, bug fixes, and documentation updates.";
     let current_branch = "main";
 
-    // 由于 create_preview 可能会调用实际的 Git 操作，我们需要处理可能的错误
+    // Act: 创建预览（由于 create_preview 可能会调用实际的 Git 操作，我们需要处理可能的错误）
     match CommitSquash::create_preview(&commits, new_message, current_branch) {
         Ok(preview) => {
+            // Assert: 验证预览创建成功
             assert_eq!(preview.commits.len(), 3);
             assert_eq!(preview.new_message, new_message);
             assert!(!preview.commits.is_empty());
@@ -135,15 +112,28 @@ fn test_create_preview_multiple_commits() {
 }
 
 /// 测试创建预览（单个提交）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_create_preview_single_commit() {
+fn test_create_preview_with_single_commit_creates_preview() {
+    // Arrange: 准备单个提交和新消息
     let commits = vec![create_single_commit()];
     let new_message = "feat: implement single feature with improvements";
     let current_branch = "feature";
 
-    // 由于 create_preview 可能会调用实际的 Git 操作，我们需要处理可能的错误
+    // Act: 创建预览（由于 create_preview 可能会调用实际的 Git 操作，我们需要处理可能的错误）
     match CommitSquash::create_preview(&commits, new_message, current_branch) {
         Ok(preview) => {
+            // Assert: 验证预览创建成功
             assert_eq!(preview.commits.len(), 1);
             assert_eq!(preview.new_message, new_message);
         }
@@ -154,8 +144,20 @@ fn test_create_preview_single_commit() {
 }
 
 /// 测试格式化预览显示
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_format_preview() {
+fn test_format_preview_with_valid_preview_returns_formatted_string() {
+    // Arrange: 准备预览数据
     let commits = create_sample_commits();
     let preview = SquashPreview {
         commits: commits.clone(),
@@ -164,7 +166,10 @@ fn test_format_preview() {
         is_pushed: false,
     };
 
+    // Act: 格式化预览
     let formatted = CommitSquash::format_preview(&preview);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("3 commit(s)"));
     assert!(formatted.contains("feat: add user authentication"));
     assert!(formatted.contains("fix: resolve authentication bug"));
@@ -173,87 +178,182 @@ fn test_format_preview() {
 }
 
 /// 测试 SquashOptions 结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_squash_options() {
+fn test_squash_options_with_valid_fields_creates_options() {
+    // Arrange: 准备选项字段值
+    let commit_shas = vec!["sha1".to_string(), "sha2".to_string(), "sha3".to_string()];
+    let new_message = "Squashed commit message";
+    let auto_stash = true;
+
+    // Act: 创建 SquashOptions
     let options = SquashOptions {
-        commit_shas: vec!["sha1".to_string(), "sha2".to_string(), "sha3".to_string()],
-        new_message: "Squashed commit message".to_string(),
-        auto_stash: true,
+        commit_shas: commit_shas.clone(),
+        new_message: new_message.to_string(),
+        auto_stash,
     };
 
+    // Assert: 验证所有字段值正确
     assert_eq!(options.commit_shas.len(), 3);
     assert_eq!(options.commit_shas[0], "sha1");
-    assert_eq!(options.new_message, "Squashed commit message");
+    assert_eq!(options.new_message, new_message);
     assert_eq!(options.auto_stash, true);
 }
 
 /// 测试 SquashResult 结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_squash_result() {
+fn test_squash_result_with_success_fields_creates_result() {
+    // Arrange: 准备成功结果字段值
+    let success = true;
+    let has_conflicts = false;
+    let was_stashed = true;
+
+    // Act: 创建 SquashResult
     let result = SquashResult {
-        success: true,
-        has_conflicts: false,
-        was_stashed: true,
+        success,
+        has_conflicts,
+        was_stashed,
     };
 
+    // Assert: 验证所有字段值正确
     assert_eq!(result.success, true);
     assert_eq!(result.has_conflicts, false);
     assert_eq!(result.was_stashed, true);
 }
 
 /// 测试 SquashResult 失败场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_squash_result_failure() {
+fn test_squash_result_with_failure_fields_creates_result() {
+    // Arrange: 准备失败结果字段值
+    let success = false;
+    let has_conflicts = true;
+    let was_stashed = false;
+
+    // Act: 创建 SquashResult
     let result = SquashResult {
-        success: false,
-        has_conflicts: true,
-        was_stashed: false,
+        success,
+        has_conflicts,
+        was_stashed,
     };
 
+    // Assert: 验证所有字段值正确
     assert_eq!(result.success, false);
     assert_eq!(result.has_conflicts, true);
     assert_eq!(result.was_stashed, false);
 }
 
 /// 测试 SquashPreview 结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_squash_preview() {
+fn test_squash_preview_with_valid_fields_creates_preview() {
+    // Arrange: 准备预览字段值
     let commits = create_sample_commits();
+    let new_message = "Combined commit message";
+    let base_sha = "preview_base";
+    let is_pushed = true;
+
+    // Act: 创建 SquashPreview
     let preview = SquashPreview {
         commits: commits.clone(),
-        new_message: "Combined commit message".to_string(),
-        base_sha: "preview_base".to_string(),
-        is_pushed: true,
+        new_message: new_message.to_string(),
+        base_sha: base_sha.to_string(),
+        is_pushed,
     };
 
+    // Assert: 验证所有字段值正确
     assert_eq!(preview.commits.len(), 3);
-    assert_eq!(preview.new_message, "Combined commit message");
-    assert_eq!(preview.base_sha, "preview_base");
+    assert_eq!(preview.new_message, new_message);
+    assert_eq!(preview.base_sha, base_sha);
     assert_eq!(preview.is_pushed, true);
 }
 
 /// 测试空提交列表处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_create_preview_empty_commits() {
+fn test_create_preview_with_empty_commits_handles_gracefully() {
+    // Arrange: 准备空提交列表
     let empty_commits: Vec<CommitInfo> = vec![];
     let new_message = "Empty squash message";
     let current_branch = "empty";
 
+    // Act: 尝试创建预览
     match CommitSquash::create_preview(&empty_commits, new_message, current_branch) {
         Ok(_) => {
-            // 如果成功，验证行为
-            assert!(true);
+            // Assert: 如果成功，验证行为
         }
         Err(_) => {
-            // 空提交列表应该导致错误，这是预期的
-            assert!(true);
+            // Assert: 空提交列表应该导致错误，这是预期的
         }
     }
 }
 
 /// 测试 SquashPreview 克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_squash_preview_clone() {
+fn test_squash_preview_clone_with_valid_preview_creates_clone() {
+    // Arrange: 准备原始预览
     let commits = create_sample_commits();
     let original_preview = SquashPreview {
         commits: commits.clone(),
@@ -262,7 +362,10 @@ fn test_squash_preview_clone() {
         is_pushed: false,
     };
 
+    // Act: 克隆预览
     let cloned_preview = original_preview.clone();
+
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(original_preview.commits.len(), cloned_preview.commits.len());
     assert_eq!(original_preview.new_message, cloned_preview.new_message);
     assert_eq!(original_preview.base_sha, cloned_preview.base_sha);
@@ -270,24 +373,50 @@ fn test_squash_preview_clone() {
 }
 
 /// 测试 SquashOptions 克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_squash_options_clone() {
+fn test_squash_options_clone_with_valid_options_creates_clone() {
+    // Arrange: 准备原始选项
     let original_options = SquashOptions {
         commit_shas: vec!["sha_a".to_string(), "sha_b".to_string()],
         new_message: "Clone test message".to_string(),
         auto_stash: false,
     };
 
+    // Act: 克隆选项
     let cloned_options = original_options.clone();
+
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(original_options.commit_shas, cloned_options.commit_shas);
     assert_eq!(original_options.new_message, cloned_options.new_message);
     assert_eq!(original_options.auto_stash, cloned_options.auto_stash);
 }
 
 /// 测试错误处理场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_get_branch_commits_error_handling() {
-    // 测试在非 Git 仓库环境中的行为
+fn test_get_branch_commits_error_handling_with_invalid_environment_handles_gracefully() {
+    // Arrange: 测试在非 Git 仓库环境中的行为
     // 这个测试主要验证错误处理不会导致 panic
 
     // 模拟调用 get_branch_commits 在无效环境中
@@ -299,25 +428,44 @@ fn test_get_branch_commits_error_handling() {
     match std::env::current_dir() {
         Ok(_) => {
             // 如果能获取当前目录，说明基本环境正常
-            assert!(true);
         }
         Err(_) => {
             // 如果连当前目录都获取不到，说明环境有问题
-            assert!(true);
         }
     }
 
-    // 验证分支名称不为空
-    assert!(!branch_name.is_empty());
+    // Assert: 验证分支名称不为空（branch_name 是字符串字面量，总是非空）
+    let _ = branch_name;
 }
 
 /// 测试 Git 仓库集成
-#[test]
-#[serial]
-fn test_git_integration() {
-    let _temp_dir = create_git_repo_with_multiple_commits();
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[rstest]
+fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
+    // 使用 GitTestEnv 创建隔离的 Git 仓库
+    let env = &git_repo_with_commit;
+
+    // 创建多个提交以模拟真实场景
+    for i in 1..=5 {
+        env.make_test_commit(
+            &format!("feature{}.txt", i),
+            &format!("Feature {} implementation\n", i),
+            &format!("feat: add feature {}", i),
+        )?;
+    }
 
     // 这个测试主要验证 Git 仓库创建辅助函数工作正常
     // 实际的 Git 集成测试应该在更高级别的集成测试中进行
-    assert!(true);
+    // GitTestEnv 会在函数结束时自动清理
+    Ok(())
 }

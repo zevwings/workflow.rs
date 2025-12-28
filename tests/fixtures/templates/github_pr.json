@@ -1,0 +1,23 @@
+{
+  "number": {{number}},
+  "title": "{{title}}",
+  "body": "{{body}}",
+  "state": "{{state}}",
+  "head": {
+    "ref": "{{head_ref}}",
+    "sha": "{{head_sha}}"
+  },
+  "base": {
+    "ref": "{{base_ref}}",
+    "sha": "{{base_sha}}"
+  },
+  "user": {
+    "login": "{{user_login}}",
+    "id": {{user_id}}
+  },
+  "created_at": "{{created_at}}",
+  "updated_at": "{{updated_at}}",
+  "merged": {{merged}},
+  "html_url": "{{html_url}}"
+}
+
