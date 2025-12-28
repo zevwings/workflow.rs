@@ -524,6 +524,7 @@ T3: test_isolation_from_current_repo 检查
 - [测试覆盖率改进方案](./test-coverage-improvement.md) - 综合改进方案
 - [测试稳定性分析](./test-stability.md) - 稳定性问题分析
 - [测试质量分析](./test-quality.md) - 测试质量分析
+- [低价值测试清理 TODO](./test-quality-low-value-tests-todo.md) - 低价值测试识别和移除计划
 - [模块覆盖率文档](./) - 各模块详细分析
 
 ### CI/CD 配置

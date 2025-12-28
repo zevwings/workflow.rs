@@ -39,7 +39,7 @@
 | | [覆盖率测试指南](./references/coverage.md) | 覆盖率工具、报告生成、提升技巧 |
 | | [性能测试指南](./references/performance.md) | 基准测试、性能要求、优化建议 |
 | | [集成测试指南](./references/integration.md) | 环境配置、数据隔离、清理机制 |
-| | [跨平台测试方案](./cross-platform.md) | 跨平台测试策略、交叉编译、CI/CD 测试 |
+| | [跨平台测试方案](./cross-platform.md) | 跨平台测试策略、CI/CD 测试 |
 | **测试模板** | [测试文档模板](./documentation-template.md) | 标准化测试文档模板（推荐） |
 | | [标准测试模板](./templates/test-case.template) | 标准测试用例模板 |
 | | [被忽略测试模板](./templates/ignored-test.template) | 被忽略测试的完整模板 |
@@ -219,7 +219,7 @@ make coverage
 
 **关键内容**：
 - 支持的平台和目标架构
-- 本地交叉编译测试方法
+- 本地测试方法
 - CI/CD 跨平台测试流程
 - 平台特定测试处理
 - 常见问题和解决方案

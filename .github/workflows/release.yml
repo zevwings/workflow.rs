@@ -375,17 +375,14 @@ jobs:
             target: x86_64-unknown-linux-gnu
             platform: Linux-x86_64
           - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            platform: Linux-ARM64
-          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             platform: Linux-x86_64-static
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             platform: Windows-x86_64
           - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            platform: Windows-ARM64
+            target: x86_64-pc-windows-gnu
+            platform: Windows-x86_64-MinGW
 
     steps:
       - name: 📥 Checkout repository
@@ -429,14 +426,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y musl-tools
 
-      - name: 📦 Install cross-compilation toolchain (Linux ARM64)
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+      - name: 📦 Install MinGW toolchain (Windows)
+        if: matrix.os == 'windows-latest' && matrix.target == 'x86_64-pc-windows-gnu'
+        shell: pwsh
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu python3
-          # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
-          # 因此不需要安装 XCB 开发库，简化构建流程
-          # 但需要安装 Python3 用于处理 Cargo.lock 脚本
+          # GitHub Actions Windows runner 通常已预装 MinGW
+          # 如果没有，可以通过 rustup 安装，或使用预装的工具链
+          # 检查 MinGW 是否可用
+          if (Get-Command x86_64-w64-mingw32-gcc -ErrorAction SilentlyContinue) {
+            Write-Host "✅ MinGW toolchain already available"
+          } else {
+            Write-Host "⚠️  MinGW toolchain not found, attempting to install..."
+            # 尝试通过 Chocolatey 安装（如果可用）
+            if (Get-Command choco -ErrorAction SilentlyContinue) {
+              choco install mingw -y
+            } else {
+              Write-Host "⚠️  Chocolatey not available, MinGW may need manual installation"
+            }
+          }
 
       - name: 📦 Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -482,23 +489,6 @@ jobs:
       - name: 🔨 Build binaries
         shell: bash
         run: |
-          # 设置交叉编译环境变量（仅 Linux ARM64）
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            echo "🔧 Cross-compiling for Linux ARM64"
-            echo "   CC: $CC_aarch64_unknown_linux_gnu"
-            echo "   LINKER: $CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER"
-            # 验证交叉编译工具链
-            if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
-              echo "✅ aarch64-linux-gnu-gcc found: $(which aarch64-linux-gnu-gcc)"
-              aarch64-linux-gnu-gcc --version || true
-            else
-              echo "❌ Error: aarch64-linux-gnu-gcc not found"
-              exit 1
-            fi
-          fi
-
           # 对于 Linux x86_64，设置环境变量以支持 xcb 构建
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
             export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
@@ -524,20 +514,17 @@ jobs:
               echo "❌ Build failed. Checking build log for xcb-related errors..."
               grep -i "xcb\|xproto\|xcbgen" build.log | head -20 || true
             fi
-          elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            # Linux ARM64 交叉编译
-            echo "🔨 Building for Linux ARM64..."
-            # 确保环境变量已设置
-            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          elif [[ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]]; then
+            # Linux musl 静态链接版本
+            echo "🔨 Building for Linux musl (static linking)..."
             if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false
-              echo "❌ Build failed for Linux ARM64"
+              echo "❌ Build failed for Linux musl"
             fi
           else
-            # 其他目标（macOS, Windows, musl）
+            # 其他目标（macOS, Windows MSVC, Windows MinGW）
             if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
               BUILD_SUCCESS=true
             else
