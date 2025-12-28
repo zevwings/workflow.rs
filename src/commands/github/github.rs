@@ -2,12 +2,12 @@
 //! 用于管理多个 GitHub 账号的配置
 
 use crate::base::dialog::{ConfirmDialog, SelectDialog};
+use crate::base::format::Sensitive;
 use crate::base::indicator::Spinner;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::settings::table::GitHubAccountListRow;
 use crate::base::table::{TableBuilder, TableStyle};
-use crate::base::util::mask_sensitive_value;
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
@@ -108,7 +108,7 @@ impl GitHubCommand {
         if let Some(account) = github.get_current_account() {
             log_success!("Current account: {}", account.name);
             log_message!("  Email: {}", account.email);
-            log_message!("  API Token: {}", mask_sensitive_value(&account.api_token));
+            log_message!("  API Token: {}", account.api_token.mask());
         } else {
             log_warning!("No GitHub account is currently active.");
             log_message!("Run 'workflow github add' to add an account.");
@@ -398,10 +398,7 @@ impl GitHubCommand {
         log_info!("Current account information:");
         log_message!("  Name: {}", old_account.name);
         log_message!("  Email: {}", old_account.email);
-        log_message!(
-            "  API Token: {}",
-            mask_sensitive_value(&old_account.api_token)
-        );
+        log_message!("  API Token: {}", old_account.api_token.mask());
         log_break!();
 
         // 收集新的账号信息（使用现有值作为默认值）

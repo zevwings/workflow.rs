@@ -1,0 +1,28 @@
+{
+  "name": "auth_failure",
+  "description": "模拟认证失败场景",
+  "scenarios": [
+    {
+      "name": "github_token_invalid",
+      "method": "GET",
+      "path": "/user",
+      "status": 401,
+      "response": {
+        "message": "Bad credentials",
+        "documentation_url": "https://docs.github.com/rest"
+      }
+    },
+    {
+      "name": "jira_credentials_invalid",
+      "method": "GET",
+      "path": "/rest/api/3/myself",
+      "status": 401,
+      "response": {
+        "errorMessages": [
+          "Authentication failed. Please check your credentials."
+        ]
+      }
+    }
+  ]
+}
+

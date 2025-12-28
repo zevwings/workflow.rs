@@ -1,10 +1,17 @@
 //! Jira CLI 命令测试
 //!
 //! 测试 Jira CLI 命令的参数解析、命令执行流程和错误处理。
+//!
+//! ## 测试策略
+//!
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 使用 `rstest` 进行参数化测试
+//! - 测试所有 Jira 子命令的参数解析
 
 use clap::Parser;
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use rstest::{fixture, rstest};
+use rstest::rstest;
 use workflow::cli::JiraSubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -15,27 +22,34 @@ struct TestJiraCli {
     command: JiraSubcommand,
 }
 
-// ==================== Fixtures ====================
+// ==================== Command Structure Tests ====================
 
-#[fixture]
-fn test_jira_id() -> &'static str {
-    "PROJ-123"
-}
-
-#[fixture]
-fn test_jira_id_alt() -> &'static str {
-    "PROJ-456"
-}
-
-// ==================== 命令结构测试 ====================
-
-#[test]
-fn test_jira_subcommand_enum_creation() {
-    // 测试 JiraSubcommand 枚举可以创建
-    // 通过编译验证枚举定义正确
-    assert!(true, "JiraSubcommand enum should be defined");
-}
-
+/// 测试Jira子命令的参数解析（带Jira ID）
+///
+/// ## 测试目的
+/// 验证所有Jira子命令能够正确解析和存储Jira ticket ID参数。
+///
+/// ## 测试场景（参数化测试）
+/// 使用`rstest`对以下子命令进行参数化测试：
+/// - `info`: 查询issue信息
+/// - `related`: 查询关联issue
+/// - `changelog`: 查询变更历史
+/// - `comment`: 添加评论
+/// - `comments`: 查询评论列表
+/// - `attachments`: 查询附件列表
+///
+/// ## 测试方法
+/// 1. 使用`clap::Parser`解析命令行参数
+/// 2. 使用模式匹配验证解析结果
+/// 3. 确认Jira ID被正确存储在对应的字段中
+///
+/// ## 技术细节
+/// - 使用`#[rstest]`和`#[case]`进行参数化测试
+/// - 每个case运行一次独立的测试
+/// - 使用模式匹配处理不同的子命令枚举变体
+///
+/// ## 预期结果
+/// 每个子命令的`jira_id`字段应包含传入的Jira ID
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
@@ -43,8 +57,11 @@ fn test_jira_subcommand_enum_creation() {
 #[case("comment", "PROJ-123")]
 #[case("comments", "PROJ-123")]
 #[case("attachments", "PROJ-456")]
-fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id]).unwrap();
+fn test_jira_command_with_id_return_ok(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id])?;
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -65,10 +82,12 @@ fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) {
         JiraSubcommand::Attachments { jira_id: id } => {
             assert_eq!(id.jira_id, Some(jira_id.to_string()));
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
+    Ok(())
 }
 
+/// 测试Jira命令不带ID时的参数解析
 #[rstest]
 #[case("info")]
 #[case("related")]
@@ -77,9 +96,14 @@ fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) {
 #[case("comments")]
 #[case("attachments")]
 #[case("clean")]
-fn test_jira_command_without_id(#[case] subcommand: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand]).unwrap();
+fn test_jira_command_without_id_parses_correctly_return_ok(#[case] subcommand: &str) -> Result<()> {
+    // Arrange: 准备不带 Jira ID 的命令输入
+    let args = &["test-jira", subcommand];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证 Jira ID 为 None
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert_eq!(args.jira_id.jira_id, None);
@@ -102,20 +126,30 @@ fn test_jira_command_without_id(#[case] subcommand: &str) {
         JiraSubcommand::Clean { jira_id, .. } => {
             assert_eq!(jira_id.jira_id, None);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
+    Ok(())
 }
 
-// ==================== 输出格式测试 ====================
+// ==================== Output Format Tests ====================
 
+/// 测试Jira命令的table输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--table"]).unwrap();
+fn test_jira_command_with_table_output_format_parses_correctly_return_ok(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
+    // Arrange: 准备带 --table 标志的命令输入
+    let args = &["test-jira", subcommand, jira_id, "--table"];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证输出格式为 table
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert!(args.query_display.output_format.table);
@@ -141,18 +175,28 @@ fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_
             assert!(!output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
+    Ok(())
 }
 
+/// 测试Jira命令的json输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--json"]).unwrap();
+fn test_jira_command_with_json_output_format_parses_correctly_return_ok(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
+    // Arrange: 准备带 --json 标志的命令输入
+    let args = &["test-jira", subcommand, jira_id, "--json"];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证输出格式为 json
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert!(!args.query_display.output_format.table);
@@ -178,18 +222,28 @@ fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_i
             assert!(!output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
+    Ok(())
 }
 
+/// 测试Jira命令的yaml输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--yaml"]).unwrap();
+fn test_jira_command_with_yaml_output_format_parses_correctly_return_ok(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
+    // Arrange: 准备带 --yaml 标志的命令输入
+    let args = &["test-jira", subcommand, jira_id, "--yaml"];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证输出格式为 yaml
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert!(!args.query_display.output_format.table);
@@ -215,18 +269,22 @@ fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_i
             assert!(output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
+    Ok(())
 }
 
+/// 测试Jira命令的markdown输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--markdown"]).unwrap();
+fn test_jira_command_output_format_markdown_return_ok(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id, "--markdown"])?;
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -253,16 +311,21 @@ fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] ji
             assert!(!output_format.yaml);
             assert!(output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
+    Ok(())
 }
 
+/// 测试Jira命令的所有输出格式标志
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
-fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&[
+fn test_jira_command_output_format_all_flags_return_ok(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         subcommand,
         jira_id,
@@ -270,8 +333,7 @@ fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] j
         "--json",
         "--yaml",
         "--markdown",
-    ])
-    .unwrap();
+    ])?;
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -292,24 +354,36 @@ fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] j
             assert!(args.query_display.output_format.yaml);
             assert!(args.query_display.output_format.markdown);
         }
-        _ => panic!("Unexpected command variant"),
+        _ => return Err(color_eyre::eyre::eyre!("Unexpected command variant")),
     }
+    Ok(())
 }
 
 // ==================== Clean 命令测试 ====================
 
+/// 测试Jira清理命令的结构（包含所有参数）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_clean_command_structure() {
-    // 测试 Clean 命令结构（带所有参数）
-    let cli = TestJiraCli::try_parse_from(&[
+fn test_jira_clean_command_structure_return_ok() -> Result<()> {
+    // Arrange: 准备测试 Clean 命令结构（带所有参数）
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "clean",
         "PROJ-789",
         "--all",
         "--dry-run",
         "--list",
-    ])
-    .unwrap();
+    ])?;
 
     match cli.command {
         JiraSubcommand::Clean {
@@ -323,10 +397,12 @@ fn test_jira_clean_command_structure() {
             assert!(dry_run.dry_run);
             assert!(list);
         }
-        _ => panic!("Expected Clean command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Clean command")),
     }
+    Ok(())
 }
 
+/// 测试Jira清理命令的标志组合
 #[rstest]
 #[case("PROJ-123", false, false, false, false)]
 #[case("PROJ-123", true, false, false, false)]
@@ -335,13 +411,13 @@ fn test_jira_clean_command_structure() {
 #[case("PROJ-123", true, true, true, false)]
 #[case("", false, false, false, true)]
 #[case("", true, false, false, true)]
-fn test_jira_clean_command_flags(
+fn test_jira_clean_command_flags_return_ok(
     #[case] jira_id: &str,
     #[case] all: bool,
     #[case] dry_run: bool,
     #[case] list: bool,
     #[case] no_jira_id: bool,
-) {
+) -> Result<()> {
     let mut args = vec!["test-jira", "clean"];
     if !no_jira_id && !jira_id.is_empty() {
         args.push(jira_id);
@@ -356,7 +432,7 @@ fn test_jira_clean_command_flags(
         args.push("--list");
     }
 
-    let cli = TestJiraCli::try_parse_from(&args).unwrap();
+    let cli = TestJiraCli::try_parse_from(&args)?;
 
     match cli.command {
         JiraSubcommand::Clean {
@@ -374,14 +450,27 @@ fn test_jira_clean_command_flags(
             assert_eq!(dr.dry_run, dry_run);
             assert_eq!(l, list);
         }
-        _ => panic!("Expected Clean command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Clean command")),
     }
+    Ok(())
 }
 
+/// 测试Jira清理命令的短标志（-a, -n, -l）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_clean_command_short_flags() {
-    // 测试 Clean 命令的短标志
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "-a", "-n", "-l"]).unwrap();
+fn test_jira_clean_command_short_flags_return_ok() -> Result<()> {
+    // Arrange: 准备测试 Clean 命令的短标志
+    let cli = TestJiraCli::try_parse_from(["test-jira", "clean", "-a", "-n", "-l"])?;
 
     match cli.command {
         JiraSubcommand::Clean {
@@ -395,72 +484,133 @@ fn test_jira_clean_command_short_flags() {
             assert!(dry_run.dry_run);
             assert!(list);
         }
-        _ => panic!("Expected Clean command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Clean command")),
     }
+    Ok(())
 }
 
 // ==================== Comments 命令参数测试 ====================
 
+/// 测试Jira评论命令的limit参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_limit() {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])
-        .unwrap();
+fn test_jira_comments_command_with_limit_return_ok() -> Result<()> {
+    let cli = TestJiraCli::try_parse_from(["test-jira", "comments", "PROJ-123", "--limit", "10"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.limit, Some(10)),
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
+    Ok(())
 }
 
+/// 测试Jira评论命令的offset参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_offset() {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])
-        .unwrap();
+fn test_jira_comments_command_with_offset_return_ok() -> Result<()> {
+    let cli = TestJiraCli::try_parse_from(["test-jira", "comments", "PROJ-123", "--offset", "5"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.offset, Some(5)),
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
+    Ok(())
 }
 
+/// 测试Jira评论命令的author参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_author() {
-    let cli = TestJiraCli::try_parse_from(&[
+fn test_jira_comments_command_with_author_return_ok() -> Result<()> {
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
         "--author",
         "user@example.com",
-    ])
-    .unwrap();
+    ])?;
     match cli.command {
         JiraSubcommand::Comments { author, .. } => {
             assert_eq!(author, Some("user@example.com".to_string()));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
+    Ok(())
 }
 
+/// 测试Jira评论命令的since参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_since() {
-    let cli = TestJiraCli::try_parse_from(&[
+fn test_jira_comments_command_with_since_return_ok() -> Result<()> {
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
         "--since",
         "2024-01-01T00:00:00Z",
-    ])
-    .unwrap();
+    ])?;
     match cli.command {
         JiraSubcommand::Comments { since, .. } => {
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
+    Ok(())
 }
 
+/// 测试Jira评论命令的所有过滤参数组合
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_all_filters() {
-    // 测试所有过滤参数组合
-    let cli = TestJiraCli::try_parse_from(&[
+fn test_jira_comments_command_all_filters_return_collect() -> Result<()> {
+    // Arrange: 准备测试所有过滤参数组合
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -472,8 +622,7 @@ fn test_jira_comments_command_all_filters() {
         "user@example.com",
         "--since",
         "2024-01-01T00:00:00Z",
-    ])
-    .unwrap();
+    ])?;
 
     match cli.command {
         JiraSubcommand::Comments {
@@ -489,14 +638,27 @@ fn test_jira_comments_command_all_filters() {
             assert_eq!(author, Some("user@example.com".to_string()));
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
+    Ok(())
 }
 
+/// 测试Jira评论命令的分页参数组合（limit + offset）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_pagination() {
-    // 测试分页参数组合（limit + offset）
-    let cli = TestJiraCli::try_parse_from(&[
+fn test_jira_comments_command_pagination_return_ok() -> Result<()> {
+    // Arrange: 准备测试分页参数组合（limit + offset）
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -504,8 +666,7 @@ fn test_jira_comments_command_pagination() {
         "15",
         "--offset",
         "30",
-    ])
-    .unwrap();
+    ])?;
 
     match cli.command {
         JiraSubcommand::Comments {
@@ -517,12 +678,14 @@ fn test_jira_comments_command_pagination() {
             assert_eq!(pagination.limit, Some(15));
             assert_eq!(pagination.offset, Some(30));
         }
-        _ => panic!("Expected Comments command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comments command")),
     }
+    Ok(())
 }
 
-// ==================== 命令枚举测试 ====================
+// ==================== Command Enum Tests ====================
 
+/// 测试Jira命令解析所有子命令
 #[rstest]
 #[case("info", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Info { .. }))]
 #[case("related", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Related { .. }))]
@@ -534,35 +697,62 @@ fn test_jira_comments_command_pagination() {
 fn test_jira_command_parsing_all_subcommands(
     #[case] subcommand: &str,
     #[case] assert_fn: fn(&JiraSubcommand) -> bool,
-) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand]).unwrap();
+) -> Result<()> {
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand])?;
     assert!(
         assert_fn(&cli.command),
         "Command should match expected variant"
     );
+    Ok(())
 }
 
+/// 测试Jira命令的错误处理（无效子命令）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_command_error_handling_invalid_subcommand() {
-    // 测试无效子命令的错误处理
-    let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
+fn test_jira_command_error_handling_invalid_subcommand_return_false() -> Result<()> {
+    // Arrange: 准备测试无效子命令的错误处理
+    let result = TestJiraCli::try_parse_from(["test-jira", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
+    Ok(())
 }
 
 // ==================== Changelog 命令测试 ====================
 
+/// 测试Jira变更日志命令的字段过滤参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_changelog_command_with_field_filter() {
-    // 测试 --field 参数
+fn test_jira_changelog_command_with_field_filter_return_ok() -> Result<()> {
+    // Arrange: 准备测试 --field 参数
     // 注意：当前 Changelog 命令的枚举定义中没有 field 字段
     // 如果将来添加了 field 字段，这个测试需要更新
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", "changelog", "PROJ-123"])?;
 
     match cli.command {
         JiraSubcommand::Changelog { args, .. } => {
             assert_eq!(args.jira_id.jira_id, Some("PROJ-123".to_string()));
             // field 字段当前不存在于枚举定义中
         }
-        _ => panic!("Expected Changelog command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Changelog command")),
     }
+    Ok(())
 }

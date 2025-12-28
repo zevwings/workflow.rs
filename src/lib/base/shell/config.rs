@@ -7,8 +7,8 @@
 //!
 //! 支持 zsh、bash、fish、powershell、elvish 等 shell 的配置文件。
 
+use crate::base::fs::{FileReader, FileWriter};
 use crate::base::settings::paths::Paths;
-use crate::base::util::file::{FileReader, FileWriter};
 use clap_complete::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;

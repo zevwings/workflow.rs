@@ -1,0 +1,35 @@
+{
+  "name": "github_pr_workflow",
+  "description": "完整的GitHub PR工作流程场景",
+  "mocks": [
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/pulls",
+      "response": {
+        "template": "{\"number\": {{pr_number}}, \"title\": \"{{title}}\", \"state\": \"open\", \"html_url\": \"https://github.com/{{owner}}/{{repo}}/pull/{{pr_number}}\"}",
+        "status": 201
+      },
+      "validation": {
+        "required_headers": ["authorization", "accept"],
+        "required_body_fields": ["title", "head", "base"]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/pulls/{{pr_number}}",
+      "response": {
+        "file": "mock_responses/github/pr.json",
+        "status": 200
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/repos/{owner}/{repo}/pulls/{{pr_number}}",
+      "response": {
+        "template": "{\"number\": {{pr_number}}, \"title\": \"{{title}}\", \"state\": \"{{state}}\"}",
+        "status": 200
+      }
+    }
+  ]
+}
+

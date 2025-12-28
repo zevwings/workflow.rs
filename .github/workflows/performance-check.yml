@@ -1,0 +1,101 @@
+name: Performance Check
+
+on:
+  schedule:
+    # 每周六 00:00 UTC 运行
+    - cron: '0 0 * * 6'
+  # 允许手动触发（用于测试或特殊情况）
+  workflow_dispatch:
+
+# 配置工作流权限
+permissions:
+  contents: read
+  pages: write  # 需要写入权限以部署到 GitHub Pages
+  id-token: write  # 需要 OIDC 权限以部署到 GitHub Pages
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================
+  # 性能基准作业
+  # ============================================
+  performance:
+    name: ⚡ Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: bash scripts/dev/shell/deps/install-basic.sh
+
+      - name: ⚡ Run performance benchmarks
+        timeout-minutes: 40
+        run: |
+          cargo bench --bench cli_performance \
+            --bench core_operations \
+            --bench network_operations
+        continue-on-error: true
+
+      - name: 📤 Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-reports
+          path: target/criterion/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 📋 Performance summary
+        if: always()
+        run: |
+          if [ -d "target/criterion" ]; then \
+            echo "⚡ Performance benchmarks completed"; \
+            echo "Reports available in target/criterion/"; \
+          else \
+            echo "⚠️  Performance benchmarks did not generate reports"; \
+          fi
+
+      - name: 📤 Upload performance reports to Pages
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/criterion/
+
+  # ============================================
+  # GitHub Pages 部署作业
+  # ============================================
+  deploy-pages:
+    name: 🌐 Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: performance
+    if: always()
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: ⚙️ Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: 📥 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+

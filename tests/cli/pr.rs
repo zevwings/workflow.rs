@@ -3,8 +3,9 @@
 //! 测试 PR CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use rstest::{fixture, rstest};
+use rstest::rstest;
 use workflow::cli::{JiraIdArg, PRCommands};
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -15,30 +16,20 @@ struct TestPRCli {
     command: PRCommands,
 }
 
-// ==================== Fixtures ====================
+// ==================== Create Command Tests ====================
 
-#[fixture]
-fn test_pr_id() -> &'static str {
-    "123"
-}
-
-#[fixture]
-fn test_branch() -> &'static str {
-    "feature/my-branch"
-}
-
-// ==================== Create 命令测试 ====================
-
+/// 测试PR创建命令的参数解析（各种选项组合）
 #[rstest]
 #[case(None, None, None, false)]
 #[case(Some("PROJ-123"), None, None, false)]
 #[case(Some("PROJ-123"), Some("Test PR"), Some("Test description"), true)]
-fn test_pr_create_command(
+fn test_pr_create_command_with_various_options_parses_correctly(
     #[case] jira_ticket: Option<&str>,
     #[case] title: Option<&str>,
     #[case] description: Option<&str>,
     #[case] dry_run: bool,
-) {
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "create"];
     if let Some(ticket) = jira_ticket {
         args.push(ticket);
@@ -55,8 +46,10 @@ fn test_pr_create_command(
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Create {
             jira_id: JiraIdArg { jira_id: ticket },
@@ -69,17 +62,24 @@ fn test_pr_create_command(
             assert_eq!(d, description.map(|s| s.to_string()));
             assert_eq!(dr.dry_run, dry_run);
         }
-        _ => panic!("Expected Create command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
     }
+
+    Ok(())
 }
 
-// ==================== Merge 命令测试 ====================
+// ==================== Merge Command Tests ====================
 
+/// 测试PR合并命令的参数解析（包含force选项）
 #[rstest]
 #[case(None, false)]
 #[case(Some("123"), false)]
 #[case(Some("123"), true)]
-fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: bool) {
+fn test_pr_merge_command_with_various_options_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+    #[case] force: bool,
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "merge"];
     if let Some(id) = pull_request_id {
         args.push(id);
@@ -88,8 +88,10 @@ fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: b
         args.push("--force");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Merge {
             pull_request_id: id,
@@ -98,42 +100,57 @@ fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: b
             assert_eq!(id, pull_request_id.map(|s| s.to_string()));
             assert_eq!(f.is_force(), force);
         }
-        _ => panic!("Expected Merge command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Merge command")),
     }
+
+    Ok(())
 }
 
-// ==================== Status 命令测试 ====================
+// ==================== Status Command Tests ====================
 
+/// 测试PR状态命令的参数解析（支持PR ID或分支名）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
 #[case(Some("feature/my-branch"))]
-fn test_pr_status_command(#[case] pull_request_id_or_branch: Option<&str>) {
+fn test_pr_status_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id_or_branch: Option<&str>,
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "status"];
     if let Some(id) = pull_request_id_or_branch {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Status {
             pull_request_id_or_branch: id,
         } => {
             assert_eq!(id, pull_request_id_or_branch.map(|s| s.to_string()));
         }
-        _ => panic!("Expected Status command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Status command")),
     }
+
+    Ok(())
 }
 
-// ==================== List 命令测试 ====================
+// ==================== List Command Tests ====================
 
+/// 测试PR列表命令的参数解析（包含state和limit选项）
 #[rstest]
 #[case(None, None)]
 #[case(Some("open"), None)]
 #[case(None, Some(10))]
 #[case(Some("closed"), Some(5))]
-fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize>) {
+fn test_pr_list_command_with_various_options_parses_correctly(
+    #[case] state: Option<&str>,
+    #[case] limit: Option<usize>,
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "list"];
     if let Some(s) = state {
         args.push("--state");
@@ -145,8 +162,10 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
         args.push(l);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::List {
             state: s,
@@ -155,40 +174,56 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
             assert_eq!(s, state.map(|s| s.to_string()));
             assert_eq!(pagination.limit, limit);
         }
-        _ => panic!("Expected List command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected List command")),
     }
+
+    Ok(())
 }
 
-// ==================== Update 命令测试 ====================
+// ==================== Update Command Tests ====================
 
+/// 测试PR更新命令的参数解析（无参数）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_pr_update_command_structure() {
-    // 测试 Update 命令结构（无参数）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "update"]).unwrap();
+fn test_pr_update_command_with_valid_input_parses_successfully() -> Result<()> {
+    // Arrange: 准备有效的 Update 命令输入（无参数）
+    let args = &["test-pr", "update"];
 
-    match cli.command {
-        PRCommands::Update => {
-            // Update 命令没有参数
-            assert!(true, "Update command should have no parameters");
-        }
-        _ => panic!("Expected Update command"),
-    }
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(args)?;
+
+    // Assert: 验证 Update 命令可以正确解析
+    assert!(matches!(cli.command, PRCommands::Update));
+
+    Ok(())
 }
 
-// ==================== Sync 命令测试 ====================
+// ==================== Sync Command Tests ====================
 
+/// 测试PR同步命令的参数解析（包含rebase、ff_only、squash选项）
 #[rstest]
 #[case("feature/source", false, false, false)]
 #[case("feature/source", true, false, false)]
 #[case("feature/source", false, true, false)]
 #[case("feature/source", false, false, true)]
 #[case("feature/source", true, true, true)]
-fn test_pr_sync_command(
+fn test_pr_sync_command_with_various_options_parses_correctly(
     #[case] source_branch: &str,
     #[case] rebase: bool,
     #[case] ff_only: bool,
     #[case] squash: bool,
-) {
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "sync", source_branch];
     if rebase {
         args.push("--rebase");
@@ -200,8 +235,10 @@ fn test_pr_sync_command(
         args.push("--squash");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Sync {
             source_branch: sb,
@@ -214,22 +251,26 @@ fn test_pr_sync_command(
             assert_eq!(ff, ff_only);
             assert_eq!(s, squash);
         }
-        _ => panic!("Expected Sync command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Sync command")),
     }
+
+    Ok(())
 }
 
-// ==================== Rebase 命令测试 ====================
+// ==================== Rebase Command Tests ====================
 
+/// 测试PR变基命令的参数解析（包含no_push和dry_run选项）
 #[rstest]
 #[case("main", false, false)]
 #[case("main", true, false)]
 #[case("main", false, true)]
 #[case("main", true, true)]
-fn test_pr_rebase_command(
+fn test_pr_rebase_command_with_various_options_parses_correctly(
     #[case] target_branch: &str,
     #[case] no_push: bool,
     #[case] dry_run: bool,
-) {
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "rebase", target_branch];
     if no_push {
         args.push("--no-push");
@@ -238,8 +279,10 @@ fn test_pr_rebase_command(
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Rebase {
             target_branch: tb,
@@ -250,86 +293,128 @@ fn test_pr_rebase_command(
             assert_eq!(np, no_push);
             assert_eq!(dr.dry_run, dry_run);
         }
-        _ => panic!("Expected Rebase command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Rebase command")),
     }
+
+    Ok(())
 }
 
-// ==================== Close 命令测试 ====================
+// ==================== Close Command Tests ====================
 
+/// 测试PR关闭命令的参数解析（可选PR ID）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
-fn test_pr_close_command(#[case] pull_request_id: Option<&str>) {
+fn test_pr_close_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "close"];
     if let Some(id) = pull_request_id {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Close {
             pull_request_id: id,
         } => {
             assert_eq!(id, pull_request_id.map(|s| s.to_string()));
         }
-        _ => panic!("Expected Close command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Close command")),
     }
+
+    Ok(())
 }
 
-// ==================== Summarize 命令测试 ====================
+// ==================== Summarize Command Tests ====================
 
+/// 测试PR摘要命令的参数解析（可选PR ID）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
-fn test_pr_summarize_command(#[case] pull_request_id: Option<&str>) {
+fn test_pr_summarize_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "summarize"];
     if let Some(id) = pull_request_id {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Summarize {
             pull_request_id: id,
         } => {
             assert_eq!(id, pull_request_id.map(|s| s.to_string()));
         }
-        _ => panic!("Expected Summarize command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Summarize command")),
     }
+
+    Ok(())
 }
 
-// ==================== Approve 命令测试 ====================
+// ==================== Approve Command Tests ====================
 
+/// 测试PR批准命令的参数解析（可选PR ID）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
-fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
+fn test_pr_approve_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+) -> Result<()> {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "approve"];
     if let Some(id) = pull_request_id {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(&args)?;
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Approve {
             pull_request_id: id,
         } => {
             assert_eq!(id, pull_request_id.map(|s| s.to_string()));
         }
-        _ => panic!("Expected Approve command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Approve command")),
     }
+
+    Ok(())
 }
 
-// ==================== Comment 命令测试 ====================
+// ==================== Comment Command Tests ====================
 
+/// 测试PR评论命令的参数解析（包含PR ID和消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_pr_comment_command_structure() {
-    let cli =
-        TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"]).unwrap();
+fn test_pr_comment_command_with_pr_id_and_message_parses_correctly() -> Result<()> {
+    // Arrange: 准备带 PR ID 和消息的 Comment 命令输入
+    let args = &["test-pr", "comment", "123", "This is a comment"];
 
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(args)?;
+
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Comment {
             pull_request_id,
@@ -338,13 +423,27 @@ fn test_pr_comment_command_structure() {
             assert_eq!(pull_request_id, Some("123".to_string()));
             assert_eq!(message, vec!["This is a comment"]);
         }
-        _ => panic!("Expected Comment command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comment command")),
     }
+
+    Ok(())
 }
 
+/// 测试PR评论命令的参数解析（多词消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_pr_comment_command_with_multiple_words() {
-    let cli = TestPRCli::try_parse_from(&[
+fn test_pr_comment_command_with_multiple_words_parses_correctly() -> Result<()> {
+    let cli = TestPRCli::try_parse_from([
         "test-pr",
         "comment",
         "123",
@@ -353,8 +452,7 @@ fn test_pr_comment_command_with_multiple_words() {
         "a",
         "multi-word",
         "comment",
-    ])
-    .unwrap();
+    ])?;
 
     match cli.command {
         PRCommands::Comment {
@@ -364,14 +462,28 @@ fn test_pr_comment_command_with_multiple_words() {
             assert_eq!(pull_request_id, Some("123".to_string()));
             assert_eq!(message, vec!["This", "is", "a", "multi-word", "comment"]);
         }
-        _ => panic!("Expected Comment command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comment command")),
     }
+
+    Ok(())
 }
 
+/// 测试PR评论命令的参数解析（只有单个参数，无消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_pr_comment_command_without_id() {
-    // 测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "single-arg"]).unwrap();
+fn test_pr_comment_command_without_id() -> Result<()> {
+    // Arrange: 准备测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
+    let cli = TestPRCli::try_parse_from(["test-pr", "comment", "single-arg"])?;
 
     match cli.command {
         PRCommands::Comment {
@@ -385,22 +497,29 @@ fn test_pr_comment_command_without_id() {
                 "Message should be empty when only one arg provided"
             );
         }
-        _ => panic!("Expected Comment command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comment command")),
     }
+
+    Ok(())
 }
 
 // ==================== Pick 命令测试 ====================
 
+/// 测试PR选择命令的参数解析（包含dry_run选项）
 #[rstest]
 #[case("feature/source", "main", false)]
 #[case("feature/source", "main", true)]
-fn test_pr_pick_command(#[case] from_branch: &str, #[case] to_branch: &str, #[case] dry_run: bool) {
+fn test_pr_pick_command(
+    #[case] from_branch: &str,
+    #[case] to_branch: &str,
+    #[case] dry_run: bool,
+) -> Result<()> {
     let mut args = vec!["test-pr", "pick", from_branch, to_branch];
     if dry_run {
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args)?;
 
     match cli.command {
         PRCommands::Pick {
@@ -412,12 +531,15 @@ fn test_pr_pick_command(#[case] from_branch: &str, #[case] to_branch: &str, #[ca
             assert_eq!(tb, to_branch);
             assert_eq!(dr.dry_run, dry_run);
         }
-        _ => panic!("Expected Pick command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Pick command")),
     }
+
+    Ok(())
 }
 
 // ==================== Reword 命令测试 ====================
 
+/// 测试PR重写命令的参数解析（包含title、description、dry_run选项）
 #[rstest]
 #[case(None, false, false, false)]
 #[case(Some("456"), false, false, false)]
@@ -430,7 +552,7 @@ fn test_pr_reword_command(
     #[case] title: bool,
     #[case] description: bool,
     #[case] dry_run: bool,
-) {
+) -> Result<()> {
     let mut args = vec!["test-pr", "reword"];
     if let Some(id) = pull_request_id {
         args.push(id);
@@ -445,7 +567,7 @@ fn test_pr_reword_command(
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args)?;
 
     match cli.command {
         PRCommands::Reword {
@@ -459,12 +581,15 @@ fn test_pr_reword_command(
             assert_eq!(d, description);
             assert_eq!(dr.dry_run, dry_run);
         }
-        _ => panic!("Expected Reword command"),
+        _ => return Err(color_eyre::eyre::eyre!("Expected Reword command")),
     }
+
+    Ok(())
 }
 
-// ==================== 命令枚举测试 ====================
+// ==================== Command Enum Tests ====================
 
+/// 测试PR命令枚举的所有变体
 #[rstest]
 #[case("create", |cmd: &PRCommands| matches!(cmd, PRCommands::Create { .. }))]
 #[case("merge", |cmd: &PRCommands| matches!(cmd, PRCommands::Merge { .. }))]
@@ -482,7 +607,7 @@ fn test_pr_reword_command(
 fn test_pr_commands_enum_all_variants(
     #[case] subcommand: &str,
     #[case] assert_fn: fn(&PRCommands) -> bool,
-) {
+) -> Result<()> {
     let mut args = vec!["test-pr", subcommand];
     // 为需要参数的命令添加最小参数
     match subcommand {
@@ -495,39 +620,254 @@ fn test_pr_commands_enum_all_variants(
         _ => {}
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args)?;
     assert!(
         assert_fn(&cli.command),
         "Command should match expected variant"
     );
+
+    Ok(())
 }
 
+/// 测试PR命令的错误处理（无效子命令）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_pr_commands_error_handling_invalid_subcommand() {
-    // 测试无效子命令的错误处理
-    let result = TestPRCli::try_parse_from(&["test-pr", "invalid"]);
+fn test_pr_commands_error_handling_invalid_subcommand() -> Result<()> {
+    // Arrange: 准备测试无效子命令的错误处理
+    let result = TestPRCli::try_parse_from(["test-pr", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
+
+    Ok(())
 }
 
+/// 测试PR命令的必需参数验证
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_pr_commands_required_parameters() {
-    // 测试必需参数的错误处理
+fn test_pr_commands_required_parameters() -> Result<()> {
+    // Arrange: 准备测试必需参数的错误处理
 
     // Sync 需要 source_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "sync"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "sync"]);
     assert!(result.is_err(), "Sync should require source_branch");
 
     // Rebase 需要 target_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "rebase"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "rebase"]);
     assert!(result.is_err(), "Rebase should require target_branch");
 
     // Pick 需要 from_branch 和 to_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "pick"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "pick"]);
     assert!(
         result.is_err(),
         "Pick should require from_branch and to_branch"
     );
 
-    let result = TestPRCli::try_parse_from(&["test-pr", "pick", "from"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "pick", "from"]);
     assert!(result.is_err(), "Pick should require to_branch");
+
+    Ok(())
+}
+
+// ==================== Boundary Condition Tests ====================
+
+/// 测试PR创建命令的空JIRA ID（应被验证器拒绝）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+fn test_pr_create_command_empty_jira_id() -> Result<()> {
+    // Arrange: 准备测试空字符串 JIRA ID（应该被验证器拒绝）
+    // 这是正确的行为：JIRA ID 验证器不允许空字符串
+    let result = TestPRCli::try_parse_from(["test-pr", "create", ""]);
+
+    // Assert: 验证解析失败（空字符串被验证器拒绝）
+    match result {
+        Ok(_) => {
+            return Err(color_eyre::eyre::eyre!(
+                "Empty JIRA ID should be rejected by validator"
+            ))
+        }
+        Err(e) => {
+            // Assert: 验证错误消息包含验证信息
+            let error_msg = e.to_string();
+            assert!(
+                error_msg.contains("JIRA ID")
+                    || error_msg.contains("empty")
+                    || error_msg.contains("Invalid")
+                    || error_msg.contains("validation"),
+                "Error message should indicate JIRA ID validation failure: {}",
+                error_msg
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// 测试PR创建命令的超长标题（边界情况）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+fn test_pr_create_command_very_long_title() -> Result<()> {
+    // Arrange: 准备测试超长标题（边界情况）
+    let long_title = "a".repeat(1000);
+    let cli = TestPRCli::try_parse_from(["test-pr", "create", "PROJ-123", "--title", &long_title])?;
+
+    match cli.command {
+        PRCommands::Create { title, .. } => {
+            assert_eq!(title, Some(long_title));
+        }
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
+    }
+
+    Ok(())
+}
+
+/// 测试PR创建命令标题中的特殊字符
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+fn test_pr_create_command_special_characters_in_title() -> Result<()> {
+    // Arrange: 准备测试标题中的特殊字符
+    let special_title = "Test PR: Fix bug #123 (urgent!)";
+    let cli =
+        TestPRCli::try_parse_from(["test-pr", "create", "PROJ-123", "--title", special_title])?;
+
+    match cli.command {
+        PRCommands::Create { title, .. } => {
+            assert_eq!(title, Some(special_title.to_string()));
+        }
+        _ => return Err(color_eyre::eyre::eyre!("Expected Create command")),
+    }
+
+    Ok(())
+}
+
+/// 测试PR评论命令的空消息（边界情况）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+fn test_pr_comment_command_empty_message() -> Result<()> {
+    // Arrange: 准备测试空消息的情况
+    let cli = TestPRCli::try_parse_from(["test-pr", "comment", "123"])?;
+
+    match cli.command {
+        PRCommands::Comment { message, .. } => {
+            assert!(
+                message.is_empty(),
+                "Message should be empty when not provided"
+            );
+        }
+        _ => return Err(color_eyre::eyre::eyre!("Expected Comment command")),
+    }
+
+    Ok(())
+}
+
+/// 测试PR列表命令的limit为0（边界值）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+fn test_pr_list_command_zero_limit() -> Result<()> {
+    // Arrange: 准备测试 limit 为 0 的情况（边界值）
+    let cli = TestPRCli::try_parse_from(["test-pr", "list", "--limit", "0"])?;
+
+    match cli.command {
+        PRCommands::List { pagination, .. } => {
+            assert_eq!(pagination.limit, Some(0));
+        }
+        _ => return Err(color_eyre::eyre::eyre!("Expected List command")),
+    }
+
+    Ok(())
+}
+
+/// 测试PR列表命令的超大limit值（边界情况）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
+#[test]
+fn test_pr_list_command_very_large_limit() -> Result<()> {
+    // Arrange: 准备测试非常大的 limit 值（边界情况）
+    let cli = TestPRCli::try_parse_from(["test-pr", "list", "--limit", "999999"])?;
+
+    match cli.command {
+        PRCommands::List { pagination, .. } => {
+            assert_eq!(pagination.limit, Some(999999));
+        }
+        _ => return Err(color_eyre::eyre::eyre!("Expected List command")),
+    }
+
+    Ok(())
 }

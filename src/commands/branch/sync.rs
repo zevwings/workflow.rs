@@ -5,7 +5,7 @@
 use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
 use crate::{log_info, log_success};
-use color_eyre::Result;
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 分支同步命令（无 PR 逻辑）
 pub struct BranchSyncCommand;
@@ -33,6 +33,31 @@ impl BranchSyncCommand {
     /// * `ff_only` - 是否只允许 fast-forward 合并
     /// * `squash` - 是否使用 squash 合并
     pub fn sync(source_branch: String, rebase: bool, ff_only: bool, squash: bool) -> Result<()> {
+        Self::sync_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+            source_branch,
+            rebase,
+            ff_only,
+            squash,
+        )
+    }
+
+    /// 执行分支同步（指定仓库路径）
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    /// * `source_branch` - 要合并到当前分支的源分支名称
+    /// * `rebase` - 是否使用 rebase（默认使用 merge）
+    /// * `ff_only` - 是否只允许 fast-forward 合并
+    /// * `squash` - 是否使用 squash 合并
+    pub fn sync_in(
+        repo_path: impl AsRef<std::path::Path>,
+        source_branch: String,
+        rebase: bool,
+        ff_only: bool,
+        squash: bool,
+    ) -> Result<()> {
         // 运行检查
         log_info!("Running pre-flight checks...");
         check::CheckCommand::run_all()?;
@@ -47,7 +72,7 @@ impl BranchSyncCommand {
         // 使用空回调（不需要 PR 处理）
         let callbacks = Box::new(NoOpCallbacks);
 
-        BranchSync::sync(options, Some(callbacks))?;
+        BranchSync::sync_in(repo_path, options, Some(callbacks))?;
 
         log_success!("Branch sync completed successfully!");
         Ok(())

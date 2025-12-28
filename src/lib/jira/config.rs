@@ -5,18 +5,14 @@
 //! - 统一的错误处理
 //! - Unix 系统下的文件权限设置（600）
 
-use crate::base::util::file::{FileReader, FileWriter};
+use crate::base::fs::{FileReader, FileWriter};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use toml::{map::Map, Value};
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 use super::status::ProjectStatusConfig;
 
@@ -148,6 +144,8 @@ where
 
     #[cfg(unix)]
     fn set_permissions(&self) -> Result<()> {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(&self.path, fs::Permissions::from_mode(0o600))
             .wrap_err("Failed to set config file permissions")?;
         Ok(())
@@ -224,6 +222,8 @@ impl ConfigManager<Value> {
 
     #[cfg(unix)]
     fn set_permissions_for_path(path: &PathBuf) -> Result<()> {
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(path, fs::Permissions::from_mode(0o600))
             .wrap_err("Failed to set config file permissions")?;
         Ok(())

@@ -1,0 +1,14 @@
+// 标准测试用例模板
+
+#[test]
+fn test_FUNCTION_NAME_with_CONDITION() {
+    // Arrange: 准备测试数据和环境
+    let input = // TODO: 准备输入数据
+    let expected = // TODO: 定义预期结果
+    
+    // Act: 执行被测试的功能
+    let result = FUNCTION_NAME(input);
+    
+    // Assert: 验证结果
+    assert_eq!(result, expected);
+}

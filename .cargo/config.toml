@@ -1,0 +1,88 @@
+# Cargo 配置文件
+# 用于配置交叉编译和其他构建选项
+
+[target.x86_64-pc-windows-gnu]
+# 配置 Windows GNU 目标的交叉编译器
+#
+# 支持的平台：macOS 和 Linux
+#
+# 在 macOS 上交叉编译 Windows 可执行文件的步骤：
+#   1. brew install mingw-w64
+#   2. rustup target add x86_64-pc-windows-gnu
+#   3. cargo build --target x86_64-pc-windows-gnu
+#
+# 在 Linux（Ubuntu/Debian）上交叉编译 Windows 可执行文件的步骤：
+#   1. sudo apt-get update
+#   2. sudo apt-get install -y gcc-mingw-w64-x86-64
+#   3. rustup target add x86_64-pc-windows-gnu
+#   4. cargo build --target x86_64-pc-windows-gnu
+#
+# 在 Linux（Fedora/RHEL）上交叉编译 Windows 可执行文件的步骤：
+#   1. sudo dnf install mingw64-gcc
+#   2. rustup target add x86_64-pc-windows-gnu
+#   3. cargo build --target x86_64-pc-windows-gnu
+#
+# 注意：编译出的 Windows 可执行文件无法在 macOS/Linux 上直接运行
+# 要运行测试，需要：
+#   1. macOS: brew install --cask wine-stable
+#   2. Linux: sudo apt-get install wine (Ubuntu/Debian) 或 sudo dnf install wine (Fedora)
+#   3. 使用 Wine 运行: wine target/x86_64-pc-windows-gnu/debug/workflow.exe
+#   4. 或者在 CI 中运行 Windows 测试（推荐）
+linker = "x86_64-w64-mingw32-gcc"
+
+[target.x86_64-unknown-linux-musl]
+# 配置 Linux musl 目标的交叉编译器
+#
+# 支持的平台：macOS 和 Linux
+#
+# ===== 方案 1：使用 cross 工具（推荐，最简单） =====
+#   1. cargo install cross --git https://github.com/cross-rs/cross
+#   2. rustup target add x86_64-unknown-linux-musl
+#   3. cross build --target x86_64-unknown-linux-musl
+#   注意：cross 会自动处理所有工具链配置，无需手动配置 linker
+#
+# ===== 方案 2：使用 musl-cross（macOS） =====
+#   1. brew install filosottile/musl-cross/musl-cross
+#   2. rustup target add x86_64-unknown-linux-musl
+#   3. 设置环境变量（在 ~/.zshrc 或 ~/.bashrc 中）：
+#      export PATH="/usr/local/opt/musl-cross/bin:$PATH"
+#   4. cargo build --target x86_64-unknown-linux-musl
+#   注意：安装后需要将 musl-cross 的 bin 目录添加到 PATH
+#
+# ===== 方案 3：在 Linux 上交叉编译 Linux musl =====
+#   1. sudo apt-get install musl-tools (Ubuntu/Debian) 或 sudo dnf install musl-gcc (Fedora)
+#   2. rustup target add x86_64-unknown-linux-musl
+#   3. cargo build --target x86_64-unknown-linux-musl
+#
+# 注意：
+# - musl 版本是静态链接的，不依赖系统库，可以在任何 Linux 发行版上运行
+# - 如果使用 cross 工具，不需要配置 linker（cross 会自动处理）
+# - 如果直接使用 cargo build，需要确保工具链在 PATH 中
+# - 某些 crate（如 ring）需要 C 编译器，确保交叉编译工具链正确安装
+linker = "x86_64-linux-musl-gcc"
+
+[target.x86_64-unknown-linux-gnu]
+# 配置 Linux GNU 目标的交叉编译器
+#
+# 支持的平台：macOS 和 Linux
+#
+# 在 macOS 上交叉编译 Linux 可执行文件的步骤（使用 glibc）：
+#   1. brew install SergioBenitez/osxct/x86_64-unknown-linux-gnu
+#   2. rustup target add x86_64-unknown-linux-gnu
+#   3. 设置环境变量：export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-unknown-linux-gnu-gcc
+#   4. cargo build --target x86_64-unknown-linux-gnu
+#
+# 在 Linux 上原生构建（不需要交叉编译）：
+#   1. 直接使用系统工具链，无需额外配置
+#   2. cargo build（或 cargo test）
+#
+# 在 Linux 上交叉编译 Linux GNU 可执行文件的步骤：
+#   1. 通常不需要额外工具，直接使用系统工具链
+#   2. rustup target add x86_64-unknown-linux-gnu
+#   3. cargo build --target x86_64-unknown-linux-gnu
+#
+# 注意：
+# - glibc 版本依赖系统库，需要目标系统有兼容的 glibc 版本
+# - 此配置文件中不设置 linker，以避免在 Linux 原生构建时使用不存在的交叉编译链接器
+# - macOS 用户如需交叉编译，请通过环境变量设置链接器（见上方步骤 3）
+

@@ -1,7 +1,7 @@
 //! 目录管理
 
 use super::constants::DOWNLOADS_FOLDER;
-use crate::base::util::directory::DirectoryWalker;
+use crate::base::fs::DirectoryWalker;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::{Path, PathBuf};
 

@@ -39,3 +39,22 @@ impl fmt::Display for HttpMethod {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_str_basic() {
+        // Basic validation that FromStr works
+        assert!(matches!(HttpMethod::from_str("GET"), Ok(HttpMethod::Get)));
+        assert!(HttpMethod::from_str("INVALID").is_err());
+    }
+
+    #[test]
+    fn test_display_basic() {
+        // Basic validation that Display works
+        assert_eq!(HttpMethod::Get.to_string(), "GET");
+        assert_eq!(HttpMethod::Post.to_string(), "POST");
+    }
+}

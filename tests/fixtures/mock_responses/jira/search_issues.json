@@ -1,0 +1,20 @@
+{
+  "issues": [
+    {
+      "id": "12345",
+      "key": "PROJ-123",
+      "fields": {
+        "summary": "Test Issue 1"
+      }
+    },
+    {
+      "id": "12346",
+      "key": "PROJ-124",
+      "fields": {
+        "summary": "Test Issue 2"
+      }
+    }
+  ],
+  "total": 2
+}
+

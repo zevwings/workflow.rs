@@ -2,12 +2,11 @@
 //!
 //! 提供别名的加载、展开和管理功能。
 
+use crate::base::fs::FileWriter;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
-use crate::base::util::file::FileWriter;
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::Result;
 use std::collections::{HashMap, HashSet};
-use std::fs;
 
 /// 别名管理器
 ///
@@ -172,6 +171,8 @@ impl AliasManager {
         // 设置文件权限（仅 Unix）
         #[cfg(unix)]
         {
+            use color_eyre::eyre::WrapErr;
+            use std::fs;
             use std::os::unix::fs::PermissionsExt;
             fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600))
                 .wrap_err("Failed to set config file permissions")?;
@@ -213,6 +214,8 @@ impl AliasManager {
         // 设置文件权限（仅 Unix）
         #[cfg(unix)]
         {
+            use color_eyre::eyre::WrapErr;
+            use std::fs;
             use std::os::unix::fs::PermissionsExt;
             fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600))
                 .wrap_err("Failed to set config file permissions")?;

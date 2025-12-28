@@ -9,10 +9,8 @@ use crate::{log_break, log_info, log_success, log_warning};
 use color_eyre::Result;
 
 /// PR 合并命令
-#[allow(dead_code)]
 pub struct PullRequestMergeCommand;
 
-#[allow(dead_code)]
 impl PullRequestMergeCommand {
     /// 合并 PR
     pub fn merge(pull_request_id: Option<String>, _force: bool) -> Result<()> {
