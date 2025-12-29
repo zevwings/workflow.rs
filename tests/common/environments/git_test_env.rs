@@ -392,11 +392,16 @@ impl GitTestEnv {
                         let domain_only = &domain[..path_start];
                         // 配置所有该域名的请求都重定向到本地（避免网络请求）
                         // 格式：url.https://github.com.insteadOf = file:///dev/null
-                        if let Ok(mut config) = repo.config() {
-                            let config_key = format!("url.https://{}.insteadOf", domain_only);
-                            // 忽略配置错误（如果配置失败，继续执行，可能仍然会卡住，但至少尝试了）
-                            let _ = config.set_str(&config_key, "file:///dev/null");
-                        }
+                        let mut config = repo
+                            .config()
+                            .wrap_err("Failed to open repository config for url.insteadOf")?;
+                        let config_key = format!("url.https://{}.insteadOf", domain_only);
+                        config.set_str(&config_key, "file:///dev/null")
+                            .wrap_err_with(|| format!(
+                                "Failed to set {} config to avoid network requests on Windows. \
+                                This may cause the test to hang if repo.remote() tries to validate the URL.",
+                                config_key
+                            ))?;
                     }
                 }
             }

@@ -17,9 +17,8 @@ type: manual
 
 | 文件 | 说明 | 类型 |
 |------|------|------|
-| `document.mdc` | 文档生成、分类和存储规则 | `always` |
-| `overview.mdc` | 项目概述、架构、修改规则、文档索引/删除规则和一般注意事项 | `always` |
-| `development.mdc` | 开发规范和指南 | `always` |
+| `document.mdc` | 文档生成、分类和存储规则，文档修改、索引和删除规则 | `always` |
+| `development.mdc` | 开发规范和指南，项目概述、架构、代码修改规则和注意事项 | `always` |
 
 ## 📖 使用说明
 
