@@ -398,18 +398,30 @@ fn test_amend_preview_clone_with_valid_preview_creates_clone() {
 /// 测试 Git 仓库集成
 ///
 /// ## 测试目的
-/// 验证测试函数能够正确执行预期功能。
+/// 验证 Git 仓库创建辅助函数工作正常，并测试基本的 Git 操作。
 ///
 /// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
-/// 3. 验证结果
+/// 1. 使用 GitTestEnv 创建隔离的 Git 仓库
+/// 2. 创建多个提交以模拟真实场景
+/// 3. 验证 Git 操作正常
 ///
 /// ## 预期结果
-/// - 测试通过，无错误
+/// - Git 仓库创建成功
+/// - 提交操作成功
+/// - Git 集成操作成功
 #[rstest]
-fn test_git_integration_return_ok(_git_repo_with_commit: GitTestEnv) -> Result<()> {
+fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
+    let env = &git_repo_with_commit;
+
+    // 创建多个提交以模拟真实场景
+    for i in 1..=3 {
+        env.make_test_commit(
+            &format!("file{}.txt", i),
+            &format!("Content of file {}\n", i),
+            &format!("Commit {}: add file{}.txt", i, i),
+        )?;
+    }
 
     // 这个测试主要验证 Git 仓库创建辅助函数工作正常
     // 实际的 Git 集成测试应该在更高级别的集成测试中进行

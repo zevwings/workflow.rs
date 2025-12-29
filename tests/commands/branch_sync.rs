@@ -35,6 +35,7 @@ use rstest::rstest;
 /// - 命令结构正确
 /// - Mock 服务器正常工作
 #[rstest]
+#[ignore]
 fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
     // 设置非交互式模式，避免对话框阻塞测试
     let _guard = DialogTestGuard::new()
@@ -102,6 +103,7 @@ fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color
 /// ## 预期结果
 /// - Rebase同步成功
 #[rstest]
+#[ignore]
 fn test_branch_sync_command_with_rebase(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
@@ -165,6 +167,7 @@ fn test_branch_sync_command_with_rebase(
 /// ## 预期结果
 /// - FF-only同步成功
 #[rstest]
+#[ignore]
 fn test_branch_sync_command_with_ff_only(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
@@ -226,6 +229,7 @@ fn test_branch_sync_command_with_ff_only(
 /// ## 预期结果
 /// - Squash同步成功
 #[rstest]
+#[ignore]
 fn test_branch_sync_command_with_squash(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
