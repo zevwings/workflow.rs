@@ -1,6 +1,8 @@
 use color_eyre::{eyre::eyre, Result};
 use inquire::{error::InquireError, MultiSelect};
 
+use crate::base::dialog::skip_config;
+
 /// 多选对话框
 ///
 /// 提供多选功能，从选项列表中选择多个选项。
@@ -40,7 +42,7 @@ pub struct MultiSelectDialog<T> {
 
 impl<T> MultiSelectDialog<T>
 where
-    T: std::fmt::Display,
+    T: std::fmt::Display + Clone,
 {
     /// 创建新的多选对话框
     ///
@@ -84,6 +86,30 @@ where
     ///
     /// 如果用户取消选择，返回错误
     pub fn prompt(self) -> Result<Vec<T>> {
+        // 检查 thread-local 配置（用于测试）
+        if skip_config::DialogConfigManager::is_non_interactive() {
+            if let Some(indices) = skip_config::DialogConfigManager::get_multi_select_indices() {
+                let mut result = Vec::new();
+                for index in indices {
+                    if index < self.options.len() {
+                        result.push(self.options[index].clone());
+                    }
+                }
+                return Ok(result);
+            }
+            // 如果启用了非交互式模式但没有设置索引，使用默认索引或空列表
+            if let Some(ref default_indices) = self.default {
+                let mut result = Vec::new();
+                for &index in default_indices {
+                    if index < self.options.len() {
+                        result.push(self.options[index].clone());
+                    }
+                }
+                return Ok(result);
+            }
+            return Ok(Vec::new());
+        }
+
         if self.options.is_empty() {
             color_eyre::eyre::bail!("No options available");
         }

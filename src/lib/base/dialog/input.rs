@@ -3,6 +3,7 @@ use inquire::{error::InquireError, validator::Validation, Text};
 use std::error::Error;
 use std::sync::Arc;
 
+use crate::base::dialog::skip_config;
 use crate::base::dialog::types::ValidatorFn;
 
 /// 文本输入对话框
@@ -123,6 +124,15 @@ impl InputDialog {
     ///
     /// 如果用户取消输入或验证失败，返回错误
     pub fn prompt(self) -> Result<String> {
+        // 检查 thread-local 配置（用于测试）
+        if skip_config::DialogConfigManager::is_non_interactive() {
+            if let Some(value) = skip_config::DialogConfigManager::get_input_value() {
+                return Ok(value);
+            }
+            // 如果启用了非交互式模式但没有设置值，使用默认值或空字符串
+            return Ok(self.default.unwrap_or_default());
+        }
+
         let mut text = Text::new(&self.prompt);
 
         // 设置默认值

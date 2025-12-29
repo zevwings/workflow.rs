@@ -3,6 +3,8 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use inquire::{error::InquireError, Select};
 
+use crate::base::dialog::skip_config;
+
 /// 单选对话框
 ///
 /// 提供单选功能，从选项列表中选择一个选项。
@@ -110,6 +112,20 @@ where
     ///
     /// 如果用户取消选择，返回错误
     pub fn prompt(self) -> Result<T> {
+        // 检查 thread-local 配置（用于测试）
+        if skip_config::DialogConfigManager::is_non_interactive() {
+            if let Some(index) = skip_config::DialogConfigManager::get_select_index() {
+                if index < self.options.len() {
+                    return Ok(self.options.into_iter().nth(index).unwrap());
+                }
+            }
+            // 如果启用了非交互式模式但没有设置索引，使用默认索引或第一个选项
+            let default_idx = self.default.unwrap_or(0);
+            if default_idx < self.options.len() {
+                return Ok(self.options.into_iter().nth(default_idx).unwrap());
+            }
+        }
+
         if self.options.is_empty() {
             color_eyre::eyre::bail!("No options available");
         }

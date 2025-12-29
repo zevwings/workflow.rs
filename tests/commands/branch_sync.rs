@@ -7,6 +7,7 @@ use workflow::commands::branch::sync::BranchSyncCommand;
 
 use crate::common::environments::GitTestEnv;
 use crate::common::fixtures::git_repo_with_commit;
+use crate::common::guards::DialogTestGuard;
 use crate::common::mock::server::MockServer;
 use rstest::rstest;
 
@@ -35,6 +36,11 @@ use rstest::rstest;
 /// - Mock 服务器正常工作
 #[rstest]
 fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
+    // 设置非交互式模式，避免对话框阻塞测试
+    let _guard = DialogTestGuard::new()
+        .with_select_index(0) // 选择 "Stash changes and continue"
+        .with_confirm_value(false); // 不推送
+
     // 1. 设置Mock GitHub API
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
@@ -94,6 +100,11 @@ fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color
 fn test_branch_sync_command_with_rebase(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
+    // 设置非交互式模式，避免对话框阻塞测试
+    let _guard = DialogTestGuard::new()
+        .with_select_index(0) // 选择 "Stash changes and continue"
+        .with_confirm_value(false); // 不推送
+
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
@@ -148,6 +159,11 @@ fn test_branch_sync_command_with_rebase(
 fn test_branch_sync_command_with_ff_only(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
+    // 设置非交互式模式，避免对话框阻塞测试
+    let _guard = DialogTestGuard::new()
+        .with_select_index(0) // 选择 "Stash changes and continue"
+        .with_confirm_value(false); // 不推送
+
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
@@ -204,6 +220,11 @@ fn test_branch_sync_command_with_ff_only(
 fn test_branch_sync_command_with_squash(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
+    // 设置非交互式模式，避免对话框阻塞测试
+    let _guard = DialogTestGuard::new()
+        .with_select_index(0) // 选择 "Stash changes and continue"
+        .with_confirm_value(false); // 不推送
+
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();

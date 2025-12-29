@@ -111,6 +111,8 @@ mod form;
 mod input;
 mod multi_select;
 mod select;
+#[doc(hidden)]
+pub mod skip_config; // 内部 API，供测试代码使用（必须为 pub 以便测试代码访问）
 mod types;
 
 pub use confirm::ConfirmDialog;
