@@ -1,6 +1,8 @@
 use color_eyre::{eyre::eyre, Result};
 use dialoguer::Confirm;
 
+use crate::base::dialog::skip_config;
+
 /// 确认对话框
 ///
 /// 提供确认功能，用于获取用户的 yes/no 选择。
@@ -119,6 +121,15 @@ impl ConfirmDialog {
     /// - 按 `n` 键：立即取消（无需按 Enter）
     /// - 按 Enter 键：使用默认值（如果设置了 `with_default()`）
     pub fn prompt(self) -> Result<bool> {
+        // 检查 thread-local 配置（用于测试）
+        if skip_config::DialogConfigManager::is_non_interactive() {
+            if let Some(value) = skip_config::DialogConfigManager::get_confirm_value() {
+                return Ok(value);
+            }
+            // 如果启用了非交互式模式但没有设置值，使用默认值
+            return Ok(self.default.unwrap_or(false));
+        }
+
         let mut confirm = Confirm::new().with_prompt(&self.prompt).wait_for_newline(false); // 启用单键自动完成
 
         // 设置默认值
