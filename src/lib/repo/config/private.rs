@@ -11,6 +11,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs::OpenOptions;
+use std::io::{Read, Seek};
 use std::path::Path;
 use toml::map::Map;
 use toml::Value;
@@ -261,7 +262,6 @@ impl PrivateRepoConfig {
         // Note: On Windows, we must read from the locked file handle, not open a new one
         // We read after acquiring the lock to ensure we have the latest data
         let mut existing_value: Value = if config_path.exists() {
-            use std::io::{Read, Seek};
             // Seek to beginning of file before reading
             file.seek(std::io::SeekFrom::Start(0))
                 .wrap_err_with(|| format!("Failed to seek config file: {:?}", config_path))?;

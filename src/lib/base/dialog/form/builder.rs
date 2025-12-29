@@ -1,6 +1,6 @@
 //! 表单构建器
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use color_eyre::{eyre::eyre, Result};
 use dialoguer::Password;
@@ -124,8 +124,6 @@ impl FormBuilder {
     ///
     /// 如果验证失败，返回错误
     fn validate(&self) -> Result<()> {
-        use std::collections::HashSet;
-
         // 检查组 ID 唯一性
         let mut group_ids = HashSet::new();
         for group in &self.groups {

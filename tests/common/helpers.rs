@@ -40,7 +40,10 @@
 //! - **当前目录**：当前目录应继续使用 `std::env::current_dir()`
 //! - **测试基础设施**：`TestIsolation` 和 `CliTestEnv` 创建的路径不需要使用这些函数
 
+use color_eyre::eyre::Context;
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Once;
 
@@ -82,7 +85,6 @@ pub fn cleanup_test_env() {
 /// // 使用 test_dir 进行测试
 /// ```
 pub fn create_temp_test_dir(prefix: &str) -> color_eyre::Result<PathBuf> {
-    use color_eyre::eyre::Context;
     let temp_dir = std::env::temp_dir();
     let timestamp = workflow::base::format::date::get_unix_timestamp_nanos();
     let random_suffix = random_string(8);
@@ -176,7 +178,6 @@ pub fn fixture_path(name: &str) -> PathBuf {
 ///
 /// 返回创建的文件路径。
 pub fn create_test_file(dir: &Path, filename: &str, content: &str) -> color_eyre::Result<PathBuf> {
-    use color_eyre::eyre::Context;
     let file_path = dir.join(filename);
     fs::write(&file_path, content)
         .wrap_err_with(|| format!("Failed to write test file: {}", file_path.display()))?;
@@ -258,9 +259,6 @@ pub fn wait_millis(millis: u64) {
 ///
 /// 返回随机字符串。
 pub fn random_string(length: usize) -> String {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-
     let mut hasher = DefaultHasher::new();
     std::time::SystemTime::now().hash(&mut hasher);
     format!("{:x}", hasher.finish())[..length.min(16)].to_string()

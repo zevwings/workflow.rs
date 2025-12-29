@@ -15,9 +15,11 @@ use crate::common::fixtures::cli_env;
 use crate::common::fixtures::cli_env_with_git;
 #[cfg(not(target_os = "windows"))]
 use crate::common::mock::server::MockServer;
+use crate::common::performance::measure_test_time_with_threshold;
 use rstest::rstest;
 #[cfg(not(target_os = "windows"))]
 use std::collections::HashMap;
+use std::time::Duration;
 
 // ==================== Basic Command Tests ====================
 
@@ -488,9 +490,6 @@ fn test_environment_variables_return_ok(cli_env: CliTestEnv) -> color_eyre::Resu
 /// - 测试通过，无错误
 #[test]
 fn test_help_command_performance() -> color_eyre::Result<()> {
-    use crate::common::performance::measure_test_time_with_threshold;
-    use std::time::Duration;
-
     // 帮助命令应该很快（< 5秒）
     measure_test_time_with_threshold(
         "test_help_command_performance",

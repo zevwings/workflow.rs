@@ -543,7 +543,8 @@ cargo check
 ### 5.4 导入检查
 
 **检查项**：
-- [ ] 所有导入是否统一从文件顶部导入
+- [ ] 所有导入是否统一从文件顶部导入（平台特定导入例外）
+- [ ] 平台特定的导入是否使用 `#[cfg(...)]` 条件编译属性标记
 - [ ] 是否避免在代码中间使用 `crate::` 路径直接调用函数
 - [ ] 导入语句是否按标准库、第三方库、本地模块的顺序组织
 
@@ -572,6 +573,10 @@ pub fn get-_branch-_prefix() -> Option<String> {
 2. 第三方库导入（按字母顺序）
 3. 本地模块导入（`crate::*`）
 
+**平台特定导入例外**：
+- 如果导入只在特定平台使用，可以使用条件编译属性 `#[cfg(...)]` 标记
+- 平台特定的导入仍然应该放在文件顶部，但使用条件编译属性限制其生效的平台
+
 **示例**：
 ```rust
 // 标准库
@@ -581,6 +586,10 @@ use std::fs;
 // 第三方库
 use anyhow::{Context, Result};
 use clap::Args;
+
+// 平台特定的第三方库导入（仅在非 musl 平台）
+#[cfg(not(target_env = "musl"))]
+use clipboard::{ClipboardContext, ClipboardProvider};
 
 // 本地模块
 use crate::repo::config::RepoConfig;
@@ -1377,4 +1386,4 @@ grep -A 1 'name = "workflow"' Cargo.lock | grep version
 
 ---
 
-**最后更新**: 2025-12-23
+**最后更新**: 2025-12-28
