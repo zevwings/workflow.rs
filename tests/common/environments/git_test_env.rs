@@ -371,6 +371,8 @@ impl GitTestEnv {
         let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
 
         // 1. 如果URL是https://，配置url.insteadOf避免真实网络请求
+        // 注意：Git的url.insteadOf格式是 url.<base>.insteadOf = <url>
+        // 其中<base>是要替换的源URL，值是替换后的目标URL
         if remote_url.starts_with("https://") {
             // 提取域名部分，配置insteadOf
             if let Some(domain_start) = remote_url.find("://") {
@@ -378,13 +380,12 @@ impl GitTestEnv {
                 if let Some(path_start) = domain.find('/') {
                     let domain_only = &domain[..path_start];
                     // 配置所有该域名的请求都重定向到本地（避免网络请求）
-                    let mut config = repo.config().ok();
-                    if let Some(ref mut config) = config {
-                        let _ = config.set_str(
-                            "url.file:///dev/null.insteadOf",
-                            &format!("https://{}", domain_only),
-                        );
-                    }
+                    // 格式：url.https://github.com.insteadOf = file:///dev/null
+                    let mut config = repo.config().wrap_err("Failed to open repository config")?;
+                    let config_key = format!("url.https://{}.insteadOf", domain_only);
+                    config
+                        .set_str(&config_key, "file:///dev/null")
+                        .wrap_err_with(|| format!("Failed to set {} config", config_key))?;
                 }
             }
         }
