@@ -353,10 +353,14 @@ impl GitTestEnv {
     ///
     /// # 功能
     ///
-    /// 1. 添加远程URL（使用假的URL）
+    /// 1. 添加远程URL（使用假的URL，不会立即触发网络请求）
     /// 2. 创建假的远程分支引用（`refs/remotes/{remote_name}/main`）
-    /// 3. 设置远程HEAD引用（`refs/remotes/{remote_name}/HEAD`）
-    /// 4. 配置 `url.insteadOf` 避免真实网络请求（如果URL是https://）
+    /// 3. 删除可能存在的旧引用（如`origin/master`）
+    /// 4. 设置远程HEAD引用（`refs/remotes/{remote_name}/HEAD`）
+    ///
+    /// 注意：不设置 `url.insteadOf`，因为这会替换 URL 为 `file:///dev/null`，
+    /// 导致某些函数无法提取仓库名。`repo.remote()` 本身不会立即触发网络请求，
+    /// 只有在 fetch/push 等操作时才会连接。
     ///
     /// # 示例
     ///
@@ -370,31 +374,16 @@ impl GitTestEnv {
     pub fn add_fake_remote(&self, remote_name: &str, remote_url: &str) -> Result<()> {
         let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
 
-        // 1. 如果URL是https://，配置url.insteadOf避免真实网络请求
-        // 注意：Git的url.insteadOf格式是 url.<base>.insteadOf = <url>
-        // 其中<base>是要替换的源URL，值是替换后的目标URL
-        if remote_url.starts_with("https://") {
-            // 提取域名部分，配置insteadOf
-            if let Some(domain_start) = remote_url.find("://") {
-                let domain = &remote_url[domain_start + 3..];
-                if let Some(path_start) = domain.find('/') {
-                    let domain_only = &domain[..path_start];
-                    // 配置所有该域名的请求都重定向到本地（避免网络请求）
-                    // 格式：url.https://github.com.insteadOf = file:///dev/null
-                    let mut config = repo.config().wrap_err("Failed to open repository config")?;
-                    let config_key = format!("url.https://{}.insteadOf", domain_only);
-                    config
-                        .set_str(&config_key, "file:///dev/null")
-                        .wrap_err_with(|| format!("Failed to set {} config", config_key))?;
-                }
-            }
-        }
+        // 注意：不设置 url.insteadOf，因为这会替换 URL 为 file:///dev/null
+        // 导致某些函数无法提取仓库名。我们使用假的远程引用而不是替换 URL，
+        // 这样既能避免网络请求，又能保持 URL 格式正确。
+        // repo.remote() 本身不会立即触发网络请求，只有在 fetch/push 等操作时才会连接。
 
-        // 2. 添加远程URL（使用假的URL）
+        // 1. 添加远程URL（使用假的URL，不会立即触发网络请求）
         repo.remote(remote_name, remote_url)
             .wrap_err_with(|| format!("Failed to add remote: {}", remote_name))?;
 
-        // 3. 创建假的远程分支引用（指向当前HEAD）
+        // 2. 创建假的远程分支引用（指向当前HEAD）
         let head = repo.head().wrap_err("Failed to get HEAD")?;
         let head_oid = head
             .target()
@@ -412,13 +401,13 @@ impl GitTestEnv {
             )
         })?;
 
-        // 4. 删除可能存在的旧引用（如origin/master）
+        // 3. 删除可能存在的旧引用（如origin/master）
         let old_ref = format!("refs/remotes/{}/master", remote_name);
         if let Ok(mut reference) = repo.find_reference(&old_ref) {
             let _ = reference.delete();
         }
 
-        // 5. 设置远程HEAD引用指向main（让 git remote show origin 能工作）
+        // 4. 设置远程HEAD引用指向main（让 git remote show origin 能工作）
         let _ = repo.reference_symbolic(
             &format!("refs/remotes/{}/HEAD", remote_name),
             &format!("refs/remotes/{}/main", remote_name),
