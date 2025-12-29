@@ -323,6 +323,8 @@ impl GitConfigGuard {
                     {
                         // 确保文件存在且可写（使用规范化后的长路径）
                         // 使用重试机制，因为 Windows 上文件系统操作可能有延迟
+                        // 使用 Option<Config> 来安全管理 config 的所有权
+                        let mut config_opt = Some(config);
                         let mut file_check_retries = 0;
                         const FILE_CHECK_MAX_RETRIES: usize = 3;
                         const FILE_CHECK_DELAY_MS: u64 = 100;
@@ -348,21 +350,24 @@ impl GitConfigGuard {
                                                 FILE_CHECK_DELAY_MS * file_check_retries as u64,
                                             ));
                                             // 重新打开 config（因为文件可能被其他进程锁定）
-                                            drop(config);
+                                            // 安全地 drop config
+                                            config_opt = None;
                                             match Config::open(config_path) {
                                                 Ok(new_config) => {
-                                                    config = new_config;
+                                                    config_opt = Some(new_config);
                                                     continue;
                                                 }
                                                 Err(_) => {
                                                     // 无法重新打开，跳出内层循环，在外层重试
+                                                    // config_opt 已经是 None，安全
                                                     break;
                                                 }
                                             }
                                         }
                                         Err(e) => {
                                             // 文件检查失败且重试次数用尽
-                                            drop(config);
+                                            // 安全地 drop config
+                                            config_opt = None;
                                             if attempt < MAX_RETRIES - 1 {
                                                 std::thread::sleep(
                                                     std::time::Duration::from_millis(
@@ -387,21 +392,24 @@ impl GitConfigGuard {
                                         FILE_CHECK_DELAY_MS * file_check_retries as u64,
                                     ));
                                     // 重新打开 config
-                                    drop(config);
+                                    // 安全地 drop config
+                                    config_opt = None;
                                     match Config::open(config_path) {
                                         Ok(new_config) => {
-                                            config = new_config;
+                                            config_opt = Some(new_config);
                                             continue;
                                         }
                                         Err(_) => {
                                             // 无法重新打开，跳出内层循环，在外层重试
+                                            // config_opt 已经是 None，安全
                                             break;
                                         }
                                     }
                                 }
                                 Err(e) => {
                                     // 文件访问失败且重试次数用尽
-                                    drop(config);
+                                    // 安全地 drop config
+                                    config_opt = None;
                                     if attempt < MAX_RETRIES - 1 {
                                         std::thread::sleep(std::time::Duration::from_millis(
                                             RETRY_DELAY_MS * 2,
@@ -423,7 +431,8 @@ impl GitConfigGuard {
 
                         // 如果文件检查未通过，继续外层重试
                         if !file_check_passed {
-                            drop(config);
+                            // 安全地 drop config（如果还存在）
+                            config_opt = None;
                             if attempt < MAX_RETRIES - 1 {
                                 std::thread::sleep(std::time::Duration::from_millis(
                                     RETRY_DELAY_MS * 2,
@@ -435,6 +444,20 @@ impl GitConfigGuard {
                                 MAX_RETRIES
                             ));
                         }
+
+                        // 从 Option 中恢复 config，如果不存在则重新打开
+                        config = match config_opt {
+                            Some(cfg) => cfg,
+                            None => {
+                                // config 在循环中被 drop 了，需要重新打开
+                                Config::open(config_path).map_err(|e| {
+                                    color_eyre::eyre::eyre!(
+                                        "Failed to reopen config file after file check: {}",
+                                        e.message()
+                                    )
+                                })?
+                            }
+                        };
                     }
 
                     match config.set_str(key, value) {
