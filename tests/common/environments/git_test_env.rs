@@ -353,14 +353,19 @@ impl GitTestEnv {
     ///
     /// # 功能
     ///
-    /// 1. 添加远程URL（使用假的URL，不会立即触发网络请求）
-    /// 2. 创建假的远程分支引用（`refs/remotes/{remote_name}/main`）
-    /// 3. 删除可能存在的旧引用（如`origin/master`）
-    /// 4. 设置远程HEAD引用（`refs/remotes/{remote_name}/HEAD`）
+    /// 1. **Windows 特定**：配置 `url.insteadOf` 避免网络请求（Windows 上的 Git 可能在添加 remote 时尝试验证 URL）
+    /// 2. 添加远程URL（使用假的URL）
+    /// 3. 创建假的远程分支引用（`refs/remotes/{remote_name}/main`）
+    /// 4. 删除可能存在的旧引用（如`origin/master`）
+    /// 5. 设置远程HEAD引用（`refs/remotes/{remote_name}/HEAD`）
     ///
-    /// 注意：不设置 `url.insteadOf`，因为这会替换 URL 为 `file:///dev/null`，
-    /// 导致某些函数无法提取仓库名。`repo.remote()` 本身不会立即触发网络请求，
-    /// 只有在 fetch/push 等操作时才会连接。
+    /// # 平台差异
+    ///
+    /// - **Windows**：需要设置 `url.insteadOf` 来避免 `repo.remote()` 时的 DNS 解析/网络验证导致的卡住
+    /// - **Linux/macOS**：不需要 `url.insteadOf`，因为它们的 Git 实现不会在添加 remote 时验证 URL
+    ///
+    /// 注意：`url.insteadOf` 会替换 URL 为 `file:///dev/null`，可能导致某些函数无法提取仓库名。
+    /// 但在 Windows 上这是必要的，以避免测试卡住。
     ///
     /// # 示例
     ///
@@ -374,12 +379,32 @@ impl GitTestEnv {
     pub fn add_fake_remote(&self, remote_name: &str, remote_url: &str) -> Result<()> {
         let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
 
-        // 注意：不设置 url.insteadOf，因为这会替换 URL 为 file:///dev/null
-        // 导致某些函数无法提取仓库名。我们使用假的远程引用而不是替换 URL，
-        // 这样既能避免网络请求，又能保持 URL 格式正确。
-        // repo.remote() 本身不会立即触发网络请求，只有在 fetch/push 等操作时才会连接。
+        // Windows 特定处理：Windows 上的 Git 可能在 repo.remote() 时尝试验证 URL（DNS 解析），
+        // 导致卡住。我们需要在 Windows 上设置 url.insteadOf 来避免网络请求。
+        // Linux/macOS 上不需要这个配置，因为它们的 Git 实现不会在添加 remote 时验证 URL。
+        #[cfg(target_os = "windows")]
+        {
+            if remote_url.starts_with("https://") {
+                // 提取域名部分，配置 insteadOf
+                if let Some(domain_start) = remote_url.find("://") {
+                    let domain = &remote_url[domain_start + 3..];
+                    if let Some(path_start) = domain.find('/') {
+                        let domain_only = &domain[..path_start];
+                        // 配置所有该域名的请求都重定向到本地（避免网络请求）
+                        // 格式：url.https://github.com.insteadOf = file:///dev/null
+                        if let Ok(mut config) = repo.config() {
+                            let config_key = format!("url.https://{}.insteadOf", domain_only);
+                            // 忽略配置错误（如果配置失败，继续执行，可能仍然会卡住，但至少尝试了）
+                            let _ = config.set_str(&config_key, "file:///dev/null");
+                        }
+                    }
+                }
+            }
+        }
 
-        // 1. 添加远程URL（使用假的URL，不会立即触发网络请求）
+        // 1. 添加远程URL
+        // 注意：在 Windows 上，如果上面的 url.insteadOf 配置成功，这不会触发网络请求。
+        // 在 Linux/macOS 上，repo.remote() 本身不会立即触发网络请求。
         repo.remote(remote_name, remote_url)
             .wrap_err_with(|| format!("Failed to add remote: {}", remote_name))?;
 
