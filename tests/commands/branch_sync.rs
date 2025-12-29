@@ -41,7 +41,7 @@ fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color
         .with_select_index(0) // 选择 "Stash changes and continue"
         .with_confirm_value(false); // 不推送
 
-    // 1. 设置Mock GitHub API
+    // 1. 设置Mock GitHub API - 必须保持mock_server存活直到测试结束
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
 
@@ -65,6 +65,7 @@ fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color
     git_env.checkout("main")?;
 
     // 6. 执行分支同步
+    // 注意：mock_server必须保持存活，否则mock端点会被删除
     let result = BranchSyncCommand::sync_in(
         git_env.path(),
         "feature".to_string(),
@@ -74,10 +75,14 @@ fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color
     );
 
     // 7. 验证结果（GitTestEnv 会在函数结束时自动恢复目录和环境）
+    // mock_server会在函数结束时自动drop，保持mock端点存活
     assert!(
         result.is_ok(),
         "Branch sync should succeed with mock GitHub API"
     );
+
+    // 确保mock被调用（可选，用于调试）
+    _mock.assert();
 
     Ok(())
 }
@@ -105,7 +110,7 @@ fn test_branch_sync_command_with_rebase(
         .with_select_index(0) // 选择 "Stash changes and continue"
         .with_confirm_value(false); // 不推送
 
-    // 设置Mock
+    // 设置Mock - 必须保持mock_server存活直到测试结束
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
     let _mock = mock_server
@@ -127,6 +132,7 @@ fn test_branch_sync_command_with_rebase(
     git_env.checkout("main")?;
 
     // 执行rebase同步
+    // 注意：mock_server必须保持存活，否则mock端点会被删除
     let result = BranchSyncCommand::sync_in(
         git_env.path(),
         "feature".to_string(),
@@ -137,6 +143,9 @@ fn test_branch_sync_command_with_rebase(
 
     // Assert: 验证（目录自动恢复）
     assert!(result.is_ok(), "Rebase sync should succeed");
+
+    // 确保mock被调用（可选，用于调试）
+    _mock.assert();
 
     Ok(())
 }
@@ -225,7 +234,7 @@ fn test_branch_sync_command_with_squash(
         .with_select_index(0) // 选择 "Stash changes and continue"
         .with_confirm_value(false); // 不推送
 
-    // 设置Mock
+    // 设置Mock - 必须保持mock_server存活直到测试结束
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
     let _mock = mock_server
@@ -248,6 +257,7 @@ fn test_branch_sync_command_with_squash(
     git_env.checkout("main")?;
 
     // 执行squash同步
+    // 注意：mock_server必须保持存活，否则mock端点会被删除
     let result = BranchSyncCommand::sync_in(
         git_env.path(),
         "feature".to_string(),
@@ -258,6 +268,9 @@ fn test_branch_sync_command_with_squash(
 
     // Assert: 验证（目录自动恢复）
     assert!(result.is_ok(), "Squash sync should succeed");
+
+    // 确保mock被调用（可选，用于调试）
+    _mock.assert();
 
     Ok(())
 }

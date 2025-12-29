@@ -1,5 +1,5 @@
 use crate::commands::pr::helpers;
-use crate::git::GitBranch;
+use crate::git::{GitBranch, GitRepo};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
 use crate::{log_break, log_info, log_success, log_warning};
@@ -158,8 +158,6 @@ impl PullRequestCloseCommand {
 
     /// 仅删除指定的 PR 分支（不切换当前分支）
     fn delete_pr_branch_only(pr_branch: &str) -> Result<()> {
-        use crate::git::GitRepo;
-
         GitRepo::fetch()?;
 
         if GitBranch::has_local_branch(pr_branch)? {

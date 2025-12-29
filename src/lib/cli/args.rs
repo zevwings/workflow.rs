@@ -4,6 +4,7 @@
 //!
 //! 使用 clap 的 `Args` trait 和 `#[command(flatten)]` 特性来实现参数复用。
 
+use crate::base::constants::errors::validation_errors;
 use clap::Args;
 
 /// 输出格式选项
@@ -82,7 +83,6 @@ impl JiraIdArg {
     ///
     /// 提供统一的、用户友好的错误消息格式。
     fn format_validation_error(original_error: &str) -> String {
-        use crate::base::constants::errors::validation_errors;
         format!(
             "Invalid JIRA ID format.\n{}\n\nError details: {}",
             validation_errors::JIRA_ID_FORMAT_HELP,

@@ -7,9 +7,11 @@
 //! - 获取 tag 信息
 
 use color_eyre::{eyre::WrapErr, Result};
+use regex::Regex;
 
 use super::GitAuth;
 use super::GitRepository;
+use crate::base::logger::console::Logger;
 use git2::Oid;
 
 /// Tag 信息
@@ -352,7 +354,6 @@ impl GitTag {
         if exists_local {
             if let Err(e) = Self::delete_local(tag_name) {
                 // 记录错误但继续删除远程 tag
-                use crate::base::logger::console::Logger;
                 Logger::print_warning(format!("Failed to delete local tag: {}", e));
             }
         }
@@ -542,7 +543,6 @@ impl GitTag {
     ///
     /// 返回版本号字符串，如果无法提取则返回 `None`。
     pub fn extract_version(tag_name: &str) -> Option<String> {
-        use regex::Regex;
         let re = Regex::new(r"^v?([0-9]+\.[0-9]+\.[0-9]+)").ok()?;
         re.captures(tag_name)
             .and_then(|caps| caps.get(1))

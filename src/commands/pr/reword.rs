@@ -17,7 +17,7 @@ use crate::log_warning;
 use crate::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_from_body};
 use crate::pr::helpers::{generate_pull_request_body, resolve_pull_request_id};
 use crate::pr::llm::RewordGenerator;
-use crate::pr::platform::create_provider_auto;
+use crate::pr::platform::{create_provider_auto, TYPES_OF_CHANGES};
 
 /// PR Reword 命令
 pub struct PullRequestRewordCommand;
@@ -262,8 +262,6 @@ impl PullRequestRewordCommand {
         current_change_types: Option<&[bool]>,
         jira_ticket: Option<&str>,
     ) -> Result<String> {
-        use crate::pr::platform::TYPES_OF_CHANGES;
-
         // 使用当前 change_types，如果没有则默认都不选中
         let selected_types: Vec<bool> = if let Some(types) = current_change_types {
             log_debug!("Using parsed change_types: {:?}", types);

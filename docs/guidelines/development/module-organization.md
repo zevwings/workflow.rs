@@ -108,6 +108,52 @@ mod linux_specific;
 mod windows_specific;
 ```
 
+### 平台特定导入规则
+
+**一般规则**：所有导入语句都应该在文件顶部。
+
+**例外情况**：如果导入只在特定平台使用，可以使用条件编译属性 `#[cfg(...)]` 标记平台特定的导入。
+
+**规则说明**：
+- 平台特定的导入仍然应该放在文件顶部
+- 使用 `#[cfg(...)]` 条件编译属性限制导入生效的平台
+- 这样可以避免在不支持的平台上编译失败或产生未使用的导入警告
+
+**示例**：
+```rust
+// 标准库导入
+use std::path::PathBuf;
+
+// 第三方库导入（跨平台）
+use color_eyre::Result;
+
+// 平台特定的第三方库导入（仅在非 musl 平台）
+#[cfg(not(target_env = "musl"))]
+use clipboard::{ClipboardContext, ClipboardProvider};
+
+#[cfg(not(target_env = "musl"))]
+use color_eyre::eyre::eyre;
+
+// 项目内部导入
+use crate::base::util::file::FileReader;
+
+// 平台特定的函数实现
+#[cfg(not(target_env = "musl"))]
+pub fn copy_to_clipboard(text: &str) -> Result<()> {
+    let mut ctx: ClipboardContext =
+        ClipboardProvider::new().map_err(|e| eyre!("Failed to initialize clipboard: {}", e))?;
+    ctx.set_contents(text.to_string())
+        .map_err(|e| eyre!("Failed to copy to clipboard: {}", e))?;
+    Ok(())
+}
+
+#[cfg(target_env = "musl")]
+pub fn copy_to_clipboard(_text: &str) -> Result<()> {
+    // musl 静态链接构建不支持剪贴板，静默失败
+    Ok(())
+}
+```
+
 ### 平台特定代码的模块化组织
 
 对于复杂的平台特定功能，建议使用独立的模块文件：
@@ -270,9 +316,10 @@ mod tests {
 - [ ] 模块职责清晰
 - [ ] 模块依赖方向正确
 - [ ] 平台特定代码组织清晰
+- [ ] 平台特定导入使用条件编译属性 `#[cfg(...)]` 标记
 - [ ] 平台特定功能有测试覆盖
 
 ---
 
-**最后更新**: 2025-12-23
+**最后更新**: 2025-12-28
 
