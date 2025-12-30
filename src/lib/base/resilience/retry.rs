@@ -247,6 +247,7 @@ where
 ///
 /// 资源不足错误不应该重试，因为重试会消耗更多资源。
 #[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn is_resource_error_message(error_msg: &str) -> bool {
     is_resource_error_message_impl(error_msg)
 }
@@ -270,6 +271,7 @@ fn is_resource_error_message_impl(error_msg: &str) -> bool {
 ///
 /// 这些错误不应该重试，因为重试会消耗更多资源。
 #[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn is_resource_error_code(error_code: Option<i32>) -> bool {
     is_resource_error_code_impl(error_code)
 }

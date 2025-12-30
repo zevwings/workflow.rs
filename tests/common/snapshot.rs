@@ -25,9 +25,12 @@
 //! ```
 
 use color_eyre::Result;
+use serial_test::serial;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
+
+use crate::common::helpers::get_current_dir_with_fallback;
 
 /// 测试环境快照
 ///
@@ -194,10 +197,14 @@ mod tests {
     ///
     /// ## 预期结果
     /// - 当前工作目录正确恢复
+    ///
+    /// ## 注意事项
+    /// - 此测试使用 `env::current_dir()` 和 `env::set_current_dir()`，需要串行执行以避免并行测试时的竞态条件
     #[test]
+    #[serial]
     fn test_snapshot_current_dir() -> Result<()> {
-        // 捕获快照
-        let original_dir = env::current_dir()?;
+        // 捕获快照（使用备用方案获取当前目录）
+        let original_dir = get_current_dir_with_fallback()?;
         let snapshot = TestSnapshot::capture();
 
         // 修改当前工作目录（如果可能）
@@ -209,8 +216,9 @@ mod tests {
                 // 恢复环境
                 snapshot.restore()?;
 
-                // 验证当前工作目录已恢复
-                assert_eq!(env::current_dir()?, original_dir);
+                // 验证当前工作目录已恢复（使用备用方案）
+                let restored_dir = get_current_dir_with_fallback()?;
+                assert_eq!(restored_dir, original_dir);
             }
         }
 

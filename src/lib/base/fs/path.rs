@@ -60,4 +60,3 @@ impl PathAccess {
         self.path.is_dir()
     }
 }
-

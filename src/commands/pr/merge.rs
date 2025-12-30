@@ -30,8 +30,8 @@ impl PullRequestMergeCommand {
         let default_branch = GitBranch::get_default_branch()?;
 
         // 5. 获取 PR 的目标分支（合并到的分支）
-        let target_branch = Self::get_pr_target_branch(&pull_request_id)
-            .unwrap_or_else(|_| default_branch.clone());
+        let target_branch =
+            Self::get_pr_target_branch(&pull_request_id).unwrap_or_else(|_| default_branch.clone());
 
         // 6. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
         Self::merge_pull_request(&pull_request_id)?;
@@ -153,7 +153,10 @@ impl PullRequestMergeCommand {
             }
         }
 
-        color_eyre::eyre::bail!("Failed to extract target branch from PR #{}", pull_request_id)
+        color_eyre::eyre::bail!(
+            "Failed to extract target branch from PR #{}",
+            pull_request_id
+        )
     }
 
     /// 合并后清理：切换到目标分支并删除当前分支

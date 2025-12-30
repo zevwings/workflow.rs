@@ -286,4 +286,3 @@ impl ConcurrentExecutor {
         Ok(results)
     }
 }
-

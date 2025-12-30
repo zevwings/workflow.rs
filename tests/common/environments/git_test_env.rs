@@ -26,6 +26,7 @@ use git2::Repository;
 use std::path::PathBuf;
 use workflow::git::{GitBranch, GitCommit, GitRepository};
 
+use crate::common::helpers::get_current_dir_with_fallback;
 use crate::common::isolation::TestIsolation;
 
 /// 统一的Git测试环境
@@ -782,8 +783,8 @@ mod tests {
     #[test]
     #[serial]
     fn test_isolation_from_current_repo_return_ok() -> Result<()> {
-        // 验证 GitTestEnv 不会操作当前仓库
-        let original_dir = std::env::current_dir()?;
+        // 验证 GitTestEnv 不会操作当前仓库（使用备用方案获取当前目录）
+        let original_dir = get_current_dir_with_fallback()?;
         let original_dir_str = original_dir.to_string_lossy().to_string();
 
         {
@@ -816,7 +817,7 @@ mod tests {
             // 注意：在并行测试时，其他测试可能使用 CurrentDirGuard 切换了全局目录
             // 所以我们只验证 GitTestEnv 本身不切换全局目录
             // ✅ 改进：在 GitTestEnv 创建后立即检查，而不是在测试结束时
-            let current_dir_during_test = std::env::current_dir()?;
+            let current_dir_during_test = get_current_dir_with_fallback()?;
             let current_dir_during_test_str = current_dir_during_test.to_string_lossy().to_string();
 
             // 如果当前目录不是临时目录，说明 GitTestEnv 没有切换它（符合预期）
