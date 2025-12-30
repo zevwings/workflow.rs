@@ -50,4 +50,3 @@ impl Sensitive for String {
         self.as_str().mask()
     }
 }
-

@@ -90,4 +90,3 @@ fn test_progress_formatting() {
     // Assert: 验证格式化结果
     assert_eq!(msg, "[3/10] Processing files");
 }
-

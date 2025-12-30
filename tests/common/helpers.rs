@@ -344,18 +344,125 @@ impl CurrentDirGuard {
     ///
     /// - 无法获取当前目录
     /// - 无法切换到目标目录
+    ///
+    /// # 注意事项
+    ///
+    /// - 使用绝对路径存储原始目录，避免相对路径问题
+    /// - 在并发测试环境中，如果当前目录不存在，会尝试使用备用方案
     pub fn new(new_dir: impl AsRef<Path>) -> color_eyre::Result<Self> {
-        let original_dir = std::env::current_dir()?;
-        std::env::set_current_dir(new_dir)?;
+        // 获取当前目录，使用绝对路径避免相对路径问题
+        // 在并发测试环境中，如果当前目录被删除，尝试使用备用方案
+        let original_dir = std::env::current_dir()
+            .and_then(|p| p.canonicalize())
+            .or_else(|_| {
+                // 如果当前目录不存在，尝试使用项目根目录或可执行文件目录作为备用
+                std::env::var("CARGO_MANIFEST_DIR").map(PathBuf::from).or_else(|_| {
+                    std::env::current_exe().and_then(|exe| {
+                        exe.parent()
+                            .ok_or_else(|| {
+                                std::io::Error::new(
+                                    std::io::ErrorKind::NotFound,
+                                    "Cannot determine original directory",
+                                )
+                            })
+                            .map(PathBuf::from)
+                    })
+                })
+            })
+            .wrap_err("Failed to get current directory")?;
+
+        // 确保目标目录存在且是绝对路径
+        let new_dir = new_dir.as_ref();
+        let new_dir_abs = if new_dir.is_absolute() {
+            new_dir.to_path_buf()
+        } else {
+            // 如果是相对路径，基于原始目录解析
+            original_dir.join(new_dir)
+        };
+
+        // 确保目标目录存在
+        if !new_dir_abs.exists() {
+            return Err(color_eyre::eyre::eyre!(
+                "Target directory does not exist: {}",
+                new_dir_abs.display()
+            ));
+        }
+
+        std::env::set_current_dir(&new_dir_abs).wrap_err_with(|| {
+            format!("Failed to change directory to: {}", new_dir_abs.display())
+        })?;
+
         Ok(Self { original_dir })
     }
 }
 
 impl Drop for CurrentDirGuard {
     fn drop(&mut self) {
-        // 忽略恢复失败，避免 panic during panic
-        let _ = std::env::set_current_dir(&self.original_dir);
+        // 尝试恢复原始目录
+        // 如果原始目录不存在，尝试使用备用方案
+        if std::env::set_current_dir(&self.original_dir).is_err() {
+            // 如果原始目录不存在，尝试使用项目根目录或可执行文件目录
+            if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+                let _ = std::env::set_current_dir(manifest_dir);
+            } else if let Ok(exe_dir) = std::env::current_exe().and_then(|exe| {
+                exe.parent()
+                    .ok_or_else(|| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::NotFound,
+                            "Cannot determine directory",
+                        )
+                    })
+                    .map(PathBuf::from)
+            }) {
+                let _ = std::env::set_current_dir(exe_dir);
+            }
+            // 如果所有方案都失败，忽略错误，避免 panic during panic
+        }
     }
+}
+
+/// 获取当前目录（带备用方案）
+///
+/// 在并发测试环境中，如果当前目录被删除，会尝试使用备用方案：
+/// 1. 尝试获取并规范化当前目录
+/// 2. 如果失败，尝试使用 `CARGO_MANIFEST_DIR` 环境变量
+/// 3. 如果失败，尝试使用可执行文件的父目录
+///
+/// # 返回
+///
+/// 返回当前目录的绝对路径，失败时返回错误
+///
+/// # 示例
+///
+/// ```no_run
+/// use tests::common::helpers::get_current_dir_with_fallback;
+///
+/// #[test]
+/// fn test_example() -> color_eyre::Result<()> {
+///     let current_dir = get_current_dir_with_fallback()?;
+///     // 使用 current_dir
+///     Ok(())
+/// }
+/// ```
+pub fn get_current_dir_with_fallback() -> color_eyre::Result<PathBuf> {
+    std::env::current_dir()
+        .and_then(|p| p.canonicalize())
+        .or_else(|_| {
+            // 如果当前目录不存在，尝试使用项目根目录或可执行文件目录作为备用
+            std::env::var("CARGO_MANIFEST_DIR").map(PathBuf::from).or_else(|_| {
+                std::env::current_exe().and_then(|exe| {
+                    exe.parent()
+                        .ok_or_else(|| {
+                            std::io::Error::new(
+                                std::io::ErrorKind::NotFound,
+                                "Cannot determine current directory",
+                            )
+                        })
+                        .map(PathBuf::from)
+                })
+            })
+        })
+        .wrap_err("Failed to get current directory")
 }
 
 // ==================== 统一路径获取函数（使用 dirs crate）====================

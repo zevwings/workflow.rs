@@ -389,9 +389,8 @@ impl PullRequestCreateCommand {
         default_branch: &str,
     ) -> Result<String> {
         // 检测基础分支
-        let base_branch = GitBranch::detect_base_branch(current_branch, default_branch)
-            .ok()
-            .flatten();
+        let base_branch =
+            GitBranch::detect_base_branch(current_branch, default_branch).ok().flatten();
 
         let mut options = vec![];
 
@@ -419,9 +418,7 @@ impl PullRequestCreateCommand {
             return Ok(current_branch.to_string());
         }
 
-        let prompt_message = format!(
-            "Create new branch based on which branch?\n\nNote: Target branch (base/default) will be selected later."
-        );
+        let prompt_message = "Create new branch based on which branch?\n\nNote: Target branch (base/default) will be selected later.".to_string();
 
         let selected_label = SelectDialog::new(&prompt_message, options)
             .with_default(default_index)
@@ -494,12 +491,20 @@ impl PullRequestCreateCommand {
         // 3. 根据选择的源分支执行不同的逻辑
         if source_branch == current_branch {
             // 基于当前分支创建：直接创建新分支（未提交的更改会带到新分支）
-            log_info!("Creating branch '{}' based on current branch '{}'...", branch_name, current_branch);
+            log_info!(
+                "Creating branch '{}' based on current branch '{}'...",
+                branch_name,
+                current_branch
+            );
             log_success!("Creating branch: {}", branch_name);
             GitBranch::checkout_branch(branch_name)?;
         } else {
             // 基于其他分支创建：需要 stash → 切换 → 拉取 → 恢复
-            log_info!("Creating branch '{}' based on '{}'...", branch_name, source_branch);
+            log_info!(
+                "Creating branch '{}' based on '{}'...",
+                branch_name,
+                source_branch
+            );
 
             // 使用 stash 暂存修改
             log_success!("Stashing uncommitted changes...");
@@ -507,12 +512,12 @@ impl PullRequestCreateCommand {
 
             // 切换到源分支
             log_info!("Switching to branch '{}'...", source_branch);
-            GitBranch::checkout_branch(&source_branch)?;
+            GitBranch::checkout_branch(source_branch)?;
 
             // 拉取最新的代码
             Spinner::with(
                 format!("Pulling latest changes from '{}'...", source_branch),
-                || GitBranch::pull(&source_branch),
+                || GitBranch::pull(source_branch),
             )?;
 
             // 创建新分支
@@ -642,7 +647,8 @@ impl PullRequestCreateCommand {
                 );
 
                 // 选择源分支（当前分支、基础分支、默认分支）
-                let source_branch = Self::select_source_branch_for_new_branch(&current_branch, &default_branch)?;
+                let source_branch =
+                    Self::select_source_branch_for_new_branch(&current_branch, &default_branch)?;
 
                 if source_branch == current_branch {
                     // 用户选择在当前分支创建 PR

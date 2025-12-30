@@ -188,4 +188,3 @@ pub fn get_unix_timestamp_nanos() -> u128 {
         .expect("System time is before Unix epoch")
         .as_nanos()
 }
-

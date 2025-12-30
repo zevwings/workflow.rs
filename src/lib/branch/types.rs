@@ -140,4 +140,3 @@ impl fmt::Display for BranchType {
         write!(f, "{}", self.as_str())
     }
 }
-
