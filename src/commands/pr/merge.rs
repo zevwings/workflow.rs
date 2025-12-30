@@ -29,14 +29,18 @@ impl PullRequestMergeCommand {
         // 4. 获取默认分支
         let default_branch = GitBranch::get_default_branch()?;
 
-        // 5. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
+        // 5. 获取 PR 的目标分支（合并到的分支）
+        let target_branch = Self::get_pr_target_branch(&pull_request_id)
+            .unwrap_or_else(|_| default_branch.clone());
+
+        // 6. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
         Self::merge_pull_request(&pull_request_id)?;
 
-        // 6. 合并后清理：切换到默认分支并删除当前分支
+        // 7. 合并后清理：切换到目标分支并删除当前分支
         // 注意：如果 PR 已合并，远程分支可能已经被删除
-        Self::cleanup_after_merge(&current_branch, &default_branch)?;
+        Self::cleanup_after_merge(&current_branch, &target_branch, &default_branch)?;
 
-        // 7. 更新 Jira 状态（如果关联了 ticket）
+        // 8. 更新 Jira 状态（如果关联了 ticket）
         Self::update_jira_status(&pull_request_id)?;
 
         Ok(())
@@ -134,13 +138,59 @@ impl PullRequestMergeCommand {
         Ok(title.and_then(|t| extract_jira_ticket_id(&t)))
     }
 
-    /// 合并后清理：切换到默认分支并删除当前分支
-    fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
+    /// 获取 PR 的目标分支（合并到的分支）
+    fn get_pr_target_branch(pull_request_id: &str) -> Result<String> {
+        let provider = create_provider_auto()?;
+
+        // 从 PR 信息中获取目标分支名
+        let info = provider.get_pull_request_info(pull_request_id)?;
+
+        // 解析 PR 信息，提取目标分支名
+        // PR 信息格式包含 "Target Branch: branch_name"
+        for line in info.lines() {
+            if let Some(branch_line) = line.strip_prefix("Target Branch: ") {
+                return Ok(branch_line.trim().to_string());
+            }
+        }
+
+        color_eyre::eyre::bail!("Failed to extract target branch from PR #{}", pull_request_id)
+    }
+
+    /// 合并后清理：切换到目标分支并删除当前分支
+    fn cleanup_after_merge(
+        current_branch: &str,
+        target_branch: &str,
+        default_branch: &str,
+    ) -> Result<()> {
         log_info!(
             "Note: Remote branch '{}' may have already been deleted via API",
             current_branch
         );
-        helpers::cleanup_branch(current_branch, default_branch, "PR merge")?;
+
+        // 确定要切换到的分支：如果目标分支存在且不是默认分支，切换到目标分支；否则切换到默认分支
+        let switch_to_branch = if target_branch != default_branch {
+            // 检查目标分支是否存在
+            if GitBranch::has_local_branch(target_branch).unwrap_or(false)
+                || GitBranch::has_remote_branch(target_branch).unwrap_or(false)
+            {
+                log_info!(
+                    "PR merged to '{}', switching to target branch instead of default branch",
+                    target_branch
+                );
+                target_branch
+            } else {
+                log_warning!(
+                    "Target branch '{}' not found, falling back to default branch '{}'",
+                    target_branch,
+                    default_branch
+                );
+                default_branch
+            }
+        } else {
+            default_branch
+        };
+
+        helpers::cleanup_branch(current_branch, switch_to_branch, "PR merge")?;
         Ok(())
     }
 }
