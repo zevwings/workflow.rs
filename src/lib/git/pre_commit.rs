@@ -8,7 +8,7 @@ use super::commit::GitCommit;
 use super::repo::GitRepo;
 use crate::base::fs::FileReader;
 use crate::base::indicator::Spinner;
-use crate::{trace_debug, trace_error, trace_info};
+use crate::{log_success, trace_debug, trace_error, trace_info};
 
 /// Pre-commit 执行结果
 #[derive(Debug, Clone)]
@@ -291,6 +291,8 @@ impl GitPreCommit {
             // 注意：虽然 run_pre_commit() 捕获了输出，但 Spinner 可以提供进度指示
             Spinner::with_output("Running pre-commit checks...", Self::run_pre_commit)?;
 
+            // 显示成功消息（用户可见的操作结果）
+            log_success!("Pre-commit checks passed");
             trace_info!("Pre-commit checks passed");
         }
         Ok(())
