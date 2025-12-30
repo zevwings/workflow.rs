@@ -541,33 +541,48 @@ impl PullRequestCreateCommand {
         } else {
             // 不在默认分支上
             if has_uncommitted {
-                // 有未提交的代码 → 询问用户是否需要在当前分支创建 PR
-                log_info!(
-                    "You are on branch '{}' with uncommitted changes.",
-                    current_branch
-                );
-                let should_use_current = ConfirmDialog::new(format!(
-                    "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
-                    current_branch, branch_name
-                ))
-                .with_default(true)
-                .prompt()?;
-
-                if should_use_current {
-                    // 用户期望在当前分支提交并创建 PR
+                // 有未提交的代码
+                // 如果当前分支名和生成的分支名相同，直接使用当前分支
+                if current_branch == branch_name {
+                    log_info!(
+                        "You are on branch '{}' with uncommitted changes. Using current branch.",
+                        current_branch
+                    );
+                    // 直接在当前分支提交并创建 PR
                     Self::commit_and_push_current_branch(
                         &current_branch,
                         commit_title,
                         &default_branch,
                     )
                 } else {
-                    // 用户不期望在当前分支提交并创建 → 使用 stash 创建新分支
-                    Self::create_new_branch_with_stash(
-                        &current_branch,
-                        branch_name,
-                        commit_title,
-                        &default_branch,
-                    )
+                    // 当前分支名和生成的分支名不同，询问用户选择
+                    log_info!(
+                        "You are on branch '{}' with uncommitted changes.",
+                        current_branch
+                    );
+                    let should_use_current = ConfirmDialog::new(format!(
+                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
+                        current_branch, branch_name
+                    ))
+                    .with_default(true)
+                    .prompt()?;
+
+                    if should_use_current {
+                        // 用户期望在当前分支提交并创建 PR
+                        Self::commit_and_push_current_branch(
+                            &current_branch,
+                            commit_title,
+                            &default_branch,
+                        )
+                    } else {
+                        // 用户不期望在当前分支提交并创建 → 使用 stash 创建新分支
+                        Self::create_new_branch_with_stash(
+                            &current_branch,
+                            branch_name,
+                            commit_title,
+                            &default_branch,
+                        )
+                    }
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
