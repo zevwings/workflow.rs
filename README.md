@@ -285,7 +285,18 @@ make bench-report
 make bench-open
 ```
 
-**详细测试指南**：请参考 [测试规范指南](./docs/guidelines/testing.md)
+**Windows 测试**：
+```powershell
+# 使用 PowerShell 测试脚本
+.\scripts\dev\shell\test.ps1
+
+# 或直接使用 Cargo
+cargo test
+```
+
+**详细测试指南**：
+- [测试规范指南](./docs/guidelines/testing.md)
+- [Windows 测试指南](./docs/guidelines/testing/windows.md) - Windows 环境详细说明
 
 ### 运行 CLI
 
