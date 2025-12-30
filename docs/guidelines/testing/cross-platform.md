@@ -118,6 +118,8 @@ cargo test --test integration_test
 
 ## 📚 相关文档
 
+- [Windows 测试指南](./windows.md) - Windows 环境下的测试详细指南
+- [Parallels Desktop Windows 测试指南](./parallels-windows.md) - 在 macOS 上使用 Parallels Desktop 测试 Windows 版本
 - [测试组织规范](./organization.md) - 测试组织结构和命名约定
 - [测试编写规范](./writing.md) - 测试编写的具体规范
 - [CI/CD 工作流](../ci-workflow.md) - CI/CD 工作流说明

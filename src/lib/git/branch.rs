@@ -2021,9 +2021,10 @@ impl GitBranch {
     pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
         trace_info!("Detecting base branch for '{}'...", branch);
 
-        // 获取所有分支（排除 branch 和 exclude_branch）
-        let all_branches = Self::get_all_branches(false)
-            .wrap_err("Failed to get all branches for base branch detection")?;
+        // 仅获取本地分支（避免在 Windows 上访问远程引用时可能触发网络操作导致卡住）
+        // 远程分支通常是本地分支的副本，检查本地分支即可
+        let all_branches = Self::get_local_branches()
+            .wrap_err("Failed to get local branches for base branch detection")?;
 
         // 按优先级排序：优先检查常见的基础分支
         let mut candidate_branches: Vec<String> = all_branches
