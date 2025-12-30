@@ -1,7 +1,7 @@
 use crate::base::dialog::{ConfirmDialog, SelectDialog};
 use crate::base::indicator::Spinner;
 use crate::commands::check;
-use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
+use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
@@ -301,7 +301,7 @@ impl PullRequestRebaseCommand {
         Spinner::with("Fetching latest changes...", GitRepo::fetch)?;
 
         // 6. 检测当前分支的基础分支（用于智能 rebase）
-        let detected_base = detect_base_branch(&current_branch, &target_branch)?;
+        let detected_base = GitBranch::detect_base_branch(&current_branch, &target_branch)?;
 
         // 7. 预览模式
         if dry_run {

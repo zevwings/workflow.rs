@@ -6,8 +6,8 @@ use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     copy_and_open_pull_request, create_branch_from_default, create_or_get_pull_request,
-    detect_base_branch, ensure_jira_status, handle_stash_pop_result, resolve_description,
-    resolve_title, select_change_types, update_jira_ticket,
+    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_title,
+    select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
@@ -255,7 +255,7 @@ impl PullRequestPickCommand {
     /// 返回要 cherry-pick 的提交列表。
     fn get_new_commits(from_branch: &str, to_branch: &str) -> Result<Vec<String>> {
         // 1. 检测 from_branch 可能基于哪个分支创建
-        let detected_base = detect_base_branch(from_branch, to_branch)?;
+        let detected_base = GitBranch::detect_base_branch(from_branch, to_branch)?;
 
         // 2. 如果检测到基础分支，自动使用该基础分支
         let actual_base = if let Some(base_branch) = detected_base {

@@ -415,6 +415,7 @@ impl GitTag {
     ///
     /// 使用 git2 库推送 tag 到远程仓库。
     /// 支持 SSH 和 HTTPS 认证，适用于私有仓库。
+    /// 包含超时和重试机制，提高网络操作的可靠性。
     ///
     /// # 参数
     ///
@@ -424,20 +425,37 @@ impl GitTag {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push(tag_name: &str) -> Result<()> {
-        let mut repo = GitRepository::open()?;
-        let mut remote = repo.find_origin_remote()?;
+        use crate::base::resilience::{
+            default_download_timeout, execute_with_timeout_and_retry, RetryConfig, TimeoutConfig,
+        };
 
-        // 配置推送选项
-        let mut push_options = GitRepository::get_push_options();
+        let timeout_config =
+            TimeoutConfig::new(default_download_timeout()).with_platform_specific();
+        let retry_config = RetryConfig::platform_default();
+        let tag_name = tag_name.to_string();
 
-        // 构建 refspec
-        let refspec = format!("refs/tags/{}:refs/tags/{}", tag_name, tag_name);
+        execute_with_timeout_and_retry(
+            timeout_config,
+            retry_config,
+            move || -> Result<()> {
+                let mut repo = GitRepository::open()?;
+                let mut remote = repo.find_origin_remote()?;
 
-        // 推送 tag
-        remote
-            .push(&[&refspec], Some(&mut push_options))
-            .wrap_err_with(|| format!("Failed to push tag: {}", tag_name))?;
+                // 配置推送选项
+                let mut push_options = GitRepository::get_push_options();
 
+                // 构建 refspec
+                let refspec = format!("refs/tags/{}:refs/tags/{}", tag_name, tag_name);
+
+                // 推送 tag
+                remote
+                    .push(&[&refspec], Some(&mut push_options))
+                    .wrap_err_with(|| format!("Failed to push tag: {}", tag_name))?;
+
+                Ok(())
+            },
+            "Pushing tag to remote",
+        )?;
         Ok(())
     }
 

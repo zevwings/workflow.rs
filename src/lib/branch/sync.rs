@@ -7,7 +7,7 @@ use crate::base::dialog::{ConfirmDialog, SelectDialog};
 use crate::base::indicator::Spinner;
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitAuth, GitBranch, GitRepository, MergeStrategy, StashPopResult};
-use crate::{log_break, log_error, log_info, log_success, log_warning};
+use crate::{trace_error, trace_info, trace_warn};
 use color_eyre::{eyre::WrapErr, Result};
 use git2::{FetchOptions, PushOptions};
 use std::path::Path;
@@ -110,7 +110,7 @@ impl BranchSync {
         let repo_path = repo_path.as_ref();
 
         let current_branch = GitBranch::current_branch_in(repo_path)?;
-        log_success!("Current branch: {}", current_branch);
+        trace_info!("Current branch: {}", current_branch);
 
         let has_stashed = Self::check_working_directory_in(repo_path)?;
 
@@ -143,7 +143,7 @@ impl BranchSync {
         };
 
         if !skip_stash_pop && has_stashed {
-            log_info!("Restoring stashed changes...");
+            trace_info!("Restoring stashed changes...");
             handle_stash_pop_result(Self::stash_pop_in(repo_path, None));
         }
 
@@ -160,13 +160,13 @@ impl BranchSync {
             // 不过为了简化逻辑，我们总是询问用户，让用户决定
             Self::prompt_and_push_after_sync_in(repo_path, &result)?;
         } else {
-            log_info!(
+            trace_info!(
                 "Current branch '{}' does not exist on remote",
                 result.current_branch
             );
-            log_info!("Skipping push. You can push manually when ready: git push");
+            trace_info!("Skipping push. You can push manually when ready: git push");
             if matches!(result.strategy, SyncStrategy::Rebase) {
-                log_info!("Or with force: git push --force-with-lease");
+                trace_info!("Or with force: git push --force-with-lease");
             }
         }
 
@@ -187,7 +187,7 @@ impl BranchSync {
             Self::has_commit_in(repo_path).wrap_err("Failed to check working directory status")?;
 
         if has_uncommitted {
-            log_warning!("Working directory has uncommitted changes");
+            trace_warn!("Working directory has uncommitted changes");
             let options = vec![
                 "Stash changes and continue".to_string(),
                 "Abort operation".to_string(),
@@ -204,9 +204,9 @@ impl BranchSync {
 
             match choice {
                 0 => {
-                    log_info!("Stashing uncommitted changes...");
+                    trace_info!("Stashing uncommitted changes...");
                     Self::stash_push_in(repo_path, Some("Auto-stash before branch sync"))?;
-                    log_success!("Changes stashed successfully");
+                    trace_info!("Changes stashed successfully");
                     Ok(true)
                 }
                 1 => {
@@ -240,18 +240,18 @@ impl BranchSync {
 
         if !exists_local && exists_remote {
             // 分支只在远程，需要先 fetch 以确保有最新的引用
-            log_info!("Source branch '{}' only exists on remote", source_branch);
+            trace_info!("Source branch '{}' only exists on remote", source_branch);
             Spinner::with("Fetching from remote...", || {
                 Self::fetch_in(repo_path).wrap_err("Failed to fetch from remote")
             })?;
-            log_success!("Fetched latest changes from remote");
+            trace_info!("Fetched latest changes from remote");
             Ok(SourceBranchInfo {
                 is_remote: true,
                 merge_ref: format!("origin/{}", source_branch),
             })
         } else {
             // 分支在本地存在，直接使用分支名
-            log_success!("Source branch '{}' is ready", source_branch);
+            trace_info!("Source branch '{}' is ready", source_branch);
             Ok(SourceBranchInfo {
                 is_remote: false,
                 merge_ref: source_branch.to_string(),
@@ -299,26 +299,26 @@ impl BranchSync {
 
                 // 如果合并失败，恢复 stash（如果有）
                 if merge_result.is_err() && has_stashed {
-                    log_info!("Merge failed, attempting to restore stashed changes...");
+                    trace_info!("Merge failed, attempting to restore stashed changes...");
                     handle_stash_pop_result(Self::stash_pop_in(repo_path, None));
                 }
 
                 match merge_result {
                     Ok(()) => {
-                        log_success!("Merge completed successfully");
+                        trace_info!("Merge completed successfully");
                         Ok(true)
                     }
                     Err(e) => {
                         // 检查是否是合并冲突
                         if let Ok(has_conflicts) = Self::has_merge_conflicts_in(repo_path) {
                             if has_conflicts {
-                                log_error!("Merge conflicts detected!");
-                                log_info!("Please resolve the conflicts manually:");
-                                log_info!("  1. Review conflicted files");
-                                log_info!("  2. Resolve conflicts");
-                                log_info!("  3. Stage resolved files: git add <files>");
-                                log_info!("  4. Complete the merge: git commit");
-                                log_info!("  5. Push when ready: git push");
+                                trace_error!("Merge conflicts detected!");
+                                trace_info!("Please resolve the conflicts manually:");
+                                trace_info!("  1. Review conflicted files");
+                                trace_info!("  2. Resolve conflicts");
+                                trace_info!("  3. Stage resolved files: git add <files>");
+                                trace_info!("  4. Complete the merge: git commit");
+                                trace_info!("  5. Push when ready: git push");
                                 color_eyre::eyre::bail!(
                                     "Merge conflicts detected. Please resolve manually."
                                 );
@@ -336,26 +336,26 @@ impl BranchSync {
 
                 // 如果 rebase 失败，恢复 stash（如果有）
                 if rebase_result.is_err() && has_stashed {
-                    log_info!("Rebase failed, attempting to restore stashed changes...");
+                    trace_info!("Rebase failed, attempting to restore stashed changes...");
                     handle_stash_pop_result(Self::stash_pop_in(repo_path, None));
                 }
 
                 match rebase_result {
                     Ok(()) => {
-                        log_success!("Rebase completed successfully");
+                        trace_info!("Rebase completed successfully");
                         Ok(true)
                     }
                     Err(e) => {
                         // 检查是否是 rebase 冲突
                         let error_msg = e.to_string().to_lowercase();
                         if error_msg.contains("conflict") || error_msg.contains("could not apply") {
-                            log_error!("Rebase conflicts detected!");
-                            log_info!("Please resolve the conflicts manually:");
-                            log_info!("  1. Review conflicted files");
-                            log_info!("  2. Resolve conflicts");
-                            log_info!("  3. Stage resolved files: git add <files>");
-                            log_info!("  4. Continue rebase: git rebase --continue");
-                            log_info!("  5. Push when ready: git push --force-with-lease");
+                            trace_error!("Rebase conflicts detected!");
+                            trace_info!("Please resolve the conflicts manually:");
+                            trace_info!("  1. Review conflicted files");
+                            trace_info!("  2. Resolve conflicts");
+                            trace_info!("  3. Stage resolved files: git add <files>");
+                            trace_info!("  4. Continue rebase: git rebase --continue");
+                            trace_info!("  5. Push when ready: git push --force-with-lease");
                             color_eyre::eyre::bail!(
                                 "Rebase conflicts detected. Please resolve manually."
                             );
@@ -391,10 +391,10 @@ impl BranchSync {
         if should_push {
             Self::push_after_sync_in(repo_path, result)?;
         } else {
-            log_info!("Skipping push as requested by user");
-            log_info!("You can push manually with: git push");
+            trace_info!("Skipping push as requested by user");
+            trace_info!("You can push manually with: git push");
             if use_force {
-                log_info!("Or with force: git push --force-with-lease");
+                trace_info!("Or with force: git push --force-with-lease");
             }
         }
 
@@ -418,8 +418,7 @@ impl BranchSync {
                     .wrap_err("Failed to push to remote")
             }
         })?;
-        log_break!();
-        log_success!("Pushed to remote successfully");
+        trace_info!("Pushed to remote successfully");
         Ok(())
     }
 

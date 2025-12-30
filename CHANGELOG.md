@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- 新增功能将在这里记录
+- **PR 创建目标分支选择功能**：智能检测分支关系，自动选择或询问用户选择 PR 的目标分支
+  - 如果分支基于默认分支创建，自动使用默认分支作为目标分支
+  - 如果分支基于其他分支创建（如 `feature/yyy` 基于 `feature/xxx`），会检测基础分支并询问用户选择合并到哪个分支
+  - 显示清晰的分支关系图和提交数量差异，帮助用户做出选择
+  - 用户取消选择时，使用默认分支并继续创建 PR
 
 ### Changed
 - 变更将在这里记录

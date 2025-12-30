@@ -658,6 +658,12 @@ workflow pr create --title "..."               # 手动指定标题
 workflow pr create --description "..."         # 指定简短描述
 workflow pr create --dry-run                   # 干运行（不实际创建）
 
+# 目标分支选择功能：
+# - 如果分支基于默认分支创建，自动使用默认分支作为目标分支
+# - 如果分支基于其他分支创建（如 feature/yyy 基于 feature/xxx），会检测基础分支并询问用户选择
+# - 显示分支关系图和提交数量差异，帮助用户做出选择
+# - 用户取消选择时，使用默认分支并继续创建 PR
+
 # 合并 PR
 workflow pr merge [PR_ID]                      # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
 workflow pr merge --force                      # 强制合并

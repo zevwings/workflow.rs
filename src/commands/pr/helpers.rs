@@ -2,7 +2,7 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
 use crate::base::indicator::Spinner;
 use crate::base::system::{Browser, Clipboard};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
@@ -208,87 +208,6 @@ pub fn cleanup_branch(
     );
 
     Ok(())
-}
-
-/// Detect which branch a given branch might be based on
-///
-/// By checking all branches, find the branch that the given branch might be directly based on.
-/// If a base branch is detected, return its name.
-///
-/// # Arguments
-///
-/// * `branch` - The branch name to detect
-/// * `exclude_branch` - The branch to exclude from detection (usually the target branch)
-///
-/// # Returns
-///
-/// Returns `Some(base_branch_name)` if a base branch is detected, otherwise returns `None`.
-///
-/// # Examples
-///
-/// ```no_run
-/// use workflow::commands::pr::helpers::detect_base_branch;
-///
-/// // Detect which branch test-rebase is based on (excluding master)
-/// let base = detect_base_branch("test-rebase", "master")?;
-/// // May return: Some("develop-")
-/// # Ok::<(), Box<dyn std::error::Error>>(())
-/// ```
-pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
-    log_info!("Detecting base branch for '{}'...", branch);
-
-    // Get all branches (excluding branch and exclude_branch)
-    let all_branches = GitBranch::get_all_branches(false)
-        .wrap_err("Failed to get all branches for base branch detection")?;
-
-    // Sort by priority: check common base branches first
-    let mut candidate_branches: Vec<String> = all_branches
-        .into_iter()
-        .filter(|b| b != branch && b != exclude_branch)
-        .collect();
-
-    // Prioritize checking common base branch names (develop, dev, staging, etc.)
-    let common_base_branches = ["develop", "dev", "staging", "test"];
-    candidate_branches.sort_by(|a, b| {
-        let a_priority = common_base_branches
-            .iter()
-            .position(|&name| a == name || a.ends_with(&format!("/{}", name)))
-            .unwrap_or(usize::MAX);
-        let b_priority = common_base_branches
-            .iter()
-            .position(|&name| b == name || b.ends_with(&format!("/{}", name)))
-            .unwrap_or(usize::MAX);
-        a_priority.cmp(&b_priority)
-    });
-
-    // Check each candidate branch
-    for candidate in &candidate_branches {
-        match GitBranch::is_branch_based_on(branch, candidate) {
-            Ok(true) => {
-                log_success!(
-                    "Detected that '{}' is likely based on '{}'",
-                    branch,
-                    candidate
-                );
-                return Ok(Some(candidate.clone()));
-            }
-            Ok(false) => {
-                // Continue checking next branch
-            }
-            Err(e) => {
-                // Check failed, log warning but continue
-                log_warning!(
-                    "Failed to check if '{}' is based on '{}': {}",
-                    branch,
-                    candidate,
-                    e
-                );
-            }
-        }
-    }
-
-    log_info!("No base branch detected for '{}'", branch);
-    Ok(None)
 }
 
 /// 配置 Jira ticket 状态
@@ -526,10 +445,214 @@ pub fn resolve_title(
     input_pull_request_title()
 }
 
+/// 解析 PR 的目标分支
+///
+/// 检测当前分支是否基于默认分支创建：
+/// - 如果是，返回默认分支
+/// - 如果不是，检测基础分支并询问用户选择目标分支
+///
+/// # 参数
+///
+/// * `current_branch` - 当前分支名称
+/// * `default_branch` - 默认分支名称
+///
+/// # 返回
+///
+/// 返回选择的目标分支名称
+pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Result<String> {
+    // 首先尝试检测基础分支（即使可能基于默认分支，也可能有更近的基础分支）
+    log_info!("Detecting base branch for '{}'...", current_branch);
+
+    let base_branch = match GitBranch::detect_base_branch(current_branch, default_branch) {
+        Ok(Some(base)) => {
+            // 检测到基础分支，检查是否就是默认分支
+            if base == default_branch {
+                log_info!(
+                    "Detected base branch '{}' is the default branch",
+                    default_branch
+                );
+                return Ok(default_branch.to_string());
+            }
+            // 检测到非默认的基础分支，使用它
+            base
+        }
+        Ok(None) => {
+            // 检测不到基础分支，检查是否基于默认分支创建
+            let is_based_on_default =
+                match GitBranch::is_branch_based_on(current_branch, default_branch) {
+                    Ok(true) => true,
+                    Ok(false) => false,
+                    Err(e) => {
+                        // 检查失败，记录警告但使用默认分支
+                        log_warning!(
+                            "Failed to check if '{}' is based on '{}': {}, using default branch",
+                            current_branch,
+                            default_branch,
+                            e
+                        );
+                        false
+                    }
+                };
+
+            if is_based_on_default {
+                log_info!(
+                    "Branch '{}' is based on default branch '{}'",
+                    current_branch,
+                    default_branch
+                );
+                return Ok(default_branch.to_string());
+            }
+
+            // 检测不到基础分支，使用默认分支
+            log_info!(
+                "Could not detect base branch for '{}', using default branch '{}'",
+                current_branch,
+                default_branch
+            );
+            return Ok(default_branch.to_string());
+        }
+        Err(e) => {
+            // 检测失败，检查是否基于默认分支创建
+            let is_based_on_default =
+                match GitBranch::is_branch_based_on(current_branch, default_branch) {
+                    Ok(true) => true,
+                    Ok(false) => false,
+                    Err(_) => false,
+                };
+
+            if is_based_on_default {
+                log_warning!(
+                    "Failed to detect base branch for '{}': {}, but branch is based on default branch '{}'",
+                    current_branch,
+                    e,
+                    default_branch
+                );
+                return Ok(default_branch.to_string());
+            }
+
+            // 检测失败，记录警告并使用默认分支
+            log_warning!(
+                "Failed to detect base branch for '{}': {}, using default branch '{}'",
+                current_branch,
+                e,
+                default_branch
+            );
+            return Ok(default_branch.to_string());
+        }
+    };
+
+    // 检测到基础分支，准备显示详细信息
+    log_info!(
+        "Detected that branch '{}' is based on '{}'",
+        current_branch,
+        base_branch
+    );
+
+    // 计算提交数量差异（用于显示更详细的信息）
+    let base_ahead_count = GitBranch::get_commits_between(default_branch, &base_branch)
+        .map(|commits| commits.len())
+        .unwrap_or(0);
+    let current_ahead_count = GitBranch::get_commits_between(&base_branch, current_branch)
+        .map(|commits| commits.len())
+        .unwrap_or(0);
+
+    // 构建分支关系图
+    let relationship_info = if base_ahead_count > 0 {
+        format!(
+            "\nBranch relationship:\n  {} (current, {} commit{})\n    └─ {} (base branch, {} commit{} ahead of {})\n        └─ {} (default branch)",
+            current_branch,
+            current_ahead_count,
+            if current_ahead_count == 1 { "" } else { "s" },
+            base_branch,
+            base_ahead_count,
+            if base_ahead_count == 1 { "" } else { "s" },
+            default_branch,
+            default_branch
+        )
+    } else {
+        format!(
+            "\nBranch relationship:\n  {} (current, {} commit{})\n    └─ {} (base branch)\n        └─ {} (default branch)",
+            current_branch,
+            current_ahead_count,
+            if current_ahead_count == 1 { "" } else { "s" },
+            base_branch,
+            default_branch
+        )
+    };
+
+    // 构建选项描述
+    let base_option = if base_ahead_count > 0 {
+        format!(
+            "{} (recommended, base branch, {} commit{} ahead of {})",
+            base_branch,
+            base_ahead_count,
+            if base_ahead_count == 1 { "" } else { "s" },
+            default_branch
+        )
+    } else {
+        format!("{} (recommended, base branch)", base_branch)
+    };
+
+    let default_option = format!("{} (default branch)", default_branch);
+
+    // 使用更清晰的选项描述
+    let options = vec![default_option, base_option];
+    let prompt_message = format!("Select target branch for PR{}", relationship_info);
+
+    // 处理用户选择，如果取消则使用默认分支
+    let selected_label = match SelectDialog::new(&prompt_message, options)
+        .with_default(1) // 默认选择基础分支（更符合预期）
+        .prompt()
+    {
+        Ok(label) => label,
+        Err(e) => {
+            // 检查是否是用户取消操作
+            let error_msg = e.to_string().to_lowercase();
+            if error_msg.contains("cancelled")
+                || error_msg.contains("cancel")
+                || error_msg.contains("operation cancelled")
+            {
+                log_info!(
+                    "Selection cancelled by user, using default branch '{}'",
+                    default_branch
+                );
+                return Ok(default_branch.to_string());
+            }
+            // 其他错误，返回错误信息
+            return Err(e).wrap_err("Failed to select target branch");
+        }
+    };
+
+    // 从选中的标签中提取分支名
+    // 选项格式："{branch_name} (description...)"，我们需要提取分支名
+    // 使用 starts_with 确保准确匹配，避免误匹配
+    let target_branch = if selected_label.starts_with(&format!("{} ", base_branch))
+        || selected_label.starts_with(&base_branch)
+    {
+        base_branch.clone()
+    } else if selected_label.starts_with(&format!("{} ", default_branch))
+        || selected_label.starts_with(default_branch)
+    {
+        default_branch.to_string()
+    } else {
+        // 如果无法匹配，尝试从标签中提取第一个单词作为分支名（作为后备方案）
+        let branch_name =
+            selected_label.split_whitespace().next().unwrap_or(&selected_label).to_string();
+        log_warning!(
+            "Could not match selected option exactly, using extracted branch name: {}",
+            branch_name
+        );
+        branch_name
+    };
+
+    log_success!("Selected target branch: {}", target_branch);
+    Ok(target_branch)
+}
+
 /// 创建或获取 PR
 ///
 /// 检查分支是否已有 PR，如果有则获取 PR URL，否则创建新 PR。
-/// 在创建 PR 前会检查分支是否有提交。
+/// 在创建 PR 前会检查分支是否有提交，并解析目标分支。
 ///
 /// # 参数
 ///
@@ -555,28 +678,36 @@ pub fn create_or_get_pull_request(
         let provider = create_provider_auto()?;
         provider.get_pull_request_url(&pr_id)
     } else {
-        // 分支无 PR，创建新 PR
-        // 先检查分支是否有提交（相对于默认分支）
-        let has_commits = GitBranch::is_branch_ahead(branch_name, default_branch)
+        // 解析目标分支
+        let target_branch = resolve_target_branch(branch_name, default_branch)?;
+
+        // 检查分支是否有提交（相对于目标分支）
+        let has_commits = GitBranch::is_branch_ahead(branch_name, &target_branch)
             .wrap_err("Failed to check branch commits")?;
 
         if !has_commits {
             log_warning!(
                 "Branch '{}' has no commits compared to '{}'.",
                 branch_name,
-                default_branch
+                target_branch
             );
             log_warning!("GitHub does not allow creating PRs for empty branches.");
             log_warning!("Please make some changes and commit them before creating a PR.");
             color_eyre::eyre::bail!(
-                "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
-                branch_name
+                "Cannot create PR: branch '{}' has no commits compared to '{}'. Please commit changes first.",
+                branch_name,
+                target_branch
             );
         }
 
         let provider = create_provider_auto()?;
         let pull_request_url = Spinner::with("Creating PR...", || {
-            provider.create_pull_request(pr_title, pull_request_body, branch_name, None)
+            provider.create_pull_request(
+                pr_title,
+                pull_request_body,
+                branch_name,
+                Some(&target_branch),
+            )
         })?;
 
         log_success!("PR created: {}", pull_request_url);
