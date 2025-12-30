@@ -28,6 +28,10 @@ use workflow::git::{GitRepo, RepoType};
 #[case("git@github.com:owner/repo", "owner/repo")]
 #[case("git@github-brainim:owner/repo.git", "owner/repo")]
 #[case("git@github-custom:owner/repo", "owner/repo")]
+#[case("ssh://git@github.com/owner/repo.git", "owner/repo")]
+#[case("ssh://git@github.com/owner/repo", "owner/repo")]
+#[case("ssh://git@github-brainim/owner/repo.git", "owner/repo")]
+#[case("ssh://git@github-custom/owner/repo", "owner/repo")]
 #[case("https://github.com/owner/repo.git", "owner/repo")]
 #[case("https://github.com/owner/repo", "owner/repo")]
 #[case("https://www.github.com/owner/repo.git", "owner/repo")]
@@ -95,12 +99,13 @@ fn test_extract_repo_name_from_url_special_characters_return_ok(
 #[case("not-a-url")]
 #[case("https://example.com/owner/repo")]
 #[case("git@example.com:owner/repo.git")]
-#[case("ssh://git@github.com/owner/repo.git")]
 #[case("ftp://github.com/owner/repo")]
 #[case("https://github.com/")]
 #[case("git@github.com:")]
 #[case(workflow::git::github::BASE)]
 #[case("git@github.com")]
+#[case("ssh://git@github.com/")]
+#[case("ssh://git@github.com")]
 fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
     // Arrange: 准备测试无效 URL 的错误处理
     let result = GitRepo::extract_repo_name_from_url(url);
@@ -120,6 +125,7 @@ fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
 /// 测试各种包含尾部斜杠的 URL 格式：
 /// - HTTPS URL 带尾部斜杠
 /// - HTTPS URL 带 .git 和尾部斜杠
+/// - SSH 协议 URL 带尾部斜杠
 /// - Codeup URL 带尾部斜杠
 ///
 /// ## 预期结果
@@ -127,6 +133,8 @@ fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
 #[rstest]
 #[case("https://github.com/owner/repo/", "owner/repo")]
 #[case("https://github.com/owner/repo.git/", "owner/repo")]
+#[case("ssh://git@github.com/owner/repo/", "owner/repo")]
+#[case("ssh://git@github.com/owner/repo.git/", "owner/repo")]
 #[case("https://codeup.aliyun.com/owner/repo/", "owner/repo")]
 fn test_extract_repo_name_from_url_trailing_slashes_return_ok(
     #[case] url: &str,

@@ -10,7 +10,7 @@ use crate::git::GitBranch;
 use crate::pr::llm::CreateGenerator;
 use crate::repo::config::RepoConfig;
 use crate::template::{BranchTemplateVars, TemplateConfig, TemplateEngine};
-use crate::{log_info, log_success, log_warning};
+use crate::{trace_info, trace_warn};
 use color_eyre::Result;
 
 /// Branch naming service
@@ -56,7 +56,7 @@ impl BranchNaming {
                 let engine = TemplateEngine::new();
                 match engine.render_string(&template_str, &vars) {
                     Ok(rendered) => {
-                        log_success!("Generated branch name using template: {}", rendered);
+                        trace_info!("Generated branch name using template: {}", rendered);
                         // Apply format conversion if needed
                         let formatted = if use_prefix_format {
                             // Template already includes prefix, but still check for repo prefix
@@ -69,7 +69,7 @@ impl BranchNaming {
                         Ok(Self::apply_repo_prefix_if_needed(formatted))
                     }
                     Err(e) => {
-                        log_warning!(
+                        trace_warn!(
                             "Failed to render branch template: {}, trying LLM fallback",
                             e
                         );
@@ -226,7 +226,7 @@ impl BranchNaming {
 
         match CreateGenerator::generate(summary, exists_branches, git_diff) {
             Ok(content) => {
-                log_success!("Generated branch name using LLM: {}", content.branch_name);
+                trace_info!("Generated branch name using LLM: {}", content.branch_name);
                 let base_name = content.branch_name;
                 let formatted =
                     Self::format_branch_name_with_ticket(use_prefix_format, ticket_id, &base_name);
@@ -234,7 +234,7 @@ impl BranchNaming {
                 Ok(Self::apply_repo_prefix_if_needed(formatted))
             }
             Err(e) => {
-                log_warning!(
+                trace_warn!(
                     "Failed to generate branch name using LLM: {}, falling back to simple method",
                     e
                 );
@@ -346,14 +346,14 @@ impl BranchNaming {
 
         let text_to_sanitize = if has_non_ascii {
             // Use LLM to translate non-English input to English
-            log_info!("Detected non-English input, translating to English...");
+            trace_info!("Detected non-English input, translating to English...");
             match BranchLLM::translate_to_english(input) {
                 Ok(translated) => {
-                    log_success!("Translated to English: {}", translated);
+                    trace_info!("Translated to English: {}", translated);
                     translated
                 }
                 Err(e) => {
-                    log_warning!(
+                    trace_warn!(
                         "Failed to translate using LLM: {}. Using original input.",
                         e
                     );
@@ -390,7 +390,7 @@ impl BranchNaming {
             Ok(slug)
         } else if sanitized.len() < 3 && has_non_ascii {
             // If sanitized result is too short and original input had non-ASCII, warn user
-            log_warning!(
+            trace_warn!(
                 "Generated branch name '{}' is very short. This may be because the original input '{}' contained non-English characters that were removed. Consider providing an English title or a JIRA ticket ID for better results.",
                 sanitized,
                 input

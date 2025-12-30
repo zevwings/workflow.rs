@@ -67,9 +67,8 @@ impl CommitSquash {
             GitBranch::get_default_branch().wrap_err("Failed to get default branch")?;
 
         // 2. 尝试检测当前分支基于哪个分支创建
-        let base_branch =
-            crate::commands::pr::helpers::detect_base_branch(current_branch, &default_branch)
-                .wrap_err("Failed to detect base branch")?;
+        let base_branch = GitBranch::detect_base_branch(current_branch, &default_branch)
+            .wrap_err("Failed to detect base branch")?;
 
         // 3. 确定基础分支（优先使用检测到的分支，否则使用默认分支）
         let actual_base = base_branch.as_deref().unwrap_or(&default_branch);

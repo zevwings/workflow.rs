@@ -380,8 +380,13 @@ match cli.subcommand {
 3. **PR 标题生成**：优先使用输入标题，或从 Jira 获取，或提示输入。
 4. **分支名和 commit 标题生成**：使用 LLM 生成，失败则回退到默认方法。
 5. **分支管理**：智能处理各种分支状态（未提交修改、未推送分支等）。
-6. **PR body 生成**：支持选择变更类型，自动生成格式化的 PR body。
-7. **Jira 更新**：分配任务，更新状态，添加评论，写入历史。
+6. **目标分支选择**：智能检测分支关系，自动选择或询问用户选择 PR 的目标分支。
+   - **基于默认分支**：如果当前分支基于默认分支（main/master）创建，直接使用默认分支作为目标分支。
+   - **基于非默认分支**：如果当前分支基于其他分支创建（如 `feature/yyy` 基于 `feature/xxx`），会检测基础分支并询问用户选择合并到哪个分支（默认分支或基础分支）。
+   - **分支关系展示**：显示清晰的分支关系图和提交数量差异，帮助用户做出选择。
+   - **用户取消处理**：如果用户取消选择，使用默认分支并继续创建 PR。
+7. **PR body 生成**：支持选择变更类型，自动生成格式化的 PR body。
+8. **Jira 更新**：分配任务，更新状态，添加评论，写入历史。
 
 ### 2. 同步分支命令 (`sync.rs`)
 
@@ -546,6 +551,21 @@ workflow pr create                           # 交互式
 workflow pr create PROJ-123                  # 指定 ticket
 workflow pr create --dry-run                 # 干运行
 ```
+
+**目标分支选择功能**：
+- 当分支基于默认分支创建时，自动使用默认分支作为目标分支。
+- 当分支基于其他分支创建时（如 `feature/yyy` 基于 `feature/xxx`），会显示分支关系图并询问用户选择：
+  ```
+  Branch relationship:
+    feature/yyy (current, 3 commits)
+      └─ feature/xxx (base branch, 5 commits ahead of master)
+          └─ master (default branch)
+
+  Select target branch for PR:
+    > feature/xxx (recommended, base branch, 5 commits ahead of master)
+      master (default branch)
+  ```
+- 用户取消选择时，使用默认分支并继续创建 PR。
 
 ### Merge 命令
 ```bash
