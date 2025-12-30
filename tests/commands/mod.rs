@@ -8,3 +8,4 @@ pub mod branch_sync;
 pub mod commit_helpers;
 pub mod config_show;
 pub mod lifecycle;
+pub mod pr_helpers;
