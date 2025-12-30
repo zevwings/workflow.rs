@@ -278,13 +278,18 @@ impl GitPreCommit {
     /// 1. Check if pre-commit hooks exist
     /// 2. Run the checks if they exist
     /// 3. Return an error if checks fail
+    ///
+    /// Note: This method uses `Spinner::with_output()` which is designed for
+    /// operations that produce output. It will show a spinner while the operation
+    /// runs, but won't interfere with the actual output from pre-commit tools.
     pub fn run_checks() -> Result<()> {
         if Self::has_pre_commit() {
             // First, stage all files (needed for pre-commit checks)
             GitCommit::add_all().wrap_err("Failed to stage files for pre-commit checks")?;
 
-            // 使用 Spinner 显示执行过程
-            Spinner::with("Running pre-commit checks...", Self::run_pre_commit)?;
+            // 使用 Spinner::with_output() 显示进度，不会干扰 pre-commit 的输出
+            // 注意：虽然 run_pre_commit() 捕获了输出，但 Spinner 可以提供进度指示
+            Spinner::with_output("Running pre-commit checks...", Self::run_pre_commit)?;
 
             trace_info!("Pre-commit checks passed");
         }
