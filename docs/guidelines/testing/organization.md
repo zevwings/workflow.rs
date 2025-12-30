@@ -20,27 +20,57 @@
 ### 1. 单元测试 (Unit Tests)
 
 - **位置**：与源代码在同一文件中
-- **特点**：测试私有函数，快速执行
+- **测试对象**：**仅测试私有函数和内部逻辑**
+- **特点**：快速执行，最小依赖
 - **组织方式**：使用 `#[cfg(test)]` 模块
 
 ```rust
-// src/lib/base/http.rs
+// src/lib/git/auth.rs
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_url() {
-        // 测试私有函数
+    fn test_extract_username_from_url() {
+        // 测试私有方法 extract_username_from_url
+        assert_eq!(
+            GitAuth::extract_username_from_url("https://user@github.com/owner/repo.git"),
+            Some("user")
+        );
     }
 }
 ```
 
+**重要规则**：
+- ✅ **只测试 private 方法和内部逻辑**
+- ❌ **不测试 public 方法**（public 方法测试应放在 `tests/` 目录）
+- ✅ 快速执行，不依赖外部环境
+- ✅ 只测试模块内部的实现细节
+
 ### 2. 集成测试 (Integration Tests)
 
 - **位置**：`tests/` 目录
+- **测试对象**：**public API 和模块间交互**
 - **特点**：测试公共 API，独立编译
 - **组织方式**：使用目录结构组织
+
+```rust
+// tests/base/format/message.rs
+use workflow::base::format::MessageFormatter;
+
+#[test]
+fn test_error_formatting() {
+    // 测试 public 方法 MessageFormatter::error
+    let msg = MessageFormatter::error("read", "config.toml", "Permission denied");
+    assert_eq!(msg, "Failed to read config.toml: Permission denied");
+}
+```
+
+**重要规则**：
+- ✅ **测试所有 public 方法**
+- ✅ **测试模块间交互和集成场景**
+- ✅ 可以使用测试环境、Mock 服务器等工具
+- ✅ 验证公共 API 的完整功能
 
 ---
 
@@ -348,8 +378,48 @@ fn test_parse_pr_response() {
 
 ### 1. 单元测试 vs 集成测试
 
-- **单元测试**：放在源代码文件中，测试私有函数和内部逻辑
-- **集成测试**：放在 `tests/` 目录，测试公共 API 和模块间交互
+**严格的测试组织规则**：
+
+- **单元测试（`src/` 中的 `#[cfg(test)]`）**：
+  - ✅ **只测试私有函数和内部逻辑**
+  - ❌ **不测试 public 方法**
+  - ✅ 快速执行，最小依赖
+  - ✅ 只测试模块内部的实现细节
+
+  ```rust
+  // src/lib/git/auth.rs
+  #[cfg(test)]
+  mod tests {
+      #[test]
+      fn test_extract_username_from_url() {
+          // ✅ 测试私有方法
+      }
+  }
+  ```
+
+- **集成测试（`tests/` 目录）**：
+  - ✅ **测试所有 public 方法**
+  - ✅ **测试模块间交互和集成场景**
+  - ✅ 可以使用测试环境、Mock 服务器等工具
+  - ✅ 独立编译，验证公共 API
+
+  ```rust
+  // tests/base/format/message.rs
+  #[test]
+  fn test_error_formatting() {
+      // ✅ 测试 public 方法
+      let msg = MessageFormatter::error("read", "config.toml", "Permission denied");
+      assert_eq!(msg, "Failed to read config.toml: Permission denied");
+  }
+  ```
+
+**为什么要严格分离？**
+
+1. **清晰的测试边界**：单元测试只关注内部实现，集成测试只关注公共接口
+2. **更好的封装**：public 方法的测试在 `tests/` 中，不依赖内部实现细节
+3. **独立编译**：集成测试作为独立的 crate 编译，确保 public API 的正确性
+4. **测试覆盖率**：避免在两个地方重复测试 public 方法
+5. **重构友好**：重构内部实现时，只需更新 `src/` 中的单元测试
 
 ### 2. 测试分组
 
@@ -427,6 +497,79 @@ cargo tarpaulin --out Html
 
 ---
 
+## 📦 测试迁移指南
+
+如果你在 `src/` 中发现了测试 public 方法的测试，请按以下步骤迁移：
+
+### 迁移步骤
+
+1. **识别 public 方法测试**：
+   - 检查测试是否调用了 public 方法（如 `pub fn method_name()`）
+   - 如果测试只调用 private 方法，应保留在 `src/` 中
+
+2. **创建对应的测试文件**：
+   - 在 `tests/` 目录中创建对应的测试文件
+   - 例如：`src/lib/base/format/message.rs` → `tests/base/format/message.rs`
+
+3. **迁移测试代码**：
+   - 将 public 方法测试复制到 `tests/` 目录
+   - 更新 import 语句（使用 `use workflow::...`）
+   - 添加适当的测试文档注释
+
+4. **清理源文件**：
+   - 从 `src/` 中删除已迁移的 public 方法测试
+   - 保留 private 方法测试
+   - 添加注释说明：`// 注意：public 方法的测试已迁移到 tests/...`
+
+5. **更新模块声明**：
+   - 在 `tests/*/mod.rs` 中添加新测试模块的声明
+   - 例如：`pub mod message;`
+
+6. **验证测试**：
+   - 运行 `cargo test` 确保所有测试通过
+   - 检查测试覆盖率没有下降
+
+### 迁移示例
+
+```rust
+// ❌ 错误：在 src/ 中测试 public 方法
+// src/lib/base/format/message.rs
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_error_formatting() {
+        let msg = MessageFormatter::error("read", "file", "error");
+        assert_eq!(msg, "Failed to read file: error");
+    }
+}
+
+// ✅ 正确：在 tests/ 中测试 public 方法
+// tests/base/format/message.rs
+use workflow::base::format::MessageFormatter;
+
+#[test]
+fn test_error_formatting() {
+    let msg = MessageFormatter::error("read", "file", "error");
+    assert_eq!(msg, "Failed to read file: error");
+}
+
+// ✅ 正确：在 src/ 中测试 private 方法
+// src/lib/git/auth.rs
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_extract_username_from_url() {
+        // 测试私有方法 extract_username_from_url
+        assert_eq!(
+            GitAuth::extract_username_from_url("https://user@github.com/repo.git"),
+            Some("user")
+        );
+    }
+}
+```
+
+---
+
 ## 相关文档
 
 - [测试编写规范](./writing.md) - 测试编写的具体规范
@@ -435,5 +578,5 @@ cargo tarpaulin --out Html
 
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-12-30
 

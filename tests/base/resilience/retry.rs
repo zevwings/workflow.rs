@@ -1,7 +1,9 @@
 //! Retry 模块集成测试
 //!
 //! 包含 retry 模块的集成测试，主要测试：
-//! - 总超时和指数退避机制
+//! - execute_with_retry 基本功能
+//! - RetryConfig::platform_default() 平台特定配置
+//! - execute_with_timeout_and_retry 总超时和指数退避机制
 //! - 并发场景
 //! - 系统级行为（资源限制、线程泄漏）
 
@@ -9,8 +11,114 @@ use color_eyre::Result;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use workflow::base::resilience::retry::{execute_with_timeout_and_retry, RetryConfig};
+use workflow::base::resilience::retry::{execute_with_retry, execute_with_timeout_and_retry, RetryConfig};
 use workflow::base::resilience::timeout::TimeoutConfig;
+
+// ==================== execute_with_retry 测试 ====================
+
+/// 测试重试执行成功
+///
+/// ## 测试目的
+/// 验证 execute_with_retry() 能够在遇到可重试错误时自动重试，并在重试后成功执行操作。
+///
+/// ## 测试场景
+/// 1. 创建重试配置（最多3次重试，延迟10ms）
+/// 2. 执行一个操作，第一次失败（可重试错误），第二次成功
+/// 3. 验证操作最终成功
+/// 4. 验证重试计数和首次尝试标志正确
+///
+/// ## 预期结果
+/// - 操作最终成功执行
+/// - 重试计数为 1（重试了1次）
+/// - succeeded_on_first_attempt 为 false
+#[test]
+fn test_execute_with_retry_success() -> Result<()> {
+    let config = RetryConfig::new(3, Duration::from_millis(10));
+    let mut attempts = 0;
+    let result = execute_with_retry(
+        config,
+        || -> Result<String> {
+            attempts += 1;
+            if attempts < 2 {
+                // 创建一个可重试的错误（IO 错误）
+                Err(color_eyre::eyre::eyre!(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "Temporary error"
+                )))
+            } else {
+                Ok("success".to_string())
+            }
+        },
+        "Test operation",
+    )?;
+    assert_eq!(result.result, "success");
+    assert_eq!(result.retry_count, 1);
+    assert!(!result.succeeded_on_first_attempt);
+    Ok(())
+}
+
+/// 测试重试执行失败（不可重试的错误）
+///
+/// ## 测试目的
+/// 验证 execute_with_retry() 在遇到不可重试的错误时能够立即返回错误，不进行重试。
+///
+/// ## 测试场景
+/// 1. 创建重试配置（最多3次重试）
+/// 2. 执行一个操作，返回不可重试的错误（NotFound）
+/// 3. 验证立即返回错误，不进行重试
+///
+/// ## 预期结果
+/// - 立即返回错误（Result::Err）
+/// - 错误消息包含 "not found"
+/// - 不进行重试（因为错误不可重试）
+#[test]
+fn test_execute_with_retry_not_retryable() {
+    let config = RetryConfig::new(3, Duration::from_millis(10));
+    let result = execute_with_retry(
+        config,
+        || -> Result<String> {
+            Err(color_eyre::eyre::eyre!(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "File not found"
+            )))
+        },
+        "Test operation",
+    );
+    assert!(result.is_err());
+    // 不可重试的错误应该立即返回，不进行重试
+    assert!(result.unwrap_err().to_string().contains("not found"));
+}
+
+/// 测试平台特定配置
+///
+/// ## 测试目的
+/// 验证 RetryConfig::platform_default() 能够根据平台返回不同的默认重试配置。
+///
+/// ## 测试场景
+/// 1. 调用 platform_default() 获取平台默认配置
+/// 2. 验证不同平台的配置参数
+///
+/// ## 预期结果
+/// - Windows 平台：max_retries=5, retry_delay=300ms, exponential_backoff=true
+/// - 其他平台：max_retries=3, retry_delay=100ms, exponential_backoff=false
+#[test]
+fn test_platform_default_config() {
+    let config = RetryConfig::platform_default();
+
+    #[cfg(target_os = "windows")]
+    {
+        assert_eq!(config.max_retries, 5);
+        assert_eq!(config.retry_delay, Duration::from_millis(300));
+        assert!(config.exponential_backoff);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        assert_eq!(config.max_retries, 3);
+        assert_eq!(config.retry_delay, Duration::from_millis(100));
+        assert!(!config.exponential_backoff);
+    }
+}
 
 // ==================== execute_with_timeout_and_retry 测试 ====================
 

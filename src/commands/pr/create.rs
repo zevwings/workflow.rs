@@ -1,13 +1,13 @@
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::dialog::{ConfirmDialog, InputDialog};
+use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
 use crate::base::indicator::Spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     copy_and_open_pull_request, create_branch_from_default, create_or_get_pull_request,
-    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_target_branch,
-    resolve_title, select_change_types, update_jira_ticket,
+    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_title,
+    select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCommit, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
@@ -18,11 +18,13 @@ use crate::pr::{
     map_branch_type_to_change_type_index, map_branch_type_to_change_types, TYPES_OF_CHANGES,
 };
 use crate::repo::RepoConfig;
-use crate::{log_info, log_success, log_warning};
+use crate::{log_break, log_info, log_success, log_warning};
 
 /// PR 创建命令
+#[allow(dead_code)]
 pub struct PullRequestCreateCommand;
 
+#[allow(dead_code)]
 impl PullRequestCreateCommand {
     /// 创建 PR（完整流程）
     pub fn create(
@@ -95,16 +97,13 @@ impl PullRequestCreateCommand {
         let (actual_branch_name, default_branch) =
             Self::create_or_update_branch(&branch_name, &commit_title)?;
 
-        // 9.5. 确定目标分支（在推送后选择一次，避免重复询问）
-        let target_branch = resolve_target_branch(&actual_branch_name, &default_branch)?;
-
         // 10. 创建或获取 PR
         let pull_request_url = create_or_get_pull_request(
             &actual_branch_name,
             &default_branch,
             &commit_title,
             &pull_request_body,
-            Some(&target_branch),
+            None, // target_branch will be resolved inside
         )?;
 
         // 11. 更新 Jira（如果有 ticket）
@@ -357,61 +356,131 @@ impl PullRequestCreateCommand {
 
         // 推送（如需要）
         if !exists_remote {
-            Spinner::with_output("Pushing to remote...", || {
-                GitBranch::push(current_branch, true) // set-upstream
-            })?;
-            log_success!("Pushed to remote successfully");
+            log_break!();
+            log_info!("Pushing to remote...");
+            log_break!();
+            GitBranch::push(current_branch, true)?; // set-upstream
         } else {
             log_info!("Branch '{}' already exists on remote.", current_branch);
             log_info!("Pushing latest changes...");
             GitBranch::push(current_branch, false)?; // 不使用 -u，因为已经设置过
-            log_success!("Pushed to remote successfully");
         }
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
 
+    /// 选择新分支的源分支
+    ///
+    /// 询问用户选择基于哪个分支创建新分支：
+    /// 1. 当前分支（包含所有提交，推荐）
+    /// 2. 基础分支（如果检测到）
+    /// 3. 默认分支（最新代码）
+    ///
+    /// # 参数
+    ///
+    /// * `current_branch` - 当前分支名称
+    /// * `default_branch` - 默认分支名称
+    ///
+    /// # 返回
+    ///
+    /// 返回选择的源分支名称
+    fn select_source_branch_for_new_branch(
+        current_branch: &str,
+        default_branch: &str,
+    ) -> Result<String> {
+        // 检测基础分支
+        let base_branch = GitBranch::detect_base_branch(current_branch, default_branch)
+            .ok()
+            .flatten();
+
+        let mut options = vec![];
+
+        // 选项 1: 当前分支（推荐）
+        options.push(format!(
+            "{} (current branch, will include all commits)",
+            current_branch
+        ));
+        let default_index = 0;
+
+        // 选项 2: 基础分支（如果检测到且不是默认分支）
+        if let Some(ref base) = base_branch {
+            if base != default_branch && base != current_branch {
+                options.push(format!("{} (base branch)", base));
+            }
+        }
+
+        // 选项 3: 默认分支
+        if default_branch != current_branch {
+            options.push(format!("{} (default branch)", default_branch));
+        }
+
+        // 如果只有一个选项，直接返回
+        if options.len() == 1 {
+            return Ok(current_branch.to_string());
+        }
+
+        let prompt_message = format!(
+            "Create new branch based on which branch?\n\nNote: Target branch (base/default) will be selected later."
+        );
+
+        let selected_label = SelectDialog::new(&prompt_message, options)
+            .with_default(default_index)
+            .prompt()
+            .wrap_err("Failed to select source branch")?;
+
+        // 解析选择的分支名
+        if selected_label.starts_with(current_branch) {
+            Ok(current_branch.to_string())
+        } else if let Some(ref base) = base_branch {
+            if selected_label.starts_with(base) {
+                Ok(base.clone())
+            } else if selected_label.starts_with(default_branch) {
+                Ok(default_branch.to_string())
+            } else {
+                // 默认返回当前分支
+                Ok(current_branch.to_string())
+            }
+        } else if selected_label.starts_with(default_branch) {
+            Ok(default_branch.to_string())
+        } else {
+            // 默认返回当前分支
+            Ok(current_branch.to_string())
+        }
+    }
+
     /// 使用 stash 创建新分支并提交
     ///
     /// 步骤 9 的辅助方法：当用户不在默认分支上且有未提交修改，但选择创建新分支时，
-    /// 使用 stash 暂存修改，切换到默认分支，拉取最新代码，创建新分支，恢复修改，
-    /// 然后提交并推送。
+    /// 基于指定的源分支创建新分支：
+    /// - 如果源分支是当前分支：直接创建新分支（未提交的更改会带到新分支）
+    /// - 如果源分支是其他分支：stash → 切换分支 → 拉取 → 恢复 → 创建新分支
     ///
     /// # 流程
-    /// 1. 使用 stash 暂存未提交的修改
-    /// 2. 切换到默认分支
-    /// 3. 拉取最新代码
-    /// 4. 检查目标分支是否存在（如果存在则报错）
-    /// 5. 创建新分支
-    /// 6. 恢复 stash 中的修改
-    /// 7. 提交更改
-    /// 8. 推送到远程
+    /// 1. 根据源分支执行不同的逻辑：
+    ///    - 当前分支：直接创建新分支
+    ///    - 其他分支：stash → 切换 → 拉取 → 恢复 → 创建新分支
+    /// 2. 提交更改并推送
+    ///
+    /// # 参数
+    ///
+    /// * `current_branch` - 当前分支名称
+    /// * `branch_name` - 要创建的新分支名称
+    /// * `commit_title` - 提交标题
+    /// * `default_branch` - 默认分支名称
+    /// * `source_branch` - 源分支名称（基于哪个分支创建）
     fn create_new_branch_with_stash(
-        _current_branch: &str,
+        current_branch: &str,
         branch_name: &str,
         commit_title: &str,
         default_branch: &str,
+        source_branch: &str,
     ) -> Result<(String, String)> {
         log_info!(
             "Will create new branch '{}' and commit changes...",
             branch_name
         );
 
-        // 使用 stash 暂存修改
-        log_success!("Stashing uncommitted changes...");
-        GitStash::stash_push(Some(&format!("WIP: {}", commit_title)))?;
-
-        // 切换到默认分支
-        log_info!("Switching to default branch '{}'...", default_branch);
-        GitBranch::checkout_branch(default_branch)?;
-
-        // 拉取最新的代码
-        Spinner::with(
-            format!("Pulling latest changes from '{}'...", default_branch),
-            || GitBranch::pull(default_branch),
-        )?;
-
-        // 检查目标分支是否存在，如果存在则报错（此方法应该创建新分支）
+        // 2. 检查目标分支是否存在
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(branch_name)
             .wrap_err("Failed to check if branch exists")?;
 
@@ -422,22 +491,47 @@ impl PullRequestCreateCommand {
             );
         }
 
-        // 创建新分支
-        log_success!("Creating branch: {}", branch_name);
-        GitBranch::checkout_branch(branch_name)?;
+        // 3. 根据选择的源分支执行不同的逻辑
+        if source_branch == current_branch {
+            // 基于当前分支创建：直接创建新分支（未提交的更改会带到新分支）
+            log_info!("Creating branch '{}' based on current branch '{}'...", branch_name, current_branch);
+            log_success!("Creating branch: {}", branch_name);
+            GitBranch::checkout_branch(branch_name)?;
+        } else {
+            // 基于其他分支创建：需要 stash → 切换 → 拉取 → 恢复
+            log_info!("Creating branch '{}' based on '{}'...", branch_name, source_branch);
 
-        // 恢复 stash
-        log_info!("Restoring stashed changes...");
-        handle_stash_pop_result(GitStash::stash_pop(None));
+            // 使用 stash 暂存修改
+            log_success!("Stashing uncommitted changes...");
+            GitStash::stash_push(Some(&format!("WIP: {}", commit_title)))?;
 
-        // 提交并推送
+            // 切换到源分支
+            log_info!("Switching to branch '{}'...", source_branch);
+            GitBranch::checkout_branch(&source_branch)?;
+
+            // 拉取最新的代码
+            Spinner::with(
+                format!("Pulling latest changes from '{}'...", source_branch),
+                || GitBranch::pull(&source_branch),
+            )?;
+
+            // 创建新分支
+            log_success!("Creating branch: {}", branch_name);
+            GitBranch::checkout_branch(branch_name)?;
+
+            // 恢复 stash
+            log_info!("Restoring stashed changes...");
+            handle_stash_pop_result(GitStash::stash_pop(None));
+        }
+
+        // 4. 提交并推送
         Spinner::with("Committing changes...", || {
             GitCommit::commit(commit_title, true) // no-verify
         })?;
-        Spinner::with_output("Pushing to remote...", || {
-            GitBranch::push(branch_name, true) // set-upstream
-        })?;
-        log_success!("Pushed to remote successfully");
+        log_break!();
+        log_info!("Pushing to remote...");
+        log_break!();
+        GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -492,10 +586,10 @@ impl PullRequestCreateCommand {
         .prompt()?;
 
         // 推送
-        Spinner::with_output("Pushing to remote...", || {
-            GitBranch::push(current_branch, true) // set-upstream
-        })?;
-        log_success!("Pushed to remote successfully");
+        log_break!();
+        log_info!("Pushing to remote...");
+        log_break!();
+        GitBranch::push(current_branch, true)?; // set-upstream
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -541,48 +635,31 @@ impl PullRequestCreateCommand {
         } else {
             // 不在默认分支上
             if has_uncommitted {
-                // 有未提交的代码
-                // 如果当前分支名和生成的分支名相同，直接使用当前分支
-                if current_branch == branch_name {
-                    log_info!(
-                        "You are on branch '{}' with uncommitted changes. Using current branch.",
-                        current_branch
-                    );
-                    // 直接在当前分支提交并创建 PR
+                // 有未提交的代码 → 统一进入选择源分支流程
+                log_info!(
+                    "You are on branch '{}' with uncommitted changes.",
+                    current_branch
+                );
+
+                // 选择源分支（当前分支、基础分支、默认分支）
+                let source_branch = Self::select_source_branch_for_new_branch(&current_branch, &default_branch)?;
+
+                if source_branch == current_branch {
+                    // 用户选择在当前分支创建 PR
                     Self::commit_and_push_current_branch(
                         &current_branch,
                         commit_title,
                         &default_branch,
                     )
                 } else {
-                    // 当前分支名和生成的分支名不同，询问用户选择
-                    log_info!(
-                        "You are on branch '{}' with uncommitted changes.",
-                        current_branch
-                    );
-                    let should_use_current = ConfirmDialog::new(format!(
-                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
-                        current_branch, branch_name
-                    ))
-                    .with_default(true)
-                    .prompt()?;
-
-                    if should_use_current {
-                        // 用户期望在当前分支提交并创建 PR
-                        Self::commit_and_push_current_branch(
-                            &current_branch,
-                            commit_title,
-                            &default_branch,
-                        )
-                    } else {
-                        // 用户不期望在当前分支提交并创建 → 使用 stash 创建新分支
-                        Self::create_new_branch_with_stash(
-                            &current_branch,
-                            branch_name,
-                            commit_title,
-                            &default_branch,
-                        )
-                    }
+                    // 用户选择基于其他分支创建新分支
+                    Self::create_new_branch_with_stash(
+                        &current_branch,
+                        branch_name,
+                        commit_title,
+                        &default_branch,
+                        &source_branch,
+                    )
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上

@@ -309,6 +309,7 @@ impl GitTag {
     ///
     /// 使用 git2 库删除远程 tag，通过推送空的 refspec 来实现。
     /// 这相当于 `git push origin --delete <tag_name>`。
+    /// 包含超时和重试机制，提高网络操作的可靠性。
     ///
     /// # 参数
     ///
@@ -318,21 +319,38 @@ impl GitTag {
     ///
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete_remote(tag_name: &str) -> Result<()> {
-        let mut repo = GitRepository::open()?;
-        let mut remote = repo.find_origin_remote()?;
+        use crate::base::resilience::{
+            default_download_timeout, execute_with_timeout_and_retry, RetryConfig, TimeoutConfig,
+        };
 
-        // 配置推送选项
-        let mut push_options = GitRepository::get_push_options();
+        let timeout_config =
+            TimeoutConfig::new(default_download_timeout()).with_platform_specific();
+        let retry_config = RetryConfig::platform_default();
+        let tag_name = tag_name.to_string();
 
-        // 构建空的 refspec 来删除远程 tag
-        // 格式：:refs/tags/<tag_name> 表示删除远程 tag
-        let refspec = format!(":refs/tags/{}", tag_name);
+        execute_with_timeout_and_retry(
+            timeout_config,
+            retry_config,
+            move || -> Result<()> {
+                let mut repo = GitRepository::open()?;
+                let mut remote = repo.find_origin_remote()?;
 
-        // 推送空的 refspec 来删除远程 tag
-        remote
-            .push(&[&refspec], Some(&mut push_options))
-            .wrap_err_with(|| format!("Failed to delete remote tag: {}", tag_name))?;
+                // 配置推送选项
+                let mut push_options = GitRepository::get_push_options();
 
+                // 构建空的 refspec 来删除远程 tag
+                // 格式：:refs/tags/<tag_name> 表示删除远程 tag
+                let refspec = format!(":refs/tags/{}", tag_name);
+
+                // 推送空的 refspec 来删除远程 tag
+                remote
+                    .push(&[&refspec], Some(&mut push_options))
+                    .wrap_err_with(|| format!("Failed to delete remote tag: {}", tag_name))?;
+
+                Ok(())
+            },
+            "Deleting remote tag",
+        )?;
         Ok(())
     }
 

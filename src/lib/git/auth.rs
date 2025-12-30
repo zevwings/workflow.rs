@@ -449,35 +449,36 @@ impl GitAuth {
     }
 }
 
+// 注意：public 方法的测试已迁移到 tests/git/auth.rs
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_find_ssh_key() {
-        // 测试 SSH 密钥查找
-        // 注意：find_ssh_key 是私有方法，这里只测试 get_remote_callbacks 不会 panic
-        let _callbacks = GitAuth::get_remote_callbacks();
-        // 如果用户有 SSH 密钥，应该能找到
-        // 如果没有，返回 None 也是正常的
-    }
-
+    /// 测试从 URL 中提取用户名（private 方法测试）
+    ///
+    /// ## 测试目的
+    /// 验证 `extract_username_from_url()` 私有方法能够正确从 HTTPS URL 中提取用户名。
+    ///
+    /// ## 测试场景
+    /// 1. 测试包含用户名的 HTTPS URL
+    /// 2. 测试不包含用户名的 HTTPS URL
+    ///
+    /// ## 预期结果
+    /// - 包含用户名的 URL 返回 Some("username")
+    /// - 不包含用户名的 URL 返回 None
     #[test]
     fn test_extract_username_from_url() {
+        // Test URL with username
         assert_eq!(
             GitAuth::extract_username_from_url("https://user@github.com/owner/repo.git"),
             Some("user")
         );
+
+        // Test URL without username
         assert_eq!(
             GitAuth::extract_username_from_url("https://github.com/owner/repo.git"),
             None
         );
-    }
-
-    #[test]
-    fn test_get_remote_callbacks() {
-        // 测试获取认证回调（不应该 panic）
-        let _callbacks = GitAuth::get_remote_callbacks();
-        // RemoteCallbacks 没有公共方法可以验证，但创建成功就说明没问题
     }
 }

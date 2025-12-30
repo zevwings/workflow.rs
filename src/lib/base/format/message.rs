@@ -104,25 +104,4 @@ impl MessageFormatter {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_error_formatting() {
-        let msg = MessageFormatter::error("read", "config.toml", "Permission denied");
-        assert_eq!(msg, "Failed to read config.toml: Permission denied");
-    }
-
-    #[test]
-    fn test_operation_formatting() {
-        let msg = MessageFormatter::operation("Creating", "new branch");
-        assert_eq!(msg, "Creating new branch...");
-    }
-
-    #[test]
-    fn test_progress_formatting() {
-        let msg = MessageFormatter::progress(3, 10, "files");
-        assert_eq!(msg, "[3/10] Processing files");
-    }
-}
+// 注意：所有 public 方法的测试已迁移到 tests/base/format/message.rs
