@@ -269,4 +269,3 @@ fn test_resolve_target_branch_select_base_branch() -> Result<()> {
 
     Ok(())
 }
-

@@ -3,8 +3,8 @@
 //! Defines branch types and provides selection functionality.
 
 use crate::base::dialog::SelectDialog;
-use crate::trace_info;
 use crate::repo::config::RepoConfig;
+use crate::trace_info;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::fmt;
 

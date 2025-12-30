@@ -6,8 +6,8 @@ use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     copy_and_open_pull_request, create_branch_from_default, create_or_get_pull_request,
-    ensure_jira_status, handle_stash_pop_result, resolve_description,
-    resolve_title, select_change_types, update_jira_ticket,
+    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_title,
+    select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;

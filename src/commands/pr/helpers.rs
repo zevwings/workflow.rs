@@ -210,7 +210,6 @@ pub fn cleanup_branch(
     Ok(())
 }
 
-
 /// 配置 Jira ticket 状态
 ///
 /// 如果有 Jira ticket，检查并配置状态。如果已配置则读取，否则进行交互式配置。
@@ -461,37 +460,49 @@ pub fn resolve_title(
 ///
 /// 返回选择的目标分支名称
 pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Result<String> {
-    // 情况1：检查当前分支是否基于默认分支创建
-    let is_based_on_default = match GitBranch::is_branch_based_on(current_branch, default_branch) {
-        Ok(true) => true,
-        Ok(false) => false,
-        Err(e) => {
-            // 检查失败，记录警告但继续检测基础分支
-            log_warning!(
-                "Failed to check if '{}' is based on '{}': {}, will try to detect base branch",
-                current_branch,
-                default_branch,
-                e
-            );
-            false
-        }
-    };
-
-    if is_based_on_default {
-        // 基于默认分支创建，直接返回默认分支
-        return Ok(default_branch.to_string());
-    }
-
-    // 情况2：不是基于默认分支创建，检测基础分支
-    log_info!(
-        "Branch '{}' is not based on default branch '{}', detecting base branch...",
-        current_branch,
-        default_branch
-    );
+    // 首先尝试检测基础分支（即使可能基于默认分支，也可能有更近的基础分支）
+    log_info!("Detecting base branch for '{}'...", current_branch);
 
     let base_branch = match GitBranch::detect_base_branch(current_branch, default_branch) {
-        Ok(Some(base)) => base,
+        Ok(Some(base)) => {
+            // 检测到基础分支，检查是否就是默认分支
+            if base == default_branch {
+                log_info!(
+                    "Detected base branch '{}' is the default branch",
+                    default_branch
+                );
+                return Ok(default_branch.to_string());
+            }
+            // 检测到非默认的基础分支，使用它
+            base
+        }
         Ok(None) => {
+            // 检测不到基础分支，检查是否基于默认分支创建
+            let is_based_on_default =
+                match GitBranch::is_branch_based_on(current_branch, default_branch) {
+                    Ok(true) => true,
+                    Ok(false) => false,
+                    Err(e) => {
+                        // 检查失败，记录警告但使用默认分支
+                        log_warning!(
+                            "Failed to check if '{}' is based on '{}': {}, using default branch",
+                            current_branch,
+                            default_branch,
+                            e
+                        );
+                        false
+                    }
+                };
+
+            if is_based_on_default {
+                log_info!(
+                    "Branch '{}' is based on default branch '{}'",
+                    current_branch,
+                    default_branch
+                );
+                return Ok(default_branch.to_string());
+            }
+
             // 检测不到基础分支，使用默认分支
             log_info!(
                 "Could not detect base branch for '{}', using default branch '{}'",
@@ -501,6 +512,24 @@ pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Resu
             return Ok(default_branch.to_string());
         }
         Err(e) => {
+            // 检测失败，检查是否基于默认分支创建
+            let is_based_on_default =
+                match GitBranch::is_branch_based_on(current_branch, default_branch) {
+                    Ok(true) => true,
+                    Ok(false) => false,
+                    Err(_) => false,
+                };
+
+            if is_based_on_default {
+                log_warning!(
+                    "Failed to detect base branch for '{}': {}, but branch is based on default branch '{}'",
+                    current_branch,
+                    e,
+                    default_branch
+                );
+                return Ok(default_branch.to_string());
+            }
+
             // 检测失败，记录警告并使用默认分支
             log_warning!(
                 "Failed to detect base branch for '{}': {}, using default branch '{}'",
@@ -553,11 +582,13 @@ pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Resu
 
     // 构建选项描述
     let base_option = if base_ahead_count > 0 {
-        format!("{} (recommended, base branch, {} commit{} ahead of {})",
+        format!(
+            "{} (recommended, base branch, {} commit{} ahead of {})",
             base_branch,
             base_ahead_count,
             if base_ahead_count == 1 { "" } else { "s" },
-            default_branch)
+            default_branch
+        )
     } else {
         format!("{} (recommended, base branch)", base_branch)
     };
@@ -566,10 +597,7 @@ pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Resu
 
     // 使用更清晰的选项描述
     let options = vec![default_option, base_option];
-    let prompt_message = format!(
-        "Select target branch for PR{}",
-        relationship_info
-    );
+    let prompt_message = format!("Select target branch for PR{}", relationship_info);
 
     // 处理用户选择，如果取消则使用默认分支
     let selected_label = match SelectDialog::new(&prompt_message, options)
@@ -580,8 +608,14 @@ pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Resu
         Err(e) => {
             // 检查是否是用户取消操作
             let error_msg = e.to_string().to_lowercase();
-            if error_msg.contains("cancelled") || error_msg.contains("cancel") || error_msg.contains("operation cancelled") {
-                log_info!("Selection cancelled by user, using default branch '{}'", default_branch);
+            if error_msg.contains("cancelled")
+                || error_msg.contains("cancel")
+                || error_msg.contains("operation cancelled")
+            {
+                log_info!(
+                    "Selection cancelled by user, using default branch '{}'",
+                    default_branch
+                );
                 return Ok(default_branch.to_string());
             }
             // 其他错误，返回错误信息
@@ -592,18 +626,22 @@ pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Resu
     // 从选中的标签中提取分支名
     // 选项格式："{branch_name} (description...)"，我们需要提取分支名
     // 使用 starts_with 确保准确匹配，避免误匹配
-    let target_branch = if selected_label.starts_with(&format!("{} ", base_branch)) || selected_label.starts_with(&base_branch) {
+    let target_branch = if selected_label.starts_with(&format!("{} ", base_branch))
+        || selected_label.starts_with(&base_branch)
+    {
         base_branch.clone()
-    } else if selected_label.starts_with(&format!("{} ", default_branch)) || selected_label.starts_with(default_branch) {
+    } else if selected_label.starts_with(&format!("{} ", default_branch))
+        || selected_label.starts_with(default_branch)
+    {
         default_branch.to_string()
     } else {
         // 如果无法匹配，尝试从标签中提取第一个单词作为分支名（作为后备方案）
-        let branch_name = selected_label
-            .split_whitespace()
-            .next()
-            .unwrap_or(&selected_label)
-            .to_string();
-        log_warning!("Could not match selected option exactly, using extracted branch name: {}", branch_name);
+        let branch_name =
+            selected_label.split_whitespace().next().unwrap_or(&selected_label).to_string();
+        log_warning!(
+            "Could not match selected option exactly, using extracted branch name: {}",
+            branch_name
+        );
         branch_name
     };
 
@@ -664,7 +702,12 @@ pub fn create_or_get_pull_request(
 
         let provider = create_provider_auto()?;
         let pull_request_url = Spinner::with("Creating PR...", || {
-            provider.create_pull_request(pr_title, pull_request_body, branch_name, Some(&target_branch))
+            provider.create_pull_request(
+                pr_title,
+                pull_request_body,
+                branch_name,
+                Some(&target_branch),
+            )
         })?;
 
         log_success!("PR created: {}", pull_request_url);
