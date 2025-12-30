@@ -660,6 +660,7 @@ pub fn resolve_target_branch(current_branch: &str, default_branch: &str) -> Resu
 /// * `default_branch` - 默认分支名称
 /// * `pr_title` - PR 标题
 /// * `pull_request_body` - PR body
+/// * `target_branch` - 可选的目标分支名称，如果提供则直接使用，否则会调用 resolve_target_branch 解析
 ///
 /// # 返回
 ///
@@ -669,6 +670,7 @@ pub fn create_or_get_pull_request(
     default_branch: &str,
     pr_title: &str,
     pull_request_body: &str,
+    target_branch: Option<&str>,
 ) -> Result<String> {
     // 检查分支是否已有 PR
     let existing_pr = get_current_branch_pr_id()?;
@@ -678,8 +680,12 @@ pub fn create_or_get_pull_request(
         let provider = create_provider_auto()?;
         provider.get_pull_request_url(&pr_id)
     } else {
-        // 解析目标分支
-        let target_branch = resolve_target_branch(branch_name, default_branch)?;
+        // 解析目标分支（如果未提供）
+        let target_branch = if let Some(tb) = target_branch {
+            tb.to_string()
+        } else {
+            resolve_target_branch(branch_name, default_branch)?
+        };
 
         // 检查分支是否有提交（相对于目标分支）
         let has_commits = GitBranch::is_branch_ahead(branch_name, &target_branch)
