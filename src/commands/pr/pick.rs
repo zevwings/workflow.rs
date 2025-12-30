@@ -6,8 +6,8 @@ use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     copy_and_open_pull_request, create_branch_from_default, create_or_get_pull_request,
-    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_title,
-    select_change_types, update_jira_ticket,
+    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_target_branch,
+    resolve_title, select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
@@ -706,12 +706,17 @@ impl PullRequestPickCommand {
             Self::create_or_update_branch(&branch_name, &commit_title)
                 .wrap_err_with(|| "Failed to create or update branch for PR")?;
 
+        // 11.5. 确定目标分支（在推送后选择一次，避免重复询问）
+        let target_branch = resolve_target_branch(&actual_branch_name, &default_branch)
+            .wrap_err_with(|| "Failed to resolve target branch")?;
+
         // 12. 创建或获取 PR
         let pull_request_url = create_or_get_pull_request(
             &actual_branch_name,
             &default_branch,
             &title,
             &pull_request_body,
+            Some(&target_branch),
         )
         .wrap_err_with(|| format!("Failed to create PR for branch: {}", actual_branch_name))?;
 

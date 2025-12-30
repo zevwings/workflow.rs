@@ -6,8 +6,8 @@ use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     copy_and_open_pull_request, create_branch_from_default, create_or_get_pull_request,
-    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_title,
-    select_change_types, update_jira_ticket,
+    ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_target_branch,
+    resolve_title, select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCommit, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
@@ -95,12 +95,16 @@ impl PullRequestCreateCommand {
         let (actual_branch_name, default_branch) =
             Self::create_or_update_branch(&branch_name, &commit_title)?;
 
+        // 9.5. 确定目标分支（在推送后选择一次，避免重复询问）
+        let target_branch = resolve_target_branch(&actual_branch_name, &default_branch)?;
+
         // 10. 创建或获取 PR
         let pull_request_url = create_or_get_pull_request(
             &actual_branch_name,
             &default_branch,
             &commit_title,
             &pull_request_body,
+            Some(&target_branch),
         )?;
 
         // 11. 更新 Jira（如果有 ticket）
@@ -537,33 +541,48 @@ impl PullRequestCreateCommand {
         } else {
             // 不在默认分支上
             if has_uncommitted {
-                // 有未提交的代码 → 询问用户是否需要在当前分支创建 PR
-                log_info!(
-                    "You are on branch '{}' with uncommitted changes.",
-                    current_branch
-                );
-                let should_use_current = ConfirmDialog::new(format!(
-                    "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
-                    current_branch, branch_name
-                ))
-                .with_default(true)
-                .prompt()?;
-
-                if should_use_current {
-                    // 用户期望在当前分支提交并创建 PR
+                // 有未提交的代码
+                // 如果当前分支名和生成的分支名相同，直接使用当前分支
+                if current_branch == branch_name {
+                    log_info!(
+                        "You are on branch '{}' with uncommitted changes. Using current branch.",
+                        current_branch
+                    );
+                    // 直接在当前分支提交并创建 PR
                     Self::commit_and_push_current_branch(
                         &current_branch,
                         commit_title,
                         &default_branch,
                     )
                 } else {
-                    // 用户不期望在当前分支提交并创建 → 使用 stash 创建新分支
-                    Self::create_new_branch_with_stash(
-                        &current_branch,
-                        branch_name,
-                        commit_title,
-                        &default_branch,
-                    )
+                    // 当前分支名和生成的分支名不同，询问用户选择
+                    log_info!(
+                        "You are on branch '{}' with uncommitted changes.",
+                        current_branch
+                    );
+                    let should_use_current = ConfirmDialog::new(format!(
+                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
+                        current_branch, branch_name
+                    ))
+                    .with_default(true)
+                    .prompt()?;
+
+                    if should_use_current {
+                        // 用户期望在当前分支提交并创建 PR
+                        Self::commit_and_push_current_branch(
+                            &current_branch,
+                            commit_title,
+                            &default_branch,
+                        )
+                    } else {
+                        // 用户不期望在当前分支提交并创建 → 使用 stash 创建新分支
+                        Self::create_new_branch_with_stash(
+                            &current_branch,
+                            branch_name,
+                            commit_title,
+                            &default_branch,
+                        )
+                    }
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
