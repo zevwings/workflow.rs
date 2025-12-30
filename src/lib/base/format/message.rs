@@ -108,21 +108,83 @@ impl MessageFormatter {
 mod tests {
     use super::*;
 
+    /// 测试错误消息格式化功能
+    ///
+    /// ## 测试目的
+    /// 验证 MessageFormatter::error() 能够正确格式化错误消息，将操作名称、目标和错误信息组合成统一的错误消息格式。
+    ///
+    /// ## 测试场景
+    /// 1. 使用操作名称 "read"、目标 "config.toml" 和错误信息 "Permission denied"
+    /// 2. 调用 error() 方法格式化错误消息
+    /// 3. 验证格式化结果符合预期格式
+    ///
+    /// ## 预期结果
+    /// - 返回格式化的错误消息："Failed to read config.toml: Permission denied"
+    /// - 消息格式为 "Failed to {operation} {target}: {error}"
     #[test]
     fn test_error_formatting() {
-        let msg = MessageFormatter::error("read", "config.toml", "Permission denied");
+        // Arrange: 准备测试数据（操作名称、目标、错误信息）
+        let operation = "read";
+        let target = "config.toml";
+        let error = "Permission denied";
+
+        // Act: 格式化错误消息
+        let msg = MessageFormatter::error(operation, target, error);
+
+        // Assert: 验证格式化结果正确
         assert_eq!(msg, "Failed to read config.toml: Permission denied");
     }
 
+    /// 测试操作消息格式化功能
+    ///
+    /// ## 测试目的
+    /// 验证 MessageFormatter::operation() 能够正确格式化操作消息，将动作和目标组合成统一的操作消息格式。
+    ///
+    /// ## 测试场景
+    /// 1. 使用动作 "Creating" 和目标 "new branch"
+    /// 2. 调用 operation() 方法格式化操作消息
+    /// 3. 验证格式化结果符合预期格式
+    ///
+    /// ## 预期结果
+    /// - 返回格式化的操作消息："Creating new branch..."
+    /// - 消息格式为 "{action} {target}..."
     #[test]
     fn test_operation_formatting() {
-        let msg = MessageFormatter::operation("Creating", "new branch");
+        // Arrange: 准备测试数据（动作、目标）
+        let action = "Creating";
+        let target = "new branch";
+
+        // Act: 格式化操作消息
+        let msg = MessageFormatter::operation(action, target);
+
+        // Assert: 验证格式化结果正确
         assert_eq!(msg, "Creating new branch...");
     }
 
+    /// 测试进度信息格式化功能
+    ///
+    /// ## 测试目的
+    /// 验证 MessageFormatter::progress() 能够正确格式化进度信息，将当前进度、总进度和项目名称组合成统一的进度显示格式。
+    ///
+    /// ## 测试场景
+    /// 1. 使用当前进度 3、总进度 10 和项目名称 "files"
+    /// 2. 调用 progress() 方法格式化进度信息
+    /// 3. 验证格式化结果符合预期格式
+    ///
+    /// ## 预期结果
+    /// - 返回格式化的进度信息："[3/10] Processing files"
+    /// - 消息格式为 "[{current}/{total}] Processing {item}"
     #[test]
     fn test_progress_formatting() {
-        let msg = MessageFormatter::progress(3, 10, "files");
+        // Arrange: 准备测试数据（当前进度、总进度、项目名称）
+        let current = 3;
+        let total = 10;
+        let item = "files";
+
+        // Act: 格式化进度信息
+        let msg = MessageFormatter::progress(current, total, item);
+
+        // Assert: 验证格式化结果正确
         assert_eq!(msg, "[3/10] Processing files");
     }
 }

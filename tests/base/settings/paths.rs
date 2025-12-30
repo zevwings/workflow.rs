@@ -83,53 +83,9 @@ fn test_paths_expand_with_tilde_only_return_ok() -> Result<()> {
     Ok(())
 }
 
-/// 测试展开绝对路径
-///
-/// ## 测试目的
-/// 验证 `Paths::expand()` 方法对绝对路径能够直接返回，不进行展开。
-///
-/// ## 测试场景
-/// 1. 准备绝对路径
-/// 2. 调用 `Paths::expand()` 展开路径
-///
-/// ## 预期结果
-/// - 直接返回绝对路径，不进行任何修改
-#[test]
-fn test_paths_expand_with_absolute_path_return_ok() -> Result<()> {
-    // Arrange: 准备绝对路径
-
-    // Act: 展开绝对路径（覆盖 paths.rs:238-239）
-    let result = Paths::expand("/absolute/path")?;
-
-    // Assert: 验证直接返回绝对路径
-    assert_eq!(result, std::path::PathBuf::from("/absolute/path"));
-
-    Ok(())
-}
-
-/// 测试展开相对路径
-///
-/// ## 测试目的
-/// 验证 `Paths::expand()` 方法对相对路径能够直接返回，不进行展开。
-///
-/// ## 测试场景
-/// 1. 准备相对路径
-/// 2. 调用 `Paths::expand()` 展开路径
-///
-/// ## 预期结果
-/// - 直接返回相对路径，不进行任何修改
-#[test]
-fn test_paths_expand_with_relative_path_return_ok() -> Result<()> {
-    // Arrange: 准备相对路径
-
-    // Act: 展开相对路径（覆盖 paths.rs:238-239）
-    let result = Paths::expand("relative/path")?;
-
-    // Assert: 验证直接返回相对路径
-    assert_eq!(result, std::path::PathBuf::from("relative/path"));
-
-    Ok(())
-}
+// 注意：以下测试已迁移到 src/lib/base/settings/paths.rs
+// - test_paths_expand_with_absolute_path_return_ok (改为测试 expand_in)
+// - test_paths_expand_with_relative_path_return_ok (改为测试 expand_in)
 
 /// 测试展开Windows环境变量路径（仅Windows）
 ///
@@ -160,28 +116,8 @@ fn test_paths_expand_with_windows_env_var_return_ok() -> Result<()> {
     Ok(())
 }
 
-/// 测试展开未设置的环境变量时返回错误
-///
-/// ## 测试目的
-/// 验证 `Paths::expand()` 方法在环境变量未设置时能够正确返回错误。
-///
-/// ## 测试场景
-/// 1. 准备包含未设置环境变量的路径
-/// 2. 调用 `Paths::expand()` 展开路径
-///
-/// ## 预期结果
-/// - 返回错误，错误消息包含 "Environment variable not set"
-#[test]
-fn test_paths_expand_with_env_var_not_set_returns_error() {
-    // Arrange: 准备未设置的环境变量
-
-    // Act: 展开包含未设置环境变量的路径（覆盖 paths.rs:225-227）
-    let result = Paths::expand("%NONEXISTENT_VAR%/path");
-
-    // Assert: 验证返回错误
-    assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("Environment variable not set"));
-}
+// 注意：以下测试已迁移到 src/lib/base/settings/paths.rs
+// - test_paths_expand_with_env_var_not_set_returns_error
 
 // ==================== Paths Config Directory Tests ====================
 
@@ -538,61 +474,9 @@ fn test_paths_binary_paths() {
     }
 }
 
-/// 测试获取二进制文件名（跨平台）
-///
-/// ## 测试目的
-/// 验证 `Paths::binary_name()` 方法能够根据平台正确返回二进制文件名。
-///
-/// ## 测试场景
-/// 1. 调用 `Paths::binary_name("workflow")` 获取二进制文件名
-///
-/// ## 预期结果
-/// - Windows 上返回 "workflow.exe"
-/// - 其他平台返回 "workflow"
-#[test]
-fn test_paths_binary_name() {
-    // 测试 binary_name() 方法（覆盖 paths.rs:550-556）
-    let result = Paths::binary_name("workflow");
-
-    // Windows 应该有 .exe 扩展名
-    #[cfg(target_os = "windows")]
-    {
-        assert_eq!(result, "workflow.exe");
-    }
-
-    // 其他平台不应该有扩展名
-    #[cfg(not(target_os = "windows"))]
-    {
-        assert_eq!(result, "workflow");
-    }
-}
-
-/// 测试获取自定义二进制文件名
-///
-/// ## 测试目的
-/// 验证 `Paths::binary_name()` 方法能够正确处理自定义名称。
-///
-/// ## 测试场景
-/// 1. 调用 `Paths::binary_name("custom-tool")` 获取自定义二进制文件名
-///
-/// ## 预期结果
-/// - Windows 上返回 "custom-tool.exe"
-/// - 其他平台返回 "custom-tool"
-#[test]
-fn test_paths_binary_name_custom() {
-    // 测试自定义名称
-    let result = Paths::binary_name("custom-tool");
-
-    #[cfg(target_os = "windows")]
-    {
-        assert_eq!(result, "custom-tool.exe");
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        assert_eq!(result, "custom-tool");
-    }
-}
+// 注意：以下测试已迁移到 src/lib/base/settings/paths.rs
+// - test_paths_binary_name
+// - test_paths_binary_name_custom
 
 /// 测试获取命令名称列表
 ///

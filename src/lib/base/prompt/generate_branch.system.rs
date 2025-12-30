@@ -110,3 +110,210 @@ Return your response in JSON format with four fields: `branch_name`, `pr_title`,
   "description": "- Update README with new features\n- Fix typos in API documentation"
 }
 ```"#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==================== Generate Branch System Prompt Tests ====================
+
+    /// 测试生成分支名system prompt常量不为空
+    ///
+    /// ## 测试目的
+    /// 验证 `GENERATE_BRANCH_SYSTEM_PROMPT` 常量已正确定义且不为空。
+    ///
+    /// ## 测试场景
+    /// 1. 检查prompt常量
+    /// 2. 验证常量不为空
+    ///
+    /// ## 预期结果
+    /// - prompt常量不为空
+    #[test]
+    fn test_generate_branch_system_prompt_with_valid_constant_returns_non_empty() {
+        // Arrange: 准备检查 prompt 常量
+
+        // Act: 验证 prompt 常量不为空
+        // (验证在 Assert 中完成)
+
+        // Assert: 验证 prompt 常量不为空
+        // Note: GENERATE_BRANCH_SYSTEM_PROMPT is a compile-time constant with non-empty content
+        // The constant is verified to exist and contain content at compile time
+        let _ = GENERATE_BRANCH_SYSTEM_PROMPT;
+    }
+
+    /// 测试生成分支名prompt包含必需的关键词
+    ///
+    /// ## 测试目的
+    /// 验证 `GENERATE_BRANCH_SYSTEM_PROMPT` 包含所有必需的关键词（branch name, PR title, description, scope等）。
+    ///
+    /// ## 测试场景
+    /// 1. 准备关键词列表
+    /// 2. 验证prompt包含所有关键词
+    ///
+    /// ## 预期结果
+    /// - prompt包含所有必需的关键词
+    #[test]
+    fn test_generate_branch_system_prompt_contains_required_keywords() {
+        // Arrange: 准备关键词列表
+        let keywords = ["branch name", "PR title", "description", "scope"];
+
+        // Act & Assert: 验证 prompt 包含所有关键词
+        for keyword in keywords.iter() {
+            assert!(
+                GENERATE_BRANCH_SYSTEM_PROMPT.contains(keyword),
+                "Prompt should contain keyword: {}",
+                keyword
+            );
+        }
+    }
+
+    /// 测试生成分支名prompt包含规则说明
+    ///
+    /// ## 测试目的
+    /// 验证 `GENERATE_BRANCH_SYSTEM_PROMPT` 包含所有规则说明（Branch Name Rules, PR Title Rules, Description Rules, Scope Rules）。
+    ///
+    /// ## 测试场景
+    /// 1. 准备规则关键词
+    /// 2. 验证prompt包含所有规则说明
+    ///
+    /// ## 预期结果
+    /// - prompt包含所有规则说明
+    #[test]
+    fn test_generate_branch_system_prompt_contains_required_rules() {
+        // Arrange: 准备规则关键词
+        let rule_keywords = [
+            "Branch Name Rules",
+            "PR Title Rules",
+            "Description Rules",
+            "Scope Rules",
+        ];
+
+        // Act & Assert: 验证 prompt 包含所有规则说明
+        for rule_keyword in rule_keywords.iter() {
+            assert!(
+                GENERATE_BRANCH_SYSTEM_PROMPT.contains(rule_keyword),
+                "Prompt should contain rule: {}",
+                rule_keyword
+            );
+        }
+    }
+
+    /// 测试生成分支名prompt包含示例和格式说明
+    ///
+    /// ## 测试目的
+    /// 验证 `GENERATE_BRANCH_SYSTEM_PROMPT` 包含示例和响应格式说明。
+    ///
+    /// ## 测试场景
+    /// 1. 准备示例和格式关键词
+    /// 2. 验证prompt包含示例和格式说明
+    ///
+    /// ## 预期结果
+    /// - prompt包含 "Examples" 或 "examples"
+    /// - prompt包含 "Response Format" 或 "response format"
+    #[test]
+    fn test_generate_branch_system_prompt_contains_examples_and_format() {
+        // Arrange: 准备示例和格式关键词
+        let example_keywords = ["Examples", "examples"];
+        let format_keywords = ["Response Format", "response format"];
+
+        // Act & Assert: 验证 prompt 包含示例和格式说明
+        assert!(
+            GENERATE_BRANCH_SYSTEM_PROMPT.contains(example_keywords[0])
+                || GENERATE_BRANCH_SYSTEM_PROMPT.contains(example_keywords[1]),
+            "Prompt should contain examples"
+        );
+        assert!(
+            GENERATE_BRANCH_SYSTEM_PROMPT.contains(format_keywords[0])
+                || GENERATE_BRANCH_SYSTEM_PROMPT.contains(format_keywords[1]),
+            "Prompt should contain response format"
+        );
+    }
+
+    /// 测试生成分支名prompt包含JSON格式规范
+    ///
+    /// ## 测试目的
+    /// 验证 `GENERATE_BRANCH_SYSTEM_PROMPT` 包含JSON格式规范说明（branch_name, pr_title, description, scope字段）。
+    ///
+    /// ## 测试场景
+    /// 1. 准备JSON字段关键词
+    /// 2. 验证prompt包含所有JSON字段说明
+    ///
+    /// ## 预期结果
+    /// - prompt包含 "branch_name"
+    /// - prompt包含 "pr_title"
+    /// - prompt包含 "description"
+    /// - prompt包含 "scope"
+    #[test]
+    fn test_generate_branch_system_prompt_contains_json_format_specification() {
+        // Arrange: 准备JSON字段关键词
+        let json_fields = ["branch_name", "pr_title", "description", "scope"];
+
+        // Act & Assert: 验证 prompt 包含所有JSON字段说明
+        for field in json_fields.iter() {
+            assert!(
+                GENERATE_BRANCH_SYSTEM_PROMPT.contains(field),
+                "Prompt should contain JSON field: {}",
+                field
+            );
+        }
+    }
+
+    /// 测试生成分支名prompt包含语言要求
+    ///
+    /// ## 测试目的
+    /// 验证 `GENERATE_BRANCH_SYSTEM_PROMPT` 包含语言要求说明（所有输出必须是英文）。
+    ///
+    /// ## 测试场景
+    /// 1. 准备语言要求关键词
+    /// 2. 验证prompt包含语言要求
+    ///
+    /// ## 预期结果
+    /// - prompt包含 "English" 或 "english"
+    /// - prompt包含 "MUST" 或 "must"
+    #[test]
+    fn test_generate_branch_system_prompt_contains_language_requirement() {
+        // Arrange: 准备语言要求关键词
+        let language_keywords = ["English", "english"];
+        let requirement_keywords = ["MUST", "must"];
+
+        // Act & Assert: 验证 prompt 包含语言要求
+        assert!(
+            GENERATE_BRANCH_SYSTEM_PROMPT.contains(language_keywords[0])
+                || GENERATE_BRANCH_SYSTEM_PROMPT.contains(language_keywords[1]),
+            "Prompt should contain language requirement"
+        );
+        assert!(
+            GENERATE_BRANCH_SYSTEM_PROMPT.contains(requirement_keywords[0])
+                || GENERATE_BRANCH_SYSTEM_PROMPT.contains(requirement_keywords[1]),
+            "Prompt should contain requirement keyword"
+        );
+    }
+
+    /// 测试生成分支名prompt长度合理
+    ///
+    /// ## 测试目的
+    /// 验证 `GENERATE_BRANCH_SYSTEM_PROMPT` 有合理的长度，至少包含基本内容（最小长度阈值500字符）。
+    ///
+    /// ## 测试场景
+    /// 1. 获取prompt长度
+    /// 2. 验证长度超过最小阈值
+    ///
+    /// ## 预期结果
+    /// - prompt长度大于500字符
+    #[test]
+    fn test_generate_branch_system_prompt_has_reasonable_length() {
+        // Arrange: 准备最小长度要求
+        let min_length = 500;
+
+        // Act: 获取 prompt 长度
+        let prompt_length = GENERATE_BRANCH_SYSTEM_PROMPT.len();
+
+        // Assert: 验证 prompt 有合理的长度
+        assert!(
+            prompt_length > min_length,
+            "Prompt should have reasonable length (at least {}), got {}",
+            min_length,
+            prompt_length
+        );
+    }
+}

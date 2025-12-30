@@ -453,31 +453,86 @@ impl GitAuth {
 mod tests {
     use super::*;
 
+    /// 测试查找 SSH 密钥
+    ///
+    /// ## 测试目的
+    /// 验证 GitAuth::get_remote_callbacks() 能够正常创建远程回调，不会因为 SSH 密钥查找而 panic。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 get_remote_callbacks() 方法获取远程回调
+    /// 2. 验证方法执行成功（不 panic）
+    ///
+    /// ## 预期结果
+    /// - 方法执行成功，不产生 panic
+    /// - 如果用户有 SSH 密钥，应该能找到
+    /// - 如果没有 SSH 密钥，返回 None 也是正常的
+    ///
+    /// ## 注意
+    /// find_ssh_key 是私有方法，这里只测试 get_remote_callbacks 不会 panic。
     #[test]
     fn test_find_ssh_key() {
-        // 测试 SSH 密钥查找
-        // 注意：find_ssh_key 是私有方法，这里只测试 get_remote_callbacks 不会 panic
+        // Arrange: 准备测试（无需额外准备）
+
+        // Act: 获取远程回调
         let _callbacks = GitAuth::get_remote_callbacks();
-        // 如果用户有 SSH 密钥，应该能找到
-        // 如果没有，返回 None 也是正常的
+
+        // Assert: 验证方法执行成功（不 panic 即通过）
     }
 
+    /// 测试从 URL 中提取用户名
+    ///
+    /// ## 测试目的
+    /// 验证 GitAuth::extract_username_from_url() 能够从 Git URL 中正确提取用户名。
+    ///
+    /// ## 测试场景
+    /// 1. 测试包含用户名的 HTTPS URL（格式：https://user@host/path）
+    /// 2. 测试不包含用户名的 HTTPS URL
+    /// 3. 验证提取结果正确
+    ///
+    /// ## 预期结果
+    /// - 包含用户名的 URL 返回 Some("user")
+    /// - 不包含用户名的 URL 返回 None
     #[test]
     fn test_extract_username_from_url() {
+        // Arrange: 准备测试数据（包含用户名的 URL 和不包含用户名的 URL）
+
+        // Act & Assert: 验证从包含用户名的 URL 中提取用户名
         assert_eq!(
             GitAuth::extract_username_from_url("https://user@github.com/owner/repo.git"),
-            Some("user")
+            Some("user"),
+            "应该能从 URL 中提取用户名"
         );
+
+        // Act & Assert: 验证从不含用户名的 URL 中提取返回 None
         assert_eq!(
             GitAuth::extract_username_from_url("https://github.com/owner/repo.git"),
-            None
+            None,
+            "不含用户名的 URL 应该返回 None"
         );
     }
 
+    /// 测试获取远程认证回调
+    ///
+    /// ## 测试目的
+    /// 验证 GitAuth::get_remote_callbacks() 能够成功创建远程认证回调对象。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 get_remote_callbacks() 方法
+    /// 2. 验证方法执行成功（不 panic）
+    ///
+    /// ## 预期结果
+    /// - 成功创建 RemoteCallbacks 对象
+    /// - 方法执行不产生 panic
+    ///
+    /// ## 注意
+    /// RemoteCallbacks 没有公共方法可以验证，但创建成功就说明没问题。
     #[test]
     fn test_get_remote_callbacks() {
-        // 测试获取认证回调（不应该 panic）
+        // Arrange: 准备测试（无需额外准备）
+
+        // Act: 获取远程认证回调
         let _callbacks = GitAuth::get_remote_callbacks();
-        // RemoteCallbacks 没有公共方法可以验证，但创建成功就说明没问题
+
+        // Assert: 验证方法执行成功（不 panic 即通过）
     }
 }

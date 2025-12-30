@@ -23,11 +23,8 @@ mod completion;
 mod git; // Git 模块测试
 mod integration;
 mod jira;
-mod pr;
-mod proxy;
 mod repo;
 mod rollback;
-mod template;
 
 // 共享测试工具
 mod common;

@@ -461,3 +461,238 @@ impl GitRepository {
         &mut self.inner
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use color_eyre::Result;
+    use tempfile::TempDir;
+
+    /// 测试打开当前目录的 Git 仓库
+    ///
+    /// ## 测试目的
+    /// 验证 GitRepository::open() 能够打开当前目录的 Git 仓库。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 open() 方法打开当前目录的仓库
+    /// 2. 如果成功打开，尝试获取 HEAD
+    /// 3. 验证操作不产生 panic
+    ///
+    /// ## 预期结果
+    /// - 如果在 Git 仓库中，成功打开仓库
+    /// - 如果不在 Git 仓库中，返回错误（这是预期的）
+    /// - 操作不产生 panic
+    ///
+    /// ## 注意
+    /// 这个测试需要在 Git 仓库中运行。如果不在 Git 仓库中，测试会失败，这是预期的。
+    #[test]
+    fn test_open_repo_success() -> Result<()> {
+        // 这个测试需要在 Git 仓库中运行
+        // 如果不在 Git 仓库中，测试会失败，这是预期的
+        let repo = GitRepository::open();
+
+        // 如果成功打开，应该能够获取 HEAD
+        if let Ok(repo) = repo {
+            // 尝试获取 HEAD（可能失败，但不应该 panic）
+            let _head = repo.head();
+        }
+
+        Ok(())
+    }
+
+    /// 测试打开指定路径的 Git 仓库
+    ///
+    /// ## 测试目的
+    /// 验证 GitRepository::open_at() 能够打开指定路径的 Git 仓库。
+    ///
+    /// ## 测试场景
+    /// 1. 创建临时目录并初始化 Git 仓库
+    /// 2. 使用 open_at() 方法打开指定路径的仓库
+    /// 3. 尝试获取 HEAD（新仓库没有 HEAD，应该失败）
+    /// 4. 验证 HEAD 获取失败（符合预期）
+    ///
+    /// ## 预期结果
+    /// - 成功打开指定路径的 Git 仓库
+    /// - 新仓库没有 HEAD，获取 HEAD 返回错误（符合预期）
+    #[test]
+    fn test_open_repo_at_success() -> Result<()> {
+        // 创建一个临时目录
+        let temp_dir = TempDir::new()?;
+        let repo_path = temp_dir.path();
+
+        // 初始化 Git 仓库（使用 git2）
+        let _repo = GitRepository::init(repo_path, None)?;
+
+        // 打开仓库
+        let repo = GitRepository::open_at(repo_path)?;
+
+        // 验证能够获取 HEAD（应该失败，因为还没有提交）
+        let head_result = repo.head();
+        assert!(head_result.is_err()); // 新仓库没有 HEAD
+
+        Ok(())
+    }
+
+    /// 测试打开不存在的仓库路径
+    ///
+    /// ## 测试目的
+    /// 验证 GitRepository::open_at() 在路径不存在时能够正确返回错误。
+    ///
+    /// ## 测试场景
+    /// 1. 使用不存在的路径调用 open_at() 方法
+    /// 2. 验证返回错误
+    ///
+    /// ## 预期结果
+    /// - 打开不存在的路径返回错误
+    #[test]
+    fn test_open_repo_at_not_found() {
+        let result = GitRepository::open_at("/nonexistent/path");
+        assert!(result.is_err());
+    }
+
+    /// 测试获取当前分支名
+    ///
+    /// ## 测试目的
+    /// 验证 GitRepository::current_branch_name() 能够正确获取当前分支的名称。
+    ///
+    /// ## 测试场景
+    /// 1. 创建临时目录并初始化 Git 仓库
+    /// 2. 创建初始提交并设置分支为 "main"
+    /// 3. 打开仓库并获取当前分支名
+    /// 4. 验证分支名正确
+    ///
+    /// ## 预期结果
+    /// - 成功获取当前分支名
+    /// - 分支名为 "main"
+    #[test]
+    fn test_current_branch_name() -> Result<()> {
+        // 创建一个临时目录并初始化 Git 仓库
+        let temp_dir = TempDir::new()?;
+        let repo_path = temp_dir.path();
+
+        // 初始化 Git 仓库并创建初始提交（使用 git2）
+        let _repo = GitRepository::init_with_commit(
+            repo_path,
+            Some("main"),
+            Some("Test"),
+            Some("test@example.com"),
+            Some("README.md"),
+            Some("# Test Repo"),
+            Some("Initial commit"),
+        )?;
+
+        // 打开仓库并获取分支名
+        let repo = GitRepository::open_at(repo_path)?;
+        let branch_name = repo.current_branch_name()?;
+
+        assert_eq!(branch_name, "main");
+
+        Ok(())
+    }
+
+    /// 测试获取 Git 签名
+    ///
+    /// ## 测试目的
+    /// 验证 GitRepository::signature() 能够正确获取 Git 提交签名（用户名和邮箱）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建临时目录并初始化 Git 仓库
+    /// 2. 配置用户信息（用户名和邮箱）
+    /// 3. 获取签名
+    /// 4. 验证签名中的用户名和邮箱正确
+    ///
+    /// ## 预期结果
+    /// - 成功获取签名
+    /// - 签名中的用户名和邮箱与配置的一致
+    #[test]
+    fn test_signature() -> Result<()> {
+        // 创建一个临时目录并初始化 Git 仓库
+        let temp_dir = TempDir::new()?;
+        let repo_path = temp_dir.path();
+
+        // 初始化 Git 仓库并配置用户信息（使用 git2）
+        let repo = GitRepository::init_with_commit(
+            repo_path,
+            None,
+            Some("Test User"),
+            Some("test@example.com"),
+            None,
+            None,
+            None,
+        )?;
+
+        // 获取签名
+        let signature = repo.signature()?;
+
+        assert_eq!(signature.name().unwrap_or(""), "Test User");
+        assert_eq!(signature.email().unwrap_or(""), "test@example.com");
+
+        Ok(())
+    }
+
+    /// 测试查找 Git 引用
+    ///
+    /// ## 测试目的
+    /// 验证 GitRepository::find_reference() 能够正确查找指定的 Git 引用。
+    ///
+    /// ## 测试场景
+    /// 1. 创建临时目录并初始化 Git 仓库
+    /// 2. 创建初始提交并设置分支为 "main"
+    /// 3. 查找引用 "refs/heads/main"
+    /// 4. 验证查找成功
+    ///
+    /// ## 预期结果
+    /// - 成功找到指定的引用
+    #[test]
+    fn test_find_reference() -> Result<()> {
+        // 创建一个临时目录并初始化 Git 仓库
+        let temp_dir = TempDir::new()?;
+        let repo_path = temp_dir.path();
+
+        // 初始化 Git 仓库并创建初始提交（使用 git2）
+        let _repo = GitRepository::init_with_commit(
+            repo_path,
+            Some("main"),
+            Some("Test"),
+            Some("test@example.com"),
+            Some("README.md"),
+            Some("# Test Repo"),
+            Some("Initial commit"),
+        )?;
+
+        // 打开仓库并查找引用
+        let repo = GitRepository::open_at(repo_path)?;
+        let ref_result = repo.find_reference("refs/heads/main");
+
+        assert!(ref_result.is_ok());
+
+        Ok(())
+    }
+
+    /// 测试获取 FetchOptions 和 PushOptions
+    ///
+    /// ## 测试目的
+    /// 验证 GitRepository::get_fetch_options() 和 get_push_options() 能够成功创建获取和推送选项。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 get_fetch_options() 方法获取获取选项
+    /// 2. 调用 get_push_options() 方法获取推送选项
+    /// 3. 验证方法执行成功（不 panic）
+    ///
+    /// ## 预期结果
+    /// - 成功创建 FetchOptions
+    /// - 成功创建 PushOptions
+    /// - 方法执行不产生 panic
+    #[test]
+    fn test_get_options() {
+        // 测试获取 FetchOptions
+        let _fetch_options = GitRepository::get_fetch_options();
+        // 验证能够创建选项（不应该 panic）
+        // 如果上面的调用没有 panic，测试就通过了
+
+        // 测试获取 PushOptions
+        let _push_options = GitRepository::get_push_options();
+        // 验证能够创建选项（不应该 panic）
+        // 如果上面的调用没有 panic，测试就通过了
+    }
+}

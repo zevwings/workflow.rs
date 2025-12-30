@@ -86,9 +86,7 @@ name = "network_operations"
 harness = false
 
 # 独立测试目标配置
-[[test]]
-name = "completeness"
-path = "tests/completion/completeness.rs"
+# 注意：completeness 的单元测试已迁移到 src/lib/completion/generate.rs 中
 
 # 测试覆盖率配置
 # tarpaulin 会扫描所有代码，但我们应该排除以下内容：

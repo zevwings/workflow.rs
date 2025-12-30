@@ -317,9 +317,11 @@ impl GitRepo {
     /// 从 URL 字符串提取仓库名
     ///
     /// 支持多种 URL 格式：
+    /// - GitHub SSH (协议格式): ssh://git@github.com/owner/repo.git
     /// - GitHub SSH: git@github.com:owner/repo.git
     /// - GitHub SSH (别名): git@github-brainim:owner/repo.git
     /// - GitHub HTTPS: https://github.com/owner/repo.git
+    /// - Codeup SSH (协议格式): ssh://git@codeup.aliyun.com/owner/repo.git
     /// - Codeup SSH: git@codeup.aliyun.com:owner/repo.git
     /// - Codeup HTTPS: https://codeup.aliyun.com/owner/repo.git
     /// - Codeup HTTP: http://codeup.aliyun.com/owner/repo
@@ -336,6 +338,23 @@ impl GitRepo {
     ///
     /// 如果无法从 URL 中提取仓库名，返回相应的错误信息。
     pub fn extract_repo_name_from_url(url: &str) -> Result<String> {
+        // GitHub SSH 协议格式: ssh://git@github.com/owner/repo.git 或 ssh://git@github-xxx/owner/repo.git
+        // 支持 SSH host 别名（如 ssh://git@github-brainim/owner/repo.git）
+        let github_ssh_proto_re = Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$")
+            .wrap_err("Invalid regex pattern")?;
+        if let Some(caps) = github_ssh_proto_re.captures(url) {
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| {
+                    eyre!(
+                        "Failed to extract repo name from GitHub SSH protocol URL: {}",
+                        url
+                    )
+                })?
+                .as_str()
+                .to_string());
+        }
+
         // GitHub SSH 格式: git@github.com:owner/repo.git 或 git@github-xxx:owner/repo.git
         let github_ssh_re =
             Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").wrap_err("Invalid regex pattern")?;
@@ -354,6 +373,22 @@ impl GitRepo {
             return Ok(caps
                 .get(1)
                 .ok_or_else(|| eyre!("Failed to extract repo name from GitHub HTTPS URL: {}", url))?
+                .as_str()
+                .to_string());
+        }
+
+        // Codeup SSH 协议格式: ssh://git@codeup.aliyun.com/owner/repo.git
+        let codeup_ssh_proto_re = Regex::new(r"ssh://git@codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
+            .wrap_err("Invalid regex pattern")?;
+        if let Some(caps) = codeup_ssh_proto_re.captures(url) {
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| {
+                    eyre!(
+                        "Failed to extract repo name from Codeup SSH protocol URL: {}",
+                        url
+                    )
+                })?
                 .as_str()
                 .to_string());
         }

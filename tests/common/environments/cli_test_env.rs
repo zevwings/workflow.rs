@@ -23,6 +23,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use git2::Repository;
 use std::fs;
 use std::path::{Path, PathBuf};
+use workflow::base::resilience::{default_filesystem_timeout, execute_with_timeout, TimeoutConfig};
 use workflow::git::{GitBranch, GitCommit, GitRepository};
 
 use crate::common::isolation::TestIsolation;
@@ -164,7 +165,7 @@ impl CliTestEnv {
         let work_dir = &self.project_path;
 
         // 初始化Git仓库并创建初始提交（使用封装工具）
-        let mut repo = GitRepository::init_with_commit(
+        GitRepository::init_with_commit(
             work_dir,
             Some("main"),
             Some("Test User"),
@@ -179,9 +180,33 @@ impl CliTestEnv {
         // 我们使用假的远程引用而不是替换 URL，这样既能避免网络请求，又能保持 URL 格式正确
 
         // 添加remote origin（用于测试需要remote的功能）
-        repo.as_inner_mut()
-            .remote("origin", "https://github.com/test/test-repo.git")
+        // 添加超时保护，防止 Windows 上 repo.remote() 触发 DNS 解析导致卡住
+        {
+            let repo_path = work_dir.to_path_buf();
+            let timeout = default_filesystem_timeout();
+            execute_with_timeout(TimeoutConfig::new(timeout), move || -> Result<()> {
+                // 在线程中重新打开仓库（因为 Repository 不能跨线程传递）
+                let repo = Repository::open(&repo_path)
+                    .wrap_err("Failed to open repository in timeout thread")?;
+                repo.remote("origin", "https://github.com/test/test-repo.git").map_err(|e| {
+                    color_eyre::eyre::eyre!("Failed to add remote 'origin': {}", e.message())
+                })?;
+                Ok(())
+            })
+            .map_err(|e| {
+                if e.to_string().contains("timed out") {
+                    color_eyre::eyre::eyre!(
+                        "repo.remote() timed out after {:?} seconds. \
+                        This may indicate a network request is being made. \
+                        On Windows, ensure url.insteadOf is configured correctly.",
+                        timeout.as_secs()
+                    )
+                } else {
+                    e
+                }
+            })
             .wrap_err("Failed to add remote origin")?;
+        }
 
         // 创建假的远程分支引用（让get_default_branch()等函数能正常工作）
         self.setup_fake_remote_refs()?;

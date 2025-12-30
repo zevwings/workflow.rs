@@ -1101,15 +1101,170 @@ impl Paths {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
-    /// 测试 home_dir() 方法（这是唯一需要测试私有 API 的测试）
+    /// 测试获取用户主目录路径
     ///
-    /// 其他所有测试都已移动到 tests/paths_integration.rs，
+    /// ## 测试目的
+    /// 验证 Paths::home_dir() 能够正确获取用户主目录路径，并返回有效的目录路径。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 home_dir() 方法获取主目录路径
+    /// 2. 验证返回的路径存在
+    /// 3. 验证返回的路径是目录类型
+    ///
+    /// ## 预期结果
+    /// - 成功返回用户主目录路径
+    /// - 路径存在且为目录类型
+    ///
+    /// ## 注意
+    /// 这是唯一需要测试私有 API 的测试。其他所有测试都已移动到 tests/paths_integration.rs，
     /// 因为它们只使用公开 API。
     #[test]
     fn test_home_dir() {
+        // Arrange: 准备测试（无需额外准备）
+
+        // Act: 获取用户主目录路径
         let home = Paths::home_dir().unwrap();
-        assert!(home.exists());
-        assert!(home.is_dir());
+
+        // Assert: 验证路径存在且为目录
+        assert!(home.exists(), "主目录路径应该存在");
+        assert!(home.is_dir(), "主目录路径应该是目录类型");
+    }
+
+    // ==================== 路径展开纯函数测试 ====================
+
+    /// 测试展开绝对路径
+    ///
+    /// ## 测试目的
+    /// 验证 `Paths::expand_in()` 方法对绝对路径能够直接返回，不进行展开。
+    ///
+    /// ## 测试场景
+    /// 1. 准备绝对路径
+    /// 2. 调用 `Paths::expand_in()` 展开路径（传入任意 home 值）
+    ///
+    /// ## 预期结果
+    /// - 直接返回绝对路径，不进行任何修改
+    #[test]
+    fn test_paths_expand_with_absolute_path_return_ok() -> color_eyre::Result<()> {
+        // Arrange: 准备绝对路径和任意 home 值
+        let home = PathBuf::from("/tmp/test");
+
+        // Act: 展开绝对路径（覆盖 paths.rs:336-337）
+        let result = Paths::expand_in("/absolute/path", home)?;
+
+        // Assert: 验证直接返回绝对路径
+        assert_eq!(result, PathBuf::from("/absolute/path"));
+        Ok(())
+    }
+
+    /// 测试展开相对路径
+    ///
+    /// ## 测试目的
+    /// 验证 `Paths::expand_in()` 方法对相对路径能够直接返回，不进行展开。
+    ///
+    /// ## 测试场景
+    /// 1. 准备相对路径
+    /// 2. 调用 `Paths::expand_in()` 展开路径（传入任意 home 值）
+    ///
+    /// ## 预期结果
+    /// - 直接返回相对路径，不进行任何修改
+    #[test]
+    fn test_paths_expand_with_relative_path_return_ok() -> color_eyre::Result<()> {
+        // Arrange: 准备相对路径和任意 home 值
+        let home = PathBuf::from("/tmp/test");
+
+        // Act: 展开相对路径（覆盖 paths.rs:336-337）
+        let result = Paths::expand_in("relative/path", home)?;
+
+        // Assert: 验证直接返回相对路径
+        assert_eq!(result, PathBuf::from("relative/path"));
+        Ok(())
+    }
+
+    /// 测试展开未设置的环境变量时返回错误
+    ///
+    /// ## 测试目的
+    /// 验证 `Paths::expand_in()` 方法在环境变量未设置时能够正确返回错误。
+    ///
+    /// ## 测试场景
+    /// 1. 准备包含未设置环境变量的路径
+    /// 2. 调用 `Paths::expand_in()` 展开路径
+    ///
+    /// ## 预期结果
+    /// - 返回错误，错误消息包含 "Environment variable not set"
+    #[test]
+    fn test_paths_expand_with_env_var_not_set_returns_error() {
+        // Arrange: 准备未设置的环境变量和任意 home 值
+        let home = PathBuf::from("/tmp/test");
+
+        // Act: 展开包含未设置环境变量的路径（覆盖 paths.rs:323-325）
+        let result = Paths::expand_in("%NONEXISTENT_VAR%/path", home);
+
+        // Assert: 验证返回错误
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Environment variable not set"));
+    }
+
+    // ==================== 二进制名称纯函数测试 ====================
+
+    /// 测试获取二进制文件名（跨平台）
+    ///
+    /// ## 测试目的
+    /// 验证 `Paths::binary_name()` 方法能够根据平台正确返回二进制文件名。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 `Paths::binary_name("workflow")` 获取二进制文件名
+    ///
+    /// ## 预期结果
+    /// - Windows 上返回 "workflow.exe"
+    /// - 其他平台返回 "workflow"
+    #[test]
+    fn test_paths_binary_name() {
+        // Arrange: 准备测试（无需额外准备）
+
+        // Act: 获取二进制文件名（覆盖 paths.rs:872-878）
+        let result = Paths::binary_name("workflow");
+
+        // Assert: 验证平台特定的文件名
+        #[cfg(target_os = "windows")]
+        {
+            assert_eq!(result, "workflow.exe");
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(result, "workflow");
+        }
+    }
+
+    /// 测试获取自定义二进制文件名
+    ///
+    /// ## 测试目的
+    /// 验证 `Paths::binary_name()` 方法能够正确处理自定义名称。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 `Paths::binary_name("custom-tool")` 获取自定义二进制文件名
+    ///
+    /// ## 预期结果
+    /// - Windows 上返回 "custom-tool.exe"
+    /// - 其他平台返回 "custom-tool"
+    #[test]
+    fn test_paths_binary_name_custom() {
+        // Arrange: 准备测试（无需额外准备）
+
+        // Act: 获取自定义二进制文件名
+        let result = Paths::binary_name("custom-tool");
+
+        // Assert: 验证平台特定的文件名
+        #[cfg(target_os = "windows")]
+        {
+            assert_eq!(result, "custom-tool.exe");
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert_eq!(result, "custom-tool");
+        }
     }
 }

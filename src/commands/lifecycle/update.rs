@@ -83,11 +83,15 @@ struct TempDirManager {
 impl TempDirManager {
     fn new(version: &str, platform: &str) -> Result<Self> {
         let temp_dir = env::temp_dir().join(format!("workflow-update-{}", version));
+        let temp_dir_clone = temp_dir.clone();
 
+        // 删除现有临时目录
         if temp_dir.exists() {
-            fs::remove_dir_all(&temp_dir).wrap_err("Failed to remove existing temp directory")?;
+            fs::remove_dir_all(&temp_dir_clone)
+                .wrap_err("Failed to remove existing temp directory")?;
         }
 
+        // 创建目录
         DirectoryWalker::new(&temp_dir).ensure_exists()?;
 
         let archive_name = format!("workflow-{}-{}.tar.gz", version, platform);
@@ -318,71 +322,84 @@ impl UpdateCommand {
     ///
     /// 从指定 URL 下载文件到临时目录，显示下载进度。
     /// 支持重试机制，如果下载失败会自动重试。
+    /// 使用超时保护防止下载流卡住。
     fn download_file(url: &str, output_path: &Path) -> Result<()> {
         log_info!("Downloading update package...");
         log_debug!("Download URL: {}", url);
         log_debug!("Saving to: {}", output_path.display());
 
+        // 克隆参数以便在闭包中使用（需要 'static 生命周期）
+        let url = url.to_string();
+        let output_path = output_path.to_path_buf();
+
         let retry_config = HttpRetryConfig::new();
 
         let retry_result = HttpRetry::retry(
-            || {
-                // 如果文件已存在且不完整，先删除它
-                if output_path.exists() {
-                    if let Err(e) = fs::remove_file(output_path) {
-                        log_debug!("Failed to delete incomplete file: {}", e);
-                    }
-                }
-
-                // 使用 get_stream 方法流式下载二进制文件
-                let http_client = HttpClient::global()?;
-                let mut response = http_client
-                    .stream(HttpMethod::Get, url, RequestConfig::<Value, Value>::new())
-                    .wrap_err("Failed to send HTTP request")?;
-
-                if !response.status().is_success() {
-                    color_eyre::eyre::bail!("Download failed: HTTP {}", response.status());
-                }
-
-                // 获取文件总大小（如果可用）
-                let total_size = response
-                    .headers()
-                    .get("content-length")
-                    .and_then(|v| v.to_str().ok())
-                    .and_then(|s| s.parse::<u64>().ok());
-
-                // 创建进度条
-                let progress = if let Some(size) = total_size {
-                    log_info!("File size: {}", DisplayFormatter::size(size));
-                    Progress::new_download(size, "Downloading update package...")
-                } else {
-                    Progress::new_unknown("Downloading update package...")
-                };
-
-                let mut file = File::create(output_path).wrap_err_with(|| {
-                    format!("Failed to create file: {}", output_path.display())
-                })?;
-
-                let mut buffer = vec![0u8; 8192];
-                let mut downloaded_bytes = 0u64;
-
-                loop {
-                    let bytes_read =
-                        response.read(&mut buffer).wrap_err("Failed to read response data")?;
-
-                    if bytes_read == 0 {
-                        break;
+            {
+                // 在闭包外部克隆，以便在闭包内部使用
+                let url = url.clone();
+                let output_path = output_path.clone();
+                move || {
+                    // 如果文件已存在且不完整，先删除它
+                    if output_path.exists() {
+                        if let Err(e) = fs::remove_file(&output_path) {
+                            log_debug!("Failed to delete incomplete file: {}", e);
+                        }
                     }
 
-                    file.write_all(&buffer[..bytes_read]).wrap_err("Failed to write to file")?;
+                    // 使用 get_stream 方法流式下载二进制文件
+                    let http_client = HttpClient::global()?;
+                    let mut response = http_client
+                        .stream(HttpMethod::Get, &url, RequestConfig::<Value, Value>::new())
+                        .wrap_err("Failed to send HTTP request")?;
 
-                    downloaded_bytes += bytes_read as u64;
-                    progress.set_position(downloaded_bytes);
+                    if !response.status().is_success() {
+                        color_eyre::eyre::bail!("Download failed: HTTP {}", response.status());
+                    }
+
+                    // 获取文件总大小（如果可用）
+                    let total_size = response
+                        .headers()
+                        .get("content-length")
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|s| s.parse::<u64>().ok());
+
+                    // 创建进度条
+                    let progress = if let Some(size) = total_size {
+                        log_info!("File size: {}", DisplayFormatter::size(size));
+                        Progress::new_download(size, "Downloading update package...")
+                    } else {
+                        Progress::new_unknown("Downloading update package...")
+                    };
+
+                    let mut file = File::create(&output_path).wrap_err_with(|| {
+                        format!("Failed to create file: {}", output_path.display())
+                    })?;
+
+                    let mut buffer = vec![0u8; 8192];
+                    let mut downloaded_bytes = 0u64;
+
+                    // 数据读取循环
+                    loop {
+                        let bytes_read =
+                            response.read(&mut buffer).wrap_err("Failed to read response data")?;
+
+                        if bytes_read == 0 {
+                            break;
+                        }
+
+                        file.write_all(&buffer[..bytes_read])
+                            .wrap_err("Failed to write to file")?;
+
+                        downloaded_bytes += bytes_read as u64;
+                        progress.set_position(downloaded_bytes);
+                    }
+
+                    progress.finish_with_message(
+                        crate::base::constants::messages::user::DOWNLOAD_COMPLETE,
+                    );
+                    Ok(())
                 }
-
-                progress
-                    .finish_with_message(crate::base::constants::messages::user::DOWNLOAD_COMPLETE);
-                Ok(())
             },
             &retry_config,
             "Downloading update package",

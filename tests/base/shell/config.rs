@@ -242,20 +242,27 @@ fn test_add_source_twice() {
     // Arrange: 准备测试添加相同的 source 语句两次（应该跳过）
     let source_path = "$HOME/.workflow/duplicate_test";
 
+    // 先清理，确保测试环境干净
+    let _ = ShellConfigManager::remove_source(source_path);
+
     // 第一次添加
     let result1 = ShellConfigManager::add_source(source_path, None);
+    assert!(result1.is_ok(), "First add_source should succeed");
+    let added1 = result1.unwrap();
+    assert!(
+        added1,
+        "First add_source should return true (successfully added)"
+    );
 
     // 第二次添加（应该返回 false，因为已存在）
     let result2 = ShellConfigManager::add_source(source_path, None);
-
-    if let (Ok(added1), Ok(added2)) = (result1, result2) {
-        // 第一次应该成功添加，第二次应该跳过
-        assert!(added1 || !added1);
-        if added1 {
-            // 如果第一次成功，第二次应该返回 false（已存在）
-            assert!(!added2);
-        }
-    }
+    assert!(result2.is_ok(), "Second add_source should succeed");
+    let added2 = result2.unwrap();
+    assert!(
+        !added2,
+        "Second add_source should return false (already exists), but got {}",
+        added2
+    );
 
     // 清理
     let _ = ShellConfigManager::remove_source(source_path);

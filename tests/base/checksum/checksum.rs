@@ -111,75 +111,9 @@ fn test_calculate_file_sha256_with_large_file_return_ok(cli_env: CliTestEnv) -> 
     Ok(())
 }
 
-/// 测试从内容解析哈希值（各种格式）
-///
-/// ## 测试目的
-/// 验证 Checksum::parse_hash_from_content() 能够从各种格式的内容中解析哈希值。
-///
-/// ## 测试场景
-/// 1. 测试标准格式：hash  filename
-/// 2. 测试只有哈希值的格式
-/// 3. 测试多行内容（只取第一行）
-/// 4. 测试带额外空格的格式
-///
-/// ## 预期结果
-/// - 所有格式都能正确解析哈希值
-#[test]
-fn test_parse_hash_from_content_with_various_formats_parses_correctly_return_ok() -> Result<()> {
-    // Arrange: 准备各种格式的内容
-
-    // Act & Assert: 测试标准格式：hash  filename
-    let content1 = "abc123def456789  file.tar.gz";
-    let hash1 = Checksum::parse_hash_from_content(content1)?;
-    assert_eq!(hash1, "abc123def456789");
-
-    // Act & Assert: 测试只有哈希值的格式
-    let content2 = "abc123def456789";
-    let hash2 = Checksum::parse_hash_from_content(content2)?;
-    assert_eq!(hash2, "abc123def456789");
-
-    // Act & Assert: 测试多行内容（只取第一行）
-    let content3 = "abc123def456789  file1.tar.gz\ndef456ghi789012  file2.tar.gz";
-    let hash3 = Checksum::parse_hash_from_content(content3)?;
-    assert_eq!(hash3, "abc123def456789");
-
-    // Act & Assert: 测试带额外空格的格式
-    let content4 = "  abc123def456789   file.tar.gz  ";
-    let hash4 = Checksum::parse_hash_from_content(content4)?;
-    assert_eq!(hash4, "abc123def456789");
-
-    Ok(())
-}
-
-/// 测试从无效内容解析哈希值
-///
-/// ## 测试目的
-/// 验证 Checksum::parse_hash_from_content() 对无效内容返回错误。
-///
-/// ## 测试场景
-/// 1. 测试空内容
-/// 2. 测试只有空白字符的内容
-/// 3. 测试只有换行符的内容
-/// 4. 验证返回错误
-///
-/// ## 预期结果
-/// - 所有无效内容都返回错误
-#[test]
-fn test_parse_hash_from_content_with_invalid_content_returns_error() {
-    // Arrange: 准备无效内容
-
-    // Act & Assert: 测试空内容
-    let result1 = Checksum::parse_hash_from_content("");
-    assert!(result1.is_err());
-
-    // Act & Assert: 测试只有空白字符的内容
-    let result2 = Checksum::parse_hash_from_content("   \n\t  ");
-    assert!(result2.is_err());
-
-    // Act & Assert: 测试只有换行符的内容
-    let result3 = Checksum::parse_hash_from_content("\n\n");
-    assert!(result3.is_err());
-}
+// 注意：以下测试已迁移到 src/lib/base/checksum/checksum.rs
+// - test_parse_hash_from_content_with_various_formats_parses_correctly_return_ok
+// - test_parse_hash_from_content_with_invalid_content_returns_error
 
 /// 测试验证文件完整性（正确的哈希值）
 ///
@@ -252,53 +186,8 @@ fn test_verify_with_incorrect_hash_return_ok(cli_env: CliTestEnv) -> Result<()> 
     Ok(())
 }
 
-/// 测试构建 SHA256 URL（各种 URL 格式）
-///
-/// ## 测试目的
-/// 验证 Checksum::build_url() 能够为各种 URL 格式构建 SHA256 URL。
-///
-/// ## 测试场景
-/// 1. 测试基本 URL 构建
-/// 2. 测试带查询参数的 URL
-/// 3. 测试带锚点的 URL
-/// 4. 测试简单文件名
-/// 5. 测试空字符串
-///
-/// ## 预期结果
-/// - 所有 URL 格式都能正确构建 SHA256 URL（在末尾添加 .sha256）
-#[test]
-fn test_build_url_with_various_urls_returns_sha256_url() {
-    // Arrange: 准备各种URL格式
-
-    // Act & Assert: 测试基本 URL 构建
-    let url1 = "https://example.com/file.tar.gz";
-    assert_eq!(
-        Checksum::build_url(url1),
-        "https://example.com/file.tar.gz.sha256"
-    );
-
-    // Act & Assert: 测试带查询参数的 URL
-    let url2 = "https://example.com/file.tar.gz?version=1.0";
-    assert_eq!(
-        Checksum::build_url(url2),
-        "https://example.com/file.tar.gz?version=1.0.sha256"
-    );
-
-    // Act & Assert: 测试带锚点的 URL
-    let url3 = "https://example.com/file.tar.gz#section";
-    assert_eq!(
-        Checksum::build_url(url3),
-        "https://example.com/file.tar.gz#section.sha256"
-    );
-
-    // Act & Assert: 测试简单文件名
-    let url4 = "file.tar.gz";
-    assert_eq!(Checksum::build_url(url4), "file.tar.gz.sha256");
-
-    // Act & Assert: 测试空字符串
-    let url5 = "";
-    assert_eq!(Checksum::build_url(url5), ".sha256");
-}
+// 注意：以下测试已迁移到 src/lib/base/checksum/checksum.rs
+// - test_build_url_with_various_urls_returns_sha256_url
 
 /// 测试计算文件 SHA256 哈希值（不存在的文件）
 ///

@@ -147,6 +147,17 @@
 - **内容**:
   - 多语言支持规则（文本外部化、资源文件组织、语言切换机制）
   - 时区和日期格式处理规则（时区处理、日期格式标准化、本地化显示）
+
+#### 7. [`http-retry.md`](./http-retry.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 基础设施改进
+- **内容**:
+  - 为 Jira API、GitHub API 和 LLM API 添加 HTTP 重试机制
+  - 统一使用 `HttpRetry::retry()` 包装所有 HTTP 请求
+  - 自动处理网络错误、5xx 服务器错误、429 限流等可重试错误
+  - 32 个方法需要添加重试机制（Jira: 10, GitHub: 21, LLM: 1）
+- **优先级**: ⭐⭐⭐ 高（提高系统可靠性和容错能力）
   - 国际化相关的代码规范和最佳实践
   - Cursor Rules 国际化规则补充
 - **优先级**: 低优先级（当前项目可能不需要）
@@ -218,6 +229,8 @@ docs/requirements/
 ├── integration.md                   # 集成与扩展待办事项（⏳ 待实施）
 ├── doc-check.md                     # 架构文档检查工具待办事项（⏳ 待实施）
 ├── internationalization.md          # 国际化支持待办事项（⏳ 待实施）
+├── http-retry.md                    # HTTP 重试机制需求（⏳ 待实施）
+├── resilience-timeout-retry.md      # Resilience (Timeout & Retry) 机制需求（⏳ 待实施）
 ├── test-global-state-refactoring.md # 测试全局状态依赖重构（📋 待实施）
 ├── test-architecture-improvement.md # 测试架构改进TODO（📋 待实施）
 └── test-naming-structure-improvement.md # 测试命名和结构改进TODO（📋 待实施）
@@ -232,8 +245,8 @@ docs/requirements/
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 1 个 | 测试覆盖度提升综合方案 |
 | 📋 待实施 | 13 个 | 核心业务模块测试覆盖率改进计划（10个）、测试全局状态重构、测试架构改进、测试命名结构改进 |
-| ⏳ 待实施 | 3 个 | 集成扩展、文档检查工具、国际化支持 |
-| **总计** | **18 个** | - |
+| ⏳ 待实施 | 6 个 | 集成扩展、文档检查工具、国际化支持、HTTP 重试机制、Resilience 超时重试机制 |
+| **总计** | **21 个** | - |
 
 ### 文档列表
 
@@ -251,7 +264,9 @@ docs/requirements/
 10. **integration.md** - 集成与扩展待办事项（⏳ 待实施，0%）
 11. **doc-check.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
 12. **internationalization.md** - 国际化支持待办事项（⏳ 待实施，0%）
-13. **test-global-state-refactoring.md** - 测试全局状态依赖重构（📋 待实施，99.8-99.9%）
+13. **http-retry.md** - HTTP 重试机制需求（⏳ 待实施，0%）
+14. **resilience-timeout-retry.md** - Resilience (Timeout & Retry) 机制需求（⏳ 待实施，0%）
+15. **test-global-state-refactoring.md** - 测试全局状态依赖重构（📋 待实施，99.8-99.9%）
 
 ---
 
@@ -317,7 +332,7 @@ docs/requirements/
 12. **Commands 模块** (`testing/test-coverage-commands.md`) - 📋 待实施（1.1%）
     - 所有 CLI 命令的实现（15 个子模块）
 
-#### 待实施文档（6 个）
+#### 待实施文档（7 个）
 8. **集成与扩展** (`integration.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
 
@@ -332,13 +347,18 @@ docs/requirements/
    - 时区和日期格式处理规则（时区处理、日期格式标准化、本地化显示）
    - 国际化相关的代码规范和最佳实践
 
-11. **测试全局状态依赖重构** (`test-global-state-refactoring.md`) - 📋 待实施（99.8-99.9%）
+11. **HTTP 重试机制** (`http-retry.md`) - ⏳ 待实施（0%）
+   - 为 Jira API、GitHub API 和 LLM API 添加 HTTP 重试机制
+   - 统一使用 `HttpRetry::retry()` 包装所有 HTTP 请求
+   - 32 个方法需要添加重试机制（Jira: 10, GitHub: 21, LLM: 1）
+
+12. **测试全局状态依赖重构** (`test-global-state-refactoring.md`) - 📋 待实施（99.8-99.9%）
    - 重构测试以减少对全局状态的依赖
    - 开发 TestIsolation、EnvGuard、GitConfigGuard 工具
    - 修复 2-3 个间歇性失败测试
    - 目标：100% 测试通过率
 
-12. **测试架构改进** (`test-architecture-improvement.md`) - 📋 待实施（0%）
+13. **测试架构改进** (`test-architecture-improvement.md`) - 📋 待实施（0%）
    - 统一测试环境使用模式
    - 扩展守卫层功能
    - 加强Mock服务器集成
@@ -346,7 +366,7 @@ docs/requirements/
    - 新增RepoTestEnv
    - 性能优化和文档完善
 
-13. **测试命名和结构改进** (`test-naming-structure-improvement.md`) - 📋 待实施（0%）
+14. **测试命名和结构改进** (`test-naming-structure-improvement.md`) - 📋 待实施（0%）
    - 统一测试函数命名格式（~273个）
    - 完善代码结构规范（101个文件）
    - 完善文档注释规范（~1573个）
@@ -389,6 +409,8 @@ docs/requirements/
 - **集成与扩展** → [`integration.md`](./integration.md) ⏳ 待实施
 - **文档检查工具** → [`doc-check.md`](./doc-check.md) ⏳ 待实施
 - **国际化支持** → [`internationalization.md`](./internationalization.md) ⏳ 待实施
+- **HTTP 重试机制** → [`http-retry.md`](./http-retry.md) ⏳ 待实施（0%）
+- **Resilience 超时重试机制** → [`resilience-timeout-retry.md`](./resilience-timeout-retry.md) ⏳ 待实施（0%）
 - **测试全局状态重构** → [`test-global-state-refactoring.md`](./test-global-state-refactoring.md) 📋 待实施（99.8-99.9%）
 - **测试架构改进** → [`test-architecture-improvement.md`](./test-architecture-improvement.md) 📋 待实施（0%）
 - **测试命名和结构改进** → [`test-naming-structure-improvement.md`](./test-naming-structure-improvement.md) 📋 待实施（0%）
@@ -400,6 +422,13 @@ docs/requirements/
 ---
 
 ## 📝 更新说明（最新）
+
+### 2025-01-XX 更新（最新）
+- ✅ 新增 HTTP 重试机制需求文档 (`http-retry.md`)
+- ✅ 新增 Resilience 超时重试机制需求文档 (`resilience-timeout-retry.md`)
+  - 为 Jira API、GitHub API 和 LLM API 添加 HTTP 重试机制的需求分析
+  - 32 个方法需要添加重试机制（Jira: 10, GitHub: 21, LLM: 1）
+  - 包含详细的实施计划和实现建议
 
 ### 2025-12-27 更新（最新）
 - ✅ 删除已完成的迁移文档：

@@ -237,6 +237,14 @@ impl GitConfigGuard {
     /// guard.set("user.email", "test@example.com")?;
     /// ```
     pub fn set(&self, key: &str, value: &str) -> Result<()> {
+        Self::set_internal_static(&self.config_path, key, value)
+    }
+
+    /// 内部实现：设置Git配置项（包含所有重试逻辑）
+    ///
+    /// 这个方法包含所有原有的重试逻辑，被 `set()` 方法包装在超时保护中。
+    /// 这是一个静态方法，接受路径和值，以满足 'static 生命周期要求。
+    fn set_internal_static(config_path: &PathBuf, key: &str, value: &str) -> Result<()> {
         // Windows 上需要更多的重试次数和更长的延迟
         #[cfg(target_os = "windows")]
         const MAX_RETRIES: usize = 10;
@@ -255,7 +263,7 @@ impl GitConfigGuard {
             {
                 // 清理锁文件（使用规范化后的路径）
                 // Windows 上锁文件清理需要更多重试和更长的等待时间
-                let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
+                let lock_file = format!("{}.lock", config_path.to_string_lossy());
                 if std::path::Path::new(&lock_file).exists() {
                     const LOCK_CLEANUP_RETRIES: usize = 5;
                     const LOCK_CLEANUP_DELAY_MS: u64 = 100; // 从 50ms 增加到 100ms
@@ -273,8 +281,8 @@ impl GitConfigGuard {
 
                 // 清理 git2 创建的临时文件（.tmpXXXXX）
                 // git2 在写入配置时会创建临时文件，如果操作失败可能残留
-                if let Some(parent) = self.config_path.parent() {
-                    if let Some(_file_name) = self.config_path.file_name() {
+                if let Some(parent) = config_path.parent() {
+                    if let Some(_file_name) = config_path.file_name() {
                         // 查找所有以 .tmp 开头的临时文件
                         if let Ok(entries) = std::fs::read_dir(parent) {
                             for entry in entries.flatten() {
@@ -304,7 +312,7 @@ impl GitConfigGuard {
                 // 清理可能存在的锁文件（解决锁文件残留问题）
                 // Git 在写入配置文件时会创建锁文件（.tmpXXXXX.lock）
                 // 如果之前的测试异常退出，锁文件可能残留
-                let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
+                let lock_file = format!("{}.lock", config_path.to_string_lossy());
                 if std::path::Path::new(&lock_file).exists() {
                     // 忽略清理失败（锁文件可能正在被使用）
                     let _ = std::fs::remove_file(&lock_file);
@@ -313,7 +321,6 @@ impl GitConfigGuard {
 
             // 使用 git2 API 打开并设置配置
             // 统一使用规范化后的路径（Windows上已转换为长路径）
-            let config_path = &self.config_path;
 
             let config_result = Config::open(config_path);
             match config_result {
@@ -527,8 +534,7 @@ impl GitConfigGuard {
                     // 如果配置文件不存在，创建一个新的
                     if e.code() == git2::ErrorCode::NotFound {
                         // 创建空配置文件（使用规范化后的路径）
-                        std::fs::write(&self.config_path, "")
-                            .wrap_err("Failed to create config file")?;
+                        std::fs::write(config_path, "").wrap_err("Failed to create config file")?;
                         // 重试
                         if attempt < MAX_RETRIES - 1 {
                             std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
@@ -537,7 +543,7 @@ impl GitConfigGuard {
                     }
                     return Err(color_eyre::eyre::eyre!(
                         "Failed to open Git config file {}: {}",
-                        self.config_path.display(),
+                        config_path.display(),
                         e.message()
                     ));
                 }

@@ -29,6 +29,7 @@ pub mod llm;
 pub mod logger;
 pub mod mcp;
 pub mod prompt;
+pub mod resilience;
 pub mod settings;
 pub mod shell;
 pub mod system;
@@ -51,6 +52,11 @@ pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConf
 pub use indicator::{Progress, Spinner};
 pub use logger::{LogLevel, Logger, Tracer};
 pub use prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
+pub use resilience::{
+    default_download_timeout, default_extract_timeout, default_filesystem_timeout,
+    default_script_timeout, execute_with_retry, execute_with_timeout, RetryConfig, RetryResult,
+    TimeoutConfig,
+};
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};
 pub use system::{Browser, Clipboard, Platform};

@@ -405,22 +405,59 @@ impl BranchNaming {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
+    use rstest::rstest;
 
+    /// 测试基本的字符串清理功能
+    ///
+    /// ## 测试目的
+    /// 验证 BranchNaming::sanitize() 能够将输入字符串转换为有效的分支名称格式。
+    ///
+    /// ## 测试场景
+    /// 1. 测试空格转换为连字符
+    /// 2. 测试特殊字符（@、#）转换为连字符
+    ///
+    /// ## 预期结果
+    /// - "Hello World" 被清理为 "hello-world"
+    /// - "test@branch#123" 被清理为 "test-branch-123"
     #[test]
     fn test_sanitize_basic() {
-        // Basic validation of sanitization
+        // Arrange & Act & Assert: 验证基本的字符串清理功能
         assert_eq!(BranchNaming::sanitize("Hello World"), "hello-world");
         assert_eq!(BranchNaming::sanitize("test@branch#123"), "test-branch-123");
     }
 
+    /// 测试基本的 slug 化功能
+    ///
+    /// ## 测试目的
+    /// 验证 BranchNaming::slugify() 能够将简单的字符串转换为 URL 友好的 slug 格式。
+    ///
+    /// ## 测试场景
+    /// 测试带空格的字符串转换为连字符分隔的小写字符串
+    ///
+    /// ## 预期结果
+    /// - "Hello World" 被转换为 "hello-world"
     #[test]
     fn test_slugify_basic() {
-        // Basic validation of slugify
+        // Arrange & Act & Assert: 验证基本的 slugify 功能
         assert_eq!(BranchNaming::slugify("Hello World"), "hello-world");
     }
 
+    /// 测试 slugify 保留下划线
+    ///
+    /// ## 测试目的
+    /// 验证 BranchNaming::slugify() 在转换过程中保留下划线字符。
+    ///
+    /// ## 测试场景
+    /// 1. 测试单个下划线的保留
+    /// 2. 测试多个下划线的保留
+    ///
+    /// ## 预期结果
+    /// - "test_branch" 保留为 "test_branch"
+    /// - "test_branch_name" 保留为 "test_branch_name"
     #[test]
     fn test_slugify_preserves_underscores() {
+        // Arrange & Act & Assert: 验证 slugify 保留下划线
         assert_eq!(BranchNaming::slugify("test_branch"), "test_branch");
         assert_eq!(
             BranchNaming::slugify("test_branch_name"),
@@ -428,25 +465,68 @@ mod tests {
         );
     }
 
+    /// 测试 slugify 长度限制
+    ///
+    /// ## 测试目的
+    /// 验证 BranchNaming::slugify() 能够限制输出字符串的长度不超过 50 个字符。
+    ///
+    /// ## 测试场景
+    /// 测试 100 个字符的长字符串被截断为 50 个字符以内
+    ///
+    /// ## 预期结果
+    /// - 输入 100 个 'a' 字符
+    /// - 输出长度不超过 50 个字符
     #[test]
     fn test_slugify_length_limit() {
+        // Arrange: 准备 100 个字符的长字符串
         let long_text = "a".repeat(100);
+
+        // Act: 执行 slugify 操作
         let result = BranchNaming::slugify(&long_text);
+
+        // Assert: 验证结果长度不超过 50 个字符
         assert!(result.len() <= 50);
     }
 
+    /// 测试 slugify 过滤空段
+    ///
+    /// ## 测试目的
+    /// 验证 BranchNaming::slugify() 能够移除连续的连字符和多余的空格。
+    ///
+    /// ## 测试场景
+    /// 1. 测试连续的连字符被合并为单个连字符
+    /// 2. 测试多个空格被转换为单个连字符
+    ///
+    /// ## 预期结果
+    /// - "test---branch" 被转换为 "test-branch"
+    /// - "test   branch" 被转换为 "test-branch"
     #[test]
     fn test_slugify_filters_empty_segments() {
+        // Arrange & Act & Assert: 验证 slugify 过滤空段
         assert_eq!(BranchNaming::slugify("test---branch"), "test-branch");
         assert_eq!(BranchNaming::slugify("test   branch"), "test-branch");
     }
 
     // ==================== from_type_and_slug 函数测试 ====================
 
+    /// 测试从类型和 slug 生成分支名称（无工单）
+    ///
+    /// ## 测试目的
+    /// 验证 BranchNaming::from_type_and_slug() 能够在没有工单号的情况下生成正确的分支名称。
+    ///
+    /// ## 测试场景
+    /// 使用分支类型 "feature" 和 slug "my-branch"，不提供工单号
+    ///
+    /// ## 预期结果
+    /// - 生成的分支名称以 "feature/my-branch" 结尾
+    /// - 可能包含仓库前缀（如果已配置）
     #[test]
     fn test_from_type_and_slug_without_ticket() {
+        // Arrange: 准备分支类型和 slug
+        // Act: 生成分支名称（不提供工单号）
         let result = BranchNaming::from_type_and_slug("feature", "my-branch", None).unwrap();
-        // The result may include a repo prefix if configured, so check that it ends with the expected format
+
+        // Assert: 验证结果以预期格式结尾（可能包含仓库前缀）
         assert!(
             result.ends_with("feature/my-branch"),
             "Expected result to end with 'feature/my-branch', got: {}",
@@ -454,13 +534,351 @@ mod tests {
         );
     }
 
+    /// 测试从类型和 slug 生成分支名称（带工单）
+    ///
+    /// ## 测试目的
+    /// 验证 BranchNaming::from_type_and_slug() 能够在提供工单号的情况下生成正确的分支名称。
+    ///
+    /// ## 测试场景
+    /// 使用分支类型 "feature"、slug "my-branch" 和工单号 "PROJ-123"
+    ///
+    /// ## 预期结果
+    /// - 函数调用成功（返回 Ok）
+    /// - 生成的分支名称包含类型或 slug 信息
+    /// - 注意：具体格式取决于模板系统的配置
     #[test]
     fn test_from_type_and_slug_with_ticket() {
-        // 注意：这个测试需要模板系统，可能会失败，但至少测试了函数调用
+        // Arrange: 准备分支类型、slug 和工单号
+        // Act: 生成分支名称（提供工单号）
         let result = BranchNaming::from_type_and_slug("feature", "my-branch", Some("PROJ-123"));
-        // 结果取决于模板系统，但应该包含类型和 slug
+
+        // Assert: 验证函数调用成功
         assert!(result.is_ok());
+
+        // Assert: 验证结果包含类型或 slug（具体格式取决于模板系统）
         let branch_name = result.unwrap();
         assert!(branch_name.contains("feature") || branch_name.contains("my-branch"));
+    }
+
+    // ==================== Slugify Tests (from naming_utils.rs) ====================
+
+    /// 测试 slugify 功能（参数化测试）
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证 BranchNaming::slugify() 能够正确处理各种输入场景。
+    ///
+    /// ## 测试场景
+    /// 测试以下场景：
+    /// - 基本输入（空格转换为连字符）
+    /// - 保留下划线
+    /// - 移除特殊字符
+    /// - 空字符串处理
+    /// - 规范化空白字符
+    ///
+    /// ## 预期结果
+    /// - 所有输入都被正确处理并返回预期的 slugified 字符串
+    #[rstest]
+    #[case("Hello World", "hello-world")] // 基本输入：空格转换为连字符
+    #[case("test branch", "test-branch")] // 基本输入
+    #[case("Test Branch Name", "test-branch-name")] // 多个单词
+    #[case("test_branch", "test_branch")] // 保留下划线
+    #[case("test_branch_name", "test_branch_name")] // 多个下划线
+    #[case("test@branch#123", "testbranch123")] // 移除特殊字符
+    #[case("test.branch", "testbranch")] // 移除点号
+    #[case("", "")] // 空字符串
+    #[case("  test  branch  ", "test-branch")] // 规范化前后空格
+    #[case("test   branch", "test-branch")] // 规范化多个空格
+    fn test_slugify_with_various_inputs_returns_slugified_string(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备输入字符串（通过参数传入）
+
+        // Act: 调用 slugify 方法
+        let result = BranchNaming::slugify(input);
+
+        // Assert: 验证返回正确的 slugified 字符串
+        assert_eq!(result, expected, "Failed to slugify '{}'", input);
+    }
+
+    // ==================== Sanitize Tests (from naming_utils.rs) ====================
+
+    /// 测试 sanitize 功能（参数化测试）
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证 BranchNaming::sanitize() 能够正确处理各种输入场景。
+    ///
+    /// ## 测试场景
+    /// 测试以下场景：
+    /// - 基本输入（空格转换为连字符）
+    /// - 转换特殊字符为连字符
+    /// - 移除非 ASCII 字符
+    /// - 移除重复连字符
+    /// - 修剪前导和尾随连字符
+    /// - 空字符串和只包含特殊字符的输入
+    ///
+    /// ## 预期结果
+    /// - 所有输入都被正确处理并返回预期的 sanitized 字符串
+    #[rstest]
+    #[case("Hello World", "hello-world")] // 基本输入：空格转换为连字符
+    #[case("test-branch", "test-branch")] // 已包含连字符
+    #[case("Test Branch", "test-branch")] // 多个单词
+    #[case("test@branch#123", "test-branch-123")] // 转换特殊字符为连字符
+    #[case("test.branch", "test-branch")] // 转换点号为连字符
+    #[case("test_branch", "test-branch")] // 转换下划线为连字符
+    #[case("测试分支", "")] // 移除非ASCII字符（纯中文）
+    #[case("test中文branch", "testbranch")] // 移除非ASCII字符（混合）
+    #[case("test 中文 branch", "test-branch")] // 移除非ASCII字符（带空格）
+    #[case("Hello 世界", "hello")] // 移除非ASCII字符
+    #[case("test---branch", "test-branch")] // 移除重复连字符
+    #[case("test   branch", "test-branch")] // 多个空格转换为单个连字符
+    #[case("-test-branch-", "test-branch")] // 修剪前后连字符
+    #[case("--test--", "test")] // 修剪多个前后连字符
+    #[case("", "")] // 空字符串
+    #[case("@#$%", "")] // 只包含特殊字符
+    #[case("---", "")] // 只包含连字符
+    fn test_sanitize_with_various_inputs_returns_sanitized_string(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备输入字符串（通过参数传入）
+
+        // Act: 调用 sanitize 方法
+        let result = BranchNaming::sanitize(input);
+
+        // Assert: 验证返回正确的 sanitized 字符串
+        assert_eq!(result, expected, "Failed to sanitize '{}'", input);
+    }
+
+    // ==================== Slugify Boundary Tests (from naming_advanced.rs) ====================
+
+    /// 测试slugify方法对长字符串的长度限制
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchNaming::slugify()` 方法能够正确处理超过长度限制的长字符串，结果不超过50个字符。
+    ///
+    /// ## 测试场景
+    /// 1. 准备超过长度限制的长字符串（100个字符）
+    /// 2. 调用slugify方法
+    /// 3. 验证结果长度不超过50个字符
+    ///
+    /// ## 预期结果
+    /// - 结果长度不超过50个字符
+    #[test]
+    fn test_slugify_with_long_string_enforces_length_limit() {
+        // Arrange: 准备超过长度限制的长字符串（100个字符）
+        let long_string = "a".repeat(100);
+
+        // Act: 调用 slugify 方法
+        let result = BranchNaming::slugify(&long_string);
+
+        // Assert: 验证结果不超过50个字符
+        assert!(result.len() <= 50);
+    }
+
+    /// 测试slugify方法处理边界情况
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchNaming::slugify()` 方法能够正确处理各种边界情况（空字符串、空格、连字符、单个字符等）。
+    ///
+    /// ## 测试场景
+    /// 1. 测试空字符串
+    /// 2. 测试只有空格的字符串
+    /// 3. 测试只有连字符的字符串
+    /// 4. 测试单个小写字母
+    /// 5. 测试单个大写字母
+    ///
+    /// ## 预期结果
+    /// - 空字符串和空格返回空字符串
+    /// - 连字符返回空字符串
+    /// - 单个字母返回小写字母
+    #[test]
+    fn test_slugify_with_edge_cases_handles_correctly() {
+        // Arrange: 准备边界情况输入
+        let empty_input = "";
+        let whitespace_input = "   ";
+        let hyphens_input = "---";
+        let single_lowercase = "a";
+        let single_uppercase = "A";
+
+        // Act: 调用 slugify 方法
+        let result_empty = BranchNaming::slugify(empty_input);
+        let result_whitespace = BranchNaming::slugify(whitespace_input);
+        let result_hyphens = BranchNaming::slugify(hyphens_input);
+        let result_lowercase = BranchNaming::slugify(single_lowercase);
+        let result_uppercase = BranchNaming::slugify(single_uppercase);
+
+        // Assert: 验证边界情况处理正确
+        assert_eq!(result_empty, "");
+        assert_eq!(result_whitespace, "");
+        assert_eq!(result_hyphens, "");
+        assert_eq!(result_lowercase, "a");
+        assert_eq!(result_uppercase, "a");
+    }
+
+    /// 测试slugify方法处理Unicode字符
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchNaming::slugify()` 方法能够正确处理包含Unicode字符的输入（保留ASCII部分）。
+    ///
+    /// ## 测试场景
+    /// 1. 测试包含Unicode字符的输入（café, naïve）
+    /// 2. 调用slugify方法
+    /// 3. 验证Unicode字符处理正确
+    ///
+    /// ## 预期结果
+    /// - Unicode字符被移除或转换
+    /// - ASCII部分被保留
+    #[test]
+    fn test_slugify_with_unicode_characters_handles_correctly() {
+        // Arrange: 准备包含 Unicode 字符的输入
+        let input1 = "café";
+        let input2 = "naïve";
+
+        // Act: 调用 slugify 方法
+        let result1 = BranchNaming::slugify(input1);
+        let result2 = BranchNaming::slugify(input2);
+
+        // Assert: 验证 Unicode 字符处理正确（保留 ASCII 部分）
+        assert!(result1.contains("caf"));
+        assert!(result2.contains("na"));
+    }
+
+    /// 测试slugify方法保留数字
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchNaming::slugify()` 方法能够保留输入中的数字。
+    ///
+    /// ## 测试场景
+    /// 1. 测试包含数字的输入（test123, 123test, test-123-branch）
+    /// 2. 调用slugify方法
+    /// 3. 验证数字被保留
+    ///
+    /// ## 预期结果
+    /// - 数字被保留在结果中
+    /// - 格式正确（小写、连字符分隔）
+    #[test]
+    fn test_slugify_with_numbers_preserves_numbers() {
+        // Arrange: 准备包含数字的输入
+        let input1 = "test123";
+        let input2 = "123test";
+        let input3 = "test-123-branch";
+
+        // Act: 调用 slugify 方法
+        let result1 = BranchNaming::slugify(input1);
+        let result2 = BranchNaming::slugify(input2);
+        let result3 = BranchNaming::slugify(input3);
+
+        // Assert: 验证数字被保留
+        assert_eq!(result1, "test123");
+        assert_eq!(result2, "123test");
+        assert_eq!(result3, "test-123-branch");
+    }
+
+    // ==================== Sanitize Boundary Tests (from naming_advanced.rs) ====================
+
+    /// 测试sanitize方法处理边界情况
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchNaming::sanitize()` 方法能够正确处理各种边界情况（空字符串、空格、连字符、单个字符等）。
+    ///
+    /// ## 测试场景
+    /// 1. 测试空字符串
+    /// 2. 测试只有空格的字符串
+    /// 3. 测试只有连字符的字符串
+    /// 4. 测试单个小写字母
+    /// 5. 测试单个大写字母
+    ///
+    /// ## 预期结果
+    /// - 空字符串和空格返回空字符串
+    /// - 连字符返回空字符串
+    /// - 单个字母返回小写字母
+    #[test]
+    fn test_sanitize_with_edge_cases_handles_correctly() {
+        // Arrange: 准备边界情况输入
+        let empty_input = "";
+        let whitespace_input = "   ";
+        let hyphens_input = "---";
+        let single_lowercase = "a";
+        let single_uppercase = "A";
+
+        // Act: 调用 sanitize 方法
+        let result_empty = BranchNaming::sanitize(empty_input);
+        let result_whitespace = BranchNaming::sanitize(whitespace_input);
+        let result_hyphens = BranchNaming::sanitize(hyphens_input);
+        let result_lowercase = BranchNaming::sanitize(single_lowercase);
+        let result_uppercase = BranchNaming::sanitize(single_uppercase);
+
+        // Assert: 验证边界情况处理正确
+        assert_eq!(result_empty, "");
+        assert_eq!(result_whitespace, "");
+        assert_eq!(result_hyphens, "");
+        assert_eq!(result_lowercase, "a");
+        assert_eq!(result_uppercase, "a");
+    }
+
+    /// 测试sanitize方法移除非ASCII字符
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchNaming::sanitize()` 方法能够移除非ASCII字符，保留ASCII字符。
+    ///
+    /// ## 测试场景
+    /// 1. 测试包含Unicode字符的输入（café, naïve, résumé）
+    /// 2. 调用sanitize方法
+    /// 3. 验证非ASCII字符被移除，ASCII字符被保留
+    ///
+    /// ## 预期结果
+    /// - 非ASCII字符（é, ï等）被移除
+    /// - ASCII字符（caf, na, r等）被保留
+    #[test]
+    fn test_sanitize_with_unicode_characters_removes_non_ascii() {
+        // Arrange: 准备包含 Unicode 字符的输入
+        let input1 = "café";
+        let input2 = "naïve";
+        let input3 = "résumé";
+
+        // Act: 调用 sanitize 方法
+        let result1 = BranchNaming::sanitize(input1);
+        let result2 = BranchNaming::sanitize(input2);
+        let result3 = BranchNaming::sanitize(input3);
+
+        // Assert: 验证非 ASCII 字符被移除，ASCII 字符被保留
+        assert!(result1.contains("caf"));
+        assert!(!result1.contains("é"));
+        assert!(result2.contains("na"));
+        assert!(!result2.contains("ï"));
+        assert!(result3.contains("r"));
+        assert!(!result3.contains("é"));
+    }
+
+    /// 测试sanitize方法保留数字
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchNaming::sanitize()` 方法能够保留输入中的数字。
+    ///
+    /// ## 测试场景
+    /// 1. 测试包含数字的输入（test123, 123test, test-123-branch）
+    /// 2. 调用sanitize方法
+    /// 3. 验证数字被保留
+    ///
+    /// ## 预期结果
+    /// - 数字被保留在结果中
+    /// - 格式正确（小写、连字符分隔）
+    #[test]
+    fn test_sanitize_with_numbers_preserves_numbers() {
+        // Arrange: 准备包含数字的输入
+        let input1 = "test123";
+        let input2 = "123test";
+        let input3 = "test-123-branch";
+
+        // Act: 调用 sanitize 方法
+        let result1 = BranchNaming::sanitize(input1);
+        let result2 = BranchNaming::sanitize(input2);
+        let result3 = BranchNaming::sanitize(input3);
+
+        // Assert: 验证数字被保留
+        assert_eq!(result1, "test123");
+        assert_eq!(result2, "123test");
+        assert_eq!(result3, "test-123-branch");
     }
 }

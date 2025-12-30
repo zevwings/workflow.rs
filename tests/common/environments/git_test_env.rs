@@ -407,99 +407,14 @@ impl GitTestEnv {
             }
         }
 
-        // 1. 添加远程URL（带超时检测，防止卡住）
+        // 1. 添加远程URL
         // 注意：在 Windows 上，如果上面的 url.insteadOf 配置成功，这不会触发网络请求。
         // 在 Linux/macOS 上，repo.remote() 本身不会立即触发网络请求。
-        // 但为了安全起见，我们在所有平台上都添加超时检测。
-        {
-            use std::sync::{Arc, Mutex};
-            use std::thread;
-            use std::time::{Duration, Instant};
-
-            // Windows 上使用更长的超时时间（因为可能需要 DNS 解析）
-            #[cfg(target_os = "windows")]
-            const TIMEOUT_SECS: u64 = 5;
-            #[cfg(not(target_os = "windows"))]
-            const TIMEOUT_SECS: u64 = 2;
-
-            let timeout = Duration::from_secs(TIMEOUT_SECS);
-            // 只存储错误消息字符串，避免跨线程传递 git2 类型
-            let result: Arc<Mutex<Option<Result<(), String>>>> = Arc::new(Mutex::new(None));
-            let result_clone = result.clone();
-            let repo_path = self.path().to_path_buf();
-            let remote_name_clone = remote_name.to_string();
-            let remote_url_clone = remote_url.to_string();
-
-            let handle = thread::spawn(move || {
-                // 在线程中重新打开仓库（因为 Repository 不能跨线程传递）
-                match Repository::open(&repo_path) {
-                    Ok(repo) => match repo.remote(&remote_name_clone, &remote_url_clone) {
-                        Ok(_) => *result_clone.lock().unwrap() = Some(Ok(())),
-                        Err(e) => {
-                            *result_clone.lock().unwrap() = Some(Err(e.message().to_string()))
-                        }
-                    },
-                    Err(e) => {
-                        *result_clone.lock().unwrap() = Some(Err(format!(
-                            "Failed to open repository in timeout thread: {}",
-                            e.message()
-                        )));
-                    }
-                }
-            });
-
-            // 等待操作完成或超时
-            let start = Instant::now();
-            let mut timed_out = false;
-            while start.elapsed() < timeout {
-                if let Ok(guard) = result.lock() {
-                    if guard.is_some() {
-                        break;
-                    }
-                }
-                // 检查是否超时
-                if start.elapsed() >= timeout {
-                    timed_out = true;
-                    break;
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-
-            // 检查是否超时（更严格的检查）
-            if timed_out || start.elapsed() >= timeout {
-                // 尝试等待一小段时间，看线程是否完成
-                thread::sleep(Duration::from_millis(100));
-                if let Ok(guard) = result.lock() {
-                    if guard.is_none() && !handle.is_finished() {
-                        return Err(color_eyre::eyre::eyre!(
-                            "repo.remote() timed out after {:?} seconds. \
-                            This may indicate a network request is being made. \
-                            On Windows, ensure url.insteadOf is configured correctly.",
-                            TIMEOUT_SECS
-                        ));
-                    }
-                }
-            }
-
-            // 获取结果并验证
-            let remote_result = result.lock().unwrap().take().ok_or_else(|| {
-                // 如果结果为空且线程未完成，说明超时了
-                if !handle.is_finished() {
-                    color_eyre::eyre::eyre!(
-                        "repo.remote() timed out after {:?} seconds. \
-                            This may indicate a network request is being made. \
-                            On Windows, ensure url.insteadOf is configured correctly.",
-                        TIMEOUT_SECS
-                    )
-                } else {
-                    color_eyre::eyre::eyre!("Failed to get remote result")
-                }
-            })?;
-
-            remote_result
-                .map_err(|msg| color_eyre::eyre::eyre!("Failed to add remote: {}", msg))
-                .wrap_err_with(|| format!("Failed to add remote: {}", remote_name))?;
-        }
+        repo.remote(remote_name, remote_url)
+            .map_err(|e| {
+                color_eyre::eyre::eyre!("Failed to add remote '{}': {}", remote_name, e.message())
+            })
+            .wrap_err_with(|| format!("Failed to add remote: {}", remote_name))?;
 
         // 注意：上面的超时检测在线程中执行，remote 已经添加到仓库中
         // 这里不需要再次添加，但我们可以验证 remote 是否存在
@@ -671,76 +586,26 @@ mod tests {
     #[test]
     #[serial]
     fn test_add_fake_remote_return_ok() -> Result<()> {
-        // Windows 上使用更长的超时时间（10秒），其他平台使用 5 秒
-        #[cfg(target_os = "windows")]
-        const TEST_TIMEOUT_SECS: u64 = 10;
-        #[cfg(not(target_os = "windows"))]
-        const TEST_TIMEOUT_SECS: u64 = 5;
+        let env = GitTestEnv::new()?;
 
-        // 使用内联超时检测（因为 test_with_timeout 宏可能不可用）
-        use std::sync::{Arc, Mutex};
-        use std::thread;
-        use std::time::{Duration, Instant};
+        // 添加假的远程引用（带超时检测和 Windows 特定的 url.insteadOf 配置）
+        // 注意：add_fake_remote() 内部已经处理了 Windows 上的网络请求问题
+        env.add_fake_remote("origin", "https://github.com/test/test-repo.git")?;
 
-        let timeout = Duration::from_secs(TEST_TIMEOUT_SECS);
-        let result: Arc<Mutex<Option<Result<()>>>> = Arc::new(Mutex::new(None));
-        let result_clone = result.clone();
+        // 验证远程引用已创建
+        // 注意：Repository::open() 和 find_reference() 是纯本地操作，不会触发网络请求
+        // 但为了安全起见，如果 add_fake_remote() 成功完成，这些操作应该很快
+        let repo =
+            Repository::open(env.path()).wrap_err("Failed to open repository for verification")?;
+        let ref_name = "refs/remotes/origin/main";
+        let reference = repo.find_reference(ref_name);
 
-        let handle = thread::spawn(move || {
-            let test_result: Result<()> = (|| {
-                let env = GitTestEnv::new()?;
+        assert!(
+            reference.is_ok(),
+            "Remote ref should exist after add_fake_remote"
+        );
 
-                // 添加假的远程引用（带超时检测和 Windows 特定的 url.insteadOf 配置）
-                // 注意：add_fake_remote() 内部已经处理了 Windows 上的网络请求问题
-                env.add_fake_remote("origin", "https://github.com/test/test-repo.git")?;
-
-                // 验证远程引用已创建
-                // 注意：Repository::open() 和 find_reference() 是纯本地操作，不会触发网络请求
-                // 但为了安全起见，如果 add_fake_remote() 成功完成，这些操作应该很快
-                let repo = Repository::open(env.path())
-                    .wrap_err("Failed to open repository for verification")?;
-                let ref_name = "refs/remotes/origin/main";
-                let reference = repo.find_reference(ref_name);
-
-                assert!(
-                    reference.is_ok(),
-                    "Remote ref should exist after add_fake_remote"
-                );
-
-                Ok(())
-            })();
-            *result_clone.lock().unwrap() = Some(test_result);
-        });
-
-        // 等待测试完成或超时
-        let start = Instant::now();
-        while start.elapsed() < timeout {
-            if let Ok(guard) = result.lock() {
-                if guard.is_some() {
-                    break;
-                }
-            }
-            thread::sleep(Duration::from_millis(10));
-        }
-
-        // 检查是否超时
-        if !handle.is_finished() {
-            return Err(color_eyre::eyre::eyre!(
-                "test_add_fake_remote_return_ok timed out after {:?} seconds. \
-                This may indicate a network request is being made. \
-                On Windows, ensure url.insteadOf is configured correctly.",
-                TEST_TIMEOUT_SECS
-            ));
-        }
-
-        // 获取结果
-        let test_result = result
-            .lock()
-            .unwrap()
-            .take()
-            .ok_or_else(|| color_eyre::eyre::eyre!("Failed to get test result"))?;
-
-        test_result
+        Ok(())
     }
 
     /// 测试GitTestEnv与当前仓库的隔离
