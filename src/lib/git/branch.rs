@@ -3,6 +3,9 @@ use std::collections::HashSet;
 
 use super::GitAuth;
 use super::GitRepository;
+use crate::base::resilience::{
+    default_download_timeout, execute_with_timeout_and_retry, RetryConfig, TimeoutConfig,
+};
 use crate::{trace_info, trace_warn};
 use git2::{FetchOptions, PushOptions};
 
@@ -726,6 +729,7 @@ impl GitBranch {
     /// 使用 git2 库从远程仓库拉取指定分支的最新更改。
     /// 支持 SSH 和 HTTPS 认证，适用于私有仓库。
     /// 自动处理 fast-forward 合并和普通合并。
+    /// 包含超时和重试机制，提高网络操作的可靠性。
     ///
     /// # 参数
     ///
@@ -736,28 +740,44 @@ impl GitBranch {
     /// 如果拉取失败，返回相应的错误信息。
     /// 如果检测到合并冲突，会返回错误，需要用户手动解决。
     pub fn pull(branch_name: &str) -> Result<()> {
+        let timeout_config =
+            TimeoutConfig::new(default_download_timeout()).with_platform_specific();
+        let retry_config = RetryConfig::platform_default();
+        let branch_name_clone = branch_name.to_string();
+
+        // 保护 fetch 操作
+        execute_with_timeout_and_retry(
+            timeout_config,
+            retry_config,
+            move || -> Result<()> {
+                let mut repo = GitRepository::open()?;
+                let mut remote = repo.find_remote("origin")?;
+
+                // 获取认证回调
+                let callbacks = GitAuth::get_remote_callbacks();
+
+                // 配置获取选项
+                let mut fetch_options = FetchOptions::new();
+                fetch_options.remote_callbacks(callbacks);
+
+                // 获取远程更新
+                let refspec = format!(
+                    "refs/heads/{}:refs/remotes/origin/{}",
+                    branch_name_clone, branch_name_clone
+                );
+                remote
+                    .fetch(&[&refspec], Some(&mut fetch_options), None)
+                    .wrap_err("Failed to fetch from origin")?;
+
+                Ok(())
+            },
+            "Pulling from remote",
+        )?;
+
+        // 继续执行合并逻辑（这部分不需要超时保护，因为不涉及网络操作）
         let mut repo = GitRepository::open()?;
-        let mut remote = repo.find_remote("origin")?;
-
-        // 获取认证回调
-        let callbacks = GitAuth::get_remote_callbacks();
-
-        // 配置获取选项
-        let mut fetch_options = FetchOptions::new();
-        fetch_options.remote_callbacks(callbacks);
-
-        // 获取远程更新
-        let refspec = format!(
-            "refs/heads/{}:refs/remotes/origin/{}",
-            branch_name, branch_name
-        );
-        remote
-            .fetch(&[&refspec], Some(&mut fetch_options), None)
-            .wrap_err("Failed to fetch from origin")?;
 
         // 更新远程引用后，查找远程分支的提交
-        // 释放 remote 的借用
-        drop(remote);
         let remote_commit_id = {
             let remote_ref = repo
                 .find_reference(&format!("refs/remotes/origin/{}", branch_name))
@@ -899,6 +919,8 @@ impl GitBranch {
     ///
     /// 将指定分支推送到远程仓库的 `origin`。
     ///
+    /// 包含超时和重试机制，提高网络操作的可靠性。
+    ///
     /// # 参数
     ///
     /// * `branch_name` - 要推送的分支名称
@@ -908,25 +930,41 @@ impl GitBranch {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push(branch_name: &str, set_upstream: bool) -> Result<()> {
-        let mut repo = GitRepository::open()?;
-        let mut remote = repo.find_origin_remote()?;
+        let timeout_config =
+            TimeoutConfig::new(default_download_timeout()).with_platform_specific();
+        let retry_config = RetryConfig::platform_default();
+        let branch_name_clone = branch_name.to_string();
 
-        // 配置推送选项
-        let mut push_options = GitRepository::get_push_options();
+        // 保护 push 操作
+        execute_with_timeout_and_retry(
+            timeout_config,
+            retry_config,
+            move || -> Result<()> {
+                let mut repo = GitRepository::open()?;
+                let mut remote = repo.find_origin_remote()?;
 
-        // 构建 refspec
-        let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
+                // 配置推送选项
+                let mut push_options = GitRepository::get_push_options();
 
-        // 推送
-        remote
-            .push(&[&refspec], Some(&mut push_options))
-            .wrap_err_with(|| format!("Failed to push branch: {}", branch_name))?;
+                // 构建 refspec
+                let refspec = format!(
+                    "refs/heads/{}:refs/heads/{}",
+                    branch_name_clone, branch_name_clone
+                );
 
-        // 如果设置了 upstream，更新本地分支的上游跟踪
-        // 注意：需要在 remote 使用完后才能获取 repo 的可变引用
-        drop(remote);
+                // 推送
+                remote
+                    .push(&[&refspec], Some(&mut push_options))
+                    .wrap_err_with(|| format!("Failed to push branch: {}", branch_name_clone))?;
 
+                Ok(())
+            },
+            "Pushing to remote",
+        )?;
+
+        // 如果设置了 upstream，更新本地分支的上游跟踪（本地操作，不需要超时保护）
         if set_upstream {
+            let mut repo = GitRepository::open()?;
             let repo_inner = repo.as_inner_mut();
             let mut branch = repo_inner
                 .find_branch(branch_name, git2::BranchType::Local)
@@ -943,6 +981,7 @@ impl GitBranch {
     ///
     /// 使用 `--force-with-lease` 选项安全地强制推送分支到远程仓库。
     /// 这比 `--force` 更安全，因为它会检查远程分支是否有新的提交。
+    /// 包含超时和重试机制，提高网络操作的可靠性。
     ///
     /// # 参数
     ///
@@ -952,24 +991,37 @@ impl GitBranch {
     ///
     /// 如果推送失败，返回相应的错误信息。
     pub fn push_force_with_lease(branch_name: &str) -> Result<()> {
-        let mut repo = GitRepository::open()?;
-        let mut remote = repo.find_remote("origin")?;
+        let timeout_config =
+            TimeoutConfig::new(default_download_timeout()).with_platform_specific();
+        let retry_config = RetryConfig::platform_default();
+        let branch_name = branch_name.to_string();
 
-        // 获取认证回调
-        let callbacks = GitAuth::get_remote_callbacks();
+        execute_with_timeout_and_retry(
+            timeout_config,
+            retry_config,
+            move || -> Result<()> {
+                let mut repo = GitRepository::open()?;
+                let mut remote = repo.find_remote("origin")?;
 
-        // 配置推送选项
-        let mut push_options = PushOptions::new();
-        push_options.remote_callbacks(callbacks);
+                // 获取认证回调
+                let callbacks = GitAuth::get_remote_callbacks();
 
-        // 构建 refspec（带 force-with-lease，使用 + 前缀）
-        let refspec = format!("+refs/heads/{}:refs/heads/{}", branch_name, branch_name);
+                // 配置推送选项
+                let mut push_options = PushOptions::new();
+                push_options.remote_callbacks(callbacks);
 
-        // 推送
-        remote
-            .push(&[&refspec], Some(&mut push_options))
-            .wrap_err_with(|| format!("Failed to force push branch: {}", branch_name))?;
+                // 构建 refspec（带 force-with-lease，使用 + 前缀）
+                let refspec = format!("+refs/heads/{}:refs/heads/{}", branch_name, branch_name);
 
+                // 推送
+                remote
+                    .push(&[&refspec], Some(&mut push_options))
+                    .wrap_err_with(|| format!("Failed to force push branch: {}", branch_name))?;
+
+                Ok(())
+            },
+            "Force pushing to remote",
+        )?;
         Ok(())
     }
 

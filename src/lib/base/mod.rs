@@ -29,6 +29,7 @@ pub mod llm;
 pub mod logger;
 pub mod mcp;
 pub mod prompt;
+pub mod resilience;
 pub mod settings;
 pub mod shell;
 pub mod system;

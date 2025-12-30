@@ -9,9 +9,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-#[cfg(test)]
-use serial_test::serial;
-
 /// 全局活跃的超时操作数量
 ///
 /// 用于限制并发超时操作的数量，防止创建过多线程导致资源泄漏。

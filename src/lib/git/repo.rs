@@ -11,6 +11,9 @@ use std::path::Path;
 
 use super::types::RepoType;
 use super::GitRepository;
+use crate::base::resilience::{
+    default_download_timeout, execute_with_timeout_and_retry, RetryConfig, TimeoutConfig,
+};
 
 /// Git 仓库管理
 ///
@@ -179,24 +182,37 @@ impl GitRepo {
     ///
     /// 使用 git2 库从远程仓库获取最新的分支和提交信息。
     /// 支持 SSH 和 HTTPS 认证，适用于私有仓库。
+    /// 包含超时和重试机制，提高网络操作的可靠性。
     ///
     /// # 错误
     ///
     /// 如果获取失败，返回相应的错误信息。
     pub fn fetch() -> Result<()> {
-        let mut repo = GitRepository::open()?;
-        let mut remote = repo.find_origin_remote()?;
+        let timeout_config =
+            TimeoutConfig::new(default_download_timeout()).with_platform_specific();
+        let retry_config = RetryConfig::platform_default();
 
-        // 配置获取选项
-        let mut fetch_options = GitRepository::get_fetch_options();
+        execute_with_timeout_and_retry(
+            timeout_config,
+            retry_config,
+            || -> Result<()> {
+                let mut repo = GitRepository::open()?;
+                let mut remote = repo.find_origin_remote()?;
 
-        // 获取远程更新
-        // 使用空数组表示获取所有默认的 refspecs
-        let refs: &[&str] = &[];
-        remote
-            .fetch(refs, Some(&mut fetch_options), None)
-            .wrap_err("Failed to fetch from origin")?;
+                // 配置获取选项
+                let mut fetch_options = GitRepository::get_fetch_options();
 
+                // 获取远程更新
+                // 使用空数组表示获取所有默认的 refspecs
+                let refs: &[&str] = &[];
+                remote
+                    .fetch(refs, Some(&mut fetch_options), None)
+                    .wrap_err("Failed to fetch from origin")?;
+
+                Ok(())
+            },
+            "Fetching from remote",
+        )?;
         Ok(())
     }
 
@@ -204,74 +220,86 @@ impl GitRepo {
     ///
     /// 使用 git2 库移除已删除的远程分支引用。
     /// 通过获取远程引用列表，然后删除本地不存在的远程引用。
+    /// 包含超时保护，防止网络操作卡住。
     ///
     /// # 错误
     ///
     /// 如果清理失败，返回相应的错误信息。
     pub fn prune_remote() -> Result<()> {
-        let mut repo = GitRepository::open()?;
-
-        // 先获取远程更新，确保远程引用是最新的
+        // 先获取远程更新，确保远程引用是最新的（已有超时/重试保护）
         Self::fetch()?;
 
-        // 获取远程引用列表
-        let mut remote = repo.find_origin_remote()?;
+        let timeout_config =
+            TimeoutConfig::new(default_download_timeout()).with_platform_specific();
 
-        // 连接远程并获取引用列表
-        let callbacks = super::GitAuth::get_remote_callbacks();
-        remote
-            .as_inner_mut()
-            .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
-            .wrap_err("Failed to connect to remote")?;
+        // 保护 connect_auth 操作
+        execute_with_timeout_and_retry(
+            timeout_config,
+            RetryConfig::platform_default(),
+            || -> Result<()> {
+                let mut repo = GitRepository::open()?;
+                let mut remote = repo.find_origin_remote()?;
 
-        // 获取远程引用列表
-        let remote_refs = remote.as_inner().list().wrap_err("Failed to list remote references")?;
+                // 连接远程并获取引用列表
+                let callbacks = super::GitAuth::get_remote_callbacks();
+                remote
+                    .as_inner_mut()
+                    .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
+                    .wrap_err("Failed to connect to remote")?;
 
-        // 构建远程引用名称集合
-        let mut remote_ref_names = std::collections::HashSet::new();
-        for remote_ref in remote_refs {
-            remote_ref_names.insert(remote_ref.name().to_string());
-        }
+                // 获取远程引用列表
+                let remote_refs =
+                    remote.as_inner().list().wrap_err("Failed to list remote references")?;
 
-        // 释放 remote 的借用
-        drop(remote);
-
-        // 遍历本地所有远程引用（refs/remotes/origin/*）
-        let local_remote_refs: Vec<String> = {
-            let repo_inner = repo.as_inner();
-            repo_inner
-                .references()?
-                .filter_map(|reference| {
-                    reference.ok().and_then(|ref_| {
-                        ref_.name()
-                            .and_then(|name| name.strip_prefix("refs/remotes/origin/"))
-                            .map(|name| name.to_string())
-                    })
-                })
-                .collect()
-        };
-
-        // 删除本地存在但远程不存在的引用
-        let mut deleted_count = 0;
-        let repo_inner_mut = repo.as_inner_mut();
-        for local_ref_name in local_remote_refs {
-            let remote_ref_name = format!("refs/heads/{}", local_ref_name);
-            if !remote_ref_names.contains(&remote_ref_name) {
-                // 远程引用不存在，删除本地引用
-                let ref_name = format!("refs/remotes/origin/{}", local_ref_name);
-                if let Ok(mut reference) = repo_inner_mut.find_reference(&ref_name) {
-                    reference
-                        .delete()
-                        .wrap_err_with(|| format!("Failed to delete reference: {}", ref_name))?;
-                    deleted_count += 1;
+                // 构建远程引用名称集合
+                let mut remote_ref_names = std::collections::HashSet::new();
+                for remote_ref in remote_refs {
+                    remote_ref_names.insert(remote_ref.name().to_string());
                 }
-            }
-        }
 
-        if deleted_count > 0 {
-            crate::log_info!("Pruned {} stale remote reference(s)", deleted_count);
-        }
+                // 释放 remote 的借用
+                drop(remote);
 
+                // 遍历本地所有远程引用（refs/remotes/origin/*）
+                let local_remote_refs: Vec<String> = {
+                    let repo_inner = repo.as_inner();
+                    repo_inner
+                        .references()?
+                        .filter_map(|reference| {
+                            reference.ok().and_then(|ref_| {
+                                ref_.name()
+                                    .and_then(|name| name.strip_prefix("refs/remotes/origin/"))
+                                    .map(|name| name.to_string())
+                            })
+                        })
+                        .collect()
+                };
+
+                // 删除本地存在但远程不存在的引用
+                let mut deleted_count = 0;
+                let repo_inner_mut = repo.as_inner_mut();
+                for local_ref_name in local_remote_refs {
+                    let remote_ref_name = format!("refs/heads/{}", local_ref_name);
+                    if !remote_ref_names.contains(&remote_ref_name) {
+                        // 远程引用不存在，删除本地引用
+                        let ref_name = format!("refs/remotes/origin/{}", local_ref_name);
+                        if let Ok(mut reference) = repo_inner_mut.find_reference(&ref_name) {
+                            reference.delete().wrap_err_with(|| {
+                                format!("Failed to delete reference: {}", ref_name)
+                            })?;
+                            deleted_count += 1;
+                        }
+                    }
+                }
+
+                if deleted_count > 0 {
+                    crate::log_info!("Pruned {} stale remote reference(s)", deleted_count);
+                }
+
+                Ok(())
+            },
+            "Pruning remote references",
+        )?;
         Ok(())
     }
 
