@@ -189,17 +189,3 @@ pub fn get_unix_timestamp_nanos() -> u128 {
         .as_nanos()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_basic_timestamp_formats() {
-        // Basic validation that timestamp generation works
-        let date = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
-        assert!(date.contains('-') && date.len() == 10); // YYYY-MM-DD
-
-        let timestamp = get_unix_timestamp();
-        assert!(timestamp > 1577836800); // After 2020-01-01
-    }
-}

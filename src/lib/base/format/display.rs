@@ -157,18 +157,3 @@ impl DisplayFormatter {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_basic_formatting() {
-        // Basic validation of core formatting functions
-        assert_eq!(DisplayFormatter::list_item("-", "test"), "- test");
-        assert_eq!(
-            DisplayFormatter::key_value("key", "value", None),
-            "key: value"
-        );
-        assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
-    }
-}

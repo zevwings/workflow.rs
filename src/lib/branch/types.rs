@@ -141,25 +141,3 @@ impl fmt::Display for BranchType {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_branch_type_basic() {
-        // Basic validation of branch types
-        assert_eq!(BranchType::all().len(), 5);
-        assert_eq!(BranchType::Feature.as_str(), "feature");
-        assert_eq!(BranchType::from_str("feature"), Some(BranchType::Feature));
-        assert_eq!(format!("{}", BranchType::Feature), "feature");
-    }
-
-    #[test]
-    fn test_branch_type_to_commit_type() {
-        assert_eq!(BranchType::Feature.to_commit_type(), "feat");
-        assert_eq!(BranchType::Bugfix.to_commit_type(), "fix");
-        assert_eq!(BranchType::Refactoring.to_commit_type(), "refactor");
-        assert_eq!(BranchType::Hotfix.to_commit_type(), "fix");
-        assert_eq!(BranchType::Chore.to_commit_type(), "chore");
-    }
-}

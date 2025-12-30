@@ -2,3 +2,4 @@
 
 pub mod date;
 pub mod format;
+pub mod message;

@@ -51,14 +51,3 @@ impl Sensitive for String {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mask_basic() {
-        // Basic validation of masking functionality
-        assert_eq!("short".mask(), "***");
-        assert_eq!("verylongapikey123456".mask(), "very***3456");
-    }
-}

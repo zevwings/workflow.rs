@@ -1,6 +1,8 @@
 //! Timeout 模块集成测试
 //!
 //! 包含 timeout 模块的集成测试，主要测试：
+//! - execute_with_timeout 基本功能
+//! - TimeoutConfig::with_platform_specific() 和 actual_timeout() 平台特定配置
 //! - 并发场景
 //! - 系统级行为（资源限制、线程泄漏）
 //! - 并发限制机制
@@ -12,6 +14,117 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use workflow::base::resilience::timeout::{execute_with_timeout, TimeoutConfig};
+
+// ==================== execute_with_timeout 基本功能测试 ====================
+
+/// 测试超时执行成功
+///
+/// ## 测试目的
+/// 验证 execute_with_timeout() 能够在超时时间内成功执行操作并返回结果。
+///
+/// ## 测试场景
+/// 1. 创建超时配置（5秒超时）
+/// 2. 执行一个快速完成的操作（立即返回成功）
+/// 3. 验证操作成功执行并返回正确结果
+///
+/// ## 预期结果
+/// - 操作成功执行
+/// - 返回正确的结果值
+/// - 不产生超时错误
+#[test]
+fn test_execute_with_timeout_success() -> Result<()> {
+    let result = execute_with_timeout(
+        TimeoutConfig::new(Duration::from_secs(5)),
+        || -> Result<String> { Ok("success".to_string()) },
+    )?;
+    assert_eq!(result, "success");
+    Ok(())
+}
+
+/// 测试超时执行失败
+///
+/// ## 测试目的
+/// 验证 execute_with_timeout() 在操作超过超时时间时能够正确返回超时错误。
+///
+/// ## 测试场景
+/// 1. 创建短超时配置（50毫秒）
+/// 2. 执行一个需要200毫秒的操作（超过超时时间）
+/// 3. 验证返回超时错误或并发限制错误
+///
+/// ## 预期结果
+/// - 返回错误（Result::Err）
+/// - 错误消息包含 "timed out" 或 "Too many concurrent"
+#[test]
+fn test_execute_with_timeout_failure() {
+    let result = execute_with_timeout(
+        TimeoutConfig::new(Duration::from_millis(50)),
+        || -> Result<String> {
+            // 操作需要 200ms，但超时是 50ms + 100ms 等待 = 150ms，应该超时
+            thread::sleep(Duration::from_millis(200));
+            Ok("success".to_string())
+        },
+    );
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    // 可能是超时错误，也可能是并发限制错误（如果之前的测试还没完成）
+    assert!(
+        error_msg.contains("timed out") || error_msg.contains("Too many concurrent"),
+        "Expected timeout or concurrent limit error, got: {}",
+        error_msg
+    );
+}
+
+/// 测试平台特定超时
+///
+/// ## 测试目的
+/// 验证 TimeoutConfig::with_platform_specific() 能够根据平台自动调整超时时间。
+///
+/// ## 测试场景
+/// 1. 创建超时配置并启用平台特定调整
+/// 2. 获取实际超时时间
+/// 3. 验证不同平台的超时时间调整正确
+///
+/// ## 预期结果
+/// - Windows 平台：超时时间调整为 1.5 倍（10秒 -> 15秒）
+/// - 其他平台：超时时间保持不变（10秒）
+#[test]
+fn test_platform_specific_timeout() {
+    let config = TimeoutConfig::new(Duration::from_secs(10)).with_platform_specific();
+    let actual = config.actual_timeout();
+
+    #[cfg(target_os = "windows")]
+    assert_eq!(actual, Duration::from_secs(15)); // 10 * 3/2 = 15
+
+    #[cfg(not(target_os = "windows"))]
+    assert_eq!(actual, Duration::from_secs(10));
+}
+
+/// 测试操作在超时边界完成
+///
+/// ## 测试目的
+/// 验证 execute_with_timeout() 能够正确处理操作在超时边界附近完成的情况。
+///
+/// ## 测试场景
+/// 1. 创建100毫秒的超时配置
+/// 2. 执行一个需要90毫秒的操作（接近但不超过超时时间）
+/// 3. 验证操作成功完成
+///
+/// ## 预期结果
+/// - 操作在超时前成功完成
+/// - 返回正确的结果
+#[test]
+fn test_timeout_boundary_completion() -> Result<()> {
+    let config = TimeoutConfig::new(Duration::from_millis(100));
+
+    // 操作在超时边界完成（刚好在超时前完成）
+    let result = execute_with_timeout(config, || -> Result<String> {
+        thread::sleep(Duration::from_millis(90)); // 接近但不超过超时时间
+        Ok("success".to_string())
+    })?;
+
+    assert_eq!(result, "success");
+    Ok(())
+}
 
 // ==================== 并发场景测试 ====================
 
