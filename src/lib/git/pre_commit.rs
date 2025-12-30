@@ -7,7 +7,6 @@ use duct::cmd;
 use super::commit::GitCommit;
 use super::repo::GitRepo;
 use crate::base::fs::FileReader;
-use crate::base::indicator::Spinner;
 use crate::{log_success, trace_debug, trace_error};
 
 /// Pre-commit 执行结果
@@ -273,23 +272,21 @@ impl GitPreCommit {
 
     /// Public method to run pre-commit checks (for use outside of commit flow)
     ///
-    /// This method should be called before committing to run pre-commit checks
-    /// without interference from Spinner output. It will:
+    /// This method should be called before committing to run pre-commit checks.
+    /// It will:
     /// 1. Check if pre-commit hooks exist
     /// 2. Run the checks if they exist
     /// 3. Return an error if checks fail
     ///
-    /// Note: This method uses `Spinner::with_output()` which is designed for
-    /// operations that produce output. It will show a spinner while the operation
-    /// runs, but won't interfere with the actual output from pre-commit tools.
+    /// Note: The `run_pre_commit()` method internally captures all output from
+    /// pre-commit tools, so no spinner is needed to avoid output conflicts.
     pub fn run_checks() -> Result<()> {
         if Self::has_pre_commit() {
             // First, stage all files (needed for pre-commit checks)
             GitCommit::add_all().wrap_err("Failed to stage files for pre-commit checks")?;
 
-            // 使用 Spinner::with() 显示进度，不会干扰 pre-commit 的输出
-            // 注意：虽然 run_pre_commit() 捕获了输出，但 Spinner 可以提供进度指示
-            Spinner::with("Running pre-commit checks...", Self::run_pre_commit)?;
+            // 执行 pre-commit 检查（run_pre_commit 内部已捕获输出）
+            Self::run_pre_commit()?;
 
             // 显示成功消息（用户可见的操作结果）
             log_success!("Pre-commit checks passed");
