@@ -11,7 +11,7 @@ use serde_json::Value;
 use crate::base::llm::{LLMClient, LLMRequestParams};
 use crate::base::prompt::REWORD_PR_SYSTEM_PROMPT;
 
-use super::helpers::extract_json_from_markdown;
+use super::helpers::extract_and_fix_json;
 
 /// PR Reword 结果，包含标题和描述
 ///
@@ -165,8 +165,8 @@ impl RewordGenerator {
     ///
     /// 如果响应格式不正确或缺少必要字段，返回相应的错误信息。
     fn parse_reword_response(response: String) -> Result<PullRequestReword> {
-        // 使用公共方法提取 JSON
-        let json_str = extract_json_from_markdown(response);
+        // 使用公共方法提取并修复 JSON（修复转义问题）
+        let json_str = extract_and_fix_json(response);
 
         // 解析 JSON
         let json: Value = serde_json::from_str(&json_str).wrap_err_with(|| {

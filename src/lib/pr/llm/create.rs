@@ -12,7 +12,7 @@ use crate::base::llm::{LLMClient, LLMRequestParams};
 use crate::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 use crate::branch::BranchNaming;
 
-use super::helpers::extract_json_from_markdown;
+use super::helpers::extract_and_fix_json;
 
 /// PR 内容，包含分支名、PR 标题、描述和 scope
 ///
@@ -181,8 +181,8 @@ impl CreateGenerator {
     ///
     /// 如果响应格式不正确或缺少必要字段，返回相应的错误信息。
     fn parse_llm_response(response: String) -> Result<PullRequestContent> {
-        // 使用公共方法提取 JSON
-        let json_str = extract_json_from_markdown(response);
+        // 使用公共方法提取并修复 JSON（修复转义问题）
+        let json_str = extract_and_fix_json(response);
 
         // 解析 JSON
         let json: Value = serde_json::from_str(&json_str).wrap_err_with(|| {
