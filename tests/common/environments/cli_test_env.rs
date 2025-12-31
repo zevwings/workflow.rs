@@ -156,6 +156,7 @@ impl CliTestEnv {
     /// let env = CliTestEnv::new()?;
     /// let home_path = env.home_path();
     /// ```
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn home_path(&self) -> &Path {
         &self.home_path
     }
@@ -459,6 +460,7 @@ impl CliTestEnv {
     /// type = "conventional"
     /// "#)?;
     /// ```
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn create_project_config(&self, content: &str) -> Result<PathBuf> {
         let config_dir = self.project_path.join(".workflow");
         fs::create_dir_all(&config_dir).map_err(|e| {
@@ -530,6 +532,7 @@ impl CliTestEnv {
     /// provider = "invalid_provider"
     /// "#)?;
     /// ```
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn create_home_workflow_config(&self, content: &str) -> Result<PathBuf> {
         let config_dir = self.home_path.join(".workflow").join("config");
         fs::create_dir_all(&config_dir).map_err(|e| {

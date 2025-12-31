@@ -1849,6 +1849,7 @@ impl GitBranch {
     ///
     /// * `branch1` - 第一个分支名称
     /// * `branch2` - 第二个分支名称
+    /// * `local_only` - 如果为 `true`，只查找本地引用，不查找远程引用（避免在 Windows 上触发网络操作导致超时）
     ///
     /// # 返回
     ///
@@ -1858,21 +1859,40 @@ impl GitBranch {
     ///
     /// 如果分支不存在或操作失败，返回相应的错误信息。
     pub fn merge_base(branch1: &str, branch2: &str) -> Result<String> {
+        Self::merge_base_internal(branch1, branch2, false)
+    }
+
+    /// 内部方法：获取两个分支的共同祖先（merge base）
+    ///
+    /// # 参数
+    ///
+    /// * `branch1` - 第一个分支名称
+    /// * `branch2` - 第二个分支名称
+    /// * `local_only` - 如果为 `true`，只查找本地引用，不查找远程引用
+    fn merge_base_internal(branch1: &str, branch2: &str, local_only: bool) -> Result<String> {
         let repo = GitRepository::open()?;
 
         // 解析分支引用
-        let branch1_ref = repo
-            .find_reference(&format!("refs/heads/{}", branch1))
-            .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", branch1)))
-            .wrap_err_with(|| format!("Failed to find branch: {}", branch1))?;
+        let branch1_ref = if local_only {
+            repo.find_reference(&format!("refs/heads/{}", branch1))
+                .wrap_err_with(|| format!("Failed to find local branch: {}", branch1))?
+        } else {
+            repo.find_reference(&format!("refs/heads/{}", branch1))
+                .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", branch1)))
+                .wrap_err_with(|| format!("Failed to find branch: {}", branch1))?
+        };
         let branch1_commit = branch1_ref
             .peel_to_commit()
             .wrap_err_with(|| format!("Failed to get commit from branch: {}", branch1))?;
 
-        let branch2_ref = repo
-            .find_reference(&format!("refs/heads/{}", branch2))
-            .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", branch2)))
-            .wrap_err_with(|| format!("Failed to find branch: {}", branch2))?;
+        let branch2_ref = if local_only {
+            repo.find_reference(&format!("refs/heads/{}", branch2))
+                .wrap_err_with(|| format!("Failed to find local branch: {}", branch2))?
+        } else {
+            repo.find_reference(&format!("refs/heads/{}", branch2))
+                .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", branch2)))
+                .wrap_err_with(|| format!("Failed to find branch: {}", branch2))?
+        };
         let branch2_commit = branch2_ref
             .peel_to_commit()
             .wrap_err_with(|| format!("Failed to get commit from branch: {}", branch2))?;
@@ -1910,6 +1930,21 @@ impl GitBranch {
     /// - 如果 `merge-base(from_branch, candidate_branch) == candidate_branch` 的 HEAD，
     ///   说明 from_branch 可能是直接基于 candidate_branch 创建的
     pub fn is_branch_based_on(from_branch: &str, candidate_branch: &str) -> Result<bool> {
+        Self::is_branch_based_on_internal(from_branch, candidate_branch, false)
+    }
+
+    /// 内部方法：检查一个分支是否直接基于另一个分支创建
+    ///
+    /// # 参数
+    ///
+    /// * `from_branch` - 要检查的分支
+    /// * `candidate_branch` - 候选的基础分支
+    /// * `local_only` - 如果为 `true`，只查找本地引用，不查找远程引用（避免在 Windows 上触发网络操作导致超时）
+    fn is_branch_based_on_internal(
+        from_branch: &str,
+        candidate_branch: &str,
+        local_only: bool,
+    ) -> Result<bool> {
         // 如果两个分支相同，返回 false
         if from_branch == candidate_branch {
             return Ok(false);
@@ -1918,16 +1953,31 @@ impl GitBranch {
         let repo = GitRepository::open()?;
 
         // 获取 merge-base
-        let merge_base_oid = match Self::merge_base(from_branch, candidate_branch) {
-            Ok(oid) => git2::Oid::from_str(&oid).wrap_err("Failed to parse merge base OID")?,
-            Err(_) => return Ok(false),
-        };
+        let merge_base_oid =
+            match Self::merge_base_internal(from_branch, candidate_branch, local_only) {
+                Ok(oid) => git2::Oid::from_str(&oid).wrap_err("Failed to parse merge base OID")?,
+                Err(_) => return Ok(false),
+            };
 
         // 获取 candidate_branch 的 HEAD commit
-        let candidate_ref = repo
-            .find_reference(&format!("refs/heads/{}", candidate_branch))
-            .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", candidate_branch)))
-            .wrap_err_with(|| format!("Failed to find candidate branch: {}", candidate_branch))?;
+        let candidate_ref = if local_only {
+            repo.find_reference(&format!("refs/heads/{}", candidate_branch)).wrap_err_with(
+                || {
+                    format!(
+                        "Failed to find local candidate branch: {}",
+                        candidate_branch
+                    )
+                },
+            )?
+        } else {
+            repo.find_reference(&format!("refs/heads/{}", candidate_branch))
+                .or_else(|_| {
+                    repo.find_reference(&format!("refs/remotes/origin/{}", candidate_branch))
+                })
+                .wrap_err_with(|| {
+                    format!("Failed to find candidate branch: {}", candidate_branch)
+                })?
+        };
         let candidate_commit = candidate_ref.peel_to_commit().wrap_err_with(|| {
             format!(
                 "Failed to get commit from candidate branch: {}",
@@ -2046,9 +2096,9 @@ impl GitBranch {
             a_priority.cmp(&b_priority)
         });
 
-        // 检查每个候选分支
+        // 检查每个候选分支（只使用本地引用，避免在 Windows 上触发网络操作导致超时）
         for candidate in &candidate_branches {
-            match Self::is_branch_based_on(branch, candidate) {
+            match Self::is_branch_based_on_internal(branch, candidate, true) {
                 Ok(true) => {
                     trace_info!(
                         "Detected that '{}' is likely based on '{}'",
