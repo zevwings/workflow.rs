@@ -420,11 +420,15 @@ impl GitTestEnv {
                                         // 配置所有该域名的请求都重定向到本地（避免网络请求）
                                         // 格式：url.https://github.com.insteadOf = file:///dev/null
                                         if let Ok(mut config) = repo.config() {
-                                            let config_key = format!("url.https://{}.insteadOf", domain_only);
-                                            if let Err(e) = config.set_str(&config_key, "file:///dev/null") {
+                                            let config_key =
+                                                format!("url.https://{}.insteadOf", domain_only);
+                                            if let Err(e) =
+                                                config.set_str(&config_key, "file:///dev/null")
+                                            {
                                                 *result_clone.lock().unwrap() = Some(Err(format!(
                                                     "Failed to set {} config: {}",
-                                                    config_key, e.message()
+                                                    config_key,
+                                                    e.message()
                                                 )));
                                                 return;
                                             }

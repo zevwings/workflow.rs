@@ -43,7 +43,7 @@ fn test_resolve_target_branch_based_on_default() -> Result<()> {
     // 但在某些边缘情况下（例如检测逻辑返回了非默认分支），函数会显示 SelectDialog
     // 如果没有 DialogTestGuard，SelectDialog 会阻塞等待用户输入，导致测试超时
     let _guard = DialogTestGuard::new().with_select_index(0);
-    
+
     // 验证 DialogTestGuard 正确设置（防御性检查）
     assert!(
         skip_config::DialogConfigManager::is_non_interactive(),
@@ -99,7 +99,7 @@ fn test_resolve_target_branch_based_on_non_default() -> Result<()> {
 
     // 设置非交互式模式，选择索引 0（默认分支）
     let _guard = DialogTestGuard::new().with_select_index(0);
-    
+
     // 验证 DialogTestGuard 正确设置（防御性检查）
     assert!(
         skip_config::DialogConfigManager::is_non_interactive(),
@@ -167,7 +167,7 @@ fn test_resolve_target_branch_no_base_detected() -> Result<()> {
     // - 是否正确设置了 select_index
     // - 是否存在线程安全问题（确保使用 #[serial] 属性）
     let _guard = DialogTestGuard::new().with_select_index(0);
-    
+
     // 验证 DialogTestGuard 正确设置（防御性检查）
     assert!(
         skip_config::DialogConfigManager::is_non_interactive(),
@@ -222,7 +222,7 @@ fn test_resolve_target_branch_detection_failure() -> Result<()> {
     // 注意：即使检测失败，如果检测到了其他分支，函数可能会显示对话框
     // 所以需要设置非交互式模式来避免测试卡住
     let _guard = DialogTestGuard::new().with_select_index(0);
-    
+
     // 验证 DialogTestGuard 正确设置（防御性检查）
     assert!(
         skip_config::DialogConfigManager::is_non_interactive(),
@@ -282,7 +282,7 @@ fn test_resolve_target_branch_user_cancelled() -> Result<()> {
     // 我们通过设置索引来模拟选择默认分支的行为
     // 实际的取消逻辑在代码中通过错误消息检测实现
     let _guard = DialogTestGuard::new().with_select_index(0);
-    
+
     // 验证 DialogTestGuard 正确设置（防御性检查）
     assert!(
         skip_config::DialogConfigManager::is_non_interactive(),
@@ -338,7 +338,7 @@ fn test_resolve_target_branch_select_base_branch() -> Result<()> {
 
     // 设置非交互式模式，选择索引 1（基础分支）
     let _guard = DialogTestGuard::new().with_select_index(1);
-    
+
     // 验证 DialogTestGuard 正确设置（防御性检查）
     assert!(
         skip_config::DialogConfigManager::is_non_interactive(),
