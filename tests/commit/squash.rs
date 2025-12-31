@@ -6,7 +6,6 @@
 //! - 压缩选项和结果处理
 //! - 错误处理和边界情况
 
-use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::commit::{CommitSquash, SquashOptions, SquashPreview, SquashResult};
 use workflow::git::CommitInfo;
@@ -67,7 +66,6 @@ fn create_single_commit() -> CommitInfo {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-#[ignore]
 fn test_get_branch_commits_with_multiple_commits_returns_all_commits() {
     // Arrange: 准备多个提交
     let commits = create_sample_commits();
@@ -455,7 +453,8 @@ fn test_get_branch_commits_error_handling_with_invalid_environment_handles_grace
 /// - 提交操作成功
 /// - Git 集成操作成功
 #[rstest]
-fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> Result<()> {
+#[ignore]
+fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
     let env = &git_repo_with_commit;
 

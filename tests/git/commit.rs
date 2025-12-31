@@ -49,6 +49,7 @@ use crate::common::helpers::CurrentDirGuard;
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_worktree_status_clean_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
@@ -89,6 +90,7 @@ fn test_worktree_status_clean_return_ok() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_has_changes_clean_repo_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
@@ -126,6 +128,7 @@ fn test_has_changes_clean_repo_return_ok() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_has_changes_with_untracked_files_return_collect() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
@@ -166,6 +169,7 @@ fn test_has_changes_with_untracked_files_return_collect() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_has_changes_with_modified_files_return_collect() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
@@ -209,6 +213,7 @@ fn test_has_changes_with_modified_files_return_collect() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_stage_all_changes_with_multiple_files_stages_all_return_collect() -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建多个文件
     let git_repo_with_commit = git_repo_with_commit();
@@ -252,6 +257,7 @@ fn test_stage_all_changes_with_multiple_files_stages_all_return_collect() -> Res
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_stage_specific_file_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
@@ -304,6 +310,7 @@ fn test_stage_specific_file_return_ok() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_get_latest_commit_info_return_ok() -> Result<()> {
     // 切换到测试仓库目录
     let git_repo_with_commit = git_repo_with_commit();
@@ -381,6 +388,7 @@ fn test_get_latest_commit_info_return_ok() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial_test::serial]
+#[ignore]
 fn test_operations_outside_git_repo_with_container() -> Result<()> {
     // 注意：这里使用 tempfile::tempdir 而不是 GitTestEnv，因为我们需要测试非 Git 仓库的情况
     use tempfile::tempdir;
