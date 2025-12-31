@@ -14,6 +14,8 @@ use crate::common::fixtures::cli_env;
 #[cfg(not(target_os = "windows"))]
 use crate::common::fixtures::cli_env_with_git;
 #[cfg(not(target_os = "windows"))]
+use crate::common::guards::DialogTestGuard;
+#[cfg(not(target_os = "windows"))]
 use crate::common::mock::server::MockServer;
 use crate::common::performance::measure_test_time_with_threshold;
 use rstest::rstest;
@@ -193,6 +195,17 @@ fn test_pr_with_git_repo_return_ok(cli_env_with_git: CliTestEnv) -> color_eyre::
     cli_env_with_git
         .create_file("README.md", "# Test")?
         .create_commit("Initial commit")?;
+
+    // 设置 DialogTestGuard 来配置 Dialog 交互
+    // 这样可以让 Dialog 自然触发，而不是通过命令行参数避免
+    // 按顺序设置多个 InputDialog 的值：Jira ticket (可选), PR title (必需), description (可选)
+    let _guard = DialogTestGuard::new()
+        .with_input_value_queue(vec![
+            "",                 // Jira ticket (optional) - 留空
+            "Test PR Title",    // PR title (required)
+            "Test description", // Short description (optional)
+        ])
+        .with_multi_select_indices(vec![0]); // 选择第一个变更类型
 
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
@@ -555,6 +568,17 @@ fn test_complete_workflow_dry_run_return_ok(
         .create_file("src/main.rs", "fn main() {}")?
         .create_commit("Initial commit")?
         .create_config(&TestDataGenerator::config_content())?;
+
+    // 设置 DialogTestGuard 来配置 Dialog 交互
+    // 这样可以让 Dialog 自然触发，而不是通过命令行参数避免
+    // 按顺序设置多个 InputDialog 的值：Jira ticket (可选), PR title (必需), description (可选)
+    let _guard = DialogTestGuard::new()
+        .with_input_value_queue(vec![
+            "",                 // Jira ticket (optional) - 留空
+            "Test PR Title",    // PR title (required)
+            "Test description", // Short description (optional)
+        ])
+        .with_multi_select_indices(vec![0]); // 选择第一个变更类型
 
     // 尝试完整的工作流（dry-run 模式）
     let commands = vec![

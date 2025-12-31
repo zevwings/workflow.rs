@@ -29,6 +29,21 @@ use workflow::base::dialog::skip_config::{DialogConfigBuilder, DialogConfigManag
 ///
 /// 管理测试期间的对话框非交互式配置，使用 RAII 模式确保配置在作用域结束时自动清理。
 /// 使用 thread-local storage 存储配置，保证线程安全。
+///
+/// # 并行测试安全性
+///
+/// 此 guard 完全支持并行测试：
+/// - 使用 `thread_local!` 宏，每个线程有独立的配置副本
+/// - 在创建时自动清理可能存在的旧配置（防御性编程）
+/// - 在 drop 时自动清理配置（RAII 模式）
+/// - 可以安全地使用 `cargo test -- --test-threads=N` 并行运行测试
+///
+/// # 线程池重用安全性
+///
+/// 即使测试框架重用线程（线程池），此 guard 也能保证安全：
+/// - 创建时先清理旧配置，确保每个测试有干净的状态
+/// - Drop 时清理配置，确保测试结束后不留残留
+/// - Thread-local storage 在同一个线程的不同测试之间是隔离的
 pub struct DialogTestGuard {
     _private: (), // 仅用于 RAII，不存储任何数据
 }
@@ -37,6 +52,14 @@ impl DialogTestGuard {
     /// 创建新的对话框测试配置守卫
     ///
     /// 启用非交互式模式，对话框将使用预设值而不是显示交互式界面。
+    ///
+    /// # 并行测试安全性
+    ///
+    /// 此方法使用 thread-local storage，完全支持并行测试。每个测试线程有独立的配置副本，
+    /// 互不干扰。可以安全地使用 `cargo test -- --test-threads=N` 并行运行测试。
+    ///
+    /// 即使测试框架重用线程（线程池），此方法也会先清理可能存在的旧配置，确保每个测试
+    /// 开始时都有干净的状态。
     ///
     /// # 返回
     ///
@@ -50,6 +73,10 @@ impl DialogTestGuard {
     /// let _guard = DialogTestGuard::new();
     /// ```
     pub fn new() -> Self {
+        // 防御性清理：确保即使线程被重用，也先清理可能存在的旧配置
+        // 这保证了即使测试框架重用线程（线程池），每个测试也有干净的状态
+        DialogConfigManager::clear_config();
+
         let config = DialogConfigBuilder::new().build();
         DialogConfigManager::set_config(config);
         Self { _private: () }
@@ -231,5 +258,100 @@ mod tests {
         assert!(!skip_config::DialogConfigManager::is_non_interactive());
         assert_eq!(skip_config::DialogConfigManager::get_confirm_value(), None);
         assert_eq!(skip_config::DialogConfigManager::get_select_index(), None);
+    }
+
+    /// 测试 DialogTestGuard 的线程隔离性
+    ///
+    /// ## 测试目的
+    /// 验证 `DialogTestGuard` 在不同线程之间的配置是隔离的，确保并行测试的安全性。
+    ///
+    /// ## 测试场景
+    /// 1. 在主线程设置配置
+    /// 2. 在另一个线程检查配置（应该是 None）
+    /// 3. 验证线程隔离性
+    ///
+    /// ## 预期结果
+    /// - 不同线程之间的配置完全隔离
+    /// - 一个线程的配置不会影响另一个线程
+    #[test]
+    fn test_thread_isolation() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+        use std::thread;
+
+        let flag = Arc::new(AtomicBool::new(false));
+        let flag_clone = flag.clone();
+
+        // 在主线程设置配置
+        let _guard = DialogTestGuard::new().with_confirm_value(true);
+
+        // 验证主线程能看到配置
+        assert!(skip_config::DialogConfigManager::is_non_interactive());
+        assert_eq!(
+            skip_config::DialogConfigManager::get_confirm_value(),
+            Some(true)
+        );
+
+        // 在另一个线程检查配置（应该是 None，因为 thread-local storage 是线程隔离的）
+        let handle = thread::spawn(move || {
+            let is_set = skip_config::DialogConfigManager::is_non_interactive();
+            flag_clone.store(is_set, Ordering::Relaxed);
+        });
+
+        handle.join().unwrap();
+
+        // 另一个线程应该看不到主线程的配置
+        assert!(
+            !flag.load(Ordering::Relaxed),
+            "Thread-local storage should be isolated between threads"
+        );
+    }
+
+    /// 测试 DialogTestGuard 的防御性清理
+    ///
+    /// ## 测试目的
+    /// 验证 `DialogTestGuard::new()` 会先清理可能存在的旧配置，确保线程重用时的安全性。
+    ///
+    /// ## 测试场景
+    /// 1. 手动设置一个配置
+    /// 2. 创建 DialogTestGuard（应该先清理旧配置）
+    /// 3. 验证配置被正确设置（而不是保留旧配置）
+    ///
+    /// ## 预期结果
+    /// - `new()` 会先清理旧配置
+    /// - 然后设置新配置
+    #[test]
+    fn test_defensive_cleanup() {
+        // 手动设置一个配置（模拟线程重用场景）
+        let old_config = DialogConfigBuilder::new()
+            .with_confirm_value(false)
+            .with_select_index(99)
+            .build();
+        DialogConfigManager::set_config(old_config);
+
+        // 验证旧配置存在
+        assert!(skip_config::DialogConfigManager::is_non_interactive());
+        assert_eq!(
+            skip_config::DialogConfigManager::get_confirm_value(),
+            Some(false)
+        );
+        assert_eq!(
+            skip_config::DialogConfigManager::get_select_index(),
+            Some(99)
+        );
+
+        // 创建新的 guard（应该先清理旧配置，然后设置新配置）
+        let _guard = DialogTestGuard::new().with_confirm_value(true).with_select_index(0);
+
+        // 验证新配置被正确设置（而不是保留旧配置）
+        assert!(skip_config::DialogConfigManager::is_non_interactive());
+        assert_eq!(
+            skip_config::DialogConfigManager::get_confirm_value(),
+            Some(true)
+        );
+        assert_eq!(
+            skip_config::DialogConfigManager::get_select_index(),
+            Some(0)
+        );
     }
 }
