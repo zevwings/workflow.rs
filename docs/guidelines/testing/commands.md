@@ -76,8 +76,8 @@ cargo test --lib 模块名::函数名
 # 运行所有集成测试
 cargo test --test '*'
 
-# 运行特定集成测试
-cargo test --test integration_test
+# 注意：项目使用 module_test 和 e2e_test 替代传统的 integration_test
+# 请使用下面的模块级和端到端测试命令
 ```
 
 ### 模块级集成测试
