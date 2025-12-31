@@ -8,4 +8,5 @@ pub mod templates;
 pub mod validators;
 
 // 重新导出常用类型，保持向后兼容
+#[allow(unused_imports)] // 这些是重新导出，供其他模块使用
 pub use server::{setup_mock_server, MockServer};

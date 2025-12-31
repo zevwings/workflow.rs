@@ -7,6 +7,7 @@ pub mod env_guard;
 pub mod git_config_guard;
 
 // 重新导出常用类型
+#[allow(unused_imports)] // 这些是重新导出，供其他模块使用
 pub use dialog_test_guard::DialogTestGuard;
 pub use env_guard::EnvGuard;
 pub use git_config_guard::GitConfigGuard;
