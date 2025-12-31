@@ -80,6 +80,28 @@ cargo test --test '*'
 cargo test --test integration_test
 ```
 
+### 模块级集成测试
+
+```bash
+# 运行模块级集成测试（module_test）
+# 这些测试运行较快，适合频繁运行
+cargo test --test module_test
+
+# 运行特定模块的测试
+cargo test --test module_test base::format
+```
+
+### 端到端集成测试
+
+```bash
+# 运行端到端集成测试（e2e_test）
+# 这些测试运行较慢，需要 Mock 服务器、Git 仓库等完整环境
+cargo test --test e2e_test
+
+# 运行特定的端到端测试
+cargo test --test e2e_test e2e::end_to_end
+```
+
 ### 文档测试
 
 ```bash
