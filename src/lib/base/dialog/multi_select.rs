@@ -86,6 +86,11 @@ where
     ///
     /// 如果用户取消选择，返回错误
     pub fn prompt(self) -> Result<Vec<T>> {
+        // 先检查选项是否为空（必须在非交互式检查之前）
+        if self.options.is_empty() {
+            color_eyre::eyre::bail!("No options available");
+        }
+
         // 检查 thread-local 配置（用于测试）
         if skip_config::DialogConfigManager::is_non_interactive() {
             if let Some(indices) = skip_config::DialogConfigManager::get_multi_select_indices() {
@@ -108,10 +113,6 @@ where
                 return Ok(result);
             }
             return Ok(Vec::new());
-        }
-
-        if self.options.is_empty() {
-            color_eyre::eyre::bail!("No options available");
         }
 
         let mut multi_select = MultiSelect::new(&self.prompt, self.options);

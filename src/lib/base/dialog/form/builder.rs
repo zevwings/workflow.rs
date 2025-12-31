@@ -302,16 +302,25 @@ impl FormBuilder {
                 field_values.insert(field.name.clone(), value);
             }
             FormFieldType::Password => {
-                let mut password_prompt = Password::new().with_prompt(&field.message);
+                // 检查 thread-local 配置（用于测试）
+                let password =
+                    if crate::base::dialog::skip_config::DialogConfigManager::is_non_interactive() {
+                        // 使用 pop_input_value 来支持多个 Password 字段按顺序使用不同值
+                        // 如果启用了非交互式模式但没有设置值，使用空字符串
+                        crate::base::dialog::skip_config::DialogConfigManager::pop_input_value()
+                            .unwrap_or_default()
+                    } else {
+                        let mut password_prompt = Password::new().with_prompt(&field.message);
 
-                // 如果允许空值，设置允许空密码
-                if field.allow_empty {
-                    password_prompt = password_prompt.allow_empty_password(true);
-                }
+                        // 如果允许空值，设置允许空密码
+                        if field.allow_empty {
+                            password_prompt = password_prompt.allow_empty_password(true);
+                        }
 
-                let password = password_prompt
-                    .interact()
-                    .map_err(|e| eyre!("Failed to get password: {}", e))?;
+                        password_prompt
+                            .interact()
+                            .map_err(|e| eyre!("Failed to get password: {}", e))?
+                    };
 
                 // 验证必填和空值
                 if field.required && password.is_empty() {

@@ -517,15 +517,17 @@ fn test_retry_with_429_error_handles_retryable_error_return_false() -> Result<()
             let current = *count;
             drop(count);
 
-            let client = HttpClient::global()?;
-            let config = RequestConfig::<Value, Value>::new();
-            let response = client.get(&url_clone, config)?;
-
             if current >= 2 {
                 Ok("success".to_string())
             } else {
                 // 429 错误应该是可重试的
-                Err(eyre!("Rate limit: {}", response.status))
+                // 使用 reqwest 直接发送请求，以便使用 error_for_status 将 429 状态码转换为 reqwest::Error
+                // 这样 HttpRetry 可以识别为可重试错误
+                let client = reqwest::blocking::Client::new();
+                let response = client.get(&url_clone).send()?;
+                // error_for_status 会将非 2xx 状态码转换为 reqwest::Error
+                response.error_for_status()?;
+                Ok("success".to_string())
             }
         },
         &config,

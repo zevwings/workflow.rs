@@ -95,19 +95,25 @@ fn test_resolve_target_branch_based_on_non_default() -> Result<()> {
 /// 验证当无法检测到基础分支时，`resolve_target_branch` 应该使用默认分支。
 ///
 /// ## 测试场景
-/// 1. 创建一个孤立的分支（没有明确的基础分支）
+/// 1. 创建一个基于默认分支的分支（但可能在某些边缘情况下被误判）
 /// 2. 调用 `resolve_target_branch`
 /// 3. 验证返回默认分支
 ///
 /// ## 预期结果
 /// - 返回默认分支（main）
+///
+/// ## 注意事项
+/// - 即使理论上应该直接返回默认分支，但在某些边缘情况下（例如检测逻辑返回了非默认分支），
+///   函数可能会显示对话框让用户选择
+/// - 因此必须设置 `DialogTestGuard` 来避免测试卡住
 #[test]
 #[serial]
 fn test_resolve_target_branch_no_base_detected() -> Result<()> {
     let env = GitTestEnv::new()?;
     let default_branch = "main";
 
-    // 创建一个分支（如果无法检测基础分支，应该使用默认分支）
+    // 创建一个基于默认分支的新分支
+    // 理论上应该直接返回默认分支，但为了测试的健壮性，设置非交互模式
     env.checkout_new_branch("orphan-branch")?;
     env.create_file("orphan.txt", "orphan")?;
     env.make_test_commit("orphan.txt", "orphan", "feat: add orphan")?;
@@ -115,16 +121,27 @@ fn test_resolve_target_branch_no_base_detected() -> Result<()> {
     // 切换到新分支
     std::env::set_current_dir(env.path())?;
 
+    // ⚠️ 重要：必须在调用 resolve_target_branch 之前创建 DialogTestGuard
     // 设置非交互式模式，选择索引 0（默认分支）
-    // 注意：即使检测不到基础分支，如果检测到了其他分支，函数可能会显示对话框
-    // 所以需要设置非交互式模式来避免测试卡住
+    //
+    // 为什么需要这个 guard：
+    // 1. 虽然理论上，当检测到的基础分支是默认分支时，函数应该直接返回而不显示对话框
+    // 2. 但在某些边缘情况下（例如检测逻辑返回了非默认分支），函数会显示 SelectDialog
+    // 3. SelectDialog 选项顺序为：[默认分支 (索引 0), 基础分支 (索引 1)]
+    // 4. 设置 select_index(0) 确保如果对话框出现，会选择默认分支，避免测试卡住
+    //
+    // 如果测试仍然卡住，检查：
+    // - DialogTestGuard 是否在函数调用前创建
+    // - 是否正确设置了 select_index
+    // - 是否存在线程安全问题（确保使用 #[serial] 属性）
     let _guard = DialogTestGuard::new().with_select_index(0);
 
     // 调用 resolve_target_branch
-    // 如果检测不到基础分支，应该返回默认分支
+    // 理论上应该直接返回默认分支（因为检测到的基础分支就是默认分支）
+    // 但设置 DialogTestGuard 确保即使显示对话框也能正确处理
     let target = resolve_target_branch("orphan-branch", default_branch)?;
 
-    // 应该返回默认分支（因为检测不到基础分支）
+    // 应该返回默认分支
     assert_eq!(target, default_branch);
 
     Ok(())

@@ -1202,7 +1202,9 @@ fn test_form_builder_run_with_multiple_groups() -> color_eyre::Result<()> {
     use crate::common::guards::DialogTestGuard;
 
     // Arrange: 使用 DialogTestGuard 配置非交互模式，预设多个输入值
-    let _guard = DialogTestGuard::new().with_input_value_queue(vec!["value1", "value2"]);
+    let _guard = DialogTestGuard::new()
+        .with_input_value_queue(vec!["value1", "value2"])
+        .with_confirm_value(true); // 确保可选组被处理
     let builder = FormBuilder::new()
         .add_group(
             "group1",
@@ -1212,7 +1214,7 @@ fn test_form_builder_run_with_multiple_groups() -> color_eyre::Result<()> {
         .add_group(
             "group2",
             |g| g.step(|f| f.add_text("field2", "Field 2")),
-            GroupConfig::optional(),
+            GroupConfig::optional().with_default_enabled(true), // 设置默认启用，确保在非交互模式下被处理
         );
 
     // Act: 运行表单（在非交互模式下会使用预设值）
