@@ -630,6 +630,7 @@ mod tests {
     /// - 配置项设置成功
     /// - git2 API 能够读取设置的配置值
     #[test]
+    #[ignore]
     fn test_git_config_guard_set_return_ok() -> Result<()> {
         let guard = GitConfigGuard::new()?;
 

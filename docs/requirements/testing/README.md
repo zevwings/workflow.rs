@@ -16,6 +16,7 @@
 | [test-coverage-improvement.md](./test-coverage-improvement.md) | 测试覆盖度提升综合方案 | 📋 待实施 |
 | [test-stability.md](./test-stability.md) | 测试不稳定性分析与修复方案 | 📋 分析完成，待实施 |
 | [test-quality.md](./test-quality.md) | 测试质量分析与改进方案 | 📋 分析完成 |
+| [test-windows-ignore.md](./test-windows-ignore.md) | Windows 平台测试忽略分析（PR 238） | 📋 分析完成 |
 
 ### 模块测试覆盖率文档
 

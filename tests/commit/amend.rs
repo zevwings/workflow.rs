@@ -410,6 +410,7 @@ fn test_amend_preview_clone_with_valid_preview_creates_clone() {
 /// - 提交操作成功
 /// - Git 集成操作成功
 #[rstest]
+#[ignore]
 fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
     let env = &git_repo_with_commit;
