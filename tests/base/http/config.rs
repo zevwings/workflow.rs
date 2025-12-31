@@ -8,7 +8,7 @@
 //! - 测试配置构建器模式和方法链
 
 use color_eyre::Result;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::Duration;
 use workflow::base::http::{Authorization, MultipartRequestConfig, RequestConfig};
@@ -47,11 +47,21 @@ fn test_request_config_new_with_no_parameters_creates_empty_config() {
 /// 验证 RequestConfig::default() 能够创建一个空的配置。
 ///
 /// ## 测试场景
-/// 1. 调用 default() 创建配置
+/// 测试 RequestConfig 默认值创建和业务逻辑验证
+///
+/// ## 测试目的
+/// 验证 `RequestConfig::default()` 能够创建一个空的配置，
+/// 并且默认配置符合业务规则和约束（所有字段为 None 是合理的默认值）。
+///
+/// ## 测试场景
+/// 1. 调用 `default()` 创建配置
 /// 2. 验证所有字段为 None
+/// 3. 验证默认配置可以正常使用（可以设置各个字段）
 ///
 /// ## 预期结果
-/// - 所有字段都为 None
+/// - 所有字段都为 None（符合默认状态）
+/// - 默认配置可以正常使用（可以设置各个字段）
+/// - 默认配置与 new() 创建的行为一致
 #[test]
 fn test_request_config_default_with_no_parameters_creates_empty_config() {
     // Arrange: 准备创建默认配置
@@ -59,12 +69,58 @@ fn test_request_config_default_with_no_parameters_creates_empty_config() {
     // Act: 创建默认的 RequestConfig
     let config = RequestConfig::<Value, Value>::default();
 
-    // Assert: 验证所有字段为 None
-    assert!(config.body.is_none());
-    assert!(config.query.is_none());
-    assert!(config.auth.is_none());
-    assert!(config.headers.is_none());
-    assert!(config.timeout.is_none());
+    // Assert: 验证所有字段为 None（符合默认状态）
+    assert!(
+        config.body.is_none(),
+        "Default config should have None body"
+    );
+    assert!(
+        config.query.is_none(),
+        "Default config should have None query"
+    );
+    assert!(
+        config.auth.is_none(),
+        "Default config should have None auth"
+    );
+    assert!(
+        config.headers.is_none(),
+        "Default config should have None headers"
+    );
+    assert!(
+        config.timeout.is_none(),
+        "Default config should have None timeout (will use default 30s)"
+    );
+
+    // Assert: 验证默认配置与 new() 创建的行为一致
+    let config_from_new = RequestConfig::<Value, Value>::new();
+    assert_eq!(
+        config.body.is_none(),
+        config_from_new.body.is_none(),
+        "Default config should behave the same as new()"
+    );
+
+    // Assert: 验证默认配置可以正常使用（可以设置各个字段）
+    // 这是一个业务逻辑验证：确保默认配置不是"死"状态，可以继续配置
+    let test_body = json!({"key": "value"});
+    let config_with_body = RequestConfig::<Value, Value>::default().body(&test_body);
+    assert!(
+        config_with_body.body.is_some(),
+        "Default config should be able to set body"
+    );
+
+    let test_query = json!({"page": 1});
+    let config_with_query = RequestConfig::<Value, Value>::default().query(&test_query);
+    assert!(
+        config_with_query.query.is_some(),
+        "Default config should be able to set query"
+    );
+
+    // 验证 timeout 为 None 时，实际会使用默认的 30 秒超时（这是业务规则）
+    // 注意：这里我们只验证默认值的行为，不测试实际的 HTTP 请求
+    assert!(
+        config.timeout.is_none(),
+        "Default timeout should be None, which means using default 30s timeout"
+    );
 }
 
 // ==================== RequestConfig Builder Tests ====================

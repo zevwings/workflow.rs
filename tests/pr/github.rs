@@ -40,32 +40,6 @@ fn sample_merge_request() -> MergePullRequestRequest {
 
 // ==================== Request Structure Tests ====================
 
-/// 测试创建 PR 请求结构体（参数化测试）
-///
-/// ## 测试目的
-/// 验证 CreatePullRequestRequest 结构体能够使用有效字段正确创建。
-///
-/// ## 测试场景
-/// 使用 fixture 提供的示例请求数据
-///
-/// ## 预期结果
-/// - 所有字段值正确（title、body、head、base）
-#[rstest]
-fn test_create_request_structure_with_valid_fields_creates_request(
-    sample_create_request: CreatePullRequestRequest,
-) {
-    // Arrange: 使用 fixture 提供的请求
-
-    // Act: 验证请求结构
-    // (结构验证在 Assert 中完成)
-
-    // Assert: 验证所有字段值正确
-    assert_eq!(sample_create_request.title, "Test PR");
-    assert_eq!(sample_create_request.body, "Test body");
-    assert_eq!(sample_create_request.head, "feature/test");
-    assert_eq!(sample_create_request.base, "main");
-}
-
 /// 测试创建 PR 请求序列化（参数化测试）
 ///
 /// ## 测试目的
@@ -113,31 +87,6 @@ fn test_create_pr_request_serialization_with_various_inputs_serializes_correctly
     assert_eq!(obj.get("head").and_then(|v| v.as_str()), Some(head));
     assert_eq!(obj.get("base").and_then(|v| v.as_str()), Some(base));
     Ok(())
-}
-
-/// 测试合并 PR 请求结构体（参数化测试）
-///
-/// ## 测试目的
-/// 验证 MergePullRequestRequest 结构体能够使用有效字段正确创建。
-///
-/// ## 测试场景
-/// 使用 fixture 提供的示例请求数据
-///
-/// ## 预期结果
-/// - 所有字段值正确（commit_title、commit_message、merge_method）
-#[rstest]
-fn test_merge_request_structure_with_valid_fields_creates_request(
-    sample_merge_request: MergePullRequestRequest,
-) {
-    // Arrange: 使用 fixture 提供的请求
-
-    // Act: 验证请求结构
-    // (结构验证在 Assert 中完成)
-
-    // Assert: 验证所有字段值正确
-    assert_eq!(sample_merge_request.commit_title, None);
-    assert_eq!(sample_merge_request.commit_message, None);
-    assert_eq!(sample_merge_request.merge_method, "squash");
 }
 
 /// 测试合并 PR 请求序列化（参数化测试）
@@ -256,27 +205,6 @@ fn test_update_pr_request_serialization_with_various_options_serializes_correctl
 
 // ==================== Response Structure Tests ====================
 
-/// 测试创建 PR 响应结构体
-///
-/// ## 测试目的
-/// 验证 CreatePullRequestResponse 结构体能够使用有效字段正确创建。
-///
-/// ## 预期结果
-/// - html_url 字段值正确
-#[test]
-fn test_create_pull_request_response_structure_with_valid_fields_creates_response() {
-    // Arrange: 准备响应字段值
-    let html_url = "https://github.com/owner/repo/pull/123";
-
-    // Act: 创建 CreatePullRequestResponse 实例
-    let response = CreatePullRequestResponse {
-        html_url: html_url.to_string(),
-    };
-
-    // Assert: 验证字段值正确
-    assert_eq!(response.html_url, html_url);
-}
-
 /// 测试创建 PR 响应反序列化
 ///
 /// ## 测试目的
@@ -300,50 +228,6 @@ fn test_create_pull_request_response_deserialization_with_valid_json_deserialize
     // Assert: 验证字段值正确
     assert_eq!(response.html_url, "https://github.com/owner/repo/pull/123");
     Ok(())
-}
-
-/// 测试 PR 信息结构体
-///
-/// ## 测试目的
-/// 验证 PullRequestInfo 结构体能够使用有效字段正确创建。
-///
-/// ## 预期结果
-/// - 所有字段值正确（number、title、body、state、merged、head、base等）
-#[test]
-fn test_pull_request_info_structure_with_valid_fields_creates_info() {
-    // Arrange: 准备 PR 信息字段值
-    let number = 123;
-    let title = "Test PR";
-    let body = Some("Test body".to_string());
-    let state = "open";
-
-    // Act: 创建 PullRequestInfo 实例
-    let pr_info = PullRequestInfo {
-        number,
-        title: title.to_string(),
-        body: body.clone(),
-        state: state.to_string(),
-        merged: Some(false),
-        merged_at: None,
-        mergeable: None,
-        html_url: "https://github.com/owner/repo/pull/123".to_string(),
-        head: PullRequestBranch {
-            ref_name: "feature/test".to_string(),
-        },
-        base: PullRequestBranch {
-            ref_name: "main".to_string(),
-        },
-        user: None,
-    };
-
-    // Assert: 验证所有字段值正确
-    assert_eq!(pr_info.number, number);
-    assert_eq!(pr_info.title, title);
-    assert_eq!(pr_info.body, body);
-    assert_eq!(pr_info.state, state);
-    assert_eq!(pr_info.merged, Some(false));
-    assert_eq!(pr_info.head.ref_name, "feature/test");
-    assert_eq!(pr_info.base.ref_name, "main");
 }
 
 /// 测试 PR 信息反序列化
@@ -421,27 +305,6 @@ fn test_pull_request_info_merged_state_with_merged_pr_return_ok() -> Result<()> 
 
 // ==================== PullRequestBranch Tests ====================
 
-/// 测试 PR 分支结构体
-///
-/// ## 测试目的
-/// 验证 PullRequestBranch 结构体能够使用有效字段正确创建。
-///
-/// ## 预期结果
-/// - ref_name 字段值正确
-#[test]
-fn test_pull_request_branch_structure_with_valid_ref_creates_branch() {
-    // Arrange: 准备分支引用名
-    let ref_name = "feature/test";
-
-    // Act: 创建 PullRequestBranch 实例
-    let branch = PullRequestBranch {
-        ref_name: ref_name.to_string(),
-    };
-
-    // Assert: 验证字段值正确
-    assert_eq!(branch.ref_name, ref_name);
-}
-
 /// 测试 PR 分支反序列化
 ///
 /// ## 测试目的
@@ -468,59 +331,6 @@ fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch_
 }
 
 // ==================== GitHubUser Tests ====================
-
-/// 测试 GitHub 用户结构体（包含所有字段）
-///
-/// ## 测试目的
-/// 验证 GitHubUser 结构体能够使用所有字段正确创建。
-///
-/// ## 预期结果
-/// - 所有字段值正确（login、name、email）
-#[test]
-fn test_github_user_structure_with_all_fields_creates_user() {
-    // Arrange: 准备用户字段值
-    let login = "testuser";
-    let name = Some("Test User".to_string());
-    let email = Some("test@example.com".to_string());
-
-    // Act: 创建 GitHubUser 实例
-    let user = GitHubUser {
-        login: login.to_string(),
-        name: name.clone(),
-        email: email.clone(),
-    };
-
-    // Assert: 验证所有字段值正确
-    assert_eq!(user.login, login);
-    assert_eq!(user.name, name);
-    assert_eq!(user.email, email);
-}
-
-/// 测试 GitHub 用户结构体（最小字段）
-///
-/// ## 测试目的
-/// 验证 GitHubUser 结构体能够使用最小字段（只有 login）正确创建。
-///
-/// ## 预期结果
-/// - login 字段值正确
-/// - 可选字段（name、email）为 None
-#[test]
-fn test_github_user_minimal_with_only_login_creates_user() {
-    // Arrange: 准备最小字段值（只有 login）
-    let login = "testuser";
-
-    // Act: 创建 GitHubUser 实例（可选字段为 None）
-    let user = GitHubUser {
-        login: login.to_string(),
-        name: None,
-        email: None,
-    };
-
-    // Assert: 验证字段值正确
-    assert_eq!(user.login, login);
-    assert_eq!(user.name, None);
-    assert_eq!(user.email, None);
-}
 
 /// 测试 GitHub 用户反序列化
 ///

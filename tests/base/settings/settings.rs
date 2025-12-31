@@ -353,28 +353,93 @@ fn test_llm_settings_current_provider_with_valid_settings_returns_provider() {
     assert_eq!(current_provider.model, Some("gpt-4".to_string()));
 }
 
-/// 测试LLMSettings的默认值方法
+/// 测试LLMSettings的默认值方法和业务逻辑验证
 ///
 /// ## 测试目的
-/// 验证测试函数能够正确执行预期功能。
+/// 验证 `LLMSettings` 的默认值方法返回正确的值，并且这些默认值符合业务规则和约束。
 ///
 /// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
-/// 3. 验证结果
+/// 1. 调用各个默认值方法
+/// 2. 验证返回值符合预期
+/// 3. 验证默认值符合业务规则和约束
 ///
 /// ## 预期结果
-/// - 测试通过，无错误
+/// - 默认 provider 为 "openai"（有效的 provider）
+/// - 默认 language 为 "en"（有效的语言代码）
+/// - 各 provider 的默认模型正确（openai: "gpt-4.0", deepseek: "deepseek-chat"）
+/// - 未知 provider（包括 proxy）返回空字符串（符合业务规则）
 #[test]
 fn test_llm_settings_defaults_with_no_parameters_returns_default_values() {
     // Arrange: 准备检查默认值
 
     // Act & Assert: 验证各个默认值方法返回正确的值
-    assert_eq!(LLMSettings::default_provider(), "openai");
-    assert_eq!(LLMSettings::default_language(), "en");
-    assert_eq!(LLMSettings::default_model("openai"), "gpt-4.0");
-    assert_eq!(LLMSettings::default_model("deepseek"), "deepseek-chat");
-    assert_eq!(LLMSettings::default_model("unknown"), ""); // proxy 必须输入，没有默认值
+    let default_provider = LLMSettings::default_provider();
+    let default_language = LLMSettings::default_language();
+    let openai_model = LLMSettings::default_model("openai");
+    let deepseek_model = LLMSettings::default_model("deepseek");
+    let proxy_model = LLMSettings::default_model("proxy");
+    let unknown_model = LLMSettings::default_model("unknown");
+
+    // Assert: 验证默认值
+    assert_eq!(default_provider, "openai");
+    assert_eq!(default_language, "en");
+    assert_eq!(openai_model, "gpt-4.0");
+    assert_eq!(deepseek_model, "deepseek-chat");
+    assert_eq!(proxy_model, ""); // proxy 必须输入，没有默认值
+    assert_eq!(unknown_model, ""); // 未知 provider 返回空字符串
+
+    // Assert: 验证业务逻辑和约束
+    // 验证默认 provider 是有效的 provider 之一
+    let valid_providers = ["openai", "deepseek", "proxy"];
+    assert!(
+        valid_providers.contains(&default_provider.as_str()),
+        "Default provider should be one of: {:?}, got: {}",
+        valid_providers,
+        default_provider
+    );
+
+    // 验证默认 language 是有效的语言代码（ISO 639-1 格式）
+    assert!(
+        default_language.len() >= 2 && default_language.len() <= 5,
+        "Language code should be 2-5 characters (ISO 639-1 format), got: {}",
+        default_language
+    );
+    assert!(
+        default_language.chars().all(|c| c.is_ascii_lowercase() || c == '-'),
+        "Language code should contain only lowercase letters and hyphens, got: {}",
+        default_language
+    );
+
+    // 验证已知 provider 的默认模型不为空且有效
+    assert!(
+        !openai_model.is_empty(),
+        "OpenAI default model should not be empty"
+    );
+    assert!(
+        openai_model.starts_with("gpt-"),
+        "OpenAI model should start with 'gpt-', got: {}",
+        openai_model
+    );
+
+    assert!(
+        !deepseek_model.is_empty(),
+        "DeepSeek default model should not be empty"
+    );
+    assert!(
+        deepseek_model.starts_with("deepseek-"),
+        "DeepSeek model should start with 'deepseek-', got: {}",
+        deepseek_model
+    );
+
+    // 验证 proxy 和未知 provider 返回空字符串（符合业务规则：必须手动配置）
+    assert_eq!(
+        proxy_model, "",
+        "Proxy provider should return empty string (must be configured manually)"
+    );
+    assert_eq!(
+        unknown_model, "",
+        "Unknown provider should return empty string (must be configured manually)"
+    );
 }
 
 /// 测试创建LLMProviderSettings并验证字段值

@@ -5,7 +5,7 @@
 use color_eyre::Result;
 use workflow::base::dialog::{
     Condition, ConditionOperator, ConditionValue, FieldDefaultValue, FormField, FormFieldType,
-    FormGroup, FormResult, FormStep, GroupConfig, StepType,
+    FormResult, FormStep, GroupConfig, StepType,
 };
 
 // ==================== FormFieldType 枚举测试 ====================
@@ -36,25 +36,6 @@ fn test_form_field_type_variants_with_all_types_creates_and_compares() {
     assert_eq!(confirmation, FormFieldType::Confirmation);
     assert_ne!(text, password);
     assert_ne!(selection, confirmation);
-}
-
-/// 测试 FormFieldType 枚举的克隆功能
-///
-/// ## 测试目的
-/// 验证 FormFieldType 枚举能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_form_field_type_clone_with_valid_type_creates_clone() {
-    // Arrange: 准备 FormFieldType 实例
-
-    // Act: 克隆类型
-    let field_type = FormFieldType::Text;
-    let cloned = field_type;
-
-    // Assert: 验证克隆成功
-    assert_eq!(field_type, cloned);
 }
 
 /// 测试 FormFieldType 枚举的调试格式化
@@ -104,25 +85,6 @@ fn test_condition_operator_variants_with_all_operators_creates_and_compares() {
     assert_eq!(not_in, ConditionOperator::NotIn);
     assert_ne!(equals, not_equals);
     assert_ne!(in_op, not_in);
-}
-
-/// 测试 ConditionOperator 枚举的克隆功能
-///
-/// ## 测试目的
-/// 验证 ConditionOperator 枚举能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_condition_operator_clone_with_valid_operator_creates_clone() {
-    // Arrange: 准备 ConditionOperator 实例
-
-    // Act: 克隆操作符
-    let op = ConditionOperator::Equals;
-    let cloned = op;
-
-    // Assert: 验证克隆成功
-    assert_eq!(op, cloned);
 }
 
 // ==================== ConditionValue 枚举测试 ====================
@@ -194,28 +156,6 @@ fn test_condition_value_multiple_with_vec_creates_multiple_values() {
     }
 }
 
-/// 测试 ConditionValue 枚举的克隆功能
-///
-/// ## 测试目的
-/// 验证 ConditionValue 枚举能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_condition_value_clone_with_valid_value_creates_clone() {
-    // Arrange: 准备 ConditionValue 实例
-
-    // Act: 克隆值
-    let value1 = ConditionValue::single("test");
-    let value2 = value1.clone();
-
-    // Assert: 验证克隆成功
-    match (value1, value2) {
-        (ConditionValue::Single(s1), ConditionValue::Single(s2)) => assert_eq!(s1, s2),
-        _ => panic!("Expected Single variants"),
-    }
-}
-
 // ==================== Condition 结构体测试 ====================
 
 /// 测试 Condition 结构体的创建
@@ -244,30 +184,6 @@ fn test_condition_creation_with_valid_fields_creates_condition() {
         ConditionValue::Single(s) => assert_eq!(s, "test_value"),
         ConditionValue::Multiple(_) => panic!("Expected Single variant"),
     }
-}
-
-/// 测试 Condition 结构体的克隆功能
-///
-/// ## 测试目的
-/// 验证 Condition 结构体能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_condition_clone_with_valid_condition_creates_clone() {
-    // Arrange: 准备 Condition 实例
-
-    // Act: 克隆条件
-    let condition1 = Condition {
-        field_name: "field".to_string(),
-        operator: ConditionOperator::Equals,
-        value: ConditionValue::single("value"),
-    };
-    let condition2 = condition1.clone();
-
-    // Assert: 验证克隆成功
-    assert_eq!(condition1.field_name, condition2.field_name);
-    assert_eq!(condition1.operator, condition2.operator);
 }
 
 /// 测试 Condition 结构体的调试格式化
@@ -377,28 +293,6 @@ fn test_field_default_value_as_bool_with_bool_value_returns_bool() {
 
     let string_value = FieldDefaultValue::String("test".to_string());
     assert_eq!(string_value.as_bool(), None);
-}
-
-/// 测试 FieldDefaultValue 枚举的克隆功能
-///
-/// ## 测试目的
-/// 验证 FieldDefaultValue 枚举能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_field_default_value_clone_with_valid_value_creates_clone() {
-    // Arrange: 准备 FieldDefaultValue 实例
-
-    // Act: 克隆值
-    let value1 = FieldDefaultValue::String("test".to_string());
-    let value2 = value1.clone();
-
-    // Assert: 验证克隆成功
-    match (value1, value2) {
-        (FieldDefaultValue::String(s1), FieldDefaultValue::String(s2)) => assert_eq!(s1, s2),
-        _ => panic!("Expected String variants"),
-    }
 }
 
 // ==================== FormResult 结构体测试 ====================
@@ -562,26 +456,6 @@ fn test_form_result_get_required_bool_with_existing_field_return_ok() -> Result<
     assert!(result.get_required_bool("nonexistent").is_err());
 
     Ok(())
-}
-
-/// 测试 FormResult 结构体的克隆功能
-///
-/// ## 测试目的
-/// 验证 FormResult 结构体能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_form_result_clone_with_valid_result_creates_clone() {
-    // Arrange: 准备 FormResult 实例
-
-    // Act: 克隆结果
-    let mut result1 = FormResult::new();
-    result1.values.insert("field1".to_string(), "value1".to_string());
-    let result2 = result1.clone();
-
-    // Assert: 验证克隆成功
-    assert_eq!(result1.get("field1"), result2.get("field1"));
 }
 
 /// 测试 FormResult 结构体的调试格式化
@@ -962,26 +836,6 @@ fn test_group_config_default_creates_default_config() {
     assert!(!config.default_enabled);
 }
 
-/// 测试 GroupConfig 结构体的克隆功能
-///
-/// ## 测试目的
-/// 验证 GroupConfig 结构体能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_group_config_clone_with_valid_config_creates_clone() {
-    // Arrange: 准备 GroupConfig 实例
-
-    // Act: 克隆配置
-    let config1 = GroupConfig::optional().with_title("Title");
-    let config2 = config1.clone();
-
-    // Assert: 验证克隆成功
-    assert_eq!(config1.title, config2.title);
-    assert_eq!(config1.optional, config2.optional);
-}
-
 /// 测试 GroupConfig 结构体的调试格式化
 ///
 /// ## 测试目的
@@ -1001,102 +855,7 @@ fn test_group_config_debug_with_valid_config_returns_debug_string() {
     assert!(debug_str.contains("Title") || debug_str.contains("optional"));
 }
 
-// ==================== FormGroup 结构体测试 ====================
-
-/// 测试 FormGroup 结构体的创建
-///
-/// ## 测试目的
-/// 验证 FormGroup 结构体能够使用有效字段正确创建。
-///
-/// ## 预期结果
-/// - 所有字段正确设置
-/// - id、title、description、optional、default_enabled、steps 等字段正确
-#[test]
-fn test_form_group_creation_with_valid_fields_creates_group() {
-    // Arrange: 准备组字段（覆盖 types.rs:267-280）
-
-    // Act: 创建 FormGroup
-    let group = FormGroup {
-        id: "group1".to_string(),
-        title: Some("Group Title".to_string()),
-        description: Some("Group Description".to_string()),
-        optional: false,
-        default_enabled: false,
-        steps: vec![],
-    };
-
-    // Assert: 验证组字段正确
-    assert_eq!(group.id, "group1");
-    assert_eq!(group.title, Some("Group Title".to_string()));
-    assert_eq!(group.description, Some("Group Description".to_string()));
-    assert!(!group.optional);
-    assert!(!group.default_enabled);
-    assert_eq!(group.steps.len(), 0);
-}
-
-/// 测试 FormGroup 结构体创建可选组
-///
-/// ## 测试目的
-/// 验证 FormGroup 结构体能够创建可选组配置。
-///
-/// ## 预期结果
-/// - optional 字段为 true
-/// - default_enabled 字段为 true
-/// - 其他字段正确设置
-#[test]
-fn test_form_group_creation_with_optional_config_creates_optional_group() {
-    // Arrange: 准备可选组字段
-
-    // Act: 创建可选组
-    let group = FormGroup {
-        id: "group2".to_string(),
-        title: None,
-        description: None,
-        optional: true,
-        default_enabled: true,
-        steps: vec![],
-    };
-
-    // Assert: 验证可选组配置正确
-    assert!(group.optional);
-    assert!(group.default_enabled);
-}
-
 // ==================== FormField 结构体测试 ====================
-
-/// 测试 FormField 结构体的创建
-///
-/// ## 测试目的
-/// 验证 FormField 结构体能够使用有效字段正确创建。
-///
-/// ## 预期结果
-/// - 所有字段正确设置
-/// - name、field_type、message、choices、default_choice、default_value、required、allow_empty、validator、condition 等字段正确
-#[test]
-fn test_form_field_creation_with_valid_fields_creates_field() {
-    // Arrange: 准备字段属性（覆盖 types.rs:97-121）
-
-    // Act: 创建 FormField
-    let field = FormField {
-        name: "field1".to_string(),
-        field_type: FormFieldType::Text,
-        message: "Enter value".to_string(),
-        choices: vec![],
-        default_choice: None,
-        default_value: None,
-        required: false,
-        allow_empty: true,
-        validator: None,
-        condition: None,
-    };
-
-    // Assert: 验证字段属性正确
-    assert_eq!(field.name, "field1");
-    assert_eq!(field.field_type, FormFieldType::Text);
-    assert_eq!(field.message, "Enter value");
-    assert!(!field.required);
-    assert!(field.allow_empty);
-}
 
 /// 测试 FormField 结构体创建带条件的字段
 ///
@@ -1138,36 +897,4 @@ fn test_form_field_creation_with_condition_creates_field_with_condition() -> Res
         .ok_or_else(|| color_eyre::eyre::eyre!("condition should exist"))?;
     assert_eq!(cond.field_name, condition.field_name);
     Ok(())
-}
-
-/// 测试 FormField 结构体的克隆功能
-///
-/// ## 测试目的
-/// 验证 FormField 结构体能够正确克隆。
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-/// - 所有字段都正确克隆
-#[test]
-fn test_form_field_clone_with_valid_field_creates_clone() {
-    // Arrange: 准备 FormField 实例
-
-    // Act: 克隆字段
-    let field1 = FormField {
-        name: "field1".to_string(),
-        field_type: FormFieldType::Text,
-        message: "Message".to_string(),
-        choices: vec![],
-        default_choice: None,
-        default_value: None,
-        required: false,
-        allow_empty: true,
-        validator: None,
-        condition: None,
-    };
-    let field2 = field1.clone();
-
-    // Assert: 验证克隆成功
-    assert_eq!(field1.name, field2.name);
-    assert_eq!(field1.field_type, field2.field_type);
 }

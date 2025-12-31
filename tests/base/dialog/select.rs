@@ -194,47 +194,73 @@ fn test_select_dialog_new_without_default_creates_dialog() {
     // Assert: 验证对话框创建成功
 }
 
-// 注意：以下测试需要用户交互，在 CI 环境中会被忽略
-
-/// 测试选择对话框的用户交互
+/// 测试选择对话框使用 DialogTestGuard 配置非交互模式
 ///
 /// ## 测试目的
-/// 验证`SelectDialog`正确显示选项列表并接收用户选择。
+/// 验证`SelectDialog`在非交互模式下能够使用预设索引返回正确结果。
 /// 覆盖源代码: `select.rs:151-156`（错误处理）
 ///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户使用方向键选择并按Enter确认
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-/// - **UI/UX验证**: 用于手动验证选择对话框的显示和操作
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_select_dialog_prompt -- --ignored
-/// ```
-/// 然后使用↑↓键选择选项，按Enter确认或Esc取消
-///
 /// ## 测试场景
-/// 1. 创建选择对话框，包含3个选项
-/// 2. 设置默认选项为第一个（索引0）
-/// 3. 显示对话框并等待用户选择
-/// 4. 验证返回值（成功返回选中的索引，取消返回错误）
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设选择索引1
+/// 2. 创建选择对话框，包含3个选项
+/// 3. 调用 prompt() 方法
+/// 4. 验证返回预设的索引值
 ///
-/// ## 预期行为
-/// - 显示选项列表，默认高亮第一个
-/// - 接受方向键导航和Enter确认
-/// - 用户确认返回`Ok(index)`
-/// - 用户取消（Esc）返回`Err(OperationCanceled)`
+/// ## 预期结果
+/// - 返回 Ok(1)，表示选择了索引1的选项
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_select_dialog_prompt() {
-    // Arrange: 准备测试用户选择的情况（覆盖 select.rs:151-156 的错误处理）
+fn test_select_dialog_prompt_with_dialog_test_guard_returns_preset_index() -> color_eyre::Result<()>
+{
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设选择索引1
+    let _guard = DialogTestGuard::new().with_select_index(1);
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let dialog = SelectDialog::new("Choose an option", options).with_default(0);
+
+    // Act: 调用 prompt() 方法（在非交互模式下会使用预设值）
+    let result = dialog.prompt()?;
+
+    // Assert: 验证返回预设的选项值（索引1对应"Option 2"）
+    assert_eq!(
+        result, "Option 2",
+        "Should return preset option from DialogTestGuard"
+    );
+    Ok(())
+}
+
+/// 测试选择对话框空选项列表的错误处理
+///
+/// ## 测试目的
+/// 验证`SelectDialog`在选项列表为空时能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 创建选择对话框，选项列表为空
+/// 2. 调用 prompt() 方法
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回 Err，错误消息包含 "No options available"
+#[test]
+fn test_select_dialog_prompt_with_empty_options_returns_error() {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式
+    let _guard = DialogTestGuard::new();
+    let options: Vec<&str> = vec![];
+    let dialog = SelectDialog::new("Choose an option", options);
+
+    // Act: 调用 prompt() 方法
     let result = dialog.prompt();
-    // 这个测试需要手动运行
-    // 如果用户取消，应该返回 OperationCanceled 错误
-    // 如果有其他错误，应该返回 Selection error
-    assert!(result.is_ok() || result.is_err());
+
+    // Assert: 验证返回错误
+    assert!(result.is_err(), "Should return error for empty options");
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("No options available"),
+        "Error message should indicate no options"
+    );
 }
 
 /// 测试模糊匹配评分器处理非空输入

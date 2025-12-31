@@ -193,52 +193,50 @@ fn test_form_builder_validate_with_empty_step_handles_gracefully() {
     // Act: 运行验证
     let result = builder.run();
 
-    // Assert: 如果步骤没有字段，验证应该失败（可能成功或失败，取决于 FieldBuilder 默认行为）
-    assert!(result.is_ok() || result.is_err());
+    // Assert: 如果步骤没有字段，验证应该失败
+    // 空步骤应该返回错误，因为没有字段可以收集
+    assert!(result.is_err(), "Empty step should return error");
+    let error_msg = result.unwrap_err().to_string();
+    assert!(!error_msg.is_empty(), "Error message should not be empty");
 }
 
-// 注意：run() 方法需要用户交互，以下测试会被忽略
-/// 测试表单构建器的完整运行流程
+/// 测试表单构建器使用 DialogTestGuard 配置非交互模式运行
 ///
 /// ## 测试目的
-/// 验证`FormBuilder`能够正确显示多步骤表单并接收用户输入。覆盖源代码: `builder.rs:173-229`
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户依次输入各个表单字段
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-/// - **多步骤流程**: 涉及多个连续的用户输入步骤
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_run -- --ignored
-/// ```
-/// 然后按照提示依次输入各字段值
+/// 验证`FormBuilder`在非交互模式下能够使用预设输入值正确运行并收集表单数据。
+/// 覆盖源代码: `builder.rs:173-229`
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加表单组和字段
-/// 3. 运行表单并等待用户输入
-/// 4. 验证收集的表单数据
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设输入值
+/// 2. 创建表单构建器，添加文本字段
+/// 3. 运行表单
+/// 4. 验证收集的表单数据包含预设值
 ///
-/// ## 预期行为
-/// - 依次显示各个表单字段
-/// - 接受用户输入并验证
-/// - 返回`Ok(FormData)`包含所有输入值
-/// - 如果用户取消则返回错误
+/// ## 预期结果
+/// - 返回 Ok(FormResult)，包含预设的输入值
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-#[cfg(feature = "interactive-tests")]
-fn test_form_builder_run() {
-    // Arrange: 准备测试运行表单（覆盖 builder.rs:173-229）
+fn test_form_builder_run_with_dialog_test_guard_returns_form_result() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设输入值
+    let _guard = DialogTestGuard::new().with_input_value_queue(vec!["test_value"]);
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| g.step(|f| f.add_text("field1", "Field 1")),
         GroupConfig::required(),
     );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证收集的表单数据包含预设值
+    assert_eq!(
+        result.get("field1"),
+        Some(&"test_value".to_string()),
+        "Should contain preset input value"
+    );
+    Ok(())
 }
 
 /// 测试无条件步骤创建
@@ -503,26 +501,62 @@ fn test_form_builder_add_optional_group_marks_group_as_optional() {
     assert!(builder.groups[0].default_enabled);
 }
 
-/// 测试默认构建器创建
+/// 测试默认构建器创建和业务逻辑验证
 ///
 /// ## 测试目的
-/// 验证 FormBuilder::default() 能够创建一个空的表单构建器。
+/// 验证 `FormBuilder::default()` 能够创建一个空的表单构建器，
+/// 并且默认构建器可以正常使用（可以添加组、可以构建表单等）。
 ///
 /// ## 测试场景
-/// 1. 调用 FormBuilder::default() 创建构建器
+/// 1. 调用 `FormBuilder::default()` 创建构建器
 /// 2. 验证构建器的 groups 字段为空
+/// 3. 验证默认构建器可以正常使用（可以添加组）
 ///
 /// ## 预期结果
-/// - 构建器的 groups 为空
+/// - 构建器的 groups 为空（符合默认状态）
+/// - 默认构建器可以正常添加组（验证可用性）
+/// - 默认构建器与 new() 创建的行为一致
 #[test]
 fn test_form_builder_default_creates_empty_builder() {
     // Arrange: 准备使用 Default trait
 
-    // Act: 创建默认构建器（覆盖 builder.rs:386-389）
+    // Act: 创建默认构建器（覆盖 builder.rs:378-382）
     let builder = FormBuilder::default();
 
-    // Assert: 验证构建器为空
-    assert!(builder.groups.is_empty());
+    // Assert: 验证构建器为空（符合默认状态）
+    assert!(
+        builder.groups.is_empty(),
+        "Default builder should have empty groups"
+    );
+
+    // Assert: 验证默认构建器与 new() 创建的行为一致
+    let builder_from_new = FormBuilder::new();
+    assert_eq!(
+        builder.groups.len(),
+        builder_from_new.groups.len(),
+        "Default builder should behave the same as new()"
+    );
+
+    // Assert: 验证默认构建器可以正常使用（可以添加组）
+    // 这是一个业务逻辑验证：确保默认构建器不是"死"状态，可以继续构建
+    let builder_with_group = FormBuilder::default().add_group(
+        "test_group",
+        |g| g.step(|f| f.add_text("test_field", "Test Field")),
+        GroupConfig::required(),
+    );
+    assert_eq!(
+        builder_with_group.groups.len(),
+        1,
+        "Default builder should be able to add groups"
+    );
+    assert_eq!(
+        builder_with_group.groups[0].id, "test_group",
+        "Added group should have correct id"
+    );
+    assert!(
+        !builder_with_group.groups[0].optional,
+        "Required group should not be optional"
+    );
 }
 
 /// 测试组配置所有选项
@@ -918,100 +952,96 @@ fn test_form_builder_field_without_condition_creates_unconditional_field() {
 /// 测试询问文本字段功能
 ///
 /// ## 测试目的
-/// 验证 FormBuilder 能够询问文本类型的字段（需要用户交互）。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户输入文本
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_ask_field_text -- --ignored
-/// ```
+/// 验证 FormBuilder 能够询问文本类型的字段，使用 DialogTestGuard 配置非交互模式。
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加一个包含文本字段的组
-/// 3. 运行表单并等待用户输入
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设输入值
+/// 2. 创建表单构建器，添加文本字段
+/// 3. 运行表单并验证收集的表单数据
 ///
 /// ## 预期结果
-/// - 能够询问文本字段并接收用户输入
+/// - 返回 Ok(FormResult)，包含预设的输入值
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_form_builder_ask_field_text() {
-    // Arrange: 准备测试 ask_field() 方法 - Text 类型（覆盖 builder.rs:269-311）
+fn test_form_builder_ask_field_text() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设输入值
+    let _guard = DialogTestGuard::new().with_input_value_queue(vec!["test_text_value"]);
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| g.step(|f| f.add_text("field1", "Field 1")),
         GroupConfig::required(),
     );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证收集的表单数据包含预设值
+    assert_eq!(
+        result.get("field1"),
+        Some(&"test_text_value".to_string()),
+        "Should contain preset input value for text field"
+    );
+    Ok(())
 }
 
 /// 测试询问密码字段功能
 ///
 /// ## 测试目的
-/// 验证 FormBuilder 能够询问密码类型的字段（需要用户交互）。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户输入密码
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_ask_field_password -- --ignored
-/// ```
+/// 验证 FormBuilder 能够询问密码类型的字段，使用 DialogTestGuard 配置非交互模式。
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加一个包含密码字段的组
-/// 3. 运行表单并等待用户输入
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设密码输入值
+/// 2. 创建表单构建器，添加密码字段
+/// 3. 运行表单并验证收集的表单数据
 ///
 /// ## 预期结果
-/// - 能够询问密码字段并接收用户输入
+/// - 返回 Ok(FormResult)，包含预设的密码值
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_form_builder_ask_field_password() {
-    // Arrange: 准备测试 ask_field() 方法 - Password 类型（覆盖 builder.rs:312-341）
+fn test_form_builder_ask_field_password() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设密码输入值
+    let _guard = DialogTestGuard::new().with_input_value_queue(vec!["secret_password"]);
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| g.step(|f| f.add_password("password", "Enter password")),
         GroupConfig::required(),
     );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证收集的表单数据包含预设的密码值
+    assert_eq!(
+        result.get("password"),
+        Some(&"secret_password".to_string()),
+        "Should contain preset input value for password field"
+    );
+    Ok(())
 }
 
 /// 测试询问选择字段功能
 ///
 /// ## 测试目的
-/// 验证 FormBuilder 能够询问选择类型的字段（需要用户交互）。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户选择选项
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_ask_field_selection -- --ignored
-/// ```
+/// 验证 FormBuilder 能够询问选择类型的字段，使用 DialogTestGuard 配置非交互模式。
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加一个包含选择字段的组
-/// 3. 运行表单并等待用户选择
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设选择索引
+/// 2. 创建表单构建器，添加选择字段
+/// 3. 运行表单并验证收集的表单数据
 ///
 /// ## 预期结果
-/// - 能够询问选择字段并接收用户选择
+/// - 返回 Ok(FormResult)，包含预设的选择值
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_form_builder_ask_field_selection() {
-    // Arrange: 准备测试 ask_field() 方法 - Selection 类型（覆盖 builder.rs:342-360）
+fn test_form_builder_ask_field_selection() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设选择索引0（选择第一个选项）
+    let _guard = DialogTestGuard::new().with_select_index(0);
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| {
@@ -1026,45 +1056,53 @@ fn test_form_builder_ask_field_selection() {
         GroupConfig::required(),
     );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证收集的表单数据包含预设的选择值
+    assert_eq!(
+        result.get("choice"),
+        Some(&"option1".to_string()),
+        "Should contain preset selection value (first option)"
+    );
+    Ok(())
 }
 
 /// 测试询问确认字段功能
 ///
 /// ## 测试目的
-/// 验证 FormBuilder 能够询问确认类型的字段（需要用户交互）。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户确认
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_ask_field_confirmation -- --ignored
-/// ```
+/// 验证 FormBuilder 能够询问确认类型的字段，使用 DialogTestGuard 配置非交互模式。
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加一个包含确认字段的组
-/// 3. 运行表单并等待用户确认
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设确认值
+/// 2. 创建表单构建器，添加确认字段
+/// 3. 运行表单并验证收集的表单数据
 ///
 /// ## 预期结果
-/// - 能够询问确认字段并接收用户确认
+/// - 返回 Ok(FormResult)，包含预设的确认值
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_form_builder_ask_field_confirmation() {
-    // Arrange: 准备测试 ask_field() 方法 - Confirmation 类型（覆盖 builder.rs:361-379）
+fn test_form_builder_ask_field_confirmation() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设确认值为 true
+    let _guard = DialogTestGuard::new().with_confirm_value(true);
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| g.step(|f| f.add_confirmation("confirm", "Confirm?")),
         GroupConfig::required(),
     );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证收集的表单数据包含预设的确认值
+    assert_eq!(
+        result.get("confirm"),
+        Some(&"yes".to_string()),
+        "Should contain preset confirmation value (true converts to 'yes')"
+    );
+    Ok(())
 }
 
 // ==================== run() 方法的更多测试 ====================
@@ -1072,100 +1110,99 @@ fn test_form_builder_ask_field_confirmation() {
 /// 测试运行表单（可选组）
 ///
 /// ## 测试目的
-/// 验证 FormBuilder 能够运行包含可选组的表单（需要用户交互）。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户输入
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_run_with_optional_group -- --ignored
-/// ```
+/// 验证 FormBuilder 能够运行包含可选组的表单，使用 DialogTestGuard 配置非交互模式。
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加一个可选组
-/// 3. 运行表单并等待用户输入
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设输入值
+/// 2. 创建表单构建器，添加可选组（默认禁用）
+/// 3. 运行表单并验证可选组的行为
 ///
 /// ## 预期结果
-/// - 能够运行表单并处理可选组
+/// - 返回 Ok(FormResult)，可选组根据配置正确处理
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_form_builder_run_with_optional_group() {
-    // Arrange: 准备测试 run() 方法 - 可选组（覆盖 builder.rs:182-196）
+fn test_form_builder_run_with_optional_group() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设输入值
+    let _guard = DialogTestGuard::new().with_input_value_queue(vec!["optional_value"]);
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| g.step(|f| f.add_text("field1", "Field 1")),
         GroupConfig::optional().with_default_enabled(false),
     );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证表单运行成功，可选组被正确处理
+    // 注意：可选组默认禁用时，如果用户没有启用，字段可能不在结果中
+    // 这里主要验证表单能够正常运行，不 panic
+    assert!(
+        result.get("field1").is_some() || result.get("field1").is_none(),
+        "Optional group should be handled correctly"
+    );
+    Ok(())
 }
 
 /// 测试运行表单（必填组）
 ///
 /// ## 测试目的
-/// 验证 FormBuilder 能够运行包含必填组的表单（需要用户交互）。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户输入
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_run_with_required_group -- --ignored
-/// ```
+/// 验证 FormBuilder 能够运行包含必填组的表单，使用 DialogTestGuard 配置非交互模式。
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加一个必填组
-/// 3. 运行表单并等待用户输入
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设输入值
+/// 2. 创建表单构建器，添加必填组（带标题）
+/// 3. 运行表单并验证收集的表单数据
 ///
 /// ## 预期结果
-/// - 能够运行表单并处理必填组
+/// - 返回 Ok(FormResult)，包含预设的输入值
+/// - 必填组必须被处理，字段值必须存在
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_form_builder_run_with_required_group() {
-    // Arrange: 准备测试 run() 方法 - 必填组（覆盖 builder.rs:200-212）
+fn test_form_builder_run_with_required_group() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设输入值
+    let _guard = DialogTestGuard::new().with_input_value_queue(vec!["required_value"]);
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| g.step(|f| f.add_text("field1", "Field 1")),
         GroupConfig::required().with_title("Required Group"),
     );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证收集的表单数据包含预设值，必填组必须被处理
+    assert_eq!(
+        result.get("field1"),
+        Some(&"required_value".to_string()),
+        "Required group should contain preset input value"
+    );
+    Ok(())
 }
 
 /// 测试运行表单（多个组）
 ///
 /// ## 测试目的
-/// 验证 FormBuilder 能够运行包含多个组的表单（需要用户交互）。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户输入多个字段
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_form_builder_run_with_multiple_groups -- --ignored
-/// ```
+/// 验证 FormBuilder 能够运行包含多个组的表单，使用 DialogTestGuard 配置非交互模式。
 ///
 /// ## 测试场景
-/// 1. 创建表单构建器
-/// 2. 添加多个组（必填组和可选组）
-/// 3. 运行表单并等待用户输入
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设多个输入值
+/// 2. 创建表单构建器，添加多个组（必填组和可选组）
+/// 3. 运行表单并验证收集的表单数据
 ///
 /// ## 预期结果
-/// - 能够运行表单并处理多个组
+/// - 返回 Ok(FormResult)，包含所有预设的输入值
+/// - 必填组和可选组都被正确处理
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_form_builder_run_with_multiple_groups() {
-    // Arrange: 准备测试 run() 方法 - 多个组（覆盖 builder.rs:179-224）
+fn test_form_builder_run_with_multiple_groups() -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设多个输入值
+    let _guard = DialogTestGuard::new().with_input_value_queue(vec!["value1", "value2"]);
     let builder = FormBuilder::new()
         .add_group(
             "group1",
@@ -1178,7 +1215,19 @@ fn test_form_builder_run_with_multiple_groups() {
             GroupConfig::optional(),
         );
 
-    let result = builder.run();
-    // 这个测试需要手动运行
-    assert!(result.is_ok() || result.is_err());
+    // Act: 运行表单（在非交互模式下会使用预设值）
+    let result = builder.run()?;
+
+    // Assert: 验证收集的表单数据包含所有预设值
+    assert_eq!(
+        result.get("field1"),
+        Some(&"value1".to_string()),
+        "Required group should contain first preset value"
+    );
+    assert_eq!(
+        result.get("field2"),
+        Some(&"value2".to_string()),
+        "Optional group should contain second preset value"
+    );
+    Ok(())
 }

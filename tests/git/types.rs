@@ -148,27 +148,7 @@ mod tests {
         assert_eq!(unknown_debug, "Unknown");
     }
 
-    /// 测试 RepoType 枚举的克隆功能
-    ///
-    /// ## 测试目的
-    /// 验证 RepoType 枚举能够正确克隆。
-    ///
-    /// ## 预期结果
-    /// - 克隆后的值与原值相等
-    /// - 克隆后的值与不同类型的值不相等
-    #[test]
-    fn test_repo_type_clone_with_valid_type_creates_clone() {
-        // Arrange: 准备原始RepoType
-        let original = RepoType::GitHub;
-
-        // Act: 克隆RepoType
-        let cloned = original;
-
-        // Assert: 验证克隆后的值相等且独立
-        assert_eq!(original, cloned);
-        let another = RepoType::Codeup;
-        assert_ne!(cloned, another);
-    }
+    // Clone trait tests removed - compiler guarantees Clone correctness for #[derive(Clone)]
 
     /// 测试 RepoType 枚举的 Copy trait
     ///
@@ -427,25 +407,6 @@ mod tests {
         assert_eq!(ff_debug, "FastForwardOnly");
     }
 
-    /// 测试 MergeStrategy 枚举的克隆功能
-    ///
-    /// ## 测试目的
-    /// 验证 MergeStrategy 枚举能够正确克隆。
-    ///
-    /// ## 预期结果
-    /// - 克隆后的值与原值相等
-    #[test]
-    fn test_merge_strategy_clone_with_valid_strategy_creates_clone() {
-        // Arrange: 准备原始MergeStrategy
-        let original = MergeStrategy::Merge;
-
-        // Act: 克隆MergeStrategy
-        let cloned = original;
-
-        // Assert: 验证克隆后的值相等（通过Debug输出验证）
-        assert_eq!(format!("{:?}", original), format!("{:?}", cloned));
-    }
-
     /// 测试 MergeStrategy 枚举的 Copy trait
     ///
     /// ## 测试目的
@@ -469,66 +430,7 @@ mod tests {
 
     // ==================== CommitInfo 结构体测试 ====================
 
-    /// 测试 CommitInfo 结构体的创建
-    ///
-    /// ## 测试目的
-    /// 验证 CommitInfo 结构体能够使用有效字段正确创建。
-    ///
-    /// ## 预期结果
-    /// - 所有字段正确设置
-    /// - sha、author、date、message 等字段正确
-    #[test]
-    fn test_commit_info_creation_with_valid_fields_creates_commit_info() {
-        // Arrange: 准备CommitInfo字段值
-        let sha = "abc123def456";
-        let message = "Initial commit";
-        let author = "John Doe";
-        let date = "2024-01-01";
-
-        // Act: 创建CommitInfo
-        let commit = CommitInfo {
-            sha: sha.to_string(),
-            message: message.to_string(),
-            author: author.to_string(),
-            date: date.to_string(),
-        };
-
-        // Assert: 验证所有字段值正确
-        assert_eq!(commit.sha, sha);
-        assert_eq!(commit.message, message);
-        assert_eq!(commit.author, author);
-        assert_eq!(commit.date, date);
-    }
-
-    /// 测试 CommitInfo 结构体的深克隆功能
-    ///
-    /// ## 测试目的
-    /// 验证 CommitInfo 结构体能够正确进行深克隆（所有字段都是独立的副本）。
-    ///
-    /// ## 预期结果
-    /// - 克隆后的值与原值相等
-    /// - 克隆后的值与原始值在内存中独立（深拷贝）
-    #[test]
-    fn test_commit_info_clone_with_valid_info_creates_deep_clone() {
-        // Arrange: 准备原始CommitInfo
-        let original = CommitInfo {
-            sha: "abc123".to_string(),
-            message: "Test commit".to_string(),
-            author: "Alice".to_string(),
-            date: "2024-12-17".to_string(),
-        };
-
-        // Act: 克隆CommitInfo
-        let cloned = original.clone();
-
-        // Assert: 验证克隆后的值相等且是深拷贝
-        assert_eq!(original.sha, cloned.sha);
-        assert_eq!(original.message, cloned.message);
-        assert_eq!(original.author, cloned.author);
-        assert_eq!(original.date, cloned.date);
-        // 验证是深拷贝（修改克隆不影响原始）- 由于String是堆分配的，这里验证地址不同
-        assert_ne!(original.sha.as_ptr(), cloned.sha.as_ptr());
-    }
+    // Clone trait and field assignment tests removed - compiler guarantees correctness
 
     /// 测试 CommitInfo 结构体的调试格式化
     ///

@@ -532,8 +532,16 @@ fn test_retry_with_429_error_handles_retryable_error_return_false() -> Result<()
         "test",
     );
 
-    // Assert: 验证错误处理路径（可能成功或失败）
-    assert!(result.is_err() || result.is_ok());
+    // Assert: 验证重试机制正确处理429错误
+    // 429错误是可重试的，应该触发重试并在第二次尝试时成功
+    assert!(result.is_ok(), "Should succeed after retry for 429 error");
+
+    // 验证尝试次数（应该至少尝试2次：第一次失败，第二次成功）
+    let final_attempt = attempt.lock().unwrap();
+    assert!(
+        *final_attempt >= 2,
+        "Should have attempted at least 2 times"
+    );
     Ok(())
 }
 

@@ -4,34 +4,6 @@
 
 use workflow::base::system::Browser;
 
-// ==================== Browser Structure Tests ====================
-
-/// 测试Browser结构体可以创建
-///
-/// ## 测试目的
-/// 验证 `Browser` 结构体能够被成功实例化，不会产生编译错误或运行时错误。
-///
-/// ## 测试场景
-/// 1. 创建 `Browser` 实例
-/// 2. 验证结构体创建成功
-///
-/// ## 注意事项
-/// - 此测试只验证结构体创建，不涉及实际打开浏览器的操作
-/// - 实际打开浏览器需要系统支持，不在本测试范围内
-///
-/// ## 预期结果
-/// - 结构体创建成功，不会panic
-#[test]
-fn test_browser_structure_can_be_created() {
-    // Arrange: 准备创建 Browser 结构体
-    // 注意：实际打开浏览器需要系统支持，这里只测试结构体
-
-    // Act: 创建 Browser 实例
-    let _browser = Browser;
-
-    // Assert: 验证结构体可以创建（不会panic）
-}
-
 // ==================== Browser Open Tests ====================
 
 /// 测试Browser打开无效URL的错误处理
@@ -80,8 +52,23 @@ fn test_browser_open_with_invalid_url_handles_gracefully() {
     // Act: 尝试打开无效URL
     let result = Browser::open(invalid_url);
 
-    // Assert: 验证不会panic（可能返回错误或成功，取决于平台）
-    assert!(result.is_err() || result.is_ok());
+    // Assert: 验证函数不 panic，明确平台行为
+    // 无效URL应该返回错误，但某些平台可能静默失败
+    // 重要的是函数不会 panic 或 hang
+    match result {
+        Ok(_) => {
+            // 某些平台可能静默失败，这也是可接受的
+            // 只要不 panic 或 hang 即可
+        }
+        Err(e) => {
+            // 返回错误是理想情况，说明URL验证正确
+            // 验证错误信息不为空
+            assert!(
+                !e.to_string().is_empty(),
+                "Error message should not be empty"
+            );
+        }
+    }
 }
 
 /// 测试Browser打开空URL的错误处理
@@ -125,6 +112,21 @@ fn test_browser_open_with_empty_url_handles_gracefully() {
     // Act: 尝试打开空URL
     let result = Browser::open(empty_url);
 
-    // Assert: 验证不会panic（空URL可能失败或成功，取决于平台实现）
-    assert!(result.is_err() || result.is_ok());
+    // Assert: 验证函数不 panic，明确平台行为
+    // 空URL应该返回错误，但某些平台可能静默失败
+    // 重要的是函数不会 panic 或 hang
+    match result {
+        Ok(_) => {
+            // 某些平台可能静默失败，这也是可接受的
+            // 只要不 panic 或 hang 即可
+        }
+        Err(e) => {
+            // 返回错误是理想情况，说明URL验证正确
+            // 验证错误信息不为空
+            assert!(
+                !e.to_string().is_empty(),
+                "Error message should not be empty"
+            );
+        }
+    }
 }

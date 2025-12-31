@@ -350,29 +350,6 @@ fn test_branch_type_equality_with_same_types_returns_equal() {
     assert_ne!(BranchType::Hotfix, BranchType::Chore);
 }
 
-/// 测试分支类型克隆功能
-///
-/// ## 测试目的
-/// 验证 BranchType 的 Clone trait 实现正确。
-///
-/// ## 测试场景
-/// 1. 克隆分支类型
-/// 2. 验证克隆后的值与原值相等
-///
-/// ## 预期结果
-/// - 克隆后的值与原值相等
-#[test]
-fn test_branch_type_clone_with_valid_type_creates_clone() {
-    // Arrange: 准备原始分支类型
-    let original = BranchType::Feature;
-
-    // Act: 克隆分支类型
-    let cloned = original;
-
-    // Assert: 验证克隆后的值相等
-    assert_eq!(original, cloned);
-}
-
 /// 测试分支类型复制功能
 ///
 /// ## 测试目的

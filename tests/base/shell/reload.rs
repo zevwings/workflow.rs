@@ -45,36 +45,6 @@ fn test_reload_result_structure_with_valid_fields_creates_result() {
     assert_eq!(result.reload_hint, reload_hint);
 }
 
-/// 测试ReloadResult的克隆功能
-///
-/// ## 测试目的
-/// 验证测试函数能够正确执行预期功能。
-///
-/// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
-/// 3. 验证结果
-///
-/// ## 预期结果
-/// - 测试通过，无错误
-#[test]
-fn test_reload_result_clone_with_valid_result_creates_clone() {
-    // Arrange: 准备原始ReloadResult
-    let result1 = ReloadResult {
-        reloaded: true,
-        messages: vec!["Message".to_string()],
-        reload_hint: "hint".to_string(),
-    };
-
-    // Act: 克隆ReloadResult
-    let result2 = result1.clone();
-
-    // Assert: 验证克隆的字段值与原始值相同
-    assert_eq!(result1.reloaded, result2.reloaded);
-    assert_eq!(result1.messages, result2.messages);
-    assert_eq!(result1.reload_hint, result2.reload_hint);
-}
-
 /// 测试ReloadResult的Debug格式化
 ///
 /// ## 测试目的

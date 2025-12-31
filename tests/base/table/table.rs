@@ -12,41 +12,6 @@ struct TestUser {
     email: String,
 }
 
-// ==================== TableBuilder Creation Tests ====================
-
-/// 测试使用数据创建TableBuilder
-///
-/// ## 测试目的
-/// 验证 `TableBuilder::new()` 方法能够使用数据成功创建表格构建器。
-///
-/// ## 测试场景
-/// 1. 准备测试数据（包含多个用户记录）
-/// 2. 调用 `TableBuilder::new()` 创建构建器
-///
-/// ## 预期结果
-/// - 构建器创建成功，不会panic
-#[test]
-fn test_table_builder_new_with_data_creates_builder() {
-    // Arrange: 准备测试数据
-    let users = vec![
-        TestUser {
-            name: "Alice".to_string(),
-            age: 30,
-            email: "alice@example.com".to_string(),
-        },
-        TestUser {
-            name: "Bob".to_string(),
-            age: 25,
-            email: "bob@example.com".to_string(),
-        },
-    ];
-
-    // Act: 创建TableBuilder
-    let _builder = TableBuilder::new(users);
-
-    // Assert: 验证可以创建TableBuilder
-}
-
 /// 测试使用标题创建TableBuilder并渲染
 ///
 /// ## 测试目的
@@ -215,29 +180,6 @@ fn test_table_builder_display_trait() {
 
     // Assert: 验证 Display trait 正常工作
     assert!(!output.is_empty());
-}
-
-/// 测试所有TableStyle变体都可以使用
-///
-/// ## 测试目的
-/// 验证所有 `TableStyle` 枚举变体都可以正常创建和使用。
-///
-/// ## 测试场景
-/// 1. 创建包含所有TableStyle变体的向量
-/// 2. 验证不会产生编译错误
-///
-/// ## 预期结果
-/// - 所有样式变体（Default, Modern, Compact, Minimal, Grid）都可以使用
-#[test]
-fn test_table_style_variants() {
-    // Assert: 验证所有 TableStyle 变体都可以使用
-    let _styles = [
-        TableStyle::Default,
-        TableStyle::Modern,
-        TableStyle::Compact,
-        TableStyle::Minimal,
-        TableStyle::Grid,
-    ];
 }
 
 /// 测试TableBuilder的链式调用

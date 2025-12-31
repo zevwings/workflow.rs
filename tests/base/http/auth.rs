@@ -115,34 +115,6 @@ fn test_authorization_debug_with_valid_instance_returns_debug_string() {
     assert!(debug_str.contains("user@example.com") || debug_str.contains("token"));
 }
 
-// ==================== Authorization Clone Tests ====================
-
-/// 测试Authorization克隆功能
-///
-/// ## 测试目的
-/// 验证 `Authorization` 结构体实现了 `Clone` trait，能够正确克隆实例。
-///
-/// ## 测试场景
-/// 1. 创建原始Authorization实例
-/// 2. 克隆实例
-/// 3. 验证克隆的字段值与原始值相同
-///
-/// ## 预期结果
-/// - 克隆成功
-/// - 克隆的username和password与原始值相同
-#[test]
-fn test_authorization_clone_with_valid_instance_creates_clone() {
-    // Arrange: 准备原始 Authorization 实例
-    let original = Authorization::new("user@example.com", "token");
-
-    // Act: 克隆实例
-    let cloned = original.clone();
-
-    // Assert: 验证克隆的字段值与原始值相同
-    assert_eq!(original.username, cloned.username);
-    assert_eq!(original.password, cloned.password);
-}
-
 // ==================== Authorization Field Access Tests ====================
 
 /// 测试Authorization字段公开访问和修改

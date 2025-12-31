@@ -195,44 +195,74 @@ fn test_multi_select_dialog_new_without_default_creates_dialog() {
 
 // 注意：以下测试需要用户交互，在 CI 环境中会被忽略
 
-/// 测试多选对话框的用户交互
+/// 测试多选对话框使用 DialogTestGuard 配置非交互模式
 ///
 /// ## 测试目的
-/// 验证`MultiSelectDialog`正确显示选项列表并接收用户的多个选择。
-///
-/// ## 为什么被忽略
-/// - **需要用户交互**: 测试需要用户使用方向键和空格键进行多选
-/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
-/// - **UI/UX验证**: 用于手动验证多选对话框的显示和操作
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_multi_select_dialog_prompt -- --ignored
-/// ```
-/// 然后使用↑↓键导航，空格键选择/取消选择，Enter确认
+/// 验证`MultiSelectDialog`在非交互模式下能够使用预设索引列表返回正确结果。
+/// 覆盖源代码: `multi_select.rs:98-103`（错误处理）
 ///
 /// ## 测试场景
-/// 1. 创建多选对话框，包含3个选项
-/// 2. 设置默认选中第一个选项
-/// 3. 显示对话框并等待用户多选
-/// 4. 验证返回选中项的索引列表
+/// 1. 使用 DialogTestGuard 配置非交互模式，预设选择索引 [0, 2]
+/// 2. 创建多选对话框，包含3个选项
+/// 3. 调用 prompt() 方法
+/// 4. 验证返回预设的索引列表
 ///
-/// ## 预期行为
-/// - 显示选项列表，默认选中第一个（带[x]标记）
-/// - 空格键切换选中状态
-/// - Enter确认返回`Ok(Vec<usize>)`包含所有选中项的索引
-/// - Esc取消返回错误
+/// ## 预期结果
+/// - 返回 Ok(vec![0, 2])，表示选择了索引0和2的选项
+/// - 不显示交互式界面
 #[test]
-#[ignore] // 需要用户交互
-fn test_multi_select_dialog_prompt() {
-    // Arrange: 准备测试用户选择的情况（覆盖 multi_select.rs:98-103 的错误处理）
+fn test_multi_select_dialog_prompt_with_dialog_test_guard_returns_preset_indices(
+) -> color_eyre::Result<()> {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式，预设选择索引 [0, 2]
+    let _guard = DialogTestGuard::new().with_multi_select_indices(vec![0, 2]);
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let dialog = MultiSelectDialog::new("Choose options", options).with_default(vec![0]);
+
+    // Act: 调用 prompt() 方法（在非交互模式下会使用预设值）
+    let result = dialog.prompt()?;
+
+    // Assert: 验证返回预设的选项列表（索引0和2对应"Option 1"和"Option 3"）
+    assert_eq!(
+        result,
+        vec!["Option 1", "Option 3"],
+        "Should return preset options from DialogTestGuard"
+    );
+    Ok(())
+}
+
+/// 测试多选对话框空选项列表的错误处理
+///
+/// ## 测试目的
+/// 验证`MultiSelectDialog`在选项列表为空时能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 创建多选对话框，选项列表为空
+/// 2. 调用 prompt() 方法
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回 Err，错误消息包含 "No options available"
+#[test]
+fn test_multi_select_dialog_prompt_with_empty_options_returns_error() {
+    use crate::common::guards::DialogTestGuard;
+
+    // Arrange: 使用 DialogTestGuard 配置非交互模式
+    let _guard = DialogTestGuard::new();
+    let options: Vec<&str> = vec![];
+    let dialog = MultiSelectDialog::new("Choose options", options);
+
+    // Act: 调用 prompt() 方法
     let result = dialog.prompt();
-    // 这个测试需要手动运行
-    // 如果用户取消，应该返回 OperationCanceled 错误
-    // 如果有其他错误，应该返回 Multi-selection error
-    assert!(result.is_ok() || result.is_err());
+
+    // Assert: 验证返回错误
+    assert!(result.is_err(), "Should return error for empty options");
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("No options available"),
+        "Error message should indicate no options"
+    );
 }
 
 /// 测试设置默认值为切片
