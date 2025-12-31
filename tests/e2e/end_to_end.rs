@@ -6,6 +6,7 @@
 
 use crate::common::cli_helpers::CliCommandBuilder;
 use crate::common::environments::CliTestEnv;
+use crate::common::guards::DialogTestGuard;
 use crate::common::mock::server::MockServer;
 use crate::common::test_data::TestDataFactory;
 use color_eyre::Result;
@@ -61,16 +62,16 @@ model = "test_model"
         mock_server.base_url()
     ))?;
 
-    // 设置 auto_accept_change_type 以避免变更类型选择的对话框
-    use workflow::repo::config::private::PrivateRepoConfig;
-    let repo_id = PrivateRepoConfig::generate_repo_id_in(env.project_path())?;
-    let repository_config = format!(
-        r#"
-["{repo_id}.pr"]
-auto_accept_change_type = true
-"#
-    );
-    env.create_home_config(&repository_config)?;
+    // 设置 DialogTestGuard 来配置 Dialog 交互
+    // 这样可以让 Dialog 自然触发，而不是通过命令行参数避免
+    // 按顺序设置多个 InputDialog 的值：Jira ticket (可选), PR title (必需), description (可选)
+    let _guard = DialogTestGuard::new()
+        .with_input_value_queue(vec![
+            "",                 // Jira ticket (optional) - 留空
+            "Test PR Title",    // PR title (required)
+            "Test description", // Short description (optional)
+        ])
+        .with_multi_select_indices(vec![0]); // 选择第一个变更类型
 
     // 1. 创建初始提交（PR需要至少一个提交）
     env.create_file("README.md", "# Test Project")?
@@ -83,17 +84,14 @@ auto_accept_change_type = true
     env.create_file("test.txt", "test content")?.create_commit("feat: add test")?;
 
     // 4. 创建PR（dry-run模式，避免实际创建）
-    // 通过命令行参数提供所有必需值，避免触发用户交互对话框
+    // 使用 DialogTestGuard 配置 Dialog，让 Dialog 自然触发
     // LLM 调用会快速失败（404），然后回退到使用 title 的 sanitized 版本作为分支名
     let binding = CliCommandBuilder::new()
         .args([
             "pr",
             "create",
             "--dry-run",
-            "--title",
-            "Test PR Title",
-            "--description",
-            "Test description",
+            // 移除 --title, --description, --jira-id 参数，让 Dialog 自然触发
         ])
         .current_dir(env.path())
         .assert();
@@ -183,16 +181,16 @@ provider = "invalid_provider"
 "#,
     )?;
 
-    // 设置 auto_accept_change_type 以避免变更类型选择的对话框
-    use workflow::repo::config::private::PrivateRepoConfig;
-    let repo_id = PrivateRepoConfig::generate_repo_id_in(env.project_path())?;
-    let repository_config = format!(
-        r#"
-["{repo_id}.pr"]
-auto_accept_change_type = true
-"#
-    );
-    env.create_home_config(&repository_config)?;
+    // 设置 DialogTestGuard 来配置 Dialog 交互
+    // 这样可以让 Dialog 自然触发，而不是通过命令行参数避免
+    // 按顺序设置多个 InputDialog 的值：Jira ticket (可选), PR title (必需), description (可选)
+    let _guard = DialogTestGuard::new()
+        .with_input_value_queue(vec![
+            "PROJ-123",         // Jira ticket (optional)
+            "Test Issue",       // PR title (required) - 从 Mock Jira API 获取的标题
+            "Test description", // Short description (optional)
+        ])
+        .with_multi_select_indices(vec![0]); // 选择第一个变更类型
 
     // 1. 创建初始提交
     env.create_file("README.md", "# Test Project")?
@@ -206,20 +204,14 @@ auto_accept_change_type = true
         .create_commit("feat(PROJ-123): add new feature")?;
 
     // 4. 创建PR（dry-run模式）
-    // 通过命令行参数提供所有必需值，避免触发用户交互对话框
-    // 提供 --jira-id 参数，让 resolve_title 从 Jira 获取标题，避免 InputDialog
+    // 使用 DialogTestGuard 配置 Dialog，让 Dialog 自然触发
     // LLM 调用会在 build_url() 阶段快速失败，不会等待网络超时
     let binding = CliCommandBuilder::new()
         .args([
             "pr",
             "create",
             "--dry-run",
-            "--jira-id",
-            "PROJ-123",
-            "--title",
-            "Test Issue", // 从 Mock Jira API 获取的标题
-            "--description",
-            "Test description",
+            // 移除 --jira-id, --title, --description 参数，让 Dialog 自然触发
         ])
         .current_dir(env.path())
         .assert();

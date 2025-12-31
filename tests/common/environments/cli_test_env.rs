@@ -1,4 +1,5 @@
 #![allow(clippy::test_attr_in_doctest)]
+#![allow(dead_code)] // 某些方法在特定测试二进制文件中未使用，但在其他测试中使用
 
 //! 统一CLI测试环境
 //!

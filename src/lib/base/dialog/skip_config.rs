@@ -20,8 +20,10 @@ pub struct DialogConfig {
     pub confirm_value: Option<bool>,
     /// SelectDialog 的预设索引
     pub select_index: Option<usize>,
-    /// InputDialog 的预设值
+    /// InputDialog 的预设值（队列，按顺序使用）
     pub input_value: Option<String>,
+    /// InputDialog 的预设值队列（用于多个 InputDialog 按顺序使用）
+    pub input_value_queue: Vec<String>,
     /// MultiSelectDialog 的预设索引列表
     pub multi_select_indices: Option<Vec<usize>>,
 }
@@ -33,6 +35,7 @@ impl DialogConfig {
             confirm_value: None,
             select_index: None,
             input_value: None,
+            input_value_queue: Vec::new(),
             multi_select_indices: None,
         }
     }
@@ -94,9 +97,40 @@ impl DialogConfigManager {
         DIALOG_CONFIG.with(|c| c.borrow().as_ref().and_then(|config| config.select_index))
     }
 
-    /// 获取 InputDialog 的预设值（内部 API，供对话框使用）
+    /// 获取并弹出 InputDialog 的预设值（内部 API，供对话框使用）
+    /// 优先从队列中获取，如果队列为空则使用单个值
+    pub(crate) fn pop_input_value() -> Option<String> {
+        DIALOG_CONFIG.with(|c| {
+            let mut config_ref = c.borrow_mut();
+            if let Some(config) = config_ref.as_mut() {
+                // 优先从队列中获取
+                if !config.input_value_queue.is_empty() {
+                    return Some(config.input_value_queue.remove(0));
+                }
+                // 如果队列为空，使用单个值并清除
+                if let Some(value) = config.input_value.take() {
+                    return Some(value);
+                }
+            }
+            None
+        })
+    }
+
+    /// 获取 InputDialog 的预设值（内部 API，供对话框使用，不弹出）
+    /// 用于向后兼容，但推荐使用 pop_input_value
     pub(crate) fn get_input_value() -> Option<String> {
-        DIALOG_CONFIG.with(|c| c.borrow().as_ref().and_then(|config| config.input_value.clone()))
+        DIALOG_CONFIG.with(|c| {
+            let config_ref = c.borrow();
+            if let Some(config) = config_ref.as_ref() {
+                // 优先从队列中获取（不弹出）
+                if !config.input_value_queue.is_empty() {
+                    return Some(config.input_value_queue[0].clone());
+                }
+                // 如果队列为空，使用单个值
+                return config.input_value.clone();
+            }
+            None
+        })
     }
 
     /// 获取 MultiSelectDialog 的预设索引列表（内部 API，供对话框使用）

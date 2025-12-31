@@ -131,6 +131,32 @@ impl DialogTestGuard {
         self
     }
 
+    /// 添加 InputDialog 的预设值到队列（支持多个 InputDialog 按顺序使用）
+    ///
+    /// # 参数
+    ///
+    /// * `values` - InputDialog 的返回值列表，会按顺序添加到队列
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self` 以支持链式调用
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::guards::DialogTestGuard;
+    ///
+    /// let _guard = DialogTestGuard::new()
+    ///     .with_input_value_queue(vec!["value1", "value2", "value3"]);
+    /// ```
+    #[allow(dead_code)] // 在 E2E 测试中使用
+    pub fn with_input_value_queue(self, values: Vec<impl Into<String>>) -> Self {
+        DialogConfigManager::update_config(|config| {
+            config.input_value_queue.extend(values.into_iter().map(|v| v.into()));
+        });
+        self
+    }
+
     /// 设置 MultiSelectDialog 的预设索引列表
     ///
     /// # 参数

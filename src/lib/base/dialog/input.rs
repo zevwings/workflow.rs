@@ -126,7 +126,8 @@ impl InputDialog {
     pub fn prompt(self) -> Result<String> {
         // 检查 thread-local 配置（用于测试）
         if skip_config::DialogConfigManager::is_non_interactive() {
-            if let Some(value) = skip_config::DialogConfigManager::get_input_value() {
+            // 使用 pop_input_value 来支持多个 InputDialog 按顺序使用不同值
+            if let Some(value) = skip_config::DialogConfigManager::pop_input_value() {
                 return Ok(value);
             }
             // 如果启用了非交互式模式但没有设置值，使用默认值或空字符串
