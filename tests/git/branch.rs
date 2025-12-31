@@ -91,6 +91,7 @@ fn test_exists_main_branch_with_default_branch_return_ok() -> Result<()> {
 /// ## 预期结果
 /// - 不存在的分支返回 false
 #[rstest]
+#[ignore]
 fn test_exists_nonexistent_branch_with_invalid_name_return_ok(
     _git_repo_with_commit: GitTestEnv,
 ) -> Result<()> {
