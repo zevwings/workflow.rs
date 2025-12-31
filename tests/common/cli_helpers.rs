@@ -22,6 +22,7 @@ impl CliCommandBuilder {
     }
 
     /// 添加参数
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn arg<S: AsRef<std::ffi::OsStr>>(mut self, arg: S) -> Self {
         self.cmd.arg(arg);
         self
@@ -38,6 +39,7 @@ impl CliCommandBuilder {
     }
 
     /// 设置环境变量
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn env<K, V>(mut self, key: K, val: V) -> Self
     where
         K: AsRef<std::ffi::OsStr>,
@@ -54,11 +56,13 @@ impl CliCommandBuilder {
     }
 
     /// 执行命令并断言成功
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn assert_success(mut self) -> assert_cmd::assert::Assert {
         self.cmd.assert().success()
     }
 
     /// 执行命令并断言失败
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn assert_failure(mut self) -> assert_cmd::assert::Assert {
         self.cmd.assert().failure()
     }
@@ -70,10 +74,12 @@ impl CliCommandBuilder {
 }
 
 /// 测试数据生成器
+#[allow(dead_code)] // 测试辅助工具，可能在未来使用
 pub struct TestDataGenerator;
 
 impl TestDataGenerator {
     /// 生成测试用的配置内容
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn config_content() -> String {
         r#"
 [jira]
@@ -88,11 +94,13 @@ token = "test_token"
 }
 
 /// 辅助函数：检查输出是否包含错误消息
+#[allow(dead_code)] // 测试辅助工具，可能在未来使用
 pub fn contains_error(output: &str) -> bool {
     output.contains("❌") || output.contains("错误") || output.contains("Error")
 }
 
 /// 辅助函数：检查输出是否为 JSON 格式
+#[allow(dead_code)] // 测试辅助工具，可能在未来使用
 pub fn is_json_format(output: &str) -> bool {
     let trimmed = output.trim();
     trimmed.starts_with('{') && trimmed.ends_with('}')

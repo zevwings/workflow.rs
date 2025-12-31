@@ -59,6 +59,7 @@ impl MockServer {
     }
 
     /// 获取 Mock 服务器引用（用于设置 Mock 端点）
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn server(&mut self) -> &mut dyn std::ops::DerefMut<Target = Server> {
         self.server.as_mut()
     }
@@ -726,6 +727,7 @@ impl MockServer {
     }
 
     /// 设置 Jira 获取当前用户（/myself）成功响应
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn setup_jira_get_current_user_success(&mut self, user_data: &Value) -> &mut Self {
         let response_body = serde_json::to_string(user_data)
             .unwrap_or_else(|e| panic!("operation should succeed: {}", e));
@@ -734,6 +736,7 @@ impl MockServer {
     }
 
     /// 设置 Jira 获取当前用户失败响应
+    #[allow(dead_code)] // 测试辅助工具，可能在未来使用
     pub fn setup_jira_get_current_user_error(
         &mut self,
         status: u16,
@@ -777,6 +780,7 @@ impl Drop for MockServer {
 ///     Ok(())
 /// }
 /// ```
+#[allow(dead_code)] // 测试辅助工具，通过 re-export 供其他模块使用
 pub fn setup_mock_server() -> MockServer {
     MockServer::new()
 }
