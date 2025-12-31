@@ -398,9 +398,25 @@ impl GitCommit {
         // 获取父提交 OID（在获取可变引用之前）
         let head_oid = repo.head().ok().and_then(|head| head.target());
 
-        // 获取签名和树并创建提交（使用可变引用）
+        // 从本地仓库配置读取用户信息（避免在 Windows 上访问全局配置导致卡住）
+        // Repository::signature() 可能会尝试访问全局配置，在 Windows 上可能很慢或卡住
+        let (user_name, user_email) = {
+            let config = repo.as_inner().config().wrap_err("Failed to open repository config")?;
+            let name = config
+                .get_string("user.name")
+                .wrap_err("Failed to get user.name from repository config. Please set it with: git config user.name")?;
+            let email = config
+                .get_string("user.email")
+                .wrap_err("Failed to get user.email from repository config. Please set it with: git config user.email")?;
+            (name, email)
+        };
+
+        // 创建签名（使用本地配置中的用户信息）
+        let signature =
+            git2::Signature::now(&user_name, &user_email).wrap_err("Failed to create signature")?;
+
+        // 获取树并创建提交（使用可变引用）
         let repo_inner = repo.as_inner_mut();
-        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
         let tree = repo_inner.find_tree(tree_id).wrap_err("Failed to find tree")?;
 
         // 获取父提交（如果有）并创建提交

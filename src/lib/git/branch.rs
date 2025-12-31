@@ -1790,6 +1790,8 @@ impl GitBranch {
     ///
     /// 使用 git2 库获取 from_branch 相对于 to_branch 的所有新提交。
     ///
+    /// 仅查找本地分支引用，避免在 Windows 上访问远程引用时可能触发网络操作导致超时。
+    ///
     /// # 参数
     ///
     /// * `base_branch` - 基础分支名称（to_branch）
@@ -1805,19 +1807,18 @@ impl GitBranch {
     pub fn get_commits_between(base_branch: &str, head_branch: &str) -> Result<Vec<String>> {
         let repo = GitRepository::open()?;
 
-        // 解析分支引用
+        // 仅使用本地引用（避免在 Windows 上访问远程引用时可能触发网络操作导致超时）
+        // 远程分支通常是本地分支的副本，检查本地分支即可
         let base_ref = repo
             .find_reference(&format!("refs/heads/{}", base_branch))
-            .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", base_branch)))
-            .wrap_err_with(|| format!("Failed to find base branch: {}", base_branch))?;
+            .wrap_err_with(|| format!("Failed to find local base branch: {}", base_branch))?;
         let base_commit = base_ref
             .peel_to_commit()
             .wrap_err_with(|| format!("Failed to get commit from base branch: {}", base_branch))?;
 
         let head_ref = repo
             .find_reference(&format!("refs/heads/{}", head_branch))
-            .or_else(|_| repo.find_reference(&format!("refs/remotes/origin/{}", head_branch)))
-            .wrap_err_with(|| format!("Failed to find head branch: {}", head_branch))?;
+            .wrap_err_with(|| format!("Failed to find local head branch: {}", head_branch))?;
         let head_commit = head_ref
             .peel_to_commit()
             .wrap_err_with(|| format!("Failed to get commit from head branch: {}", head_branch))?;

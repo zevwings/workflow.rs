@@ -380,38 +380,11 @@ impl GitTestEnv {
     pub fn add_fake_remote(&self, remote_name: &str, remote_url: &str) -> Result<()> {
         let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
 
+        // 1. 添加远程URL（带超时检测，防止卡住）
         // Windows 特定处理：Windows 上的 Git 可能在 repo.remote() 时尝试验证 URL（DNS 解析），
         // 导致卡住。我们需要在 Windows 上设置 url.insteadOf 来避免网络请求。
-        // Linux/macOS 上不需要这个配置，因为它们的 Git 实现不会在添加 remote 时验证 URL。
-        #[cfg(target_os = "windows")]
-        {
-            if remote_url.starts_with("https://") {
-                // 提取域名部分，配置 insteadOf
-                if let Some(domain_start) = remote_url.find("://") {
-                    let domain = &remote_url[domain_start + 3..];
-                    if let Some(path_start) = domain.find('/') {
-                        let domain_only = &domain[..path_start];
-                        // 配置所有该域名的请求都重定向到本地（避免网络请求）
-                        // 格式：url.https://github.com.insteadOf = file:///dev/null
-                        let mut config = repo
-                            .config()
-                            .wrap_err("Failed to open repository config for url.insteadOf")?;
-                        let config_key = format!("url.https://{}.insteadOf", domain_only);
-                        config.set_str(&config_key, "file:///dev/null")
-                            .wrap_err_with(|| format!(
-                                "Failed to set {} config to avoid network requests on Windows. \
-                                This may cause the test to hang if repo.remote() tries to validate the URL.",
-                                config_key
-                            ))?;
-                    }
-                }
-            }
-        }
-
-        // 1. 添加远程URL（带超时检测，防止卡住）
-        // 注意：在 Windows 上，如果上面的 url.insteadOf 配置成功，这不会触发网络请求。
-        // 在 Linux/macOS 上，repo.remote() 本身不会立即触发网络请求。
-        // 但为了安全起见，我们在所有平台上都添加超时检测。
+        // 注意：config.set_str() 和 repo.remote() 都可能在 Windows 上卡住，所以将它们都放在超时检测线程中。
+        // Linux/macOS 上不需要 url.insteadOf 配置，因为它们的 Git 实现不会在添加 remote 时验证 URL。
         {
             use std::sync::{Arc, Mutex};
             use std::thread;
@@ -434,12 +407,41 @@ impl GitTestEnv {
             let handle = thread::spawn(move || {
                 // 在线程中重新打开仓库（因为 Repository 不能跨线程传递）
                 match Repository::open(&repo_path) {
-                    Ok(repo) => match repo.remote(&remote_name_clone, &remote_url_clone) {
-                        Ok(_) => *result_clone.lock().unwrap() = Some(Ok(())),
-                        Err(e) => {
-                            *result_clone.lock().unwrap() = Some(Err(e.message().to_string()))
+                    Ok(repo) => {
+                        // Windows 特定：设置 url.insteadOf 配置（也在超时检测线程中，防止 config.set_str() 卡住）
+                        #[cfg(target_os = "windows")]
+                        {
+                            if remote_url_clone.starts_with("https://") {
+                                // 提取域名部分，配置 insteadOf
+                                if let Some(domain_start) = remote_url_clone.find("://") {
+                                    let domain = &remote_url_clone[domain_start + 3..];
+                                    if let Some(path_start) = domain.find('/') {
+                                        let domain_only = &domain[..path_start];
+                                        // 配置所有该域名的请求都重定向到本地（避免网络请求）
+                                        // 格式：url.https://github.com.insteadOf = file:///dev/null
+                                        if let Ok(mut config) = repo.config() {
+                                            let config_key = format!("url.https://{}.insteadOf", domain_only);
+                                            if let Err(e) = config.set_str(&config_key, "file:///dev/null") {
+                                                *result_clone.lock().unwrap() = Some(Err(format!(
+                                                    "Failed to set {} config: {}",
+                                                    config_key, e.message()
+                                                )));
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    },
+
+                        // 添加远程 URL
+                        match repo.remote(&remote_name_clone, &remote_url_clone) {
+                            Ok(_) => *result_clone.lock().unwrap() = Some(Ok(())),
+                            Err(e) => {
+                                *result_clone.lock().unwrap() = Some(Err(e.message().to_string()))
+                            }
+                        }
+                    }
                     Err(e) => {
                         *result_clone.lock().unwrap() = Some(Err(format!(
                             "Failed to open repository in timeout thread: {}",
