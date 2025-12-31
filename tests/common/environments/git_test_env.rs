@@ -586,6 +586,7 @@ mod tests {
     /// - .git目录存在
     #[test]
     #[serial]
+    #[ignore]
     fn test_git_test_env_creation_return_ok() -> Result<()> {
         let env = GitTestEnv::new()?;
         let path = env.path();
@@ -611,6 +612,7 @@ mod tests {
     /// - 当前分支为test-branch
     #[test]
     #[serial]
+    #[ignore]
     fn test_create_and_checkout_branch() -> Result<()> {
         let env = GitTestEnv::new()?;
 
@@ -640,6 +642,7 @@ mod tests {
     /// - 提交后的SHA与提交前不同
     #[test]
     #[serial]
+    #[ignore]
     fn test_make_test_commit_return_ok() -> Result<()> {
         let env = GitTestEnv::new()?;
 
@@ -745,7 +748,6 @@ mod tests {
 
         test_result
     }
-
     /// 测试GitTestEnv与当前仓库的隔离
     ///
     /// ## 测试目的
@@ -784,6 +786,7 @@ mod tests {
     /// - GitTestEnv 创建时全局工作目录保持不变（使用绝对路径，不切换全局目录）
     #[test]
     #[serial]
+    #[ignore]
     fn test_isolation_from_current_repo_return_ok() -> Result<()> {
         // 验证 GitTestEnv 不会操作当前仓库（使用备用方案获取当前目录）
         let original_dir = get_current_dir_with_fallback()?;

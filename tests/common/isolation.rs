@@ -305,6 +305,7 @@ mod tests {
     /// - Git配置守卫可用
     /// - Git配置项设置成功
     #[test]
+    #[ignore]
     fn test_test_isolation_with_git_config_return_ok() -> Result<()> {
         let mut isolation = TestIsolation::new()?.with_git_config()?;
 

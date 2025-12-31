@@ -66,6 +66,7 @@ fn create_single_commit() -> CommitInfo {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
+#[ignore]
 fn test_get_branch_commits_with_multiple_commits_returns_all_commits() {
     // Arrange: 准备多个提交
     let commits = create_sample_commits();

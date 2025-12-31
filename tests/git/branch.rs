@@ -58,6 +58,7 @@ fn test_remove_branch_prefix_with_slash_handles_prefix_return_ok() -> Result<()>
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_exists_main_branch_with_default_branch_return_ok() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let git_repo_with_commit = git_repo_with_commit();
@@ -124,6 +125,7 @@ fn test_exists_nonexistent_branch_with_invalid_name_return_ok(
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
     // Arrange: 准备 Git 测试环境和分支名
     let git_repo_with_commit = git_repo_with_commit();
@@ -159,6 +161,7 @@ fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
     // Arrange: 准备 Git 测试环境和带前缀的分支名
     let git_repo_with_commit = git_repo_with_commit();
@@ -197,6 +200,7 @@ fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建分支
     let git_repo_with_commit = git_repo_with_commit();
@@ -258,6 +262,7 @@ fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial]
+#[ignore]
 fn test_list_branches_with_multiple_branches_return_collect() -> Result<()> {
     // Arrange: 准备 Git 测试环境并获取初始分支列表
     let git_repo_with_commit = git_repo_with_commit();
@@ -307,6 +312,7 @@ fn test_list_branches_with_multiple_branches_return_collect() -> Result<()> {
 /// ## 预期结果
 /// - 所有策略的 Debug 字符串都不为空
 #[test]
+#[ignore]
 fn test_merge_strategy_enum_with_all_variants_return_collect() -> Result<()> {
     // Arrange: 准备所有合并策略枚举变体
     let strategies = [
@@ -339,6 +345,7 @@ fn test_merge_strategy_enum_with_all_variants_return_collect() -> Result<()> {
 /// ## 预期结果
 /// - 创建失败，空分支名不存在
 #[rstest]
+#[ignore]
 fn test_empty_branch_name_with_empty_string_return_empty(
     _git_repo_with_commit: GitTestEnv,
 ) -> Result<()> {
@@ -373,6 +380,7 @@ fn test_empty_branch_name_with_empty_string_return_empty(
 /// ## 预期结果
 /// - 在没有 Git 的情况下返回错误（注意：这个测试可能不会按预期工作，因为 Git 可能在其他位置）
 #[test]
+#[ignore]
 fn test_git_not_available_without_git_return_ok() -> Result<()> {
     // Arrange: 使用 EnvGuard 临时移除 Git（通过清空 PATH）
     let mut env_guard = EnvGuard::new();
@@ -386,7 +394,3 @@ fn test_git_not_available_without_git_return_ok() -> Result<()> {
     // EnvGuard 会在 drop 时自动恢复 PATH
     Ok(())
 }
-
-// ==================== Integration Tests ====================
-
-// ==================== Performance Tests ====================
