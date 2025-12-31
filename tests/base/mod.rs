@@ -4,6 +4,7 @@
 //! 测试目录结构与源代码目录结构完全对齐：src/lib/base/* ↔ tests/base/*
 
 pub mod alias;
+pub mod cache;
 pub mod checksum;
 pub mod concurrent;
 pub mod constants;
