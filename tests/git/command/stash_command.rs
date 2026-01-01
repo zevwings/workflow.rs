@@ -233,3 +233,41 @@ fn test_drop_stash_deletes_stash() -> Result<()> {
 
     Ok(())
 }
+
+/// 测试检查冲突
+///
+/// ## 测试目的
+/// 验证 GitStashCommand::check_conflicts() 能够检查冲突。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 创建文件并提交
+/// 3. 修改文件
+/// 4. 检查冲突（应该没有冲突）
+/// 5. 验证返回 false
+///
+/// ## 预期结果
+/// - 没有冲突时返回 false
+#[test]
+#[serial]
+fn test_check_conflicts_returns_false_when_no_conflicts() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // Act: 创建文件并提交
+    std::fs::write(env.path().join("conflict-test.txt"), "content")?;
+    GitCommitCommand::add_all(None)?;
+    GitCommitCommand::commit("Initial commit", false, None)?;
+
+    // Act: 修改文件
+    std::fs::write(env.path().join("conflict-test.txt"), "modified content")?;
+
+    // Act: 检查冲突
+    let has_conflicts = GitStashCommand::check_conflicts(None)?;
+
+    // Assert: 验证没有冲突
+    assert!(!has_conflicts, "Should not have conflicts in normal state");
+
+    Ok(())
+}

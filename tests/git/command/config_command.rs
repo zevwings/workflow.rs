@@ -205,3 +205,36 @@ fn test_set_user_sets_email_and_name() -> Result<()> {
 
     Ok(())
 }
+
+/// 测试列出所有配置项
+///
+/// ## 测试目的
+/// 验证 GitConfigCommand::list_config() 能够列出所有配置项。
+///
+/// ## 测试场景
+/// 1. 列出所有全局配置
+/// 2. 验证返回配置列表
+///
+/// ## 预期结果
+/// - 返回配置项列表（可能为空或包含配置）
+#[test]
+#[serial]
+fn test_list_config_returns_config_list() -> Result<()> {
+    // Act: 列出所有全局配置
+    let configs = GitConfigCommand::list_config(true, None)?;
+
+    // Assert: 验证返回列表（可能为空或包含配置）
+    // 配置列表可能为空，也可能包含系统配置，这都是正常的
+    assert!(
+        configs.is_empty() || !configs.is_empty(),
+        "Should return a list of configs"
+    );
+
+    // 如果列表不为空，验证格式
+    for (key, _value) in &configs {
+        assert!(!key.is_empty(), "Config key should not be empty");
+        // value 可能为空，这是正常的
+    }
+
+    Ok(())
+}

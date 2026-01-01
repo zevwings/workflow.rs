@@ -176,3 +176,177 @@ fn test_get_head_sha_returns_valid_sha() -> Result<()> {
 
     Ok(())
 }
+
+/// 测试修改最后一次提交
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::amend() 能够修改最后一次提交。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 创建提交
+/// 3. 修改文件并暂存
+/// 4. 修改提交
+/// 5. 验证提交被修改
+///
+/// ## 预期结果
+/// - 提交修改成功
+#[test]
+#[serial]
+fn test_amend_modifies_last_commit() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let test_file = "amend-test.txt";
+
+    // Act: 创建初始提交
+    std::fs::write(env.path().join(test_file), "initial content")?;
+    GitCommitCommand::add_all(None)?;
+    GitCommitCommand::commit("Initial commit", false, None)?;
+
+    let original_sha = GitCommitCommand::get_head_sha(None)?;
+
+    // Act: 修改文件并暂存
+    std::fs::write(env.path().join(test_file), "amended content")?;
+    GitCommitCommand::add_all(None)?;
+
+    // Act: 修改提交
+    GitCommitCommand::amend(Some("Amended commit"), None)?;
+
+    // Assert: 验证提交 SHA 已改变（因为提交被修改）
+    let new_sha = GitCommitCommand::get_head_sha(None)?;
+    assert_ne!(
+        original_sha, new_sha,
+        "Commit SHA should change after amend"
+    );
+
+    // 验证文件内容已更新
+    let content = std::fs::read_to_string(env.path().join(test_file))?;
+    assert_eq!(
+        content.trim(),
+        "amended content",
+        "File should contain amended content"
+    );
+
+    Ok(())
+}
+
+/// 测试获取提交信息
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::get_commit_info() 能够获取提交信息。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 创建提交
+/// 3. 获取提交信息
+/// 4. 验证返回的信息
+///
+/// ## 预期结果
+/// - 返回有效的提交信息（消息、作者、日期）
+#[test]
+#[serial]
+fn test_get_commit_info_returns_commit_details() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let commit_message = "Test commit for info";
+
+    // Act: 创建提交
+    std::fs::write(env.path().join("info-test.txt"), "content")?;
+    GitCommitCommand::add_all(None)?;
+    GitCommitCommand::commit(commit_message, false, None)?;
+
+    let commit_sha = GitCommitCommand::get_head_sha(None)?;
+
+    // Act: 获取提交信息
+    let (message, author, date) = GitCommitCommand::get_commit_info(&commit_sha, None)?;
+
+    // Assert: 验证返回的信息
+    assert_eq!(message, commit_message, "Commit message should match");
+    assert!(!author.is_empty(), "Author should not be empty");
+    assert!(!date.is_empty(), "Date should not be empty");
+
+    Ok(())
+}
+
+/// 测试获取差异内容
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::get_diff() 能够获取差异内容。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 创建文件并暂存
+/// 3. 获取暂存区差异
+/// 4. 验证差异内容
+///
+/// ## 预期结果
+/// - 返回有效的差异内容
+#[test]
+#[serial]
+fn test_get_diff_returns_diff_content() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let test_file = "diff-test.txt";
+    let test_content = "diff content\nline 2";
+
+    // Act: 创建文件并暂存
+    std::fs::write(env.path().join(test_file), test_content)?;
+    GitCommitCommand::add(test_file, None)?;
+
+    // Act: 获取暂存区差异
+    let diff = GitCommitCommand::get_diff(true, None)?;
+
+    // Assert: 验证差异内容包含文件信息
+    assert!(!diff.is_empty(), "Diff should not be empty");
+    assert!(
+        diff.contains(test_file) || diff.contains("diff-test"),
+        "Diff should contain file name"
+    );
+
+    Ok(())
+}
+
+/// 测试获取工作区差异
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::get_diff() 能够获取工作区差异。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 修改文件（不暂存）
+/// 3. 获取工作区差异
+/// 4. 验证差异内容
+///
+/// ## 预期结果
+/// - 返回有效的差异内容
+#[test]
+#[serial]
+fn test_get_diff_returns_working_directory_diff() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let test_file = "working-diff.txt";
+
+    // Act: 创建并提交文件
+    std::fs::write(env.path().join(test_file), "original content")?;
+    GitCommitCommand::add_all(None)?;
+    GitCommitCommand::commit("Initial commit", false, None)?;
+
+    // Act: 修改文件（不暂存）
+    std::fs::write(env.path().join(test_file), "modified content")?;
+
+    // Act: 获取工作区差异
+    let diff = GitCommitCommand::get_diff(false, None)?;
+
+    // Assert: 验证差异内容
+    assert!(!diff.is_empty(), "Diff should not be empty");
+    assert!(
+        diff.contains("modified") || diff.contains("original"),
+        "Diff should contain content changes"
+    );
+
+    Ok(())
+}

@@ -168,3 +168,117 @@ fn test_list_remotes_returns_remotes() -> Result<()> {
 
     Ok(())
 }
+
+/// 测试添加远程仓库
+///
+/// ## 测试目的
+/// 验证 GitRepoCommand::add_remote() 能够添加远程仓库。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 添加远程仓库
+/// 3. 验证远程仓库存在
+/// 4. 清理：删除远程仓库
+///
+/// ## 预期结果
+/// - 远程仓库添加成功
+#[test]
+#[serial]
+fn test_add_remote_adds_remote() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let remote_name = "test-origin";
+    let remote_url = "https://github.com/test/repo.git";
+
+    // Act: 添加远程仓库
+    GitRepoCommand::add_remote(remote_name, remote_url, None)?;
+
+    // Assert: 验证远程仓库存在
+    let remotes = GitRepoCommand::list_remotes(None)?;
+    assert!(
+        remotes.contains(&remote_name.to_string()),
+        "Remote should be added"
+    );
+
+    // Cleanup: 删除远程仓库
+    let _ = GitRepoCommand::remove_remote(remote_name, None);
+
+    Ok(())
+}
+
+/// 测试删除远程仓库
+///
+/// ## 测试目的
+/// 验证 GitRepoCommand::remove_remote() 能够删除远程仓库。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 添加远程仓库
+/// 3. 删除远程仓库
+/// 4. 验证远程仓库被删除
+///
+/// ## 预期结果
+/// - 远程仓库删除成功
+#[test]
+#[serial]
+fn test_remove_remote_removes_remote() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let remote_name = "test-remove";
+    let remote_url = "https://github.com/test/repo.git";
+
+    // Act: 添加远程仓库
+    GitRepoCommand::add_remote(remote_name, remote_url, None)?;
+
+    // Act: 删除远程仓库
+    GitRepoCommand::remove_remote(remote_name, None)?;
+
+    // Assert: 验证远程仓库被删除
+    let remotes = GitRepoCommand::list_remotes(None)?;
+    assert!(
+        !remotes.contains(&remote_name.to_string()),
+        "Remote should be removed"
+    );
+
+    Ok(())
+}
+
+/// 测试获取远程 URL
+///
+/// ## 测试目的
+/// 验证 GitRepoCommand::get_remote_url() 能够获取远程 URL。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 添加远程仓库
+/// 3. 获取远程 URL
+/// 4. 验证返回的 URL
+/// 5. 清理：删除远程仓库
+///
+/// ## 预期结果
+/// - 返回正确的远程 URL
+#[test]
+#[serial]
+fn test_get_remote_url_returns_url() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let remote_name = "test-url";
+    let remote_url = "https://github.com/test/repo.git";
+
+    // Act: 添加远程仓库
+    GitRepoCommand::add_remote(remote_name, remote_url, None)?;
+
+    // Act: 获取远程 URL
+    let url = GitRepoCommand::get_remote_url(Some(remote_name), None)?;
+
+    // Assert: 验证返回的 URL
+    assert_eq!(url, remote_url, "Remote URL should match");
+
+    // Cleanup: 删除远程仓库
+    let _ = GitRepoCommand::remove_remote(remote_name, None);
+
+    Ok(())
+}
