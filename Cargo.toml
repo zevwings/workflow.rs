@@ -41,6 +41,10 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 handlebars = "5.1"
 git2 = { version = "0.18", default-features = false, features = ["vendored-openssl", "ssh"] }  # Git 操作库，使用 vendored-openssl，启用 SSH 支持
+
+# clipboard 依赖 XCB 库，在 musl 静态链接构建中不可用
+# 因此只在非 musl 目标中包含此依赖
+[target.'cfg(not(target_env = "musl"))'.dependencies]
 clipboard = "0.5"
 
 [dev-dependencies]
