@@ -89,6 +89,10 @@ harness = false
 name = "network_operations"
 harness = false
 
+[[bench]]
+name = "git_commands"
+harness = false
+
 # 独立测试目标配置
 [[test]]
 name = "completeness"

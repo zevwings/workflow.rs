@@ -1,0 +1,178 @@
+//! GitCommitCommand 测试
+//!
+//! 测试提交命令包装层的功能。
+
+use color_eyre::Result;
+use serial_test::serial;
+use workflow::git::commands::GitCommitCommand;
+
+use crate::common::environments::GitTestEnv;
+use crate::common::helpers::CurrentDirGuard;
+
+/// 测试检查 Git 状态
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::status() 能够获取 Git 状态。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 获取 Git 状态
+/// 3. 验证返回状态信息
+///
+/// ## 预期结果
+/// - 返回状态信息（可能是空字符串如果没有更改）
+#[test]
+#[serial]
+fn test_status_returns_status() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // Act: 获取 Git 状态
+    let status = GitCommitCommand::status(None)?;
+
+    // Assert: 验证返回状态（初始状态应该为空）
+    // 注意：GitTestEnv 创建了初始提交，所以工作目录应该是干净的
+    assert!(
+        status.trim().is_empty(),
+        "Initial status should be empty, got: {}",
+        status
+    );
+
+    Ok(())
+}
+
+/// 测试检查是否有更改
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::has_changes() 能够检查是否有未提交的更改。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 创建新文件
+/// 3. 检查是否有更改
+///
+/// ## 预期结果
+/// - 创建文件后有更改，返回 true
+#[test]
+#[serial]
+fn test_has_changes_detects_changes() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // Act: 创建新文件
+    std::fs::write(env.path().join("test.txt"), "test content")?;
+
+    // Act: 检查是否有更改
+    let has_changes = GitCommitCommand::has_changes(None)?;
+
+    // Assert: 验证检测到更改
+    assert!(has_changes, "Should detect changes after creating file");
+
+    Ok(())
+}
+
+/// 测试暂存文件
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::add() 能够暂存文件。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 创建新文件
+/// 3. 暂存文件
+/// 4. 验证文件已暂存
+///
+/// ## 预期结果
+/// - 文件成功暂存
+#[test]
+#[serial]
+fn test_add_stages_file() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let test_file = "test-add.txt";
+
+    // Act: 创建并暂存文件
+    std::fs::write(env.path().join(test_file), "test content")?;
+    GitCommitCommand::add(test_file, None)?;
+
+    // Assert: 验证文件已暂存（通过检查暂存区状态）
+    let status = GitCommitCommand::status(None)?;
+    assert!(
+        status.contains(test_file),
+        "File should be staged, status: {}",
+        status
+    );
+
+    Ok(())
+}
+
+/// 测试创建提交
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::commit() 能够创建提交。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 创建并暂存文件
+/// 3. 创建提交
+/// 4. 验证提交成功
+///
+/// ## 预期结果
+/// - 提交创建成功
+#[test]
+#[serial]
+fn test_commit_creates_commit() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let test_file = "test-commit.txt";
+
+    // Act: 创建文件、暂存并提交
+    std::fs::write(env.path().join(test_file), "test content")?;
+    GitCommitCommand::add(test_file, None)?;
+    GitCommitCommand::commit("Test commit", false, None)?;
+
+    // Assert: 验证工作目录干净（没有未提交的更改）
+    let has_changes = GitCommitCommand::has_changes(None)?;
+    assert!(
+        !has_changes,
+        "Working directory should be clean after commit"
+    );
+
+    Ok(())
+}
+
+/// 测试获取 HEAD SHA
+///
+/// ## 测试目的
+/// 验证 GitCommitCommand::get_head_sha() 能够获取 HEAD 的 SHA。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 获取 HEAD SHA
+/// 3. 验证返回有效的 SHA
+///
+/// ## 预期结果
+/// - 返回有效的 commit SHA
+#[test]
+#[serial]
+fn test_get_head_sha_returns_valid_sha() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
+    let env = GitTestEnv::new()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // Act: 获取 HEAD SHA
+    let sha = GitCommitCommand::get_head_sha(None)?;
+
+    // Assert: 验证返回有效的 SHA（40 个字符的十六进制字符串）
+    assert_eq!(sha.len(), 40, "SHA should be 40 characters long");
+    assert!(
+        sha.chars().all(|c| c.is_ascii_hexdigit()),
+        "SHA should contain only hex digits"
+    );
+
+    Ok(())
+}

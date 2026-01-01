@@ -35,6 +35,9 @@ mod table;
 mod tag;
 mod types;
 
+// 命令包装层
+pub mod commands;
+
 // 重新导出所有公共 API
 pub use auth::GitAuth;
 pub use branch::{GitBranch, MergeStrategy};

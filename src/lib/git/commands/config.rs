@@ -1,0 +1,139 @@
+//! Git 配置操作命令封装
+//!
+//! 提供配置相关的所有 Git 命令操作，包括：
+//! - 配置读取（get_config）
+//! - 配置设置（set_config）
+
+use crate::git::commands::GitCommand;
+use color_eyre::{eyre::WrapErr, Result};
+use std::path::Path;
+
+/// Git 配置命令操作
+pub struct GitConfigCommand;
+
+impl GitConfigCommand {
+    /// 获取配置值
+    ///
+    /// 使用 `git config --get <key>` 命令
+    pub fn get_config(key: &str, global: bool, cwd: Option<&Path>) -> Result<Option<String>> {
+        let mut args = vec!["config", "--get"];
+
+        if global {
+            args.push("--global");
+        }
+
+        args.push(key);
+
+        match GitCommand::run(&args, cwd) {
+            Ok(output) => {
+                let value = output.trim().to_string();
+                if value.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(value))
+                }
+            }
+            Err(e) => {
+                // 如果配置不存在，Git 会返回错误（退出码 1），这是正常的
+                // Git 在配置不存在时返回退出码 1，我们可以通过检查错误类型来判断
+                let error_str = format!("{}", e);
+                if error_str.contains("not found")
+                    || error_str.contains("no such key")
+                    || error_str.contains("exited with code 1")
+                {
+                    Ok(None)
+                } else {
+                    Err(color_eyre::eyre::eyre!("{}", e))
+                        .wrap_err_with(|| format!("Failed to get config: {}", key))
+                }
+            }
+        }
+    }
+
+    /// 设置配置值
+    ///
+    /// 使用 `git config <scope> <key> <value>` 命令
+    pub fn set_config(key: &str, value: &str, global: bool, cwd: Option<&Path>) -> Result<()> {
+        let mut args = vec!["config"];
+
+        if global {
+            args.push("--global");
+        }
+
+        args.push(key);
+        args.push(value);
+
+        GitCommand::execute(&args, cwd)
+            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .wrap_err_with(|| format!("Failed to set config: {} = {}", key, value))
+    }
+
+    /// 删除配置项
+    ///
+    /// 使用 `git config --unset <key>` 命令
+    pub fn unset_config(key: &str, global: bool, cwd: Option<&Path>) -> Result<()> {
+        let mut args = vec!["config", "--unset"];
+
+        if global {
+            args.push("--global");
+        }
+
+        args.push(key);
+
+        GitCommand::execute(&args, cwd)
+            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .wrap_err_with(|| format!("Failed to unset config: {}", key))
+    }
+
+    /// 获取用户邮箱
+    ///
+    /// 使用 `git config user.email` 命令
+    pub fn get_user_email(global: bool, cwd: Option<&Path>) -> Result<Option<String>> {
+        Self::get_config("user.email", global, cwd)
+    }
+
+    /// 获取用户名称
+    ///
+    /// 使用 `git config user.name` 命令
+    pub fn get_user_name(global: bool, cwd: Option<&Path>) -> Result<Option<String>> {
+        Self::get_config("user.name", global, cwd)
+    }
+
+    /// 设置用户邮箱和名称
+    ///
+    /// # 返回
+    ///
+    /// 返回设置后的 `(email, name)` 元组
+    pub fn set_user(
+        email: &str,
+        name: &str,
+        global: bool,
+        cwd: Option<&Path>,
+    ) -> Result<(String, String)> {
+        Self::set_config("user.email", email, global, cwd)?;
+        Self::set_config("user.name", name, global, cwd)?;
+        Ok((email.to_string(), name.to_string()))
+    }
+
+    /// 列出所有配置项
+    ///
+    /// 使用 `git config --list` 命令
+    pub fn list_config(global: bool, cwd: Option<&Path>) -> Result<Vec<(String, String)>> {
+        let mut args = vec!["config", "--list"];
+
+        if global {
+            args.push("--global");
+        }
+
+        let output = GitCommand::run(&args, cwd).map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
+
+        let mut configs = Vec::new();
+        for line in output.lines() {
+            if let Some((key, value)) = line.split_once('=') {
+                configs.push((key.trim().to_string(), value.trim().to_string()));
+            }
+        }
+
+        Ok(configs)
+    }
+}
