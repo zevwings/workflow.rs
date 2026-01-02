@@ -2,7 +2,7 @@
 //!
 //! 测试 GitRemote 的基础功能，包括：
 //! - 获取远程 URL
-//! - 逃生舱方法
+//! - 远程仓库操作
 
 use color_eyre::Result;
 use tempfile::TempDir;
@@ -15,21 +15,25 @@ fn test_find_origin_remote() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库（使用 git2）
-    let mut repo = GitRepository::init(repo_path, None)?;
+    // 初始化 Git 仓库
+    let _repo = GitRepository::init(repo_path, None)?;
 
-    // 添加 origin 远程（使用 git2 API）
-    repo.as_inner_mut()
-        .remote("origin", "https://github.com/test/repo.git")
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote: {}", e))?;
+    // 添加 origin 远程（使用 GitRepoCommand）
+    use workflow::git::commands::GitRepoCommand;
+    GitRepoCommand::add_remote(
+        "origin",
+        "https://github.com/test/repo.git",
+        Some(repo_path),
+    )
+    .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote: {}", e))?;
 
     // 打开仓库并查找 origin 远程
     let mut repo = GitRepository::open_at(repo_path)?;
     let remote = repo.find_origin_remote()?;
 
     // 验证能够获取 URL
-    let url = remote.url();
-    assert_eq!(url, Some("https://github.com/test/repo.git"));
+    let url = remote.url()?;
+    assert_eq!(url, "https://github.com/test/repo.git");
 
     Ok(())
 }
@@ -41,7 +45,7 @@ fn test_find_remote_not_found() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库（使用 git2）
+    // 初始化 Git 仓库
     let _repo = GitRepository::init(repo_path, None)?;
 
     // 打开仓库并尝试查找不存在的远程
@@ -60,12 +64,12 @@ fn test_remote_url() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库（使用 git2）
-    let mut repo = GitRepository::init(repo_path, None)?;
+    // 初始化 Git 仓库
+    let _repo = GitRepository::init(repo_path, None)?;
 
-    // 添加 origin 远程（使用 git2 API）
-    repo.as_inner_mut()
-        .remote("origin", "git@github.com:test/repo.git")
+    // 添加 origin 远程（使用 GitRepoCommand）
+    use workflow::git::commands::GitRepoCommand;
+    GitRepoCommand::add_remote("origin", "git@github.com:test/repo.git", Some(repo_path))
         .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote: {}", e))?;
 
     // 打开仓库并查找 origin 远程
@@ -73,39 +77,44 @@ fn test_remote_url() -> Result<()> {
     let remote = repo.find_origin_remote()?;
 
     // 验证能够获取 URL
-    // 注意：find_origin_remote() 会规范化 SSH URL 格式（从 git@host:path 转换为 ssh://git@host/path）
-    // 因为 git2 库不支持简写格式，所以返回的是规范化后的格式
-    let url = remote.url();
-    assert_eq!(url, Some("ssh://git@github.com/test/repo.git"));
+    // 注意：Git 命令本身支持简写 SSH URL，所以返回的可能是原始格式或规范化后的格式
+    let url = remote.url()?;
+    // URL 可能是原始格式或规范化后的格式，都接受
+    assert!(
+        url == "git@github.com:test/repo.git" || url == "ssh://git@github.com/test/repo.git",
+        "URL should be in expected format, got: {}",
+        url
+    );
 
     Ok(())
 }
 
-/// 测试逃生舱方法
+/// 测试远程 URL 获取
 #[test]
-fn test_as_inner() -> Result<()> {
+fn test_remote_url_access() -> Result<()> {
     // 创建一个临时目录并初始化 Git 仓库
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库（使用 git2）
-    let mut repo = GitRepository::init(repo_path, None)?;
+    // 初始化 Git 仓库
+    let _repo = GitRepository::init(repo_path, None)?;
 
-    // 添加 origin 远程（使用 git2 API）
-    repo.as_inner_mut()
-        .remote("origin", "https://github.com/test/repo.git")
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote: {}", e))?;
+    // 添加 origin 远程（使用 GitRepoCommand）
+    use workflow::git::commands::GitRepoCommand;
+    GitRepoCommand::add_remote(
+        "origin",
+        "https://github.com/test/repo.git",
+        Some(repo_path),
+    )
+    .map_err(|e| color_eyre::eyre::eyre!("Failed to add remote: {}", e))?;
 
     // 打开仓库并查找 origin 远程
     let mut repo = GitRepository::open_at(repo_path)?;
-    let mut remote = repo.find_origin_remote()?;
+    let remote = repo.find_origin_remote()?;
 
-    // 测试逃生舱方法
-    let _inner_ref = remote.as_inner();
-    let _inner_mut_ref = remote.as_inner_mut();
-
-    // 验证能够访问底层 Remote（不应该 panic）
-    // 如果上面的调用没有 panic，测试就通过了
+    // 测试获取 URL（不应该 panic）
+    let url = remote.url()?;
+    assert_eq!(url, "https://github.com/test/repo.git");
 
     Ok(())
 }

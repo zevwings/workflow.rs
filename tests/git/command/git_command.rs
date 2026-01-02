@@ -4,7 +4,8 @@
 
 use color_eyre::Result;
 use serial_test::serial;
-use workflow::git::commands::{GitCommand, GitError};
+use workflow::git::commands::command::GitCommand;
+use workflow::git::commands::GitError;
 
 use crate::common::environments::GitTestEnv;
 use crate::common::helpers::CurrentDirGuard;

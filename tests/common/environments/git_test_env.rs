@@ -23,7 +23,8 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::PathBuf;
-use workflow::git::commands::{GitBranchCommand, GitCommand, GitCommitCommand, GitRepoCommand};
+use workflow::git::commands::command::GitCommand;
+use workflow::git::commands::{GitBranchCommand, GitCommitCommand, GitRepoCommand};
 use workflow::git::{GitBranch, GitCommit, GitRepository};
 
 use crate::common::helpers::get_current_dir_with_fallback;
@@ -308,11 +309,8 @@ impl GitTestEnv {
     /// ```
     pub fn last_commit_sha(&self) -> Result<String> {
         let repo = GitRepository::open_at(self.path())?;
-        let head = repo.head()?;
-        let oid = head
-            .target()
-            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD does not point to a valid commit"))?;
-        Ok(oid.to_string())
+        let head_sha = repo.head()?;
+        Ok(head_sha)
     }
 
     /// 添加假的远程仓库引用（用于测试需要远程分支的功能）
@@ -541,7 +539,8 @@ impl GitTestEnv {
 
                     let remote_result = if remotes.contains(&remote_name_clone) {
                         // Remote 已存在，使用 git remote set-url 更新
-                        workflow::git::commands::GitCommand::execute(
+                        use workflow::git::commands::command::GitCommand;
+                        GitCommand::execute(
                             &["remote", "set-url", &remote_name_clone, &remote_url_clone],
                             Some(&repo_path),
                         )

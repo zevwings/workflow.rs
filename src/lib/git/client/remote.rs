@@ -1,27 +1,28 @@
 //! Git 远程仓库封装
 //!
-//! 提供统一的 Git 远程仓库操作接口，封装 git2::Remote 的常用操作。
+//! 提供统一的 Git 远程仓库操作接口，使用 GitCommand 执行 git 命令。
 
 use color_eyre::{eyre::WrapErr, Result};
-use git2::{FetchOptions, PushOptions, Remote};
+use std::path::PathBuf;
+
+use crate::git::commands::command::GitCommand;
+use crate::git::commands::GitRepoCommand;
 
 /// Git 远程仓库封装
 ///
-/// 提供统一的 Git 远程仓库操作接口，封装 git2::Remote 的常用操作。
-///
-/// 注意：`GitRemote` 持有 `Remote` 的所有权，但 `Remote` 本身可能持有对 `Repository` 的引用。
-/// 因此，`GitRemote` 的生命周期与创建它的 `GitRepository` 相关。
-pub struct GitRemote<'repo> {
-    inner: Remote<'repo>,
+/// 提供统一的 Git 远程仓库操作接口，使用 GitCommand 执行 git 命令。
+pub struct GitRemote {
+    name: String,
+    repo_path: PathBuf,
 }
 
-impl<'repo> GitRemote<'repo> {
+impl GitRemote {
     /// 创建新的 GitRemote 实例
     ///
     /// 这是一个内部方法，通常通过 `GitRepository::find_remote()` 或
     /// `GitRepository::find_origin_remote()` 来创建。
-    pub(crate) fn new(remote: Remote<'repo>) -> Self {
-        Self { inner: remote }
+    pub(crate) fn new(name: String, repo_path: PathBuf) -> Self {
+        Self { name, repo_path }
     }
 
     /// 获取远程 URL
@@ -29,16 +30,16 @@ impl<'repo> GitRemote<'repo> {
     /// # 返回
     ///
     /// 返回远程仓库的 URL，如果未设置则返回 `None`。
-    pub fn url(&self) -> Option<&str> {
-        self.inner.url()
+    pub fn url(&self) -> Result<String> {
+        GitRepoCommand::get_remote_url(Some(&self.name), Some(&self.repo_path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to get remote URL: {}", e))
     }
 
     /// 推送到远程
     ///
     /// # 参数
     ///
-    /// * `refspecs` - 要推送的引用规范数组（如 `["refs/heads/main:refs/heads/main"]`）
-    /// * `options` - 可选的推送选项（包含认证信息）
+    /// * `refspecs` - 要推送的引用规范数组（如 `["refs/heads/main:refs/heads/main"]` 或 `["main"]`）
     ///
     /// # 返回
     ///
@@ -56,13 +57,22 @@ impl<'repo> GitRemote<'repo> {
     /// # fn main() -> Result<()> {
     /// let mut repo = GitRepository::open()?;
     /// let mut remote = repo.find_origin_remote()?;
-    /// let mut push_options = GitRepository::get_push_options();
-    /// remote.push(&["refs/heads/main:refs/heads/main"], Some(&mut push_options))?;
+    /// remote.push(&["main"])?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn push(&mut self, refspecs: &[&str], options: Option<&mut PushOptions>) -> Result<()> {
-        self.inner.push(refspecs, options).wrap_err("Failed to push to remote")
+    pub fn push(&mut self, refspecs: &[&str]) -> Result<()> {
+        // 构建 git push 命令
+        let mut args = vec!["push", &self.name];
+
+        // 添加 refspecs
+        for refspec in refspecs {
+            args.push(refspec);
+        }
+
+        GitCommand::execute(&args, Some(&self.repo_path))
+            .map_err(GitCommand::handle_auth_error)
+            .wrap_err("Failed to push to remote")
     }
 
     /// 从远程获取
@@ -70,8 +80,7 @@ impl<'repo> GitRemote<'repo> {
     /// # 参数
     ///
     /// * `refspecs` - 要获取的引用规范数组（如 `["refs/heads/*:refs/remotes/origin/*"]`）
-    /// * `options` - 可选的获取选项（包含认证信息）
-    /// * `reflog_message` - 可选的 reflog 消息
+    ///   如果为空，则获取所有默认引用
     ///
     /// # 返回
     ///
@@ -89,41 +98,50 @@ impl<'repo> GitRemote<'repo> {
     /// # fn main() -> Result<()> {
     /// let mut repo = GitRepository::open()?;
     /// let mut remote = repo.find_origin_remote()?;
-    /// let mut fetch_options = GitRepository::get_fetch_options();
-    /// remote.fetch(&["refs/heads/*:refs/remotes/origin/*"], Some(&mut fetch_options), None)?;
+    /// remote.fetch(&[])?; // 获取所有默认引用
     /// # Ok(())
     /// # }
     /// ```
-    pub fn fetch(
-        &mut self,
-        refspecs: &[&str],
-        options: Option<&mut FetchOptions>,
-        reflog_message: Option<&str>,
-    ) -> Result<()> {
-        self.inner
-            .fetch(refspecs, options, reflog_message)
+    pub fn fetch(&mut self, refspecs: &[&str]) -> Result<()> {
+        // 如果没有指定 refspecs，使用简单的 fetch
+        if refspecs.is_empty() {
+            return GitRepoCommand::fetch(Some(&self.name), Some(&self.repo_path))
+                .wrap_err("Failed to fetch from remote");
+        }
+
+        // 构建 git fetch 命令（带 refspecs）
+        let mut args = vec!["fetch", &self.name];
+
+        // 添加 refspecs
+        for refspec in refspecs {
+            args.push(refspec);
+        }
+
+        GitCommand::execute(&args, Some(&self.repo_path))
+            .map_err(GitCommand::handle_auth_error)
             .wrap_err("Failed to fetch from remote")
     }
 
-    /// 逃生舱：直接访问底层 Remote
+    /// 列出远程引用
     ///
-    /// 用于需要直接使用 git2 高级功能的场景。
+    /// 使用 `git ls-remote` 命令列出远程仓库的所有引用。
     ///
     /// # 返回
     ///
-    /// 返回底层 `Remote` 的不可变引用。
-    pub fn as_inner(&self) -> &Remote<'repo> {
-        &self.inner
-    }
+    /// 返回元组向量 `(ref_name, sha)`，包含引用名称和对应的 SHA。
+    ///
+    /// # 错误
+    ///
+    /// 如果获取失败，返回相应的错误信息。
+    pub fn list(&self) -> Result<Vec<(String, String)>> {
+        let output = GitRepoCommand::ls_remote(&self.name, Some(&self.repo_path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to list remote references: {}", e))?;
 
-    /// 逃生舱：可变访问底层 Remote
-    ///
-    /// 用于需要直接使用 git2 高级功能的场景。
-    ///
-    /// # 返回
-    ///
-    /// 返回底层 `Remote` 的可变引用。
-    pub fn as_inner_mut(&mut self) -> &mut Remote<'repo> {
-        &mut self.inner
+        let refs: Vec<(String, String)> = GitCommand::parse_key_value(&output, '\t')
+            .into_iter()
+            .map(|(sha, ref_name)| (ref_name, sha))
+            .collect();
+
+        Ok(refs)
     }
 }

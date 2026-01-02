@@ -3,6 +3,7 @@
 //! 测试 Stash 命令包装层的功能。
 
 use color_eyre::Result;
+use serial_test::serial;
 use workflow::git::commands::{GitCommitCommand, GitStashCommand};
 
 use crate::common::environments::GitTestEnv;
@@ -21,6 +22,7 @@ use crate::common::environments::GitTestEnv;
 /// ## 预期结果
 /// - Stash 保存成功
 #[test]
+#[serial]
 fn test_stash_push_saves_changes() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -60,6 +62,7 @@ fn test_stash_push_saves_changes() -> Result<()> {
 /// ## 预期结果
 /// - 返回所有 stash 的列表
 #[test]
+#[serial]
 fn test_list_stash_returns_all_stashes() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -101,6 +104,7 @@ fn test_list_stash_returns_all_stashes() -> Result<()> {
 /// ## 预期结果
 /// - Stash 应用成功，且 stash 仍然存在
 #[test]
+#[serial]
 fn test_stash_apply_applies_stash() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -151,6 +155,7 @@ fn test_stash_apply_applies_stash() -> Result<()> {
 /// ## 预期结果
 /// - Stash 恢复成功，且 stash 被删除
 #[test]
+#[serial]
 fn test_stash_pop_applies_and_deletes_stash() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -201,6 +206,7 @@ fn test_stash_pop_applies_and_deletes_stash() -> Result<()> {
 /// ## 预期结果
 /// - Stash 删除成功
 #[test]
+#[serial]
 fn test_drop_stash_deletes_stash() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -242,6 +248,7 @@ fn test_drop_stash_deletes_stash() -> Result<()> {
 /// ## 预期结果
 /// - 没有冲突时返回 false
 #[test]
+#[serial]
 fn test_check_conflicts_returns_false_when_no_conflicts() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;

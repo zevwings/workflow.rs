@@ -6,10 +6,13 @@
 //! - 格式化显示
 //! - Rebase 相关操作
 
+use crate::git::commands::GitCommitCommand;
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitRepository, GitStash};
 use color_eyre::{eyre::WrapErr, Result};
-use git2::Oid;
 use std::collections::HashSet;
+use std::io::Write;
+use std::process::Command;
+use tempfile::NamedTempFile;
 
 /// Squash 预览信息
 #[derive(Debug, Clone)]
@@ -176,7 +179,7 @@ impl CommitSquash {
         result
     }
 
-    /// 使用 git2 rebase API 执行 squash 操作
+    /// 使用 git 命令执行 squash 操作
     ///
     /// # 参数
     ///
@@ -192,213 +195,188 @@ impl CommitSquash {
         selected_commit_shas: &[String],
         new_message: &str,
     ) -> Result<()> {
-        let mut repo = GitRepository::open()?;
+        let repo = GitRepository::open()?;
+        let repo_path = repo.path();
 
-        // 解析 commit SHA
-        let base_oid = Oid::from_str(base_sha)
+        // 验证 base_sha 和 selected_commit_shas 都是有效的 commit
+        GitCommitCommand::verify_ref(base_sha, Some(repo_path))
             .wrap_err_with(|| format!("Invalid base commit SHA: {}", base_sha))?;
 
-        // 将选中的 SHA 转换为 Oid 集合
-        let selected_oids: HashSet<Oid> =
-            selected_commit_shas.iter().filter_map(|s| Oid::from_str(s).ok()).collect();
+        for commit_sha in selected_commit_shas {
+            GitCommitCommand::verify_ref(commit_sha, Some(repo_path))
+                .wrap_err_with(|| format!("Invalid commit SHA: {}", commit_sha))?;
+        }
 
-        // 获取 HEAD commit（在获取可变引用之前）
-        let head_commit_id = {
-            let head = repo.head()?;
-            let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
-            head_commit.id()
-        };
+        // 获取从 base_sha 到 HEAD 的所有 commits（按时间顺序，从旧到新）
+        let all_commits =
+            GitCommitCommand::rev_list(&format!("{}..HEAD", base_sha), Some(repo_path))
+                .wrap_err("Failed to get commit list")?;
 
-        // 转换为 AnnotatedCommit（rebase 需要）
-        // 使用作用域来管理 repo_inner 和 rebase 的生命周期
-        let (signature, squash_commits) = {
-            let repo_inner = repo.as_inner_mut();
-            let head_annotated = repo_inner
-                .find_annotated_commit(head_commit_id)
-                .wrap_err("Failed to create annotated commit from HEAD")?;
-            let base_annotated =
-                repo_inner.find_annotated_commit(base_oid).wrap_err_with(|| {
-                    format!("Failed to create annotated commit from base: {}", base_sha)
-                })?;
+        let all_commit_shas: Vec<String> = all_commits
+            .iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
 
-            // 初始化 rebase
-            let mut rebase_opts = git2::RebaseOptions::new();
-            // 不使用 inmemory 模式，因为我们需要修改工作目录
+        // 将选中的 SHA 转换为集合，方便查找
+        let selected_set: HashSet<String> = selected_commit_shas.iter().cloned().collect();
 
-            let mut rebase = repo_inner
-                .rebase(
-                    Some(&head_annotated),
-                    Some(&base_annotated),
-                    None,
-                    Some(&mut rebase_opts),
-                )
-                .wrap_err_with(|| format!("Failed to initialize rebase from base: {}", base_sha))?;
+        // 构建 rebase todo 列表
+        // 第一个选中的 commit 使用 "pick"，后续的选中 commits 使用 "squash"
+        let mut todo_lines = Vec::new();
+        let mut is_first_selected = true;
 
-            // 获取签名
-            let signature = repo_inner.signature().wrap_err("Failed to get signature")?;
-
-            // 跟踪要 squash 的 commits
-            let mut squash_commits: Vec<Oid> = Vec::new();
-            let mut is_first_selected = true;
-
-            // 应用所有 rebase 操作
-            while let Some(op) = rebase.next() {
-                let op = op.wrap_err("Failed to get next rebase operation")?;
-
-                // 检查是否有冲突
-                if repo_inner.index()?.has_conflicts() {
-                    rebase.abort().ok();
-                    color_eyre::eyre::bail!(
-                        "Rebase conflicts detected. Please resolve manually:\n  1. Review conflicted files\n  2. Resolve conflicts\n  3. Stage resolved files: git add <files>\n  4. Continue rebase: git rebase --continue\n  5. Or abort rebase: git rebase --abort"
-                    );
-                }
-
-                // 检查是否是选中的 commit（需要 squash）
-                if selected_oids.contains(&op.id()) {
-                    if is_first_selected {
-                        // 第一个选中的 commit：正常提交，但记录它
-                        squash_commits.push(op.id());
-                        rebase
-                            .commit(None, &signature, None)
-                            .wrap_err("Failed to commit first selected commit")?;
-                        is_first_selected = false;
-                    } else {
-                        // 后续选中的 commits：收集到 squash_commits
-                        squash_commits.push(op.id());
-                        // 对于 squash 的 commit，我们需要合并它们的更改
-                        // git2 rebase API 不支持直接 squash，我们需要手动合并
-                        // 当前 index 已经包含了这个 commit 的更改，正常提交
-                        // 稍后我们会合并所有 squash commits 并更新消息
-                        rebase
-                            .commit(None, &signature, None)
-                            .wrap_err("Failed to commit squash commit")?;
-                    }
+        for commit_sha in &all_commit_shas {
+            if selected_set.contains(commit_sha) {
+                if is_first_selected {
+                    todo_lines.push(format!("pick {}", commit_sha));
+                    is_first_selected = false;
                 } else {
-                    // 对于非选中的 commit，正常提交
-                    rebase
-                        .commit(None, &signature, None)
-                        .wrap_err("Failed to commit rebase operation")?;
+                    todo_lines.push(format!("squash {}", commit_sha));
                 }
+            } else {
+                todo_lines.push(format!("pick {}", commit_sha));
             }
+        }
 
-            // 完成 rebase
-            rebase.finish(None).wrap_err("Failed to finish rebase")?;
-            // rebase 和 repo_inner 在这个作用域结束时自动 drop
+        // 创建临时文件用于 rebase todo 列表
+        let mut todo_file =
+            NamedTempFile::new().wrap_err("Failed to create temporary file for rebase todo")?;
+        let todo_content = todo_lines.join("\n");
+        todo_file
+            .write_all(todo_content.as_bytes())
+            .wrap_err("Failed to write rebase todo")?;
+        let todo_path = todo_file.path().to_path_buf();
+        todo_file.persist(&todo_path).wrap_err("Failed to persist todo file")?;
 
-            (signature, squash_commits)
+        // 创建临时文件用于提交消息
+        let mut message_file =
+            NamedTempFile::new().wrap_err("Failed to create temporary file for commit message")?;
+        message_file
+            .write_all(new_message.as_bytes())
+            .wrap_err("Failed to write commit message")?;
+        let message_path = message_file.path().to_path_buf();
+        message_file.persist(&message_path).wrap_err("Failed to persist message file")?;
+
+        // 创建序列编辑器脚本（用于自动编辑 rebase todo）
+        // 使用跨平台的方式：在 Unix 上使用 sh，在 Windows 上使用 cmd
+        let (seq_editor_script, seq_editor_ext) = if cfg!(windows) {
+            (
+                format!(
+                    r#"@echo off
+copy /Y "{}" "%1" >nul
+"#,
+                    todo_path.to_string_lossy().replace('/', "\\")
+                ),
+                ".bat",
+            )
+        } else {
+            (
+                format!(
+                    r#"#!/bin/sh
+cp "{}" "$1"
+"#,
+                    todo_path.to_string_lossy()
+                ),
+                ".sh",
+            )
         };
 
-        // 如果有多于一个 squash commit，需要合并它们
-        if squash_commits.len() > 1 {
-            // 获取最后一个 squash commit（最新的）
-            let last_squash_oid = squash_commits.last().unwrap();
+        let mut seq_editor_file = NamedTempFile::with_suffix(seq_editor_ext)
+            .wrap_err("Failed to create temporary file for sequence editor")?;
+        seq_editor_file
+            .write_all(seq_editor_script.as_bytes())
+            .wrap_err("Failed to write sequence editor script")?;
+        let seq_editor_path = seq_editor_file.path().to_path_buf();
+        seq_editor_file
+            .persist(&seq_editor_path)
+            .wrap_err("Failed to persist sequence editor file")?;
 
-            // 获取当前 HEAD（应该是最后一个 squash commit）
-            let current_head_oid = {
-                let current_head = repo.head()?;
-                current_head.target().unwrap()
-            };
-            // 重新获取可变引用
-            let repo_inner = repo.as_inner_mut();
+        // 设置脚本可执行权限（Unix）
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&seq_editor_path, std::fs::Permissions::from_mode(0o755))
+                .wrap_err("Failed to set executable permissions")?;
+        }
 
-            // 如果当前 HEAD 不是最后一个 squash commit，需要更新
-            if current_head_oid != *last_squash_oid {
-                // 获取最后一个 squash commit
-                let last_commit = repo_inner
-                    .find_commit(*last_squash_oid)
-                    .wrap_err("Failed to find last squash commit")?;
-
-                // 获取所有 squash commits 的 tree，合并它们
-                let mut trees = Vec::new();
-                for oid in &squash_commits {
-                    let commit = repo_inner
-                        .find_commit(*oid)
-                        .wrap_err_with(|| format!("Failed to find commit: {}", oid))?;
-                    trees.push(commit.tree_id());
-                }
-
-                // 合并所有 trees（这里简化处理，使用最后一个 tree）
-                // 实际上应该合并所有 trees 的更改，但 git2 没有直接的 tree 合并 API
-                // 我们需要手动合并，这很复杂
-                // 为了简化，我们使用最后一个 commit 的 tree
-                let merged_tree_id = last_commit.tree_id();
-                let merged_tree =
-                    repo_inner.find_tree(merged_tree_id).wrap_err("Failed to find merged tree")?;
-
-                // 获取第一个 squash commit 的父 commit（base）
-                let first_squash_commit = repo_inner
-                    .find_commit(squash_commits[0])
-                    .wrap_err("Failed to find first squash commit")?;
-                let parent_commit =
-                    first_squash_commit.parent(0).wrap_err("Failed to get parent commit")?;
-
-                // 创建新的 commit，使用新消息和合并后的 tree
-                let new_commit_oid = repo_inner
-                    .commit(
-                        None,
-                        &signature,
-                        &signature,
-                        new_message,
-                        &merged_tree,
-                        &[&parent_commit],
-                    )
-                    .wrap_err("Failed to create squashed commit")?;
-
-                // 更新 HEAD 指向新的 commit
-                repo_inner.set_head_detached(new_commit_oid).wrap_err("Failed to update HEAD")?;
-            } else {
-                // 如果当前 HEAD 已经是最后一个 squash commit，只需要修改消息
-                let last_commit = repo_inner
-                    .find_commit(*last_squash_oid)
-                    .wrap_err("Failed to find last squash commit")?;
-
-                // 获取父 commit
-                let parent_commit =
-                    last_commit.parent(0).wrap_err("Failed to get parent commit")?;
-
-                // 创建新的 commit，使用新消息
-                let tree = last_commit.tree().wrap_err("Failed to get tree from last commit")?;
-                let new_commit_oid = repo_inner
-                    .commit(
-                        None,
-                        &signature,
-                        &signature,
-                        new_message,
-                        &tree,
-                        &[&parent_commit],
-                    )
-                    .wrap_err("Failed to create commit with new message")?;
-
-                // 更新 HEAD
-                repo_inner.set_head_detached(new_commit_oid).wrap_err("Failed to update HEAD")?;
-            }
-        } else if squash_commits.len() == 1 {
-            // 如果只有一个 squash commit，只需要修改消息
-            // rebase 已经在作用域内完成，repo_inner 已经 drop
-            // 重新获取可变引用
-            let repo_inner = repo.as_inner_mut();
-            let commit = repo_inner
-                .find_commit(squash_commits[0])
-                .wrap_err("Failed to find squash commit")?;
-
-            let parent_commit = commit.parent(0).wrap_err("Failed to get parent commit")?;
-
-            let tree = commit.tree().wrap_err("Failed to get tree from commit")?;
-            let new_commit_oid = repo_inner
-                .commit(
-                    None,
-                    &signature,
-                    &signature,
-                    new_message,
-                    &tree,
-                    &[&parent_commit],
-                )
-                .wrap_err("Failed to create commit with new message")?;
-
-            repo_inner.set_head_detached(new_commit_oid).wrap_err("Failed to update HEAD")?;
+        // 创建提交消息编辑器脚本
+        let (commit_editor_script, commit_editor_ext) = if cfg!(windows) {
+            (
+                format!(
+                    r#"@echo off
+copy /Y "{}" "%1" >nul
+"#,
+                    message_path.to_string_lossy().replace('/', "\\")
+                ),
+                ".bat",
+            )
         } else {
-            // 如果没有 squash commit，rebase 已经在作用域内完成
-            // 不需要额外操作
+            (
+                format!(
+                    r#"#!/bin/sh
+cp "{}" "$1"
+"#,
+                    message_path.to_string_lossy()
+                ),
+                ".sh",
+            )
+        };
+
+        let mut commit_editor_file = NamedTempFile::with_suffix(commit_editor_ext)
+            .wrap_err("Failed to create temporary file for commit editor")?;
+        commit_editor_file
+            .write_all(commit_editor_script.as_bytes())
+            .wrap_err("Failed to write commit editor script")?;
+        let commit_editor_path = commit_editor_file.path().to_path_buf();
+        commit_editor_file
+            .persist(&commit_editor_path)
+            .wrap_err("Failed to persist commit editor file")?;
+
+        // 设置脚本可执行权限（Unix）
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&commit_editor_path, std::fs::Permissions::from_mode(0o755))
+                .wrap_err("Failed to set executable permissions")?;
+        }
+
+        // 执行 rebase
+        // 使用 GIT_SEQUENCE_EDITOR 和 GIT_EDITOR 环境变量来自动化交互
+        let mut rebase_cmd = Command::new("git");
+        rebase_cmd
+            .arg("rebase")
+            .arg("-i")
+            .arg(base_sha)
+            .current_dir(repo_path)
+            .env("GIT_SEQUENCE_EDITOR", &seq_editor_path)
+            .env("GIT_EDITOR", &commit_editor_path)
+            .env("GIT_TERMINAL_PROMPT", "0");
+
+        let rebase_output = rebase_cmd.output().wrap_err("Failed to execute git rebase")?;
+
+        // 清理临时文件
+        let _ = std::fs::remove_file(&todo_path);
+        let _ = std::fs::remove_file(&message_path);
+        let _ = std::fs::remove_file(&seq_editor_path);
+        let _ = std::fs::remove_file(&commit_editor_path);
+
+        if !rebase_output.status.success() {
+            let stderr = String::from_utf8_lossy(&rebase_output.stderr);
+            let stdout = String::from_utf8_lossy(&rebase_output.stdout);
+
+            // 检查是否有冲突
+            if stderr.contains("conflict") || stdout.contains("conflict") {
+                color_eyre::eyre::bail!(
+                    "Rebase conflicts detected. Please resolve manually:\n  1. Review conflicted files\n  2. Resolve conflicts\n  3. Stage resolved files: git add <files>\n  4. Continue rebase: git rebase --continue\n  5. Or abort rebase: git rebase --abort"
+                );
+            }
+
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to execute rebase: {}\n{}",
+                stderr,
+                stdout
+            ));
         }
 
         Ok(())
@@ -443,10 +421,7 @@ impl CommitSquash {
         // 步骤3: 验证选中的 commits 存在
         let repo = GitRepository::open()?;
         for commit_sha in &options.commit_shas {
-            let oid = git2::Oid::from_str(commit_sha)
-                .wrap_err_with(|| format!("Invalid commit SHA: {}", commit_sha))?;
-            repo.as_inner()
-                .find_commit(oid)
+            GitCommitCommand::verify_ref(commit_sha, Some(repo.path()))
                 .wrap_err_with(|| format!("Commit not found: {}", commit_sha))?;
         }
 

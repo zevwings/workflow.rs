@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset, Local, TimeZone};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-use super::GitRepository;
+use super::commands::{GitCommitCommand, GitStashCommand};
 use crate::trace_warn;
 
 /// Stash 条目信息
@@ -67,7 +67,7 @@ pub struct GitStash;
 impl GitStash {
     /// 保存未提交的修改到 stash
     ///
-    /// 使用 git2 库将当前工作区和暂存区的未提交修改保存到 stash。
+    /// 使用 Git 命令行将当前工作区和暂存区的未提交修改保存到 stash。
     /// 如果提供了消息，则使用该消息作为 stash 消息。
     ///
     /// # 参数
@@ -78,60 +78,41 @@ impl GitStash {
     ///
     /// 如果 stash 操作失败，返回相应的错误信息。
     pub fn stash_push(message: Option<&str>) -> Result<()> {
-        let mut repo = GitRepository::open()?;
-
-        // 构建 stash 消息
-        let stash_message = if let Some(msg) = message {
-            msg.to_string()
-        } else {
-            // 如果没有提供消息，使用默认格式
-            let branch =
-                super::GitBranch::current_branch().unwrap_or_else(|_| "unknown".to_string());
-            format!(
-                "WIP on {}: {}",
-                branch,
-                chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-            )
-        };
-
-        // 获取签名并保存 stash
-        let repo_inner = repo.as_inner_mut();
-        let signature = repo_inner.signature().wrap_err("Failed to get repository signature")?;
-        repo_inner
-            .stash_save(&signature, &stash_message, None)
-            .wrap_err("Failed to stash changes")?;
-
-        Ok(())
+        GitStashCommand::stash_push(message, None).wrap_err("Failed to stash changes")
     }
 
     /// 检查是否有未合并的文件（冲突文件）
     ///
-    /// 使用 git2 库检查是否有未合并的路径（冲突文件）。
+    /// 使用 Git 命令行检查是否有未合并的路径（冲突文件）。
     /// 返回 true 如果有冲突文件，false 如果没有
     pub fn has_unmerged() -> Result<bool> {
-        let mut repo = GitRepository::open()?;
+        // 使用 git status --porcelain 检查冲突状态
+        // 冲突文件的状态码包含 'U' (unmerged)
+        let output = GitCommitCommand::status(None).wrap_err("Failed to get repository status")?;
 
-        // 使用 index 检查未合并的文件
-        let _index = repo.index()?;
+        // 检查输出中是否有冲突标记（状态码包含 'U'）
+        // Git status --porcelain 格式：
+        // - 第一个字符：索引状态
+        // - 第二个字符：工作树状态
+        // - 'U' 表示未合并（冲突）
+        for line in output.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            if line.len() >= 2 {
+                let index_status = line.chars().nth(0).unwrap_or(' ');
+                let worktree_status = line.chars().nth(1).unwrap_or(' ');
+                // 'U' 表示未合并（冲突）
+                if index_status == 'U' || worktree_status == 'U' {
+                    return Ok(true);
+                }
+            }
+        }
 
-        // 遍历索引条目，查找未合并的文件
-        // git2 的 IndexEntry 不直接暴露 stage，我们使用 statuses 检查冲突
-
-        // 更可靠的方法：使用 statuses 检查是否有冲突状态
-        let mut status_options = git2::StatusOptions::new();
-        status_options.include_untracked(false);
-        status_options.include_ignored(false);
-
-        let statuses = repo
-            .as_inner()
-            .statuses(Some(&mut status_options))
-            .wrap_err("Failed to get repository statuses")?;
-
-        // 检查是否有冲突状态的文件
-        for entry in statuses.iter() {
-            let status = entry.status();
-            // 检查是否有冲突标记（CONFLICTED 状态）
-            if status.contains(git2::Status::CONFLICTED) {
+        // 也检查 git diff --check 是否有冲突标记（检查工作区文件中的冲突标记）
+        if let Ok(has_conflicts) = GitCommitCommand::check_conflicts(None) {
+            if has_conflicts {
                 return Ok(true);
             }
         }
@@ -141,56 +122,40 @@ impl GitStash {
 
     /// 列出所有 stash 条目
     ///
-    /// 使用 git2 库获取所有 stash 条目的结构化数据。
+    /// 使用 Git 命令行获取所有 stash 条目的结构化数据。
     ///
     /// # 返回
     ///
     /// 返回所有 stash 条目的列表，按索引从新到旧排列（stash@{0} 在第一个）。
     pub fn stash_list() -> Result<Vec<StashEntry>> {
-        let mut repo = GitRepository::open()?;
+        // 使用 GitStashCommand 获取基础信息
+        let stash_entries =
+            GitStashCommand::list_stash(None).wrap_err("Failed to list stash entries")?;
+
         let mut entries = Vec::new();
 
-        // 使用 stash_foreach 遍历所有 stash
-        // 注意：需要先收集所有 stash OID，然后在回调外处理，避免借用冲突
-        let mut stash_oids = Vec::new();
-        let mut stash_messages = Vec::new();
+        // 为每个 stash 获取时间戳和 commit hash
+        for stash_entry in stash_entries {
+            // 获取 commit hash（如果还没有）
+            let commit_hash = if stash_entry.commit_hash.is_empty() {
+                GitCommitCommand::rev_parse(&format!("stash@{{{}}}", stash_entry.index), None)
+                    .ok()
+                    .map(|s| s.trim().to_string())
+                    .unwrap_or_default()
+            } else {
+                stash_entry.commit_hash.clone()
+            };
 
-        repo.as_inner_mut()
-            .stash_foreach(|_stash_index, message, stash_oid| {
-                stash_oids.push(*stash_oid);
-                stash_messages.push(message.to_string());
-                true // 继续遍历
-            })
-            .wrap_err("Failed to list stash entries")?;
+            // 获取时间戳
+            let timestamp = Self::get_stash_timestamp(stash_entry.index).ok();
 
-        // 现在处理每个 stash
-        for (idx, stash_oid) in stash_oids.iter().enumerate() {
-            // 获取 commit 对象以获取更多信息
-            let repo_inner = repo.as_inner();
-            if let Ok(commit) = repo_inner.find_commit(*stash_oid) {
-                // 获取时间戳（使用与 commit.rs 相同的方式）
-                let time = commit.time();
-                let offset = FixedOffset::east_opt(time.offset_minutes() * 60)
-                    .unwrap_or_else(|| FixedOffset::east_opt(0).unwrap());
-                let timestamp = offset
-                    .timestamp_opt(time.seconds(), 0)
-                    .single()
-                    .map(|dt| dt.with_timezone(&Local));
-
-                // 获取完整消息
-                let full_message = stash_messages.get(idx).cloned().unwrap_or_default();
-
-                // 从完整消息中提取分支名和消息
-                let (branch, message) = Self::extract_branch_and_message(&full_message);
-
-                entries.push(StashEntry {
-                    index: idx,
-                    branch,
-                    message,
-                    commit_hash: stash_oid.to_string(),
-                    timestamp,
-                });
-            }
+            entries.push(StashEntry {
+                index: stash_entry.index,
+                branch: stash_entry.branch,
+                message: stash_entry.message,
+                commit_hash,
+                timestamp,
+            });
         }
 
         // 按索引排序（从新到旧，stash@{0} 在第一个）
@@ -199,36 +164,54 @@ impl GitStash {
         Ok(entries)
     }
 
-    /// 从 stash 完整消息中提取分支名和消息
+    /// 获取 stash 的时间戳
     ///
-    /// stash 消息格式：
-    /// - `WIP on <branch>: <message>`
-    /// - `On <branch>: <message>`
-    fn extract_branch_and_message(full_message: &str) -> (String, String) {
-        // 尝试匹配 "WIP on <branch>: " 或 "On <branch>: "
-        if let Some(pos) = full_message.find("WIP on ") {
-            let after_wip = &full_message[pos + 7..]; // "WIP on " 的长度是 7
-            if let Some(colon_pos) = after_wip.find(": ") {
-                let branch = after_wip[..colon_pos].to_string();
-                let message = after_wip[colon_pos + 2..].to_string();
-                return (branch, message);
-            }
-        } else if let Some(pos) = full_message.find("On ") {
-            let after_on = &full_message[pos + 3..]; // "On " 的长度是 3
-            if let Some(colon_pos) = after_on.find(": ") {
-                let branch = after_on[..colon_pos].to_string();
-                let message = after_on[colon_pos + 2..].to_string();
-                return (branch, message);
-            }
+    /// 使用 `git log` 命令获取 stash commit 的时间戳。
+    fn get_stash_timestamp(stash_index: usize) -> Result<DateTime<Local>> {
+        let stash_ref = format!("stash@{{{}}}", stash_index);
+        // 使用 git log 获取时间戳
+        // 格式：%ct 是 Unix 时间戳，%z 是时区偏移
+        let stash_ref_str = stash_ref.as_str();
+        let output = GitCommitCommand::log(Some(1), "%ct %z", Some(stash_ref_str), false, None)
+            .wrap_err_with(|| format!("Failed to get timestamp for {}", stash_ref))?;
+
+        let parts: Vec<&str> = output.split_whitespace().collect();
+        if parts.is_empty() {
+            return Err(eyre!("Invalid timestamp format"));
         }
 
-        // 如果无法提取，返回整个消息作为消息，分支为 unknown
-        ("unknown".to_string(), full_message.to_string())
+        let timestamp_secs: i64 = parts[0]
+            .parse()
+            .wrap_err_with(|| format!("Failed to parse timestamp: {}", parts[0]))?;
+
+        // 解析时区偏移（格式：+0800 或 -0500）
+        let offset_secs = if parts.len() > 1 {
+            let offset_str = parts[1];
+            if offset_str.len() == 5 {
+                let sign = if offset_str.starts_with('+') { 1 } else { -1 };
+                let hours: i32 = offset_str[1..3].parse().unwrap_or(0);
+                let minutes: i32 = offset_str[3..5].parse().unwrap_or(0);
+                sign * (hours * 3600 + minutes * 60)
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+
+        let offset =
+            FixedOffset::east_opt(offset_secs).unwrap_or_else(|| FixedOffset::east_opt(0).unwrap());
+        let dt = offset
+            .timestamp_opt(timestamp_secs, 0)
+            .single()
+            .ok_or_else(|| eyre!("Invalid timestamp"))?;
+
+        Ok(dt.with_timezone(&Local))
     }
 
     /// 应用指定的 stash（不删除）
     ///
-    /// 使用 git2 库应用指定的 stash，保留 stash 条目。
+    /// 使用 Git 命令行应用指定的 stash，保留 stash 条目。
     ///
     /// # 参数
     ///
@@ -238,8 +221,6 @@ impl GitStash {
     ///
     /// 返回 `StashApplyResult`，包含应用状态、冲突信息和警告。
     pub fn stash_apply(stash_ref: Option<&str>) -> Result<StashApplyResult> {
-        let mut repo = GitRepository::open()?;
-
         // 解析 stash 索引
         let stash_index = if let Some(ref_str) = stash_ref {
             // 从 "stash@{n}" 中提取索引
@@ -252,13 +233,10 @@ impl GitStash {
             0 // 默认应用最新的（索引 0）
         };
 
-        // 应用 stash
-        let mut apply_options = git2::StashApplyOptions::new();
-        // 注意：git2 0.18 版本中 StashApplyOptions 没有 reinstate_index 方法
-        // 默认行为是不恢复索引状态
+        let stash_ref_str = stash_ref.unwrap_or("stash@{0}");
 
-        let repo_inner = repo.as_inner_mut();
-        let result = repo_inner.stash_apply(stash_index, Some(&mut apply_options));
+        // 应用 stash
+        let result = GitStashCommand::stash_apply(Some(stash_index), None);
 
         match result {
             Ok(_) => {
@@ -267,16 +245,13 @@ impl GitStash {
                 Ok(StashApplyResult {
                     applied: true,
                     has_conflicts,
-                    message: Some(format!(
-                        "Stash {} applied successfully",
-                        stash_ref.unwrap_or("stash@{0}")
-                    )),
+                    message: Some(format!("Stash {} applied successfully", stash_ref_str)),
                     warnings: if has_conflicts {
                         vec!["Merge conflicts detected. Please resolve them manually.".to_string()]
                     } else {
                         vec![]
                     },
-                    stat: Self::stash_show_stat(stash_ref.unwrap_or("stash@{0}")).ok(),
+                    stat: Self::stash_show_stat(stash_ref_str).ok(),
                 })
             }
             Err(e) => {
@@ -287,11 +262,7 @@ impl GitStash {
                     has_conflicts,
                     message: None,
                     warnings: vec![
-                        format!(
-                            "Failed to apply stash {}: {}",
-                            stash_ref.unwrap_or("stash@{0}"),
-                            e
-                        ),
+                        format!("Failed to apply stash {}: {}", stash_ref_str, e),
                         if has_conflicts {
                             "Merge conflicts detected. Please resolve them manually.".to_string()
                         } else {
@@ -306,7 +277,7 @@ impl GitStash {
 
     /// 删除指定的 stash
     ///
-    /// 使用 git2 库删除指定的 stash 条目。
+    /// 使用 Git 命令行删除指定的 stash 条目。
     ///
     /// # 参数
     ///
@@ -316,8 +287,6 @@ impl GitStash {
     ///
     /// 如果删除失败，返回相应的错误信息。
     pub fn stash_drop(stash_ref: Option<&str>) -> Result<()> {
-        let mut repo = GitRepository::open()?;
-
         // 解析 stash 索引
         let stash_index = if let Some(ref_str) = stash_ref {
             // 从 "stash@{n}" 中提取索引
@@ -330,15 +299,13 @@ impl GitStash {
             0 // 默认删除最新的（索引 0）
         };
 
-        // 删除 stash
-        repo.as_inner_mut()
-            .stash_drop(stash_index)
+        GitStashCommand::drop_stash(Some(stash_index), None)
             .wrap_err_with(|| format!("Failed to drop stash {}", stash_ref.unwrap_or("stash@{0}")))
     }
 
     /// 应用并删除指定的 stash
     ///
-    /// 使用 git2 库应用并删除指定的 stash 条目。
+    /// 使用 Git 命令行应用并删除指定的 stash 条目。
     /// 如果应用失败（冲突），保留 stash 条目。
     ///
     /// # 参数
@@ -349,8 +316,6 @@ impl GitStash {
     ///
     /// 返回 `StashPopResult`，包含恢复状态、消息和警告信息。
     pub fn stash_pop(stash_ref: Option<&str>) -> Result<StashPopResult> {
-        let mut repo = GitRepository::open()?;
-
         // 解析 stash 索引
         let stash_index = if let Some(ref_str) = stash_ref {
             // 从 "stash@{n}" 中提取索引
@@ -363,30 +328,17 @@ impl GitStash {
             0 // 默认应用并删除最新的（索引 0）
         };
 
-        // 先应用 stash
-        let mut apply_options = git2::StashApplyOptions::new();
-        // 注意：git2 0.18 版本中 StashApplyOptions 没有 reinstate_index 方法
-        // 默认行为是不恢复索引状态
+        let stash_ref_str = stash_ref.unwrap_or("stash@{0}");
 
-        let repo_inner = repo.as_inner_mut();
-        let apply_result = repo_inner.stash_apply(stash_index, Some(&mut apply_options));
+        // 使用 stash pop 命令（会自动删除）
+        let result = GitStashCommand::stash_pop(Some(stash_index), None);
 
-        match apply_result {
-            Ok(_) => {
-                // 应用成功，删除 stash
-                repo_inner
-                    .stash_drop(stash_index)
-                    .wrap_err("Failed to drop stash after successful apply")?;
-
-                Ok(StashPopResult {
-                    restored: true,
-                    message: Some(format!(
-                        "Stash {} applied and removed",
-                        stash_ref.unwrap_or("stash@{0}")
-                    )),
-                    warnings: vec![],
-                })
-            }
+        match result {
+            Ok(_) => Ok(StashPopResult {
+                restored: true,
+                message: Some(format!("Stash {} applied and removed", stash_ref_str)),
+                warnings: vec![],
+            }),
             Err(e) => {
                 // 应用失败，检查是否有冲突
                 let has_conflicts = Self::has_unmerged().unwrap_or(false);
@@ -395,7 +347,7 @@ impl GitStash {
                     let warnings = vec![
                         format!(
                             "Merge conflicts detected when applying stash {}.",
-                            stash_ref.unwrap_or("stash@{0}")
+                            stash_ref_str
                         ),
                         "The stash entry is kept in case you need it again.".to_string(),
                         "Please resolve the conflicts manually and then:".to_string(),
@@ -416,11 +368,7 @@ impl GitStash {
                 } else {
                     // 没有冲突但失败了，返回包含警告的结果
                     let warnings = vec![
-                        format!(
-                            "Failed to apply stash {}: {}",
-                            stash_ref.unwrap_or("stash@{0}"),
-                            e
-                        ),
+                        format!("Failed to apply stash {}: {}", stash_ref_str, e),
                         "The stash entry is kept. You can try again later.".to_string(),
                     ];
                     // 记录到 tracing（用于调试）
@@ -440,7 +388,7 @@ impl GitStash {
 
     /// 获取 stash 的统计信息
     ///
-    /// 使用 git2 库获取 stash 的文件变更统计。
+    /// 使用 Git 命令行获取 stash 的文件变更统计。
     ///
     /// # 参数
     ///
@@ -450,109 +398,74 @@ impl GitStash {
     ///
     /// 返回 `StashStat`，包含文件变更统计信息。
     pub fn stash_show_stat(stash_ref: &str) -> Result<StashStat> {
-        let mut repo = GitRepository::open()?;
+        // 使用 git show --stat 获取统计信息
+        let output = GitCommitCommand::show(stash_ref, true, Some(""), None)
+            .wrap_err_with(|| format!("Failed to get stash stat for {}", stash_ref))?;
 
-        // 解析 stash 索引
-        let stash_index = stash_ref
-            .strip_prefix("stash@{")
-            .and_then(|s| s.strip_suffix("}"))
-            .and_then(|s| s.parse::<usize>().ok())
-            .ok_or_else(|| color_eyre::eyre::eyre!("Invalid stash reference: {}", stash_ref))?;
-
-        // 获取 stash commit OID
-        let mut stash_oid = None;
-        repo.as_inner_mut()
-            .stash_foreach(|index, _message, oid| {
-                if index == stash_index {
-                    stash_oid = Some(*oid);
-                    false // 停止遍历
-                } else {
-                    true // 继续遍历
-                }
-            })
-            .wrap_err("Failed to find stash entry")?;
-
-        let stash_oid =
-            stash_oid.ok_or_else(|| color_eyre::eyre::eyre!("Stash {} not found", stash_ref))?;
-        let repo_inner = repo.as_inner();
-        let stash_commit = repo_inner
-            .find_commit(stash_oid)
-            .wrap_err_with(|| format!("Failed to find stash commit: {}", stash_ref))?;
-
-        // Stash commit 的结构：
-        // - parent 0: WIP commit (工作区状态)
-        // - parent 1: index commit (暂存区状态，可选)
-        // - parent 2: HEAD commit (原始 HEAD，可选)
-        // 我们需要计算 WIP commit 相对于 HEAD 的 diff
-
-        let stash_tree = stash_commit.tree()?;
+        // 解析输出
+        // git show --stat 输出格式示例：
+        //  file1.txt | 5 +++++
+        //  file2.txt | 10 +++++-----
+        //  2 files changed, 10 insertions(+), 5 deletions(-)
         let mut files_changed = 0;
         let mut insertions = 0;
         let mut deletions = 0;
-        let mut seen_files = std::collections::HashSet::new();
 
-        // 如果有父提交，计算相对于父提交的 diff
-        // 通常 stash 的第一个父提交是 WIP commit
-        let repo_inner = repo.as_inner();
-        if stash_commit.parent_count() > 0 {
-            if let Ok(parent_commit) = stash_commit.parent(0) {
-                let parent_tree = parent_commit.tree()?;
-
-                // 计算 diff
-                let diff =
-                    repo_inner.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None)?;
-
-                diff.foreach(
-                    &mut |delta, _progress| {
-                        if let Some(path) = delta.new_file().path() {
-                            if seen_files.insert(path.to_string_lossy().to_string()) {
-                                files_changed += 1;
-                            }
-                        } else if let Some(path) = delta.old_file().path() {
-                            if seen_files.insert(path.to_string_lossy().to_string()) {
-                                files_changed += 1;
-                            }
-                        }
-                        true
-                    },
-                    None,
-                    None,
-                    Some(&mut |_delta, _hunk, line| {
-                        let origin = line.origin();
-                        if origin == '+' {
-                            insertions += 1;
-                        } else if origin == '-' {
-                            deletions += 1;
-                        }
-                        true
-                    }),
-                )?;
+        for line in output.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
             }
-        } else {
-            // 如果没有父提交，计算相对于空树的 diff（新文件）
-            let diff = repo_inner.diff_tree_to_tree(None, Some(&stash_tree), None)?;
 
-            diff.foreach(
-                &mut |delta, _progress| {
-                    if let Some(path) = delta.new_file().path() {
-                        if seen_files.insert(path.to_string_lossy().to_string()) {
-                            files_changed += 1;
+            // 检查是否是统计行（最后一行）
+            if line.contains("files changed") {
+                // 解析格式：2 files changed, 10 insertions(+), 5 deletions(-)
+                // 或：2 files changed, 10 insertions(+)
+                // 或：2 files changed, 5 deletions(-)
+                if let Some(files_pos) = line.find("files changed") {
+                    // 提取文件数
+                    if let Some(files_str) = line[..files_pos].split_whitespace().next() {
+                        files_changed = files_str.parse().unwrap_or(0);
+                    }
+
+                    // 提取插入数
+                    if let Some(ins_pos) = line.find("insertion") {
+                        let before_ins = &line[..ins_pos];
+                        if let Some(ins_str) = before_ins.split_whitespace().last() {
+                            insertions = ins_str.parse().unwrap_or(0);
                         }
                     }
-                    true
-                },
-                None,
-                None,
-                Some(&mut |_delta, _hunk, line| {
-                    let origin = line.origin();
-                    if origin == '+' {
-                        insertions += 1;
-                    } else if origin == '-' {
-                        deletions += 1;
+
+                    // 提取删除数
+                    if let Some(del_pos) = line.find("deletion") {
+                        let before_del = &line[..del_pos];
+                        if let Some(del_str) = before_del.split_whitespace().last() {
+                            deletions = del_str.parse().unwrap_or(0);
+                        }
                     }
-                    true
-                }),
-            )?;
+                }
+            } else if line.contains('|') {
+                // 这是文件变更行，统计文件数
+                // 格式：file.txt | 5 +++++
+                if let Some(pipe_pos) = line.find('|') {
+                    let file_part = line[..pipe_pos].trim();
+                    if !file_part.is_empty() {
+                        files_changed += 1;
+                    }
+                }
+            }
+        }
+
+        // 如果从统计行没有解析到文件数，使用文件行数
+        if files_changed == 0 {
+            // 重新计算文件数（从文件行）
+            files_changed = output
+                .lines()
+                .filter(|line| {
+                    let line = line.trim();
+                    line.contains('|') && !line.contains("files changed")
+                })
+                .count();
         }
 
         Ok(StashStat {

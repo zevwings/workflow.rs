@@ -3,6 +3,7 @@
 //! 测试仓库命令包装层的功能。
 
 use color_eyre::Result;
+use serial_test::serial;
 use workflow::git::commands::GitRepoCommand;
 
 use crate::common::environments::GitTestEnv;
@@ -20,6 +21,7 @@ use crate::common::environments::GitTestEnv;
 /// ## 预期结果
 /// - 返回 true
 #[test]
+#[serial]
 fn test_is_git_repo_returns_true_in_repo() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -47,6 +49,7 @@ fn test_is_git_repo_returns_true_in_repo() -> Result<()> {
 /// ## 预期结果
 /// - 返回 false
 #[test]
+#[serial]
 fn test_is_git_repo_returns_false_outside_repo() -> Result<()> {
     // Arrange: 创建临时目录（非 Git 仓库）
     let temp_dir = tempfile::tempdir()?;
@@ -74,6 +77,7 @@ fn test_is_git_repo_returns_false_outside_repo() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的 Git 目录路径
 #[test]
+#[serial]
 fn test_get_git_dir_returns_valid_path() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -108,6 +112,7 @@ fn test_get_git_dir_returns_valid_path() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的工作目录路径
 #[test]
+#[serial]
 fn test_get_workdir_returns_valid_path() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -145,6 +150,7 @@ fn test_get_workdir_returns_valid_path() -> Result<()> {
 /// ## 预期结果
 /// - 返回远程列表（可能为空，因为测试环境可能没有配置远程）
 #[test]
+#[serial]
 fn test_list_remotes_returns_remotes() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -177,6 +183,7 @@ fn test_list_remotes_returns_remotes() -> Result<()> {
 /// ## 预期结果
 /// - 远程仓库添加成功
 #[test]
+#[serial]
 fn test_add_remote_adds_remote() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -214,6 +221,7 @@ fn test_add_remote_adds_remote() -> Result<()> {
 /// ## 预期结果
 /// - 远程仓库删除成功
 #[test]
+#[serial]
 fn test_remove_remote_removes_remote() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -252,6 +260,7 @@ fn test_remove_remote_removes_remote() -> Result<()> {
 /// ## 预期结果
 /// - 返回正确的远程 URL
 #[test]
+#[serial]
 fn test_get_remote_url_returns_url() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;

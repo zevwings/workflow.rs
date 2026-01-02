@@ -3,6 +3,7 @@
 //! 测试 Cherry-pick 命令包装层的功能。
 
 use color_eyre::Result;
+use serial_test::serial;
 use workflow::git::commands::{
     GitBranchCommand, GitCherryPickCommand, GitCommitCommand, GitResetCommand,
 };
@@ -22,6 +23,7 @@ use crate::common::environments::GitTestEnv;
 /// ## 预期结果
 /// - 返回 false（没有进行中的 cherry-pick）
 #[test]
+#[serial]
 fn test_check_status_returns_false_when_no_cherry_pick() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -54,6 +56,7 @@ fn test_check_status_returns_false_when_no_cherry_pick() -> Result<()> {
 /// ## 预期结果
 /// - Cherry-pick 成功
 #[test]
+#[serial]
 fn test_cherry_pick_applies_commit() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -117,6 +120,7 @@ fn test_cherry_pick_applies_commit() -> Result<()> {
 /// ## 预期结果
 /// - Cherry-pick 被中止
 #[test]
+#[serial]
 fn test_abort_cherry_pick_aborts_operation() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -171,6 +175,7 @@ fn test_abort_cherry_pick_aborts_operation() -> Result<()> {
 /// ## 预期结果
 /// - Cherry-pick 继续并完成
 #[test]
+#[serial]
 fn test_continue_cherry_pick_continues_operation() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;

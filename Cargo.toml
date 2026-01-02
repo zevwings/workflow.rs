@@ -40,7 +40,7 @@ fs2 = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 handlebars = "5.1"
-git2 = { version = "0.18", default-features = false, features = ["vendored-openssl", "ssh"] }  # Git 操作库，使用 vendored-openssl，启用 SSH 支持
+tempfile = "3.8"        # 临时文件和目录
 
 # clipboard 依赖 XCB 库，在 musl 静态链接构建中不可用
 # 因此只在非 musl 目标中包含此依赖
@@ -52,7 +52,6 @@ pretty_assertions = "1.4"
 rstest = "0.18"
 mockito = "1.2"
 assert_cmd = "2.0"      # CLI 命令测试
-tempfile = "3.8"        # 临时文件和目录
 serial_test = "3.2.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 

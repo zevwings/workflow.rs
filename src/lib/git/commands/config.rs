@@ -4,7 +4,7 @@
 //! - 配置读取（get_config）
 //! - 配置设置（set_config）
 
-use crate::git::commands::GitCommand;
+use crate::git::commands::command::GitCommand;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::Path;
 
@@ -71,6 +71,8 @@ impl GitConfigCommand {
     /// 删除配置项
     ///
     /// 使用 `git config --unset <key>` 命令
+    ///
+    /// 注意：如果配置项不存在，Git 会返回退出代码 5，这是正常的，不会返回错误。
     pub fn unset_config(key: &str, global: bool, cwd: Option<&Path>) -> Result<()> {
         let mut args = vec!["config", "--unset"];
 
@@ -80,9 +82,21 @@ impl GitConfigCommand {
 
         args.push(key);
 
-        GitCommand::execute(&args, cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
-            .wrap_err_with(|| format!("Failed to unset config: {}", key))
+        match GitCommand::execute(&args, cwd) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                // Git 在配置项不存在时返回退出代码 5，这是正常的
+                // 检查错误信息或退出代码
+                let error_str = format!("{}", e);
+                if error_str.contains("exited with code 5") {
+                    // 配置项不存在，这是正常的，返回成功
+                    Ok(())
+                } else {
+                    Err(color_eyre::eyre::eyre!("{}", e))
+                        .wrap_err_with(|| format!("Failed to unset config: {}", key))
+                }
+            }
+        }
     }
 
     /// 获取用户邮箱
@@ -146,5 +160,35 @@ impl GitConfigCommand {
         }
 
         Ok(configs)
+    }
+
+    /// 获取本地配置值
+    ///
+    /// 使用 `git config --get <key>` 命令（本地配置）
+    pub fn get_local(key: &str, cwd: Option<&Path>) -> Result<String> {
+        Self::get_config(key, false, cwd)?
+            .ok_or_else(|| color_eyre::eyre::eyre!("Config key '{}' not found", key))
+    }
+
+    /// 设置本地配置值
+    ///
+    /// 使用 `git config --file <path>/.git/config <key> <value>` 命令（本地配置）
+    /// 直接指定 `.git/config` 文件路径，确保写入仓库的本地配置文件，
+    /// 即使 GIT_CONFIG 环境变量被设置也能正常工作。
+    pub fn set_local(key: &str, value: &str, cwd: Option<&Path>) -> Result<()> {
+        // 确定仓库路径
+        let repo_path =
+            cwd.ok_or_else(|| color_eyre::eyre::eyre!("cwd is required for set_local"))?;
+
+        // 构建 .git/config 文件路径
+        let config_path = repo_path.join(".git").join("config");
+
+        // 使用 --file 参数直接指定配置文件路径
+        let config_path_str = config_path.to_string_lossy().to_string();
+        let args = vec!["config", "--file", &config_path_str, key, value];
+
+        GitCommand::execute(&args, cwd)
+            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .wrap_err_with(|| format!("Failed to set local config: {} = {}", key, value))
     }
 }

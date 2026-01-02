@@ -5,7 +5,7 @@
 //! - 混合重置（--mixed，默认）
 //! - 硬重置（--hard）
 
-use crate::git::commands::GitCommand;
+use crate::git::commands::command::GitCommand;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::Path;
 
@@ -68,7 +68,7 @@ impl GitResetCommand {
         }
 
         GitCommand::execute(&args, cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err_with(|| {
                 format!(
                     "Failed to reset (mode: {:?}, target: {:?})",

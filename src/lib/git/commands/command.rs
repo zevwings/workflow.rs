@@ -91,6 +91,32 @@ impl fmt::Display for GitError {
 
 impl std::error::Error for GitError {}
 
+/// Git 引用常量
+pub mod git_refs {
+    /// HEAD 引用
+    pub const HEAD: &str = "HEAD";
+    /// 当前分支引用
+    pub const CURRENT_BRANCH: &str = "HEAD";
+}
+
+/// Git 命令选项常量
+pub mod git_options {
+    /// --porcelain 选项（用于 status 命令）
+    pub const PORCELAIN: &str = "--porcelain";
+    /// --show-current 选项（用于 branch 命令）
+    pub const SHOW_CURRENT: &str = "--show-current";
+    /// --force-with-lease 选项（用于 push 命令）
+    pub const FORCE_WITH_LEASE: &str = "--force-with-lease";
+    /// --no-verify 选项（用于 commit 命令）
+    pub const NO_VERIFY: &str = "--no-verify";
+    /// --no-ff 选项（用于 merge 命令）
+    pub const NO_FF: &str = "--no-ff";
+    /// --ff-only 选项（用于 merge 命令）
+    pub const FF_ONLY: &str = "--ff-only";
+    /// --squash 选项（用于 merge 命令）
+    pub const SQUASH: &str = "--squash";
+}
+
 /// Git 命令执行器
 ///
 /// 提供统一的 Git 命令执行接口，所有 Git 操作都通过此接口执行。
@@ -109,6 +135,123 @@ impl GitCommand {
 
     #[cfg(not(target_os = "windows"))]
     const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
+
+    /// 默认远程仓库名称
+    pub const DEFAULT_REMOTE: &'static str = "origin";
+
+    /// 默认分支名称（按优先级排序）
+    pub const DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
+
+    /// 将 GitError 转换为 color_eyre::eyre::Error
+    ///
+    /// 这是一个通用的错误转换方法，用于将 `GitError` 转换为 `color_eyre::eyre::Error`。
+    pub fn to_eyre_error(e: GitError) -> color_eyre::eyre::Error {
+        color_eyre::eyre::eyre!("{}", e)
+    }
+
+    /// 处理认证错误
+    ///
+    /// 如果错误是认证失败，返回专门的认证错误消息；否则返回通用错误。
+    pub fn handle_auth_error(e: GitError) -> color_eyre::eyre::Error {
+        match e {
+            GitError::AuthenticationFailed { reason } => {
+                color_eyre::eyre::eyre!("Authentication failed: {}", reason)
+            }
+            _ => Self::to_eyre_error(e),
+        }
+    }
+
+    /// 处理合并冲突错误
+    ///
+    /// 如果错误是合并冲突，返回专门的合并冲突错误消息；否则返回通用错误。
+    pub fn handle_merge_error(e: GitError) -> color_eyre::eyre::Error {
+        match e {
+            GitError::MergeConflict { details } => {
+                color_eyre::eyre::eyre!("Merge conflict detected:\n{}", details)
+            }
+            _ => Self::to_eyre_error(e),
+        }
+    }
+
+    /// 处理 Stash 冲突错误
+    ///
+    /// 如果错误是 stash 冲突，返回专门的 stash 冲突错误消息；否则返回通用错误。
+    pub fn handle_stash_error(e: GitError) -> color_eyre::eyre::Error {
+        match e {
+            GitError::StashConflict { details } => {
+                color_eyre::eyre::eyre!("Stash apply conflict detected:\n{}", details)
+            }
+            _ => Self::to_eyre_error(e),
+        }
+    }
+
+    /// 处理 Cherry-pick 冲突错误
+    ///
+    /// 如果错误是 cherry-pick 冲突，返回专门的 cherry-pick 冲突错误消息；否则返回通用错误。
+    pub fn handle_cherry_pick_error(e: GitError) -> color_eyre::eyre::Error {
+        match e {
+            GitError::CherryPickConflict => color_eyre::eyre::eyre!(
+                "Cherry-pick conflict detected. Please resolve conflicts and continue with 'git cherry-pick --continue'"
+            ),
+            _ => Self::to_eyre_error(e),
+        }
+    }
+
+    /// 解析 Git 命令输出为行列表
+    ///
+    /// 将 Git 命令的输出按行分割，去除空白行和前后空格。
+    ///
+    /// # 参数
+    ///
+    /// * `output` - Git 命令的输出字符串
+    ///
+    /// # 返回
+    ///
+    /// 返回非空行的向量，每行已去除前后空格
+    pub fn parse_lines(output: &str) -> Vec<String> {
+        output.lines().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
+    }
+
+    /// 解析 Git 命令输出为键值对列表
+    ///
+    /// 将 Git 命令的输出按行分割，每行按指定分隔符分割为键值对。
+    ///
+    /// # 参数
+    ///
+    /// * `output` - Git 命令的输出字符串
+    /// * `separator` - 键值对分隔符（如 `'='`, `'\t'`）
+    ///
+    /// # 返回
+    ///
+    /// 返回键值对向量，键和值都已去除前后空格
+    pub fn parse_key_value(output: &str, separator: char) -> Vec<(String, String)> {
+        output
+            .lines()
+            .filter_map(|line| {
+                line.split_once(separator)
+                    .map(|(k, v)| (k.trim().to_string(), v.trim().to_string()))
+            })
+            .collect()
+    }
+
+    /// 解析 Git 命令输出为行列表（带自定义处理）
+    ///
+    /// 将 Git 命令的输出按行分割，允许对每行进行自定义处理。
+    ///
+    /// # 参数
+    ///
+    /// * `output` - Git 命令的输出字符串
+    /// * `mapper` - 对每行进行处理的函数
+    ///
+    /// # 返回
+    ///
+    /// 返回处理后的行向量
+    pub fn parse_lines_with<F>(output: &str, mapper: F) -> Vec<String>
+    where
+        F: Fn(&str) -> String,
+    {
+        output.lines().map(|s| mapper(s.trim())).filter(|s| !s.is_empty()).collect()
+    }
 
     /// 执行 Git 命令并返回标准输出
     ///
@@ -181,10 +324,29 @@ impl GitCommand {
                     .run()
                     .map_err(|e| color_eyre::eyre::eyre!("Failed to execute command: {}", e))
             })
-            .map_err(|e| GitError::CommandFailed {
-                command: command_str.clone(),
-                stderr: format!("Command timed out after {:?}: {}", timeout, e),
-                stdout: String::new(),
+            .map_err(|e| {
+                let error_msg = format!("{}", e);
+                // 检查错误类型并格式化错误消息
+                let stderr = if error_msg.contains("Operation timed out")
+                    || error_msg.contains("timed out after")
+                {
+                    // 真正的超时错误，使用原始错误消息
+                    error_msg
+                } else if error_msg.contains("Too many concurrent timeout operations") {
+                    // 并发限制错误，使用原始错误消息
+                    error_msg
+                } else if error_msg.contains("Failed to create timeout thread") {
+                    // 线程创建失败错误，使用原始错误消息
+                    error_msg
+                } else {
+                    // 其他错误（如命令执行失败），不提及 timeout，因为这可能不是超时问题
+                    format!("Command execution failed: {}", e)
+                };
+                GitError::CommandFailed {
+                    command: command_str.clone(),
+                    stderr,
+                    stdout: String::new(),
+                }
             })?;
 
         if !output.status.success() {
@@ -255,10 +417,29 @@ impl GitCommand {
                     .run()
                     .map_err(|e| color_eyre::eyre::eyre!("Failed to execute command: {}", e))
             })
-            .map_err(|e| GitError::CommandFailed {
-                command: command_str.clone(),
-                stderr: format!("Command timed out after {:?}: {}", timeout, e),
-                stdout: String::new(),
+            .map_err(|e| {
+                let error_msg = format!("{}", e);
+                // 检查错误类型并格式化错误消息
+                let stderr = if error_msg.contains("Operation timed out")
+                    || error_msg.contains("timed out after")
+                {
+                    // 真正的超时错误，使用原始错误消息
+                    error_msg
+                } else if error_msg.contains("Too many concurrent timeout operations") {
+                    // 并发限制错误，使用原始错误消息
+                    error_msg
+                } else if error_msg.contains("Failed to create timeout thread") {
+                    // 线程创建失败错误，使用原始错误消息
+                    error_msg
+                } else {
+                    // 其他错误（如命令执行失败），不提及 timeout，因为这可能不是超时问题
+                    format!("Command execution failed: {}", e)
+                };
+                GitError::CommandFailed {
+                    command: command_str.clone(),
+                    stderr,
+                    stdout: String::new(),
+                }
             })?;
 
         if !output.status.success() {
@@ -383,5 +564,100 @@ impl GitCommand {
             stderr: stderr_str,
             stdout: stdout_str,
         }
+    }
+}
+
+/// Git 命令参数构建器
+///
+/// 提供流畅的 API 来构建 Git 命令参数，简化条件参数添加。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::git::commands::command::GitArgsBuilder;
+///
+/// let args = GitArgsBuilder::new("push")
+///     .flag_if(true, "--force-with-lease")
+///     .arg("origin")
+///     .arg("main")
+///     .build();
+/// ```
+pub struct GitArgsBuilder {
+    args: Vec<String>,
+}
+
+impl GitArgsBuilder {
+    /// 创建新的参数构建器
+    ///
+    /// # 参数
+    ///
+    /// * `command` - Git 命令名称（如 "push", "merge"）
+    pub fn new(command: &str) -> Self {
+        Self {
+            args: vec![command.to_string()],
+        }
+    }
+
+    /// 添加标志参数（如果条件为真）
+    ///
+    /// # 参数
+    ///
+    /// * `condition` - 是否添加该标志
+    /// * `flag` - 标志名称（如 "--force-with-lease"）
+    pub fn flag_if(mut self, condition: bool, flag: &str) -> Self {
+        if condition {
+            self.args.push(flag.to_string());
+        }
+        self
+    }
+
+    /// 添加标志参数
+    ///
+    /// # 参数
+    ///
+    /// * `flag` - 标志名称（如 "--force-with-lease"）
+    pub fn flag(mut self, flag: &str) -> Self {
+        self.args.push(flag.to_string());
+        self
+    }
+
+    /// 添加参数
+    ///
+    /// # 参数
+    ///
+    /// * `arg` - 参数值
+    pub fn arg(mut self, arg: &str) -> Self {
+        self.args.push(arg.to_string());
+        self
+    }
+
+    /// 添加可选参数
+    ///
+    /// # 参数
+    ///
+    /// * `arg` - 可选的参数值
+    pub fn arg_opt(mut self, arg: Option<&str>) -> Self {
+        if let Some(a) = arg {
+            self.args.push(a.to_string());
+        }
+        self
+    }
+
+    /// 构建参数数组
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Vec<&str>` 格式的参数数组，可直接用于 `GitCommand::run()` 或 `GitCommand::execute()`
+    pub fn build(&self) -> Vec<&str> {
+        self.args.iter().map(|s| s.as_str()).collect()
+    }
+
+    /// 构建参数数组（移动语义）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Vec<String>` 格式的参数数组
+    pub fn build_owned(self) -> Vec<String> {
+        self.args
     }
 }

@@ -6,9 +6,12 @@
 //! - 历史 commit reword 执行
 //! - Rebase 相关操作
 
+use crate::git::commands::GitCommitCommand;
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitRepository, GitStash};
 use color_eyre::{eyre::WrapErr, Result};
-use git2::Oid;
+use std::io::Write;
+use std::process::Command;
+use tempfile::NamedTempFile;
 
 /// Reword 预览信息
 #[derive(Debug, Clone)]
@@ -179,7 +182,7 @@ impl CommitReword {
         }
     }
 
-    /// 使用 git2 rebase API 执行 reword 操作
+    /// 使用 git 命令执行 reword 操作
     ///
     /// # 参数
     ///
@@ -196,110 +199,174 @@ impl CommitReword {
         new_message: &str,
     ) -> Result<()> {
         let repo = GitRepository::open()?;
+        let repo_path = repo.path();
 
-        // 解析 commit SHA
-        let parent_oid = Oid::from_str(parent_sha)
+        // 验证 parent_sha 和 target_commit_sha 都是有效的 commit
+        GitCommitCommand::verify_ref(parent_sha, Some(repo_path))
             .wrap_err_with(|| format!("Invalid parent commit SHA: {}", parent_sha))?;
-        let target_oid = Oid::from_str(target_commit_sha)
+        GitCommitCommand::verify_ref(target_commit_sha, Some(repo_path))
             .wrap_err_with(|| format!("Invalid target commit SHA: {}", target_commit_sha))?;
 
-        // 获取 HEAD commit（在获取可变引用之前）
-        let head_commit_id = {
-            let head = repo.head()?;
-            let head_commit = head.peel_to_commit().wrap_err("Failed to get commit from HEAD")?;
-            head_commit.id()
+        // 获取从 parent_sha 到 HEAD 的所有 commits（按时间顺序，从旧到新）
+        let all_commits =
+            GitCommitCommand::rev_list(&format!("{}..HEAD", parent_sha), Some(repo_path))
+                .wrap_err("Failed to get commit list")?;
+
+        let all_commit_shas: Vec<String> = all_commits
+            .iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        // 构建 rebase todo 列表
+        // 目标 commit 使用 "reword"，其他 commits 使用 "pick"
+        let mut todo_lines = Vec::new();
+        for commit_sha in &all_commit_shas {
+            if commit_sha == target_commit_sha {
+                todo_lines.push(format!("reword {}", commit_sha));
+            } else {
+                todo_lines.push(format!("pick {}", commit_sha));
+            }
+        }
+
+        // 创建临时文件用于 rebase todo 列表
+        let mut todo_file =
+            NamedTempFile::new().wrap_err("Failed to create temporary file for rebase todo")?;
+        let todo_content = todo_lines.join("\n");
+        todo_file
+            .write_all(todo_content.as_bytes())
+            .wrap_err("Failed to write rebase todo")?;
+        let todo_path = todo_file.path().to_path_buf();
+        todo_file.persist(&todo_path).wrap_err("Failed to persist todo file")?;
+
+        // 创建临时文件用于提交消息
+        let mut message_file =
+            NamedTempFile::new().wrap_err("Failed to create temporary file for commit message")?;
+        message_file
+            .write_all(new_message.as_bytes())
+            .wrap_err("Failed to write commit message")?;
+        let message_path = message_file.path().to_path_buf();
+        message_file.persist(&message_path).wrap_err("Failed to persist message file")?;
+
+        // 创建序列编辑器脚本（用于自动编辑 rebase todo）
+        let (seq_editor_script, seq_editor_ext) = if cfg!(windows) {
+            (
+                format!(
+                    r#"@echo off
+copy /Y "{}" "%1" >nul
+"#,
+                    todo_path.to_string_lossy().replace('/', "\\")
+                ),
+                ".bat",
+            )
+        } else {
+            (
+                format!(
+                    r#"#!/bin/sh
+cp "{}" "$1"
+"#,
+                    todo_path.to_string_lossy()
+                ),
+                ".sh",
+            )
         };
 
-        // 转换为 AnnotatedCommit（rebase 需要）
-        let mut repo = repo;
-        let repo_inner = repo.as_inner_mut();
-        let head_annotated = repo_inner
-            .find_annotated_commit(head_commit_id)
-            .wrap_err("Failed to create annotated commit from HEAD")?;
-        let parent_annotated =
-            repo_inner.find_annotated_commit(parent_oid).wrap_err_with(|| {
+        let mut seq_editor_file = NamedTempFile::with_suffix(seq_editor_ext)
+            .wrap_err("Failed to create temporary file for sequence editor")?;
+        seq_editor_file
+            .write_all(seq_editor_script.as_bytes())
+            .wrap_err("Failed to write sequence editor script")?;
+        let seq_editor_path = seq_editor_file.path().to_path_buf();
+        seq_editor_file
+            .persist(&seq_editor_path)
+            .wrap_err("Failed to persist sequence editor file")?;
+
+        // 设置脚本可执行权限（Unix）
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&seq_editor_path, std::fs::Permissions::from_mode(0o755))
+                .wrap_err("Failed to set executable permissions")?;
+        }
+
+        // 创建提交消息编辑器脚本
+        let (commit_editor_script, commit_editor_ext) = if cfg!(windows) {
+            (
                 format!(
-                    "Failed to create annotated commit from parent: {}",
-                    parent_sha
-                )
-            })?;
-
-        // 初始化 rebase
-        let mut rebase_opts = git2::RebaseOptions::new();
-        // 不使用 inmemory 模式，因为我们需要修改工作目录
-
-        let mut rebase = repo_inner
-            .rebase(
-                Some(&head_annotated),
-                Some(&parent_annotated),
-                None,
-                Some(&mut rebase_opts),
+                    r#"@echo off
+copy /Y "{}" "%1" >nul
+"#,
+                    message_path.to_string_lossy().replace('/', "\\")
+                ),
+                ".bat",
             )
-            .wrap_err_with(|| format!("Failed to initialize rebase from parent: {}", parent_sha))?;
+        } else {
+            (
+                format!(
+                    r#"#!/bin/sh
+cp "{}" "$1"
+"#,
+                    message_path.to_string_lossy()
+                ),
+                ".sh",
+            )
+        };
 
-        // 获取签名
-        let signature = repo_inner.signature().wrap_err("Failed to get signature")?;
+        let mut commit_editor_file = NamedTempFile::with_suffix(commit_editor_ext)
+            .wrap_err("Failed to create temporary file for commit editor")?;
+        commit_editor_file
+            .write_all(commit_editor_script.as_bytes())
+            .wrap_err("Failed to write commit editor script")?;
+        let commit_editor_path = commit_editor_file.path().to_path_buf();
+        commit_editor_file
+            .persist(&commit_editor_path)
+            .wrap_err("Failed to persist commit editor file")?;
 
-        // 应用所有 rebase 操作
-        while let Some(op) = rebase.next() {
-            let op = op.wrap_err("Failed to get next rebase operation")?;
+        // 设置脚本可执行权限（Unix）
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&commit_editor_path, std::fs::Permissions::from_mode(0o755))
+                .wrap_err("Failed to set executable permissions")?;
+        }
+
+        // 执行 rebase
+        // 使用 GIT_SEQUENCE_EDITOR 和 GIT_EDITOR 环境变量来自动化交互
+        let mut rebase_cmd = Command::new("git");
+        rebase_cmd
+            .arg("rebase")
+            .arg("-i")
+            .arg(parent_sha)
+            .current_dir(repo_path)
+            .env("GIT_SEQUENCE_EDITOR", &seq_editor_path)
+            .env("GIT_EDITOR", &commit_editor_path)
+            .env("GIT_TERMINAL_PROMPT", "0");
+
+        let rebase_output = rebase_cmd.output().wrap_err("Failed to execute git rebase")?;
+
+        // 清理临时文件
+        let _ = std::fs::remove_file(&todo_path);
+        let _ = std::fs::remove_file(&message_path);
+        let _ = std::fs::remove_file(&seq_editor_path);
+        let _ = std::fs::remove_file(&commit_editor_path);
+
+        if !rebase_output.status.success() {
+            let stderr = String::from_utf8_lossy(&rebase_output.stderr);
+            let stdout = String::from_utf8_lossy(&rebase_output.stdout);
 
             // 检查是否有冲突
-            if repo_inner.index()?.has_conflicts() {
-                rebase.abort().ok();
+            if stderr.contains("conflict") || stdout.contains("conflict") {
                 color_eyre::eyre::bail!(
                     "Rebase conflicts detected. Please resolve manually:\n  1. Review conflicted files\n  2. Resolve conflicts\n  3. Stage resolved files: git add <files>\n  4. Continue rebase: git rebase --continue\n  5. Or abort rebase: git rebase --abort"
                 );
             }
 
-            // 如果是目标 commit，需要手动创建新的 commit 使用新消息
-            if op.id() == target_oid {
-                // 获取当前 index 的 tree
-                let mut index = repo_inner.index()?;
-                let tree_id = index.write_tree().wrap_err("Failed to write tree")?;
-                let tree = repo_inner.find_tree(tree_id).wrap_err("Failed to find tree")?;
-
-                // 获取 rebase 的当前 HEAD（父 commit）
-                let head_ref = repo_inner.find_reference("HEAD").ok();
-                let parent_commit = head_ref.and_then(|r| r.peel_to_commit().ok());
-
-                // 创建新的 commit，使用新消息
-                let new_commit_oid = if let Some(parent) = parent_commit.as_ref() {
-                    repo_inner.commit(None, &signature, &signature, new_message, &tree, &[parent])
-                } else {
-                    // 如果没有父 commit（根 commit），创建没有父的 commit
-                    repo_inner.commit(None, &signature, &signature, new_message, &tree, &[])
-                }
-                .wrap_err_with(|| {
-                    format!(
-                        "Failed to create commit with new message for: {}",
-                        target_commit_sha
-                    )
-                })?;
-
-                // 更新 HEAD 指向新创建的 commit
-                repo_inner.set_head_detached(new_commit_oid).wrap_err("Failed to update HEAD")?;
-
-                // 注意：我们已经手动创建了 commit，但 rebase 仍然需要知道操作已完成
-                // 由于 git2 rebase API 的限制，我们需要使用 rebase.commit() 来标记操作完成
-                // 但这里传入 None 会使用当前的 HEAD（我们刚创建的 commit）
-                // 实际上，由于我们已经更新了 HEAD，rebase.commit() 应该会使用新的 commit
-                // 但为了安全，我们仍然调用 rebase.commit() 来继续 rebase 流程
-                rebase
-                    .commit(None, &signature, None)
-                    .wrap_err("Failed to commit rebase operation after creating new commit")?;
-            } else {
-                // 对于非目标 commit，正常提交
-                rebase
-                    .commit(None, &signature, None)
-                    .wrap_err("Failed to commit rebase operation")?;
-            }
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to execute rebase: {}\n{}",
+                stderr,
+                stdout
+            ));
         }
-
-        // 完成 rebase
-        rebase.finish(None).wrap_err_with(|| {
-            format!("Failed to finish rebase for reword: {}", target_commit_sha)
-        })?;
 
         Ok(())
     }
@@ -339,12 +406,7 @@ impl CommitReword {
 
         // 步骤3: 验证目标 commit 存在
         let repo = GitRepository::open()?;
-        let target_oid = git2::Oid::from_str(&options.commit_sha)
-            .wrap_err_with(|| format!("Invalid commit SHA: {}", options.commit_sha))?;
-
-        // 检查 commit 是否存在
-        repo.as_inner()
-            .find_commit(target_oid)
+        GitCommitCommand::verify_ref(&options.commit_sha, Some(repo.path()))
             .wrap_err_with(|| format!("Commit not found: {}", options.commit_sha))?;
 
         // 步骤4: 使用 git2 rebase API 执行 reword

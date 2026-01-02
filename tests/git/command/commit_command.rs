@@ -3,6 +3,7 @@
 //! 测试提交命令包装层的功能。
 
 use color_eyre::Result;
+use serial_test::serial;
 use workflow::git::commands::GitCommitCommand;
 
 use crate::common::environments::GitTestEnv;
@@ -24,6 +25,7 @@ use crate::common::environments::GitTestEnv;
 /// - 不使用 CurrentDirGuard，直接指定路径以避免全局工作目录切换导致的竞态条件
 /// - 使用明确的路径参数确保 Git 命令在正确的目录中执行
 #[test]
+#[serial]
 fn test_status_returns_status() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -57,6 +59,7 @@ fn test_status_returns_status() -> Result<()> {
 /// ## 预期结果
 /// - 创建文件后有更改，返回 true
 #[test]
+#[serial]
 fn test_has_changes_detects_changes() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -88,6 +91,7 @@ fn test_has_changes_detects_changes() -> Result<()> {
 /// ## 预期结果
 /// - 文件成功暂存
 #[test]
+#[serial]
 fn test_add_stages_file() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -123,6 +127,7 @@ fn test_add_stages_file() -> Result<()> {
 /// ## 预期结果
 /// - 提交创建成功
 #[test]
+#[serial]
 fn test_commit_creates_commit() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -157,6 +162,7 @@ fn test_commit_creates_commit() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的 commit SHA
 #[test]
+#[serial]
 fn test_get_head_sha_returns_valid_sha() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -190,6 +196,7 @@ fn test_get_head_sha_returns_valid_sha() -> Result<()> {
 /// ## 预期结果
 /// - 提交修改成功
 #[test]
+#[serial]
 fn test_amend_modifies_last_commit() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -242,6 +249,7 @@ fn test_amend_modifies_last_commit() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的提交信息（消息、作者、日期）
 #[test]
+#[serial]
 fn test_get_commit_info_returns_commit_details() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -281,6 +289,7 @@ fn test_get_commit_info_returns_commit_details() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的差异内容
 #[test]
+#[serial]
 fn test_get_diff_returns_diff_content() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -319,6 +328,7 @@ fn test_get_diff_returns_diff_content() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的差异内容
 #[test]
+#[serial]
 fn test_get_diff_returns_working_directory_diff() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;

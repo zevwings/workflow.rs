@@ -3,6 +3,7 @@
 //! 测试分支命令包装层的功能。
 
 use color_eyre::Result;
+use serial_test::serial;
 use workflow::git::commands::GitBranchCommand;
 
 use crate::common::environments::GitTestEnv;
@@ -20,6 +21,7 @@ use crate::common::environments::GitTestEnv;
 /// ## 预期结果
 /// - 返回当前分支名（main）
 #[test]
+#[serial]
 fn test_current_branch_returns_branch_name() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -48,6 +50,7 @@ fn test_current_branch_returns_branch_name() -> Result<()> {
 /// ## 预期结果
 /// - 分支创建成功并存在
 #[test]
+#[serial]
 fn test_create_branch_creates_branch() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -77,6 +80,7 @@ fn test_create_branch_creates_branch() -> Result<()> {
 /// ## 预期结果
 /// - 存在的分支返回 true，不存在的返回 false
 #[test]
+#[serial]
 fn test_branch_exists_checks_correctly() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -110,6 +114,7 @@ fn test_branch_exists_checks_correctly() -> Result<()> {
 /// ## 预期结果
 /// - 成功切换到新分支
 #[test]
+#[serial]
 fn test_checkout_branch_switches_branch() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -143,6 +148,7 @@ fn test_checkout_branch_switches_branch() -> Result<()> {
 /// ## 预期结果
 /// - 返回所有分支的列表
 #[test]
+#[serial]
 fn test_list_branches_returns_all_branches() -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建多个分支
     let env = GitTestEnv::new()?;
@@ -184,6 +190,7 @@ fn test_list_branches_returns_all_branches() -> Result<()> {
 /// ## 预期结果
 /// - 返回 false（测试环境可能没有远程）
 #[test]
+#[serial]
 fn test_branch_exists_remote_checks_remote_branch() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -215,6 +222,7 @@ fn test_branch_exists_remote_checks_remote_branch() -> Result<()> {
 /// ## 预期结果
 /// - 返回 (本地存在, 远程存在) 元组
 #[test]
+#[serial]
 fn test_branch_exists_checks_local_and_remote() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -246,6 +254,7 @@ fn test_branch_exists_checks_local_and_remote() -> Result<()> {
 /// ## 预期结果
 /// - 分支删除成功
 #[test]
+#[serial]
 fn test_delete_branch_removes_branch() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -284,6 +293,7 @@ fn test_delete_branch_removes_branch() -> Result<()> {
 /// ## 预期结果
 /// - 分支强制删除成功
 #[test]
+#[serial]
 fn test_delete_branch_force_removes_unmerged_branch() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -327,6 +337,7 @@ fn test_delete_branch_force_removes_unmerged_branch() -> Result<()> {
 /// ## 预期结果
 /// - 已合并的分支返回 true
 #[test]
+#[serial]
 fn test_is_merged_checks_merged_branch() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -371,6 +382,7 @@ fn test_is_merged_checks_merged_branch() -> Result<()> {
 /// ## 预期结果
 /// - 分支合并成功
 #[test]
+#[serial]
 fn test_merge_branch_merges_successfully() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;

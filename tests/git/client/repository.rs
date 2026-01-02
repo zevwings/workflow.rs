@@ -33,7 +33,7 @@ fn test_open_repo_at_success() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库（使用 git2）
+    // 初始化 Git 仓库
     let _repo = GitRepository::init(repo_path, None)?;
 
     // 打开仓库
@@ -60,7 +60,7 @@ fn test_current_branch_name() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库并创建初始提交（使用 git2）
+    // 初始化 Git 仓库并创建初始提交
     let _repo = GitRepository::init_with_commit(
         repo_path,
         Some("main"),
@@ -87,7 +87,7 @@ fn test_signature() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库并配置用户信息（使用 git2）
+    // 初始化 Git 仓库并配置用户信息
     let repo = GitRepository::init_with_commit(
         repo_path,
         None,
@@ -99,10 +99,10 @@ fn test_signature() -> Result<()> {
     )?;
 
     // 获取签名
-    let signature = repo.signature()?;
+    let (name, email) = repo.signature()?;
 
-    assert_eq!(signature.name().unwrap_or(""), "Test User");
-    assert_eq!(signature.email().unwrap_or(""), "test@example.com");
+    assert_eq!(name, "Test User");
+    assert_eq!(email, "test@example.com");
 
     Ok(())
 }
@@ -114,7 +114,7 @@ fn test_find_reference() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let repo_path = temp_dir.path();
 
-    // 初始化 Git 仓库并创建初始提交（使用 git2）
+    // 初始化 Git 仓库并创建初始提交
     let _repo = GitRepository::init_with_commit(
         repo_path,
         Some("main"),
@@ -134,16 +134,19 @@ fn test_find_reference() -> Result<()> {
     Ok(())
 }
 
-/// 测试获取 FetchOptions 和 PushOptions
+/// 测试获取仓库路径
 #[test]
-fn test_get_options() {
-    // 测试获取 FetchOptions
-    let _fetch_options = GitRepository::get_fetch_options();
-    // 验证能够创建选项（不应该 panic）
-    // 如果上面的调用没有 panic，测试就通过了
+fn test_repo_path() -> Result<()> {
+    // 创建一个临时目录并初始化 Git 仓库
+    let temp_dir = TempDir::new()?;
+    let repo_path = temp_dir.path();
 
-    // 测试获取 PushOptions
-    let _push_options = GitRepository::get_push_options();
-    // 验证能够创建选项（不应该 panic）
-    // 如果上面的调用没有 panic，测试就通过了
+    // 初始化 Git 仓库
+    let repo = GitRepository::init(repo_path, None)?;
+
+    // 验证能够获取仓库路径
+    let path = repo.path();
+    assert_eq!(path, repo_path);
+
+    Ok(())
 }

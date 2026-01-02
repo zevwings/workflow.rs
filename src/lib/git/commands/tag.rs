@@ -4,7 +4,8 @@
 //! - Tag 查询（列出本地/远程 tag、检查存在性）
 //! - Tag 操作（创建、删除、推送）
 
-use crate::git::commands::{GitCommand, GitError};
+use crate::git::commands::command::GitCommand;
+use crate::git::commands::GitError;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::Path;
 
@@ -19,8 +20,7 @@ impl GitTagCommand {
         let output =
             GitCommand::run(&["tag"], cwd).map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
 
-        let mut tags: Vec<String> =
-            output.lines().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+        let mut tags = GitCommand::parse_lines(&output);
 
         tags.sort();
         Ok(tags)
@@ -30,27 +30,24 @@ impl GitTagCommand {
     ///
     /// 使用 `git ls-remote --tags` 命令
     pub fn list_remote_tags(remote: Option<&str>, cwd: Option<&Path>) -> Result<Vec<String>> {
-        let remote = remote.unwrap_or("origin");
+        let remote = remote.unwrap_or(GitCommand::DEFAULT_REMOTE);
         let output = GitCommand::run(&["ls-remote", "--tags", remote], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
+            .map_err(GitCommand::to_eyre_error)?;
 
-        let mut tags = Vec::new();
-        for line in output.lines() {
-            // 格式: <commit_hash>	refs/tags/<tag_name>
-            // 或者: <commit_hash>	refs/tags/<tag_name>^{} (peeled tag)
-            if let Some(ref_part) = line.split_whitespace().nth(1) {
-                if let Some(tag_ref) = ref_part.strip_prefix("refs/tags/") {
-                    // 移除 ^{} 后缀（peeled tag）
-                    let tag_name = tag_ref.strip_suffix("^{}").unwrap_or(tag_ref);
-                    if !tags.contains(&tag_name.to_string()) {
-                        tags.push(tag_name.to_string());
-                    }
-                }
+        // 使用 parse_key_value 解析输出，格式: <commit_hash>\trefs/tags/<tag_name>
+        let mut tags: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        for (_, ref_name) in GitCommand::parse_key_value(&output, '\t') {
+            // 提取 tag 名称，移除 refs/tags/ 前缀和 ^{} 后缀（peeled tag）
+            if let Some(tag_ref) = ref_name.strip_prefix("refs/tags/") {
+                let tag_name = tag_ref.strip_suffix("^{}").unwrap_or(tag_ref);
+                tags.insert(tag_name.to_string());
             }
         }
 
-        tags.sort();
-        Ok(tags)
+        let mut tags_vec: Vec<String> = tags.into_iter().collect();
+        tags_vec.sort();
+        Ok(tags_vec)
     }
 
     /// 检查 tag 是否存在（本地）
@@ -76,7 +73,7 @@ impl GitTagCommand {
         remote: Option<&str>,
         cwd: Option<&Path>,
     ) -> Result<bool> {
-        let remote = remote.unwrap_or("origin");
+        let remote = remote.unwrap_or(GitCommand::DEFAULT_REMOTE);
         let output = GitCommand::run(
             &[
                 "ls-remote",
@@ -121,7 +118,7 @@ impl GitTagCommand {
                 GitError::BranchAlreadyExists { branch } => {
                     color_eyre::eyre::eyre!("Tag '{}' already exists", branch)
                 }
-                _ => color_eyre::eyre::eyre!("{}", e),
+                _ => GitCommand::to_eyre_error(e),
             })
             .wrap_err_with(|| format!("Failed to create tag: {}", tag_name))
     }
@@ -144,7 +141,7 @@ impl GitTagCommand {
         args.push(tag_name);
 
         GitCommand::execute(&args, cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err_with(|| format!("Failed to create annotated tag: {}", tag_name))
     }
 
@@ -153,7 +150,7 @@ impl GitTagCommand {
     /// 使用 `git tag -d <name>` 命令
     pub fn delete_local(tag_name: &str, cwd: Option<&Path>) -> Result<()> {
         GitCommand::execute(&["tag", "-d", tag_name], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err_with(|| format!("Failed to delete local tag: {}", tag_name))
     }
 
@@ -161,9 +158,9 @@ impl GitTagCommand {
     ///
     /// 使用 `git push <remote> :refs/tags/<name>` 命令
     pub fn delete_remote(tag_name: &str, remote: Option<&str>, cwd: Option<&Path>) -> Result<()> {
-        let remote = remote.unwrap_or("origin");
+        let remote = remote.unwrap_or(GitCommand::DEFAULT_REMOTE);
         GitCommand::execute(&["push", remote, &format!(":refs/tags/{}", tag_name)], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err_with(|| format!("Failed to delete remote tag: {}", tag_name))
     }
 
@@ -171,14 +168,9 @@ impl GitTagCommand {
     ///
     /// 使用 `git push <remote> <tag>` 命令
     pub fn push_tag(tag_name: &str, remote: Option<&str>, cwd: Option<&Path>) -> Result<()> {
-        let remote = remote.unwrap_or("origin");
+        let remote = remote.unwrap_or(GitCommand::DEFAULT_REMOTE);
         GitCommand::execute(&["push", remote, tag_name], cwd)
-            .map_err(|e| match e {
-                GitError::AuthenticationFailed { reason } => {
-                    color_eyre::eyre::eyre!("Authentication failed: {}", reason)
-                }
-                _ => color_eyre::eyre::eyre!("{}", e),
-            })
+            .map_err(GitCommand::handle_auth_error)
             .wrap_err_with(|| format!("Failed to push tag {} to {}", tag_name, remote))
     }
 
@@ -186,9 +178,9 @@ impl GitTagCommand {
     ///
     /// 使用 `git push <remote> --tags` 命令
     pub fn push_all_tags(remote: Option<&str>, cwd: Option<&Path>) -> Result<()> {
-        let remote = remote.unwrap_or("origin");
+        let remote = remote.unwrap_or(GitCommand::DEFAULT_REMOTE);
         GitCommand::execute(&["push", remote, "--tags"], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err_with(|| format!("Failed to push all tags to {}", remote))
     }
 
@@ -201,7 +193,7 @@ impl GitTagCommand {
                 GitError::CommitNotFound { .. } => {
                     color_eyre::eyre::eyre!("Tag '{}' does not exist", tag_name)
                 }
-                _ => color_eyre::eyre::eyre!("{}", e),
+                _ => GitCommand::to_eyre_error(e),
             })
             .map(|s| s.trim().to_string())
             .wrap_err_with(|| format!("Failed to get commit hash for tag: {}", tag_name))

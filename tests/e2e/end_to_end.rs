@@ -311,7 +311,7 @@ fn test_commit_workflow() -> Result<()> {
 
     // 3. 验证提交历史
     // 使用 git log 获取提交消息
-    let output = workflow::git::commands::GitCommand::run(
+    let output = workflow::git::commands::command::GitCommand::run(
         &["log", "--format=%s"],
         Some(env.path().as_path()),
     )?;

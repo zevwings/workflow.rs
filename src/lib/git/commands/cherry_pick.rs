@@ -6,7 +6,7 @@
 //! - 中止 cherry-pick（abort）
 //! - 检查 cherry-pick 状态（check_status）
 
-use crate::git::commands::{GitCommand, GitError};
+use crate::git::commands::command::GitCommand;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::Path;
 
@@ -27,14 +27,7 @@ impl GitCherryPickCommand {
         args.push(commit_sha);
 
         GitCommand::execute(&args, cwd)
-            .map_err(|e| match e {
-                GitError::CherryPickConflict => {
-                    color_eyre::eyre::eyre!(
-                        "Cherry-pick conflict detected. Please resolve conflicts and continue with 'git cherry-pick --continue'"
-                    )
-                }
-                _ => color_eyre::eyre::eyre!("{}", e),
-            })
+            .map_err(GitCommand::handle_cherry_pick_error)
             .wrap_err_with(|| format!("Failed to cherry-pick commit: {}", commit_sha))
     }
 
@@ -43,7 +36,7 @@ impl GitCherryPickCommand {
     /// 使用 `git cherry-pick --continue` 命令
     pub fn continue_cherry_pick(cwd: Option<&Path>) -> Result<()> {
         GitCommand::execute(&["cherry-pick", "--continue"], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err("Failed to continue cherry-pick")
     }
 
@@ -52,7 +45,7 @@ impl GitCherryPickCommand {
     /// 使用 `git cherry-pick --abort` 命令
     pub fn abort_cherry_pick(cwd: Option<&Path>) -> Result<()> {
         GitCommand::execute(&["cherry-pick", "--abort"], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err("Failed to abort cherry-pick")
     }
 

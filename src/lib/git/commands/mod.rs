@@ -24,8 +24,8 @@ pub mod reset;
 pub mod stash;
 pub mod tag;
 
-// 导出基础类型
-pub use command::{GitCommand, GitError};
+// 导出基础类型（GitCommand 不对外导出，只供 commands 模块内部使用）
+pub use command::{GitArgsBuilder, GitError};
 
 // 导出功能命令
 pub use branch::GitBranchCommand;

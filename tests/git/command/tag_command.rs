@@ -3,6 +3,7 @@
 //! 测试 Tag 命令包装层的功能。
 
 use color_eyre::Result;
+use serial_test::serial;
 use workflow::git::commands::GitTagCommand;
 
 use crate::common::environments::GitTestEnv;
@@ -20,6 +21,7 @@ use crate::common::environments::GitTestEnv;
 /// ## 预期结果
 /// - Tag 创建成功并存在
 #[test]
+#[serial]
 fn test_create_tag_creates_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -50,6 +52,7 @@ fn test_create_tag_creates_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回所有 tag 的列表
 #[test]
+#[serial]
 fn test_list_local_tags_returns_all_tags() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -89,6 +92,7 @@ fn test_list_local_tags_returns_all_tags() -> Result<()> {
 /// ## 预期结果
 /// - 存在的 tag 返回 true，不存在的返回 false
 #[test]
+#[serial]
 fn test_tag_exists_checks_correctly() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -124,6 +128,7 @@ fn test_tag_exists_checks_correctly() -> Result<()> {
 /// ## 预期结果
 /// - Tag 删除成功
 #[test]
+#[serial]
 fn test_delete_local_removes_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -157,6 +162,7 @@ fn test_delete_local_removes_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的 commit SHA
 #[test]
+#[serial]
 fn test_get_tag_commit_returns_valid_sha() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -192,6 +198,7 @@ fn test_get_tag_commit_returns_valid_sha() -> Result<()> {
 /// ## 预期结果
 /// - 带注释的 tag 创建成功
 #[test]
+#[serial]
 fn test_create_annotated_tag_creates_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -222,6 +229,7 @@ fn test_create_annotated_tag_creates_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回 false 或错误（测试环境可能没有远程）
 #[test]
+#[serial]
 fn test_tag_exists_remote_checks_remote_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
@@ -259,6 +267,7 @@ fn test_tag_exists_remote_checks_remote_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回 (本地存在, 远程存在) 元组，或处理错误（如果远程不存在）
 #[test]
+#[serial]
 fn test_tag_exists_checks_local_and_remote() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;

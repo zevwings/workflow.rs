@@ -649,7 +649,6 @@ fn test_clear_pr_config() {
 /// ## 预期结果
 /// - 配置能够正确从文件加载
 #[rstest]
-// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_from_existing_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
 

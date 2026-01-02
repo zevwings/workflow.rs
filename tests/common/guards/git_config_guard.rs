@@ -194,6 +194,11 @@ impl GitConfigGuard {
                 color_eyre::eyre::eyre!("Failed to create temp Git config file: {}", e)
             })?;
 
+            // 确保文件存在（创建空文件）
+            // 这对于 Git 命令正常工作很重要，因为 Git 需要有效的配置文件格式
+            std::fs::write(temp_file.path(), "")
+                .map_err(|e| color_eyre::eyre::eyre!("Failed to initialize config file: {}", e))?;
+
             let config_path = temp_file.path().to_path_buf();
 
             // 保存原始的GIT_CONFIG环境变量
@@ -212,7 +217,7 @@ impl GitConfigGuard {
 
     /// 设置Git配置项
     ///
-    /// 使用 Git 命令设置配置项到临时配置文件（通过 GIT_CONFIG 环境变量）。
+    /// 使用 Git 命令设置配置项到临时配置文件（通过 --file 参数显式指定）。
     ///
     /// # 参数
     ///
@@ -237,11 +242,13 @@ impl GitConfigGuard {
     /// guard.set("user.email", "test@example.com")?;
     /// ```
     pub fn set(&self, key: &str, value: &str) -> Result<()> {
-        // 使用 GitConfigCommand 设置配置
-        // GIT_CONFIG 环境变量已经设置（在 new() 方法中），GitCommand 会显式传递它
-        // 不使用 --global 标志，因为我们使用的是 GIT_CONFIG 环境变量指向的临时文件
-        // 环境隔离已通过 GitCommand 显式传递 GIT_CONFIG 环境变量得到保证
-        GitConfigCommand::set_config(key, value, false, None)
+        // 使用 --file 参数显式指定配置文件，确保 Git 能够正确写入配置
+        // 这比依赖 GIT_CONFIG 环境变量更可靠，特别是在并行测试环境中
+        let config_path_str = self.config_path.to_string_lossy().to_string();
+        let args = vec!["config", "--file", &config_path_str, key, value];
+
+        workflow::git::commands::command::GitCommand::execute(&args, None)
+            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
             .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
     }
 

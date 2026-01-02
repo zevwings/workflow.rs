@@ -3,8 +3,9 @@
 //! 测试 Git 命令包装层的性能，包括命令执行、分支操作、提交操作等。
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use workflow::git::commands::command::GitCommand;
 use workflow::git::commands::{
-    GitBranchCommand, GitCommand, GitCommitCommand, GitConfigCommand, GitRepoCommand,
+    GitBranchCommand, GitCommitCommand, GitConfigCommand, GitRepoCommand,
 };
 
 fn bench_git_command_run(c: &mut Criterion) {

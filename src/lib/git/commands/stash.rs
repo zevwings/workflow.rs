@@ -6,7 +6,7 @@
 //! - Stash 列表（list_stash）
 //! - Stash 删除（drop_stash）
 
-use crate::git::commands::{GitCommand, GitError};
+use crate::git::commands::command::GitCommand;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::Path;
 
@@ -35,7 +35,7 @@ impl GitStashCommand {
         }
 
         GitCommand::execute(&args, cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err("Failed to stash changes")
     }
 
@@ -52,12 +52,7 @@ impl GitStashCommand {
         }
 
         GitCommand::execute(&args, cwd)
-            .map_err(|e| match e {
-                GitError::StashConflict { details } => {
-                    color_eyre::eyre::eyre!("Stash pop conflict:\n{}", details)
-                }
-                _ => color_eyre::eyre::eyre!("{}", e),
-            })
+            .map_err(GitCommand::handle_stash_error)
             .wrap_err("Failed to pop stash")
     }
 
@@ -74,12 +69,7 @@ impl GitStashCommand {
         }
 
         GitCommand::execute(&args, cwd)
-            .map_err(|e| match e {
-                GitError::StashConflict { details } => {
-                    color_eyre::eyre::eyre!("Stash apply conflict:\n{}", details)
-                }
-                _ => color_eyre::eyre::eyre!("{}", e),
-            })
+            .map_err(GitCommand::handle_stash_error)
             .wrap_err("Failed to apply stash")
     }
 
@@ -87,8 +77,7 @@ impl GitStashCommand {
     ///
     /// 使用 `git stash list` 命令
     pub fn list_stash(cwd: Option<&Path>) -> Result<Vec<StashEntry>> {
-        let output = GitCommand::run(&["stash", "list"], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
+        let output = GitCommand::run(&["stash", "list"], cwd).map_err(GitCommand::to_eyre_error)?;
 
         let mut entries = Vec::new();
         for (index, line) in output.lines().enumerate() {
@@ -104,29 +93,26 @@ impl GitStashCommand {
 
     /// 解析 stash 列表行
     fn parse_stash_line(line: &str, index: usize, cwd: Option<&Path>) -> Option<StashEntry> {
-        // 格式: stash@{0}: WIP on branch: message
-        // 提取分支和消息
-        let parts: Vec<&str> = line.splitn(2, ':').collect();
-        if parts.len() < 2 {
-            return None;
-        }
+        // 格式: stash@{0}: WIP on branch: message 或 stash@{0}: On branch: message
+        // 提取冒号后的部分
+        let message_part = line.split_once(':')?.1.trim();
 
-        let message_part = parts[1].trim();
-        let (branch, message) = if let Some(rest) = message_part.strip_prefix("WIP on ") {
-            if let Some(colon_pos) = rest.find(':') {
-                (rest[..colon_pos].trim(), rest[colon_pos + 1..].trim())
-            } else {
-                (rest, "")
-            }
-        } else if let Some(rest) = message_part.strip_prefix("On ") {
-            if let Some(colon_pos) = rest.find(':') {
-                (rest[..colon_pos].trim(), rest[colon_pos + 1..].trim())
-            } else {
-                (rest, "")
-            }
-        } else {
-            ("", message_part)
-        };
+        // 解析分支和消息
+        let (branch, message) = message_part
+            .strip_prefix("WIP on ")
+            .or_else(|| message_part.strip_prefix("On "))
+            .map(|rest| {
+                // 查找第二个冒号（如果有）
+                rest.splitn(2, ':').map(|s| s.trim()).collect::<Vec<_>>()
+            })
+            .map(|parts| {
+                if parts.len() == 2 {
+                    (parts[0], parts[1])
+                } else {
+                    (parts[0], "")
+                }
+            })
+            .unwrap_or(("", message_part));
 
         // 获取 commit hash
         let commit_hash = GitCommand::run(&["rev-parse", &format!("stash@{{{}}}", index)], cwd)
@@ -155,7 +141,7 @@ impl GitStashCommand {
         }
 
         GitCommand::execute(&args, cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .map_err(GitCommand::to_eyre_error)
             .wrap_err("Failed to drop stash")
     }
 
@@ -163,8 +149,8 @@ impl GitStashCommand {
     ///
     /// 使用 `git diff --check` 命令
     pub fn check_conflicts(cwd: Option<&Path>) -> Result<bool> {
-        let output = GitCommand::run(&["diff", "--check"], cwd)
-            .map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
+        let output =
+            GitCommand::run(&["diff", "--check"], cwd).map_err(GitCommand::to_eyre_error)?;
 
         Ok(!output.trim().is_empty())
     }

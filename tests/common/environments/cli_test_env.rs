@@ -23,7 +23,8 @@
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
-use workflow::git::commands::{GitBranchCommand, GitCommand, GitCommitCommand};
+use workflow::git::commands::command::GitCommand;
+use workflow::git::commands::{GitBranchCommand, GitCommitCommand};
 use workflow::git::{GitBranch, GitCommit, GitRepository};
 
 use crate::common::isolation::TestIsolation;
@@ -75,7 +76,8 @@ impl CliTestEnv {
     /// let env = CliTestEnv::new()?;
     /// ```
     pub fn new() -> Result<Self> {
-        let mut isolation = TestIsolation::new()?;
+        // 创建隔离环境，启用Git配置隔离以避免并行测试时的冲突
+        let mut isolation = TestIsolation::new()?.with_git_config()?;
 
         // 创建两个独立的路径
         // - project_path: 用于项目级配置（仓库根目录）
@@ -92,6 +94,12 @@ impl CliTestEnv {
         // - WORKFLOW_DISABLE_ICLOUD: 禁用 iCloud，确保使用临时目录
         isolation.env_guard().set("HOME", &home_path.to_string_lossy());
         isolation.env_guard().set("WORKFLOW_DISABLE_ICLOUD", "1");
+
+        // 配置Git用户（使用隔离的Git配置）
+        if let Some(git_guard) = isolation.git_config_guard() {
+            git_guard.set("user.name", "Test User")?;
+            git_guard.set("user.email", "test@example.com")?;
+        }
 
         Ok(Self {
             isolation,
@@ -166,7 +174,7 @@ impl CliTestEnv {
         let work_dir = &self.project_path;
 
         // 初始化Git仓库并创建初始提交（使用封装工具）
-        let mut repo = GitRepository::init_with_commit(
+        let _repo = GitRepository::init_with_commit(
             work_dir,
             Some("main"),
             Some("Test User"),
@@ -181,9 +189,13 @@ impl CliTestEnv {
         // 我们使用假的远程引用而不是替换 URL，这样既能避免网络请求，又能保持 URL 格式正确
 
         // 添加remote origin（用于测试需要remote的功能）
-        repo.as_inner_mut()
-            .remote("origin", "https://github.com/test/test-repo.git")
-            .wrap_err("Failed to add remote origin")?;
+        use workflow::git::commands::GitRepoCommand;
+        GitRepoCommand::add_remote(
+            "origin",
+            "https://github.com/test/test-repo.git",
+            Some(work_dir),
+        )
+        .wrap_err("Failed to add remote origin")?;
 
         // 创建假的远程分支引用（让get_default_branch()等函数能正常工作）
         self.setup_fake_remote_refs()?;
@@ -203,20 +215,22 @@ impl CliTestEnv {
         let work_dir = &self.project_path;
 
         // 初始化Git仓库（使用封装工具）
-        let mut repo = GitRepository::init(work_dir, Some("main"))?;
+        let _repo = GitRepository::init(work_dir, Some("main"))?;
 
         // 在仓库的配置文件中设置Git用户配置
-        let mut config =
-            repo.as_inner_mut().config().wrap_err("Failed to open repository config")?;
-        config.set_str("user.name", "Test User").wrap_err("Failed to set user.name")?;
-        config
-            .set_str("user.email", "test@example.com")
+        use workflow::git::commands::{GitConfigCommand, GitRepoCommand};
+        GitConfigCommand::set_local("user.name", "Test User", Some(work_dir))
+            .wrap_err("Failed to set user.name")?;
+        GitConfigCommand::set_local("user.email", "test@example.com", Some(work_dir))
             .wrap_err("Failed to set user.email")?;
 
         // 添加remote origin（用于测试需要remote的功能）
-        repo.as_inner_mut()
-            .remote("origin", "https://github.com/test/test-repo.git")
-            .wrap_err("Failed to add remote origin")?;
+        GitRepoCommand::add_remote(
+            "origin",
+            "https://github.com/test/test-repo.git",
+            Some(work_dir),
+        )
+        .wrap_err("Failed to add remote origin")?;
 
         // 注意：不创建初始提交，保持仓库为空
         // 也不调用 setup_fake_remote_refs()，因为 HEAD 不存在
