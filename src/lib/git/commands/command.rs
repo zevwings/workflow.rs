@@ -5,11 +5,13 @@
 //! - 错误处理
 //! - 输出解析
 
+use crate::base::resilience::{execute_with_timeout, TimeoutConfig};
 use color_eyre::Result;
 use duct::cmd;
 use std::fmt;
 use std::path::Path;
 use std::process::Output;
+use std::time::Duration;
 
 /// Git 命令执行错误
 #[derive(Debug, Clone)]
@@ -95,6 +97,19 @@ impl std::error::Error for GitError {}
 pub struct GitCommand;
 
 impl GitCommand {
+    /// Git 命令默认超时时间
+    ///
+    /// - Windows 平台：120秒（因为 Windows 上 Git 操作可能较慢）
+    /// - 其他平台：60秒
+    ///
+    /// 大多数 Git 命令应该在几秒内完成，但对于可能较慢的操作（如网络操作、配置读取），
+    /// 使用平台相关的超时时间可以避免不必要的超时错误。
+    #[cfg(target_os = "windows")]
+    const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
+
+    #[cfg(not(target_os = "windows"))]
+    const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
+
     /// 执行 Git 命令并返回标准输出
     ///
     /// # 参数
@@ -108,21 +123,63 @@ impl GitCommand {
     ///
     /// # 错误
     ///
-    /// 如果命令执行失败，返回 `GitError`
+    /// 如果命令执行失败或超时，返回 `GitError`
     pub fn run(args: &[&str], cwd: Option<&Path>) -> Result<String, GitError> {
-        let mut command = cmd("git", args);
+        Self::run_with_timeout(args, cwd, Self::DEFAULT_TIMEOUT)
+    }
 
-        if let Some(cwd) = cwd {
-            command = command.dir(cwd);
-        }
+    /// 执行 Git 命令并返回标准输出（带超时）
+    ///
+    /// # 参数
+    ///
+    /// * `args` - Git 命令参数（不包含 "git" 本身）
+    /// * `cwd` - 工作目录（可选，默认为当前目录）
+    /// * `timeout` - 超时时间
+    ///
+    /// # 返回
+    ///
+    /// 返回命令的标准输出（UTF-8 字符串）
+    ///
+    /// # 错误
+    ///
+    /// 如果命令执行失败或超时，返回 `GitError`
+    pub fn run_with_timeout(
+        args: &[&str],
+        cwd: Option<&Path>,
+        timeout: Duration,
+    ) -> Result<String, GitError> {
+        let command_str = format!("git {}", args.join(" "));
+        let cwd_clone = cwd.map(|p| p.to_path_buf());
+        // 将 args 转换为拥有所有权的 Vec<String>
+        let args_owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
-        let output = command.stdout_capture().stderr_capture().run().map_err(|e| {
-            GitError::CommandFailed {
-                command: format!("git {}", args.join(" ")),
-                stderr: format!("Failed to execute command: {}", e),
+        // 使用超时机制执行命令
+        let output =
+            execute_with_timeout(TimeoutConfig::new(timeout), move || -> Result<Output> {
+                // 将 Vec<String> 转换为 &[&str]
+                let args_refs: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
+                let mut command = cmd("git", &args_refs);
+
+                // 设置环境变量以避免 Git 等待终端输入
+                // GIT_TERMINAL_PROMPT=0: 禁用终端提示，避免 Git 等待用户输入
+                // GIT_PAGER=cat: 使用 cat 作为分页器，避免等待用户交互
+                command = command.env("GIT_TERMINAL_PROMPT", "0").env("GIT_PAGER", "cat");
+
+                if let Some(cwd) = cwd_clone.as_ref() {
+                    command = command.dir(cwd);
+                }
+
+                command
+                    .stdout_capture()
+                    .stderr_capture()
+                    .run()
+                    .map_err(|e| color_eyre::eyre::eyre!("Failed to execute command: {}", e))
+            })
+            .map_err(|e| GitError::CommandFailed {
+                command: command_str.clone(),
+                stderr: format!("Command timed out after {:?}: {}", timeout, e),
                 stdout: String::new(),
-            }
-        })?;
+            })?;
 
         if !output.status.success() {
             return Err(Self::handle_error(args, &output));
@@ -144,17 +201,54 @@ impl GitCommand {
     ///
     /// 成功返回 `Ok(())`，失败返回 `GitError`
     pub fn execute(args: &[&str], cwd: Option<&Path>) -> Result<(), GitError> {
-        let mut command = cmd("git", args).stdout_null().stderr_capture();
+        Self::execute_with_timeout(args, cwd, Self::DEFAULT_TIMEOUT)
+    }
 
-        if let Some(cwd) = cwd {
-            command = command.dir(cwd);
-        }
+    /// 执行 Git 命令（静默模式，不返回输出，带超时）
+    ///
+    /// # 参数
+    ///
+    /// * `args` - Git 命令参数
+    /// * `cwd` - 工作目录（可选）
+    /// * `timeout` - 超时时间
+    ///
+    /// # 返回
+    ///
+    /// 成功返回 `Ok(())`，失败返回 `GitError`
+    pub fn execute_with_timeout(
+        args: &[&str],
+        cwd: Option<&Path>,
+        timeout: Duration,
+    ) -> Result<(), GitError> {
+        let command_str = format!("git {}", args.join(" "));
+        let cwd_clone = cwd.map(|p| p.to_path_buf());
+        // 将 args 转换为拥有所有权的 Vec<String>
+        let args_owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
-        let output = command.run().map_err(|e| GitError::CommandFailed {
-            command: format!("git {}", args.join(" ")),
-            stderr: format!("Failed to execute command: {}", e),
-            stdout: String::new(),
-        })?;
+        // 使用超时机制执行命令
+        let output =
+            execute_with_timeout(TimeoutConfig::new(timeout), move || -> Result<Output> {
+                // 将 Vec<String> 转换为 &[&str]
+                let args_refs: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
+                let mut command = cmd("git", &args_refs)
+                    .stdout_null()
+                    .stderr_capture()
+                    .env("GIT_TERMINAL_PROMPT", "0")
+                    .env("GIT_PAGER", "cat");
+
+                if let Some(cwd) = cwd_clone.as_ref() {
+                    command = command.dir(cwd);
+                }
+
+                command
+                    .run()
+                    .map_err(|e| color_eyre::eyre::eyre!("Failed to execute command: {}", e))
+            })
+            .map_err(|e| GitError::CommandFailed {
+                command: command_str.clone(),
+                stderr: format!("Command timed out after {:?}: {}", timeout, e),
+                stdout: String::new(),
+            })?;
 
         if !output.status.success() {
             return Err(Self::handle_error(args, &output));
@@ -172,15 +266,43 @@ impl GitCommand {
     ///
     /// # 返回
     ///
-    /// 返回 `true` 如果命令成功，`false` 如果失败
+    /// 返回 `true` 如果命令成功，`false` 如果失败或超时
     pub fn check(args: &[&str], cwd: Option<&Path>) -> bool {
-        let mut command = cmd("git", args).stdout_null().stderr_null();
+        Self::check_with_timeout(args, cwd, Self::DEFAULT_TIMEOUT)
+    }
 
-        if let Some(cwd) = cwd {
-            command = command.dir(cwd);
-        }
+    /// 检查 Git 命令是否成功（静默检查，带超时）
+    ///
+    /// # 参数
+    ///
+    /// * `args` - Git 命令参数
+    /// * `cwd` - 工作目录（可选）
+    /// * `timeout` - 超时时间
+    ///
+    /// # 返回
+    ///
+    /// 返回 `true` 如果命令成功，`false` 如果失败或超时
+    pub fn check_with_timeout(args: &[&str], cwd: Option<&Path>, timeout: Duration) -> bool {
+        let cwd_clone = cwd.map(|p| p.to_path_buf());
+        // 将 args 转换为拥有所有权的 Vec<String>
+        let args_owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
-        command.run().map(|output| output.status.success()).unwrap_or(false)
+        execute_with_timeout(TimeoutConfig::new(timeout), move || -> Result<bool> {
+            // 将 Vec<String> 转换为 &[&str]
+            let args_refs: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
+            let mut command = cmd("git", &args_refs)
+                .stdout_null()
+                .stderr_null()
+                .env("GIT_TERMINAL_PROMPT", "0")
+                .env("GIT_PAGER", "cat");
+
+            if let Some(cwd) = cwd_clone.as_ref() {
+                command = command.dir(cwd);
+            }
+
+            Ok(command.run().map(|output| output.status.success()).unwrap_or(false))
+        })
+        .unwrap_or(false)
     }
 
     /// 处理错误

@@ -2,6 +2,7 @@
 //!
 //! 测试配置命令包装层的功能。
 
+use crate::common::guards::GitConfigGuard;
 use color_eyre::Result;
 use serial_test::serial;
 use workflow::git::commands::GitConfigCommand;
@@ -41,24 +42,27 @@ fn test_get_config_returns_value() -> Result<()> {
 /// 验证 GitConfigCommand::set_config() 能够设置配置值。
 ///
 /// ## 测试场景
-/// 1. 设置测试配置
-/// 2. 获取配置值
-/// 3. 验证配置被设置
-/// 4. 删除配置
+/// 1. 使用隔离的Git配置环境
+/// 2. 设置测试配置
+/// 3. 获取配置值
+/// 4. 验证配置被设置
 ///
 /// ## 预期结果
 /// - 配置设置成功
 #[test]
 #[serial]
 fn test_set_config_sets_value() -> Result<()> {
+    // Arrange: 使用隔离的Git配置环境
+    let _guard = GitConfigGuard::new()?;
+
     let test_key = "test.config.key";
     let test_value = "test-value-12345";
 
-    // Act: 设置配置值
-    GitConfigCommand::set_config(test_key, test_value, true, None)?;
+    // Act: 设置配置值（使用 global=false，Git 会使用 GIT_CONFIG 环境变量指定的文件）
+    GitConfigCommand::set_config(test_key, test_value, false, None)?;
 
     // Act: 获取配置值
-    let value = GitConfigCommand::get_config(test_key, true, None)?;
+    let value = GitConfigCommand::get_config(test_key, false, None)?;
 
     // Assert: 验证配置被设置
     assert_eq!(
@@ -67,8 +71,7 @@ fn test_set_config_sets_value() -> Result<()> {
         "Config value should match set value"
     );
 
-    // Cleanup: 删除测试配置
-    let _ = GitConfigCommand::unset_config(test_key, true, None);
+    // guard 在 drop 时自动清理，无需手动删除配置
 
     Ok(())
 }
@@ -79,26 +82,30 @@ fn test_set_config_sets_value() -> Result<()> {
 /// 验证 GitConfigCommand::unset_config() 能够删除配置项。
 ///
 /// ## 测试场景
-/// 1. 设置测试配置
-/// 2. 删除配置
-/// 3. 验证配置被删除
+/// 1. 使用隔离的Git配置环境
+/// 2. 设置测试配置
+/// 3. 删除配置
+/// 4. 验证配置被删除
 ///
 /// ## 预期结果
 /// - 配置删除成功
 #[test]
 #[serial]
 fn test_unset_config_removes_config() -> Result<()> {
+    // Arrange: 使用隔离的Git配置环境
+    let _guard = GitConfigGuard::new()?;
+
     let test_key = "test.unset.key";
     let test_value = "test-value-unset";
 
-    // Arrange: 设置配置
-    GitConfigCommand::set_config(test_key, test_value, true, None)?;
+    // Arrange: 设置配置（使用 global=false，Git 会使用 GIT_CONFIG 环境变量指定的文件）
+    GitConfigCommand::set_config(test_key, test_value, false, None)?;
 
     // Act: 删除配置
-    GitConfigCommand::unset_config(test_key, true, None)?;
+    GitConfigCommand::unset_config(test_key, false, None)?;
 
     // Assert: 验证配置被删除
-    let value = GitConfigCommand::get_config(test_key, true, None).unwrap_or(None); // 配置不存在时可能返回 None
+    let value = GitConfigCommand::get_config(test_key, false, None).unwrap_or(None); // 配置不存在时可能返回 None
     assert_eq!(value, None, "Config should be removed");
 
     Ok(())
@@ -166,42 +173,43 @@ fn test_get_user_name_returns_name() -> Result<()> {
 /// 验证 GitConfigCommand::set_user() 能够设置用户信息。
 ///
 /// ## 测试场景
-/// 1. 保存原始配置（如果存在）
+/// 1. 使用隔离的Git配置环境
 /// 2. 设置测试用户信息
 /// 3. 验证配置被设置
-/// 4. 恢复原始配置
 ///
 /// ## 预期结果
 /// - 用户信息设置成功
 #[test]
 #[serial]
 fn test_set_user_sets_email_and_name() -> Result<()> {
-    // Arrange: 保存原始配置
-    let original_email = GitConfigCommand::get_user_email(true, None)?;
-    let original_name = GitConfigCommand::get_user_name(true, None)?;
+    // Arrange: 使用隔离的Git配置环境
+    let _guard = GitConfigGuard::new()?;
 
     let test_email = "test@example.com";
     let test_name = "Test User";
 
-    // Act: 设置用户信息
-    let (email, name) = GitConfigCommand::set_user(test_email, test_name, true, None)?;
+    // Act: 设置用户信息（使用 global=false，Git 会使用 GIT_CONFIG 环境变量指定的文件）
+    let (email, name) = GitConfigCommand::set_user(test_email, test_name, false, None)?;
 
     // Assert: 验证配置被设置
     assert_eq!(email, test_email, "Email should match");
     assert_eq!(name, test_name, "Name should match");
 
-    // Cleanup: 恢复原始配置
-    if let Some(orig_email) = original_email {
-        GitConfigCommand::set_config("user.email", &orig_email, true, None)?;
-    } else {
-        let _ = GitConfigCommand::unset_config("user.email", true, None);
-    }
+    // 验证配置确实被写入隔离的配置文件
+    let saved_email = GitConfigCommand::get_user_email(false, None)?;
+    let saved_name = GitConfigCommand::get_user_name(false, None)?;
+    assert_eq!(
+        saved_email,
+        Some(test_email.to_string()),
+        "Email should be saved"
+    );
+    assert_eq!(
+        saved_name,
+        Some(test_name.to_string()),
+        "Name should be saved"
+    );
 
-    if let Some(orig_name) = original_name {
-        GitConfigCommand::set_config("user.name", &orig_name, true, None)?;
-    } else {
-        let _ = GitConfigCommand::unset_config("user.name", true, None);
-    }
+    // guard 在 drop 时自动清理，无需手动恢复配置
 
     Ok(())
 }
@@ -212,16 +220,20 @@ fn test_set_user_sets_email_and_name() -> Result<()> {
 /// 验证 GitConfigCommand::list_config() 能够列出所有配置项。
 ///
 /// ## 测试场景
-/// 1. 列出所有全局配置
-/// 2. 验证返回配置列表
+/// 1. 使用隔离的Git配置环境
+/// 2. 列出所有配置
+/// 3. 验证返回配置列表
 ///
 /// ## 预期结果
 /// - 返回配置项列表（可能为空或包含配置）
 #[test]
 #[serial]
 fn test_list_config_returns_config_list() -> Result<()> {
-    // Act: 列出所有全局配置
-    let configs = GitConfigCommand::list_config(true, None)?;
+    // Arrange: 使用隔离的Git配置环境
+    let _guard = GitConfigGuard::new()?;
+
+    // Act: 列出所有配置（使用 global=false，Git 会使用 GIT_CONFIG 环境变量指定的文件）
+    let configs = GitConfigCommand::list_config(false, None)?;
 
     // Assert: 验证返回列表（可能为空或包含配置）
     // 配置列表可能为空，也可能包含系统配置，这都是正常的

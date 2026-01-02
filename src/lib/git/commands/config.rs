@@ -118,6 +118,9 @@ impl GitConfigCommand {
     /// 列出所有配置项
     ///
     /// 使用 `git config --list` 命令
+    ///
+    /// 注意：此方法使用平台相关的超时时间（Windows 120秒，其他平台 60秒），
+    /// 因为读取全局配置可能需要较长时间，特别是在配置项很多或系统较慢的情况下。
     pub fn list_config(global: bool, cwd: Option<&Path>) -> Result<Vec<(String, String)>> {
         let mut args = vec!["config", "--list"];
 
@@ -125,7 +128,15 @@ impl GitConfigCommand {
             args.push("--global");
         }
 
-        let output = GitCommand::run(&args, cwd).map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
+        // 使用平台相关的超时时间（Windows 120秒，其他平台 60秒）
+        // 因为读取全局配置可能需要较长时间，特别是在配置项很多或系统较慢的情况下
+        #[cfg(target_os = "windows")]
+        let timeout = std::time::Duration::from_secs(180);
+        #[cfg(not(target_os = "windows"))]
+        let timeout = std::time::Duration::from_secs(120);
+
+        let output = GitCommand::run_with_timeout(&args, cwd, timeout)
+            .map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
 
         let mut configs = Vec::new();
         for line in output.lines() {

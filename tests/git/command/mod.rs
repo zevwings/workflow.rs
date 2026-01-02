@@ -7,7 +7,6 @@ mod cherry_pick_command;
 mod commit_command;
 mod config_command;
 mod git_command;
-mod git_error;
 mod repo_command;
 mod stash_command;
 mod tag_command;

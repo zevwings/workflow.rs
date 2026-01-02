@@ -3,11 +3,9 @@
 //! 测试 Tag 命令包装层的功能。
 
 use color_eyre::Result;
-use serial_test::serial;
 use workflow::git::commands::GitTagCommand;
 
 use crate::common::environments::GitTestEnv;
-use crate::common::helpers::CurrentDirGuard;
 
 /// 测试创建 tag
 ///
@@ -22,18 +20,17 @@ use crate::common::helpers::CurrentDirGuard;
 /// ## 预期结果
 /// - Tag 创建成功并存在
 #[test]
-#[serial]
 fn test_create_tag_creates_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let tag_name = "v1.0.0";
 
     // Act: 创建 tag
-    GitTagCommand::create_tag(tag_name, None, None)?;
+    GitTagCommand::create_tag(tag_name, None, Some(repo_path.as_path()))?;
 
     // Assert: 验证 tag 存在
-    let exists = GitTagCommand::tag_exists_local(tag_name, None)?;
+    let exists = GitTagCommand::tag_exists_local(tag_name, Some(repo_path.as_path()))?;
     assert!(exists, "Tag should exist after creation");
 
     Ok(())
@@ -53,18 +50,17 @@ fn test_create_tag_creates_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回所有 tag 的列表
 #[test]
-#[serial]
 fn test_list_local_tags_returns_all_tags() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
 
     // Act: 创建多个 tag
-    GitTagCommand::create_tag("v1.0.0", None, None)?;
-    GitTagCommand::create_tag("v1.1.0", None, None)?;
+    GitTagCommand::create_tag("v1.0.0", None, Some(repo_path.as_path()))?;
+    GitTagCommand::create_tag("v1.1.0", None, Some(repo_path.as_path()))?;
 
     // Act: 列出所有 tag
-    let tags = GitTagCommand::list_local_tags(None)?;
+    let tags = GitTagCommand::list_local_tags(Some(repo_path.as_path()))?;
 
     // Assert: 验证包含所有 tag
     assert!(
@@ -93,20 +89,19 @@ fn test_list_local_tags_returns_all_tags() -> Result<()> {
 /// ## 预期结果
 /// - 存在的 tag 返回 true，不存在的返回 false
 #[test]
-#[serial]
 fn test_tag_exists_checks_correctly() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let existing_tag = "v1.0.0";
     let nonexistent_tag = "v999.999.999";
 
     // Act: 创建 tag
-    GitTagCommand::create_tag(existing_tag, None, None)?;
+    GitTagCommand::create_tag(existing_tag, None, Some(repo_path.as_path()))?;
 
     // Act: 检查 tag 存在性
-    let exists = GitTagCommand::tag_exists_local(existing_tag, None)?;
-    let not_exists = !GitTagCommand::tag_exists_local(nonexistent_tag, None)?;
+    let exists = GitTagCommand::tag_exists_local(existing_tag, Some(repo_path.as_path()))?;
+    let not_exists = !GitTagCommand::tag_exists_local(nonexistent_tag, Some(repo_path.as_path()))?;
 
     // Assert: 验证结果
     assert!(exists, "Existing tag should return true");
@@ -129,21 +124,20 @@ fn test_tag_exists_checks_correctly() -> Result<()> {
 /// ## 预期结果
 /// - Tag 删除成功
 #[test]
-#[serial]
 fn test_delete_local_removes_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let tag_name = "v1.0.0";
 
     // Act: 创建 tag
-    GitTagCommand::create_tag(tag_name, None, None)?;
+    GitTagCommand::create_tag(tag_name, None, Some(repo_path.as_path()))?;
 
     // Act: 删除 tag
-    GitTagCommand::delete_local(tag_name, None)?;
+    GitTagCommand::delete_local(tag_name, Some(repo_path.as_path()))?;
 
     // Assert: 验证 tag 被删除
-    let exists = GitTagCommand::tag_exists_local(tag_name, None)?;
+    let exists = GitTagCommand::tag_exists_local(tag_name, Some(repo_path.as_path()))?;
     assert!(!exists, "Tag should not exist after deletion");
 
     Ok(())
@@ -163,18 +157,17 @@ fn test_delete_local_removes_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回有效的 commit SHA
 #[test]
-#[serial]
 fn test_get_tag_commit_returns_valid_sha() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let tag_name = "v1.0.0";
 
     // Act: 创建 tag
-    GitTagCommand::create_tag(tag_name, None, None)?;
+    GitTagCommand::create_tag(tag_name, None, Some(repo_path.as_path()))?;
 
     // Act: 获取 tag 指向的 commit
-    let commit_sha = GitTagCommand::get_tag_commit(tag_name, None)?;
+    let commit_sha = GitTagCommand::get_tag_commit(tag_name, Some(repo_path.as_path()))?;
 
     // Assert: 验证返回有效的 SHA（40 个字符的十六进制字符串）
     assert_eq!(commit_sha.len(), 40, "SHA should be 40 characters long");
@@ -199,19 +192,18 @@ fn test_get_tag_commit_returns_valid_sha() -> Result<()> {
 /// ## 预期结果
 /// - 带注释的 tag 创建成功
 #[test]
-#[serial]
 fn test_create_annotated_tag_creates_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let tag_name = "v1.0.0-annotated";
     let tag_message = "Annotated tag message";
 
     // Act: 创建带注释的 tag
-    GitTagCommand::create_annotated_tag(tag_name, tag_message, None, None)?;
+    GitTagCommand::create_annotated_tag(tag_name, tag_message, None, Some(repo_path.as_path()))?;
 
     // Assert: 验证 tag 存在
-    let exists = GitTagCommand::tag_exists_local(tag_name, None)?;
+    let exists = GitTagCommand::tag_exists_local(tag_name, Some(repo_path.as_path()))?;
     assert!(exists, "Annotated tag should exist after creation");
 
     Ok(())
@@ -230,15 +222,14 @@ fn test_create_annotated_tag_creates_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回 false 或错误（测试环境可能没有远程）
 #[test]
-#[serial]
 fn test_tag_exists_remote_checks_remote_tag() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
 
     // Act: 检查远程 tag（测试环境可能没有远程）
     // 如果远程不存在，可能会返回错误，这是可以接受的
-    match GitTagCommand::tag_exists_remote("v1.0.0", None, None) {
+    match GitTagCommand::tag_exists_remote("v1.0.0", None, Some(repo_path.as_path())) {
         Ok(exists) => {
             // 如果成功，验证函数能够正常执行并返回布尔值
             // 测试环境可能没有远程，所以 exists 应该是 false
@@ -268,19 +259,18 @@ fn test_tag_exists_remote_checks_remote_tag() -> Result<()> {
 /// ## 预期结果
 /// - 返回 (本地存在, 远程存在) 元组，或处理错误（如果远程不存在）
 #[test]
-#[serial]
 fn test_tag_exists_checks_local_and_remote() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let tag_name = "v1.0.0-exists";
 
     // Act: 创建 tag
-    GitTagCommand::create_tag(tag_name, None, None)?;
+    GitTagCommand::create_tag(tag_name, None, Some(repo_path.as_path()))?;
 
     // Act: 检查 tag 存在性
     // 如果远程不存在，可能会返回错误，这是可以接受的
-    match GitTagCommand::tag_exists(tag_name, None, None) {
+    match GitTagCommand::tag_exists(tag_name, None, Some(repo_path.as_path())) {
         Ok((exists_local, _exists_remote)) => {
             // Assert: 验证本地 tag 存在
             assert!(exists_local, "Local tag should exist");
@@ -288,7 +278,8 @@ fn test_tag_exists_checks_local_and_remote() -> Result<()> {
         }
         Err(_) => {
             // 如果失败（例如没有远程），验证至少本地 tag 存在
-            let exists_local = GitTagCommand::tag_exists_local(tag_name, None)?;
+            let exists_local =
+                GitTagCommand::tag_exists_local(tag_name, Some(repo_path.as_path()))?;
             assert!(
                 exists_local,
                 "Local tag should exist even if remote check fails"

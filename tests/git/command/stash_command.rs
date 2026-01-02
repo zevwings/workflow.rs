@@ -3,11 +3,9 @@
 //! 测试 Stash 命令包装层的功能。
 
 use color_eyre::Result;
-use serial_test::serial;
 use workflow::git::commands::{GitCommitCommand, GitStashCommand};
 
 use crate::common::environments::GitTestEnv;
-use crate::common::helpers::CurrentDirGuard;
 
 /// 测试保存 stash
 ///
@@ -23,27 +21,26 @@ use crate::common::helpers::CurrentDirGuard;
 /// ## 预期结果
 /// - Stash 保存成功
 #[test]
-#[serial]
 fn test_stash_push_saves_changes() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let test_file = "test-stash.txt";
 
-    // Act: 创建未提交的更改并保存到 stash
-    std::fs::write(env.path().join(test_file), "stash content")?;
-    GitCommitCommand::add_all(None)?; // 需要先暂存才能 stash
-    GitStashCommand::stash_push(Some("Test stash"), None)?;
+    // Act: 创建未提交的更改并保存到 stash（使用明确的路径）
+    std::fs::write(repo_path.join(test_file), "stash content")?;
+    GitCommitCommand::add_all(Some(repo_path.as_path()))?; // 需要先暂存才能 stash
+    GitStashCommand::stash_push(Some("Test stash"), Some(repo_path.as_path()))?;
 
     // Assert: 验证文件不在工作目录中（已被 stash）
-    let has_changes = GitCommitCommand::has_changes(None)?;
+    let has_changes = GitCommitCommand::has_changes(Some(repo_path.as_path()))?;
     assert!(
         !has_changes,
         "Working directory should be clean after stash"
     );
 
     // 验证 stash 列表不为空
-    let stashes = GitStashCommand::list_stash(None)?;
+    let stashes = GitStashCommand::list_stash(Some(repo_path.as_path()))?;
     assert!(!stashes.is_empty(), "Should have at least one stash");
 
     Ok(())
@@ -63,23 +60,22 @@ fn test_stash_push_saves_changes() -> Result<()> {
 /// ## 预期结果
 /// - 返回所有 stash 的列表
 #[test]
-#[serial]
 fn test_list_stash_returns_all_stashes() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
 
-    // Act: 创建多个 stash
-    std::fs::write(env.path().join("file1.txt"), "content1")?;
-    GitCommitCommand::add_all(None)?;
-    GitStashCommand::stash_push(Some("Stash 1"), None)?;
+    // Act: 创建多个 stash（使用明确的路径）
+    std::fs::write(repo_path.join("file1.txt"), "content1")?;
+    GitCommitCommand::add_all(Some(repo_path.as_path()))?;
+    GitStashCommand::stash_push(Some("Stash 1"), Some(repo_path.as_path()))?;
 
-    std::fs::write(env.path().join("file2.txt"), "content2")?;
-    GitCommitCommand::add_all(None)?;
-    GitStashCommand::stash_push(Some("Stash 2"), None)?;
+    std::fs::write(repo_path.join("file2.txt"), "content2")?;
+    GitCommitCommand::add_all(Some(repo_path.as_path()))?;
+    GitStashCommand::stash_push(Some("Stash 2"), Some(repo_path.as_path()))?;
 
     // Act: 列出所有 stash
-    let stashes = GitStashCommand::list_stash(None)?;
+    let stashes = GitStashCommand::list_stash(Some(repo_path.as_path()))?;
 
     // Assert: 验证返回所有 stash
     assert!(
@@ -105,27 +101,26 @@ fn test_list_stash_returns_all_stashes() -> Result<()> {
 /// ## 预期结果
 /// - Stash 应用成功，且 stash 仍然存在
 #[test]
-#[serial]
 fn test_stash_apply_applies_stash() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let test_file = "test-apply.txt";
     let test_content = "apply content";
 
-    // Act: 创建并保存 stash
-    std::fs::write(env.path().join(test_file), test_content)?;
-    GitCommitCommand::add_all(None)?;
-    GitStashCommand::stash_push(Some("Test apply"), None)?;
+    // Act: 创建并保存 stash（使用明确的路径）
+    std::fs::write(repo_path.join(test_file), test_content)?;
+    GitCommitCommand::add_all(Some(repo_path.as_path()))?;
+    GitStashCommand::stash_push(Some("Test apply"), Some(repo_path.as_path()))?;
 
     // 记录 stash 数量
-    let stash_count_before = GitStashCommand::list_stash(None)?.len();
+    let stash_count_before = GitStashCommand::list_stash(Some(repo_path.as_path()))?.len();
 
     // Act: 应用 stash
-    GitStashCommand::stash_apply(None, None)?;
+    GitStashCommand::stash_apply(None, Some(repo_path.as_path()))?;
 
     // Assert: 验证文件被应用回来
-    let file_content = std::fs::read_to_string(env.path().join(test_file))?;
+    let file_content = std::fs::read_to_string(repo_path.join(test_file))?;
     assert_eq!(
         file_content.trim(),
         test_content,
@@ -133,7 +128,7 @@ fn test_stash_apply_applies_stash() -> Result<()> {
     );
 
     // 验证 stash 仍然存在
-    let stash_count_after = GitStashCommand::list_stash(None)?.len();
+    let stash_count_after = GitStashCommand::list_stash(Some(repo_path.as_path()))?.len();
     assert_eq!(
         stash_count_before, stash_count_after,
         "Stash should still exist after apply"
@@ -156,26 +151,25 @@ fn test_stash_apply_applies_stash() -> Result<()> {
 /// ## 预期结果
 /// - Stash 恢复成功，且 stash 被删除
 #[test]
-#[serial]
 fn test_stash_pop_applies_and_deletes_stash() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
     let test_file = "test-pop.txt";
     let test_content = "pop content";
 
-    // Act: 创建并保存 stash
-    std::fs::write(env.path().join(test_file), test_content)?;
-    GitCommitCommand::add_all(None)?;
-    GitStashCommand::stash_push(Some("Test pop"), None)?;
+    // Act: 创建并保存 stash（使用明确的路径）
+    std::fs::write(repo_path.join(test_file), test_content)?;
+    GitCommitCommand::add_all(Some(repo_path.as_path()))?;
+    GitStashCommand::stash_push(Some("Test pop"), Some(repo_path.as_path()))?;
 
-    let stash_count_before = GitStashCommand::list_stash(None)?.len();
+    let stash_count_before = GitStashCommand::list_stash(Some(repo_path.as_path()))?.len();
 
     // Act: 恢复 stash（pop）
-    GitStashCommand::stash_pop(None, None)?;
+    GitStashCommand::stash_pop(None, Some(repo_path.as_path()))?;
 
     // Assert: 验证文件被恢复
-    let file_content = std::fs::read_to_string(env.path().join(test_file))?;
+    let file_content = std::fs::read_to_string(repo_path.join(test_file))?;
     assert_eq!(
         file_content.trim(),
         test_content,
@@ -183,7 +177,7 @@ fn test_stash_pop_applies_and_deletes_stash() -> Result<()> {
     );
 
     // 验证 stash 被删除
-    let stash_count_after = GitStashCommand::list_stash(None)?.len();
+    let stash_count_after = GitStashCommand::list_stash(Some(repo_path.as_path()))?.len();
     assert_eq!(
         stash_count_after,
         stash_count_before - 1,
@@ -207,24 +201,23 @@ fn test_stash_pop_applies_and_deletes_stash() -> Result<()> {
 /// ## 预期结果
 /// - Stash 删除成功
 #[test]
-#[serial]
 fn test_drop_stash_deletes_stash() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
 
-    // Act: 创建并保存 stash
-    std::fs::write(env.path().join("test.txt"), "content")?;
-    GitCommitCommand::add_all(None)?;
-    GitStashCommand::stash_push(Some("Test drop"), None)?;
+    // Act: 创建并保存 stash（使用明确的路径）
+    std::fs::write(repo_path.join("test.txt"), "content")?;
+    GitCommitCommand::add_all(Some(repo_path.as_path()))?;
+    GitStashCommand::stash_push(Some("Test drop"), Some(repo_path.as_path()))?;
 
-    let stash_count_before = GitStashCommand::list_stash(None)?.len();
+    let stash_count_before = GitStashCommand::list_stash(Some(repo_path.as_path()))?.len();
 
     // Act: 删除 stash
-    GitStashCommand::drop_stash(None, None)?;
+    GitStashCommand::drop_stash(None, Some(repo_path.as_path()))?;
 
     // Assert: 验证 stash 被删除
-    let stash_count_after = GitStashCommand::list_stash(None)?.len();
+    let stash_count_after = GitStashCommand::list_stash(Some(repo_path.as_path()))?.len();
     assert_eq!(
         stash_count_after,
         stash_count_before - 1,
@@ -249,22 +242,21 @@ fn test_drop_stash_deletes_stash() -> Result<()> {
 /// ## 预期结果
 /// - 没有冲突时返回 false
 #[test]
-#[serial]
 fn test_check_conflicts_returns_false_when_no_conflicts() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let env = GitTestEnv::new()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+    let repo_path = env.path();
 
-    // Act: 创建文件并提交
-    std::fs::write(env.path().join("conflict-test.txt"), "content")?;
-    GitCommitCommand::add_all(None)?;
-    GitCommitCommand::commit("Initial commit", false, None)?;
+    // Act: 创建文件并提交（使用明确的路径）
+    std::fs::write(repo_path.join("conflict-test.txt"), "content")?;
+    GitCommitCommand::add_all(Some(repo_path.as_path()))?;
+    GitCommitCommand::commit("Initial commit", false, Some(repo_path.as_path()))?;
 
     // Act: 修改文件
-    std::fs::write(env.path().join("conflict-test.txt"), "modified content")?;
+    std::fs::write(repo_path.join("conflict-test.txt"), "modified content")?;
 
     // Act: 检查冲突
-    let has_conflicts = GitStashCommand::check_conflicts(None)?;
+    let has_conflicts = GitStashCommand::check_conflicts(Some(repo_path.as_path()))?;
 
     // Assert: 验证没有冲突
     assert!(!has_conflicts, "Should not have conflicts in normal state");

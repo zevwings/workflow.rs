@@ -9,6 +9,7 @@
 //! - `tag` - Tag 操作命令（GitTagCommand）
 //! - `repo` - 仓库操作命令（GitRepoCommand）
 //! - `config` - 配置操作命令（GitConfigCommand）
+//! - `reset` - Reset 操作命令（GitResetCommand）
 
 // 基础模块
 pub mod command;
@@ -19,6 +20,7 @@ pub mod cherry_pick;
 pub mod commit;
 pub mod config;
 pub mod repo;
+pub mod reset;
 pub mod stash;
 pub mod tag;
 
@@ -31,5 +33,6 @@ pub use cherry_pick::GitCherryPickCommand;
 pub use commit::GitCommitCommand;
 pub use config::GitConfigCommand;
 pub use repo::GitRepoCommand;
+pub use reset::{GitResetCommand, ResetMode};
 pub use stash::{GitStashCommand, StashEntry};
 pub use tag::GitTagCommand;
