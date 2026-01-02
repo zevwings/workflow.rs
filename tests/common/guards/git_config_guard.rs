@@ -212,7 +212,8 @@ impl GitConfigGuard {
 
     /// 设置Git配置项
     ///
-    /// 使用 Git 命令设置配置项到临时配置文件（通过 GIT_CONFIG 环境变量）。
+    /// 在 Windows 上直接操作配置文件以避免 `git config` 命令可能导致的超时问题。
+    /// 在其他平台上使用 Git 命令设置配置项到临时配置文件（通过 GIT_CONFIG 环境变量）。
     ///
     /// # 参数
     ///
@@ -225,7 +226,8 @@ impl GitConfigGuard {
     ///
     /// # 错误
     ///
-    /// - Git命令执行失败
+    /// - Git命令执行失败（非 Windows 平台）
+    /// - 配置文件读写失败（Windows 平台）
     ///
     /// # 示例
     ///
@@ -237,12 +239,118 @@ impl GitConfigGuard {
     /// guard.set("user.email", "test@example.com")?;
     /// ```
     pub fn set(&self, key: &str, value: &str) -> Result<()> {
-        // 使用 GitConfigCommand 设置配置
-        // GIT_CONFIG 环境变量已经设置（在 new() 方法中），GitCommand 会显式传递它
-        // 不使用 --global 标志，因为我们使用的是 GIT_CONFIG 环境变量指向的临时文件
-        // 环境隔离已通过 GitCommand 显式传递 GIT_CONFIG 环境变量得到保证
-        GitConfigCommand::set_config(key, value, false, None)
-            .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
+        #[cfg(target_os = "windows")]
+        {
+            // Windows 上直接操作配置文件，避免 git config 命令可能导致的超时问题
+            self.set_config_direct(key, value)
+                .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            // 非 Windows 平台使用 Git 命令
+            // GIT_CONFIG 环境变量已经设置（在 new() 方法中），GitCommand 会显式传递它
+            // 不使用 --global 标志，因为我们使用的是 GIT_CONFIG 环境变量指向的临时文件
+            // 环境隔离已通过 GitCommand 显式传递 GIT_CONFIG 环境变量得到保证
+            GitConfigCommand::set_config(key, value, false, None)
+                .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
+        }
+    }
+
+    /// 直接设置Git配置项（Windows平台专用）
+    ///
+    /// 直接操作配置文件，避免使用 `git config` 命令可能导致的超时问题。
+    ///
+    /// # 参数
+    ///
+    /// * `key` - Git配置键（如 "user.name"）
+    /// * `value` - Git配置值
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回`Ok(())`，失败时返回错误
+    #[cfg(target_os = "windows")]
+    fn set_config_direct(&self, key: &str, value: &str) -> Result<()> {
+        use std::fs::OpenOptions;
+        use std::io::{Read, Write};
+
+        // 解析 key，格式为 "section.key" 或 "section.subsection.key"
+        let parts: Vec<&str> = key.split('.').collect();
+        if parts.len() < 2 {
+            return Err(color_eyre::eyre::eyre!(
+                "Invalid config key format: {} (expected format: section.key)",
+                key
+            ));
+        }
+
+        // 读取现有配置
+        let mut config_content = String::new();
+        if self.config_path.exists() {
+            let mut file = std::fs::File::open(&self.config_path)
+                .wrap_err_with(|| format!("Failed to open config file: {}", self.config_path.display()))?;
+            file.read_to_string(&mut config_content)
+                .wrap_err_with(|| format!("Failed to read config file: {}", self.config_path.display()))?;
+        }
+
+        // 构建 section 名称（如 "user" 或 "remote \"origin\""）
+        let section_name = parts[0];
+        let key_name = parts[1..].join(".");
+        let section_header = format!("[{}]", section_name);
+
+        // 查找或创建 section
+        let section_pos = config_content.find(&section_header);
+        let updated_content = if let Some(start) = section_pos {
+            // Section 已存在，更新或添加 key
+            // 找到 section 的结束位置（下一个 [ 或文件结尾）
+            let section_end = config_content[start..]
+                .find("\n[")
+                .map(|i| start + i + 1)
+                .unwrap_or(config_content.len());
+
+            let section_content = &config_content[start..section_end];
+            let key_line = format!("\t{} = {}\n", key_name, value);
+
+            // 检查 key 是否已存在
+            let key_pattern = format!("{} = ", key_name);
+            if let Some(key_pos) = section_content.find(&key_pattern) {
+                // Key 已存在，替换它
+                let key_line_end = section_content[key_pos..]
+                    .find('\n')
+                    .map(|i| key_pos + i + 1)
+                    .unwrap_or(section_content.len() - key_pos);
+
+                format!(
+                    "{}{}{}{}",
+                    &config_content[..start],
+                    &section_content[..key_pos],
+                    key_line.trim_end(),
+                    &section_content[key_pos + key_line_end..]
+                )
+            } else {
+                // Key 不存在，添加到 section 末尾
+                format!(
+                    "{}{}{}",
+                    &config_content[..section_end],
+                    key_line,
+                    &config_content[section_end..]
+                )
+            }
+        } else {
+            // Section 不存在，添加新的 section 和 key
+            let new_section = format!("\n[{}]\n\t{} = {}\n", section_name, key_name, value);
+            format!("{}{}", config_content, new_section)
+        };
+
+        // 写入配置文件
+        let mut file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(&self.config_path)
+            .wrap_err_with(|| format!("Failed to open config file for writing: {}", self.config_path.display()))?;
+        file.write_all(updated_content.as_bytes())
+            .wrap_err_with(|| format!("Failed to write config file: {}", self.config_path.display()))?;
+
+        Ok(())
     }
 
     /// 从全局配置复制
