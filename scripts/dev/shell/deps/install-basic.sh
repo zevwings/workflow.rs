@@ -23,6 +23,7 @@ sudo apt-get update
 
 # 安装基本依赖
 sudo apt-get install -y \
+    git \
     python3 \
     libxcb1-dev \
     libxcb-render0-dev \
@@ -51,10 +52,16 @@ sudo apt-get install -y \
     libxkbcommon-x11-dev
 
 # 验证安装
+if ! git --version >/dev/null 2>&1; then
+    echo -e "${RED}❌ Error: Git not found${NC}"
+    exit 1
+fi
+
 if ! python3 --version; then
     echo -e "${RED}❌ Error: Python3 not found${NC}"
     exit 1
 fi
 
 echo -e "${GREEN}✅ Basic system dependencies installed successfully${NC}"
+echo -e "${GREEN}   Git: $(git --version)${NC}"
 
