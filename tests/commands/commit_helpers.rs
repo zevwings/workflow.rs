@@ -4,8 +4,8 @@
 
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::{cli_env_with_empty_git, cli_env_with_git};
-use git2::Repository;
 use rstest::rstest;
+use workflow::git::commands::GitBranchCommand;
 // Removed serial_test::serial - tests can run in parallel with CliTestEnv isolation
 use workflow::commands::commit::helpers::{
     check_has_last_commit, check_has_last_commit_in, check_not_on_default_branch,
@@ -212,23 +212,12 @@ fn test_check_not_on_default_branch_on_feature_branch_return_ok(
     cli_env_with_git.setup_fake_remote_refs()?;
 
     // 创建并切换到 feature 分支
-    let repo = Repository::open(cli_env_with_git.path())
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to open repository: {}", e))?;
-    let head = repo.head().map_err(|e| color_eyre::eyre::eyre!("Failed to get HEAD: {}", e))?;
-    let head_commit = repo
-        .find_commit(head.target().unwrap())
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to find HEAD commit: {}", e))?;
-    repo.branch("feature/test", &head_commit, false)
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to create branch: {}", e))?;
-    repo.set_head("refs/heads/feature/test")
-        .map_err(|e| color_eyre::eyre::eyre!("Failed to checkout branch: {}", e))?;
-    repo.checkout_head(Some(
-        git2::build::CheckoutBuilder::default()
-            .force()
-            .remove_ignored(false)
-            .remove_untracked(false),
-    ))
-    .map_err(|e| color_eyre::eyre::eyre!("Failed to checkout HEAD: {}", e))?;
+    GitBranchCommand::checkout_branch(
+        "feature/test",
+        true,
+        Some(cli_env_with_git.path().as_path()),
+    )
+    .map_err(|e| color_eyre::eyre::eyre!("Failed to create and checkout branch: {}", e))?;
 
     // Act: 使用路径参数版本，避免切换全局工作目录
     let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");

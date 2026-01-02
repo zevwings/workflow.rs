@@ -10,7 +10,7 @@ use crate::common::guards::DialogTestGuard;
 use crate::common::mock::server::MockServer;
 use crate::common::test_data::TestDataFactory;
 use color_eyre::Result;
-use git2::Repository;
+use workflow::git::commands::GitBranchCommand;
 
 // ==================== PR 工作流测试 ====================
 
@@ -265,17 +265,13 @@ fn test_branch_management_workflow() -> Result<()> {
     env.checkout("feature/one")?;
 
     // 验证当前分支
-    let repo = Repository::open(env.path())?;
-    let head = repo.head()?;
-    let branch_name = head.name().unwrap().strip_prefix("refs/heads/").unwrap();
+    let branch_name = GitBranchCommand::current_branch(Some(env.path().as_path()))?;
     assert_eq!(branch_name, "feature/one");
 
     // 4. 切换到另一个分支
     env.checkout("feature/two")?;
 
-    let repo = Repository::open(env.path())?;
-    let head = repo.head()?;
-    let branch_name = head.name().unwrap().strip_prefix("refs/heads/").unwrap();
+    let branch_name = GitBranchCommand::current_branch(Some(env.path().as_path()))?;
     assert_eq!(branch_name, "feature/two");
 
     Ok(())
@@ -314,18 +310,12 @@ fn test_commit_workflow() -> Result<()> {
         .create_commit("feat: add library")?;
 
     // 3. 验证提交历史
-    let repo = Repository::open(env.path())?;
-    let mut revwalk = repo.revwalk()?;
-    revwalk.push_head()?;
-
-    let mut commit_messages = Vec::new();
-    for oid in revwalk {
-        let oid = oid?;
-        let commit = repo.find_commit(oid)?;
-        commit_messages.push(commit.message().unwrap_or("").to_string());
-    }
-
-    // 应该包含所有提交
+    // 使用 git log 获取提交消息
+    let output = workflow::git::commands::GitCommand::run(
+        &["log", "--format=%s"],
+        Some(env.path().as_path()),
+    )?;
+    let commit_messages: Vec<&str> = output.lines().collect();
     let all_messages = commit_messages.join(" ");
     assert!(all_messages.contains("Initial commit"));
     assert!(all_messages.contains("add main function"));

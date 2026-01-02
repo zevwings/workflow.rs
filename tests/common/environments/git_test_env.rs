@@ -22,8 +22,8 @@
 //! ```
 
 use color_eyre::{eyre::WrapErr, Result};
-use git2::Repository;
 use std::path::PathBuf;
+use workflow::git::commands::{GitBranchCommand, GitCommand, GitCommitCommand, GitRepoCommand};
 use workflow::git::{GitBranch, GitCommit, GitRepository};
 
 use crate::common::helpers::get_current_dir_with_fallback;
@@ -189,23 +189,9 @@ impl GitTestEnv {
     /// env.checkout_new_branch("feature/test")?;
     /// ```
     pub fn checkout_new_branch(&self, branch_name: &str) -> Result<()> {
-        let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
-        let head = repo.head().wrap_err("Failed to get HEAD")?;
-        let head_commit = repo
-            .find_commit(head.target().unwrap())
-            .wrap_err("Failed to find HEAD commit")?;
-        repo.branch(branch_name, &head_commit, false)
-            .wrap_err_with(|| format!("Failed to create branch: {}", branch_name))?;
-        let refname = format!("refs/heads/{}", branch_name);
-        repo.set_head(&refname)
-            .wrap_err_with(|| format!("Failed to checkout branch: {}", branch_name))?;
-        repo.checkout_head(Some(
-            git2::build::CheckoutBuilder::default()
-                .force()
-                .remove_ignored(false)
-                .remove_untracked(false),
-        ))
-        .wrap_err_with(|| format!("Failed to checkout HEAD for branch: {}", branch_name))?;
+        // 使用封装的 Git 命令创建并切换分支
+        GitBranchCommand::checkout_branch(branch_name, true, Some(self.path().as_path()))
+            .wrap_err_with(|| format!("Failed to checkout new branch: {}", branch_name))?;
         Ok(())
     }
 
@@ -302,17 +288,8 @@ impl GitTestEnv {
     /// assert_eq!(branch, "main");
     /// ```
     pub fn current_branch(&self) -> Result<String> {
-        let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
-        let head = repo.head().wrap_err("Failed to get HEAD")?;
-        let branch_name =
-            head.name().ok_or_else(|| color_eyre::eyre::eyre!("HEAD is not a branch"))?;
-
-        // 提取分支名（从 refs/heads/main -> main）
-        let branch_name = branch_name
-            .strip_prefix("refs/heads/")
-            .ok_or_else(|| color_eyre::eyre::eyre!("Invalid branch reference: {}", branch_name))?;
-
-        Ok(branch_name.to_string())
+        GitBranchCommand::current_branch(Some(self.path().as_path()))
+            .wrap_err("Failed to get current branch")
     }
 
     /// 获取最后一次提交的SHA
@@ -378,8 +355,6 @@ impl GitTestEnv {
     /// ```
     #[allow(dead_code)] // 这是一个公共API，可能被其他测试使用
     pub fn add_fake_remote(&self, remote_name: &str, remote_url: &str) -> Result<()> {
-        let repo = Repository::open(self.path()).wrap_err("Failed to open repository")?;
-
         // 1. 添加远程URL（带超时检测，防止卡住）
         // Windows 特定处理：Windows 上的 Git 可能在 repo.remote() 时尝试验证 URL（DNS 解析），
         // 导致卡住。我们需要在 Windows 上设置 url.insteadOf 来避免网络请求。
@@ -550,36 +525,41 @@ impl GitTestEnv {
                     return;
                 }
 
-                // 非 Windows 平台：使用 git2 API
+                // 非 Windows 平台：使用 Git 命令
                 #[cfg(not(target_os = "windows"))]
                 {
-                    match Repository::open(&repo_path) {
-                        Ok(repo) => {
-                            // 添加远程 URL
-                            let remote_result = match repo.find_remote(&remote_name_clone) {
-                                Ok(_) => {
-                                    // Remote 已存在，使用 remote_set_url 更新
-                                    repo.remote_set_url(&remote_name_clone, &remote_url_clone)
-                                }
-                                Err(_) => {
-                                    // Remote 不存在，创建新的 remote
-                                    repo.remote(&remote_name_clone, &remote_url_clone).map(|_| ())
-                                }
-                            };
-
-                            match remote_result {
-                                Ok(_) => *result_clone.lock().unwrap() = Some(Ok(())),
-                                Err(e) => {
-                                    *result_clone.lock().unwrap() =
-                                        Some(Err(e.message().to_string()))
-                                }
-                            }
-                        }
+                    use workflow::git::commands::GitRepoCommand;
+                    // 检查 remote 是否已存在
+                    let remotes = match GitRepoCommand::list_remotes(Some(&repo_path)) {
+                        Ok(remotes) => remotes,
                         Err(e) => {
-                            *result_clone.lock().unwrap() = Some(Err(format!(
-                                "Failed to open repository in timeout thread: {}",
-                                e.message()
-                            )));
+                            *result_clone.lock().unwrap() =
+                                Some(Err(format!("Failed to list remotes: {}", e)));
+                            return;
+                        }
+                    };
+
+                    let remote_result = if remotes.contains(&remote_name_clone) {
+                        // Remote 已存在，使用 git remote set-url 更新
+                        workflow::git::commands::GitCommand::execute(
+                            &["remote", "set-url", &remote_name_clone, &remote_url_clone],
+                            Some(&repo_path),
+                        )
+                        .map_err(|e| format!("{}", e))
+                    } else {
+                        // Remote 不存在，创建新的 remote
+                        GitRepoCommand::add_remote(
+                            &remote_name_clone,
+                            &remote_url_clone,
+                            Some(&repo_path),
+                        )
+                        .map_err(|e| format!("{}", e))
+                    };
+
+                    match remote_result {
+                        Ok(_) => *result_clone.lock().unwrap() = Some(Ok(())),
+                        Err(msg) => {
+                            *result_clone.lock().unwrap() = Some(Err(msg));
                         }
                     }
                 }
@@ -640,20 +620,24 @@ impl GitTestEnv {
 
         // 注意：上面的超时检测在线程中执行，remote 已经添加到仓库中
         // 这里不需要再次添加，但我们可以验证 remote 是否存在
-        let _ = repo
-            .find_remote(remote_name)
-            .wrap_err_with(|| format!("Remote '{}' was not added successfully", remote_name))?;
+        let remotes = GitRepoCommand::list_remotes(Some(self.path().as_path()))?;
+        if !remotes.contains(&remote_name.to_string()) {
+            return Err(color_eyre::eyre::eyre!(
+                "Remote '{}' was not added successfully",
+                remote_name
+            ));
+        }
 
         // 2. 创建假的远程分支引用（指向当前HEAD）
-        let head = repo.head().wrap_err("Failed to get HEAD")?;
-        let head_oid = head
-            .target()
-            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD does not point to a valid commit"))?;
-        repo.reference(
-            &format!("refs/remotes/{}/main", remote_name),
-            head_oid,
-            true,
-            "fake remote ref",
+        // 获取 HEAD SHA
+        let head_sha = GitCommitCommand::get_head_sha(Some(self.path().as_path()))
+            .wrap_err("Failed to get HEAD SHA")?;
+
+        // 使用 git update-ref 创建远程分支引用
+        let remote_ref = format!("refs/remotes/{}/main", remote_name);
+        GitCommand::execute(
+            &["update-ref", &remote_ref, &head_sha],
+            Some(self.path().as_path()),
         )
         .wrap_err_with(|| {
             format!(
@@ -664,16 +648,14 @@ impl GitTestEnv {
 
         // 3. 删除可能存在的旧引用（如origin/master）
         let old_ref = format!("refs/remotes/{}/master", remote_name);
-        if let Ok(mut reference) = repo.find_reference(&old_ref) {
-            let _ = reference.delete();
-        }
+        let _ = GitCommand::execute(&["update-ref", "-d", &old_ref], Some(self.path().as_path()));
 
         // 4. 设置远程HEAD引用指向main（让 git remote show origin 能工作）
-        let _ = repo.reference_symbolic(
-            &format!("refs/remotes/{}/HEAD", remote_name),
-            &format!("refs/remotes/{}/main", remote_name),
-            true,
-            "fake remote HEAD",
+        let remote_head_ref = format!("refs/remotes/{}/HEAD", remote_name);
+        let remote_main_ref = format!("refs/remotes/{}/main", remote_name);
+        let _ = GitCommand::execute(
+            &["symbolic-ref", &remote_head_ref, &remote_main_ref],
+            Some(self.path().as_path()),
         );
 
         Ok(())
@@ -836,17 +818,14 @@ mod tests {
                 env.add_fake_remote("origin", "https://github.com/test/test-repo.git")?;
 
                 // 验证远程引用已创建
-                // 注意：Repository::open() 和 find_reference() 是纯本地操作，不会触发网络请求
-                // 但为了安全起见，如果 add_fake_remote() 成功完成，这些操作应该很快
-                let repo = Repository::open(env.path())
-                    .wrap_err("Failed to open repository for verification")?;
+                // 使用 git show-ref 检查引用是否存在
                 let ref_name = "refs/remotes/origin/main";
-                let reference = repo.find_reference(ref_name);
-
-                assert!(
-                    reference.is_ok(),
-                    "Remote ref should exist after add_fake_remote"
+                let exists = GitCommand::check(
+                    &["show-ref", "--verify", "--quiet", ref_name],
+                    Some(env.path().as_path()),
                 );
+
+                assert!(exists, "Remote ref should exist after add_fake_remote");
 
                 Ok(())
             })();

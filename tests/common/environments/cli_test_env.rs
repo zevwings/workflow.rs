@@ -21,9 +21,9 @@
 //! ```
 
 use color_eyre::{eyre::WrapErr, Result};
-use git2::Repository;
 use std::fs;
 use std::path::{Path, PathBuf};
+use workflow::git::commands::{GitBranchCommand, GitCommand, GitCommitCommand};
 use workflow::git::{GitBranch, GitCommit, GitRepository};
 
 use crate::common::isolation::TestIsolation;
@@ -239,48 +239,41 @@ impl CliTestEnv {
     /// 2. 删除可能存在的旧引用（如`origin/master`）
     /// 3. 设置远程HEAD引用（`refs/remotes/origin/HEAD`）
     pub fn setup_fake_remote_refs(&self) -> Result<&Self> {
-        let repo = Repository::open(&self.project_path).wrap_err("Failed to open repository")?;
-
         // 1. 创建假的远程分支引用（指向当前HEAD）
-        // 注意：如果仓库还没有提交（UnbornBranch），HEAD 可能不存在
+        // 注意：如果仓库还没有提交，HEAD 可能不存在
         // 在这种情况下，我们跳过创建远程引用
-        let head_oid = match repo.head() {
-            Ok(head) => head
-                .target()
-                .ok_or_else(|| color_eyre::eyre::eyre!("HEAD does not point to a valid commit"))?,
-            Err(e) if e.code() == git2::ErrorCode::UnbornBranch => {
+        let head_sha = match GitCommitCommand::get_head_sha(Some(&self.project_path)) {
+            Ok(sha) => sha,
+            Err(e) => {
                 // 如果 HEAD 不存在（空仓库），跳过创建远程引用
                 // 这通常发生在 init_git_repo() 被调用但还没有创建提交时
-                return Ok(self);
-            }
-            Err(e) => {
-                return Err(color_eyre::eyre::eyre!(
-                    "Failed to get HEAD: {}",
-                    e.message()
-                ));
+                let error_msg = e.to_string();
+                if error_msg.contains("HEAD") || error_msg.contains("not found") {
+                    return Ok(self);
+                }
+                return Err(e).wrap_err("Failed to get HEAD SHA");
             }
         };
 
-        repo.reference(
-            "refs/remotes/origin/main",
-            head_oid,
-            true,
-            "fake remote ref",
+        // 使用 git update-ref 创建远程分支引用
+        GitCommand::execute(
+            &["update-ref", "refs/remotes/origin/main", &head_sha],
+            Some(&self.project_path),
         )
         .wrap_err("Failed to create remote ref")?;
 
         // 2. 删除可能存在的旧引用（如origin/master）
         let old_ref = "refs/remotes/origin/master";
-        if let Ok(mut reference) = repo.find_reference(old_ref) {
-            let _ = reference.delete();
-        }
+        let _ = GitCommand::execute(&["update-ref", "-d", old_ref], Some(&self.project_path));
 
         // 3. 设置远程HEAD引用指向main（让 git remote show origin 能工作）
-        let _ = repo.reference_symbolic(
-            "refs/remotes/origin/HEAD",
-            "refs/remotes/origin/main",
-            true,
-            "fake remote HEAD",
+        let _ = GitCommand::execute(
+            &[
+                "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+                "refs/remotes/origin/main",
+            ],
+            Some(&self.project_path),
         );
 
         Ok(self)
@@ -724,9 +717,10 @@ mod tests {
         env.create_branch("feature/test")?;
 
         // 验证分支存在
-        let repo = Repository::open(env.path()).unwrap();
-        let branch = repo.find_branch("feature/test", git2::BranchType::Local);
-        assert!(branch.is_ok(), "Branch should exist");
+        let exists =
+            GitBranchCommand::branch_exists_local("feature/test", Some(env.path().as_path()))
+                .unwrap();
+        assert!(exists, "Branch should exist");
 
         Ok(())
     }
@@ -760,10 +754,7 @@ mod tests {
         env.checkout("feature/test")?;
 
         // 验证当前分支
-        let repo = Repository::open(env.path()).unwrap();
-        let head = repo.head().unwrap();
-        let branch_name = head.name().unwrap();
-        let branch_name = branch_name.strip_prefix("refs/heads/").unwrap();
+        let branch_name = GitBranchCommand::current_branch(Some(env.path().as_path())).unwrap();
         assert_eq!(branch_name, "feature/test");
 
         Ok(())
