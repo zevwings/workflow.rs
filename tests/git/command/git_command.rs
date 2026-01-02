@@ -177,10 +177,34 @@ fn test_run_with_cwd_executes_in_correct_directory() -> Result<()> {
     let output = GitCommand::run(&["rev-parse", "--show-toplevel"], Some(repo_path.as_path()))?;
 
     // Assert: 验证输出指向正确的目录
-    assert!(
-        output.trim().ends_with(repo_path.canonicalize()?.to_str().unwrap_or_default()),
-        "Output should point to correct directory"
-    );
+    // 在 Windows 上，路径格式可能不同（反斜杠 vs 正斜杠，可能有 \\?\ 前缀）
+    // 需要规范化路径进行比较
+    let expected_path = repo_path.canonicalize()?;
+    let output_path = std::path::PathBuf::from(output.trim());
+
+    // 规范化两个路径（移除 \\?\ 前缀，统一路径分隔符）
+    #[cfg(target_os = "windows")]
+    {
+        let normalize = |p: &std::path::Path| -> String {
+            p.to_string_lossy().replace("\\\\?\\", "").replace('\\', "/").to_lowercase()
+        };
+        let normalized_expected = normalize(&expected_path);
+        let normalized_output = normalize(&output_path);
+        assert_eq!(
+            normalized_expected,
+            normalized_output,
+            "Output should point to correct directory (expected: {}, got: {})",
+            expected_path.display(),
+            output_path.display()
+        );
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        assert_eq!(
+            expected_path, output_path,
+            "Output should point to correct directory"
+        );
+    }
 
     Ok(())
 }
