@@ -222,7 +222,6 @@ fn test_execute_with_timeout_and_retry_exponential_backoff() -> Result<()> {
 /// 注意：此测试涉及并发操作，在并行测试环境中可能不稳定。
 /// 使用 `cargo test --test-threads=1` 运行以确保稳定性。
 #[test]
-#[ignore]
 fn test_concurrent_execute_with_timeout_and_retry() -> Result<()> {
     let timeout_config = TimeoutConfig::new(Duration::from_millis(200));
     let retry_config = RetryConfig::new(2, Duration::from_millis(10));

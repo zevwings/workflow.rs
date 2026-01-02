@@ -440,8 +440,11 @@ mod tests {
     /// ## 预期结果
     /// - 配置项设置成功
     /// - git2 API 能够读取设置的配置值
+    ///
+    /// ## 注意事项
+    /// - 使用 `#[serial]` 标记，避免并行测试时环境变量污染
     #[test]
-    #[ignore]
+    #[serial]
     fn test_git_config_guard_set_return_ok() -> Result<()> {
         let guard = GitConfigGuard::new()?;
 
