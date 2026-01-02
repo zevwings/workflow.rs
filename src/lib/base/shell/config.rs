@@ -215,6 +215,7 @@ impl ShellConfigManager {
     /// 添加 source 语句
     ///
     /// 在 shell 配置文件中添加 source 语句。如果已存在则跳过。
+    /// 根据检测到的 shell 类型自动使用正确的关键字（PowerShell 使用 `.`，其他使用 `source`）。
     ///
     /// # 参数
     ///
@@ -225,38 +226,14 @@ impl ShellConfigManager {
     ///
     /// 如果读取或写入配置文件失败，返回相应的错误信息。
     pub fn add_source(source_path: &str, comment: Option<&str>) -> Result<bool> {
-        let config_path = Self::get_config_path()?;
-        let content = Self::read_config_file(&config_path).unwrap_or_default();
-
-        // 检查是否已存在
-        if Self::has_source_in_content(&content, source_path)? {
-            return Ok(false);
-        }
-
-        // 添加 source 语句
-        let mut new_content = content;
-        if !new_content.is_empty() && !new_content.ends_with('\n') {
-            new_content.push('\n');
-        }
-
-        if let Some(comment_text) = comment {
-            new_content.push_str("# ");
-            new_content.push_str(comment_text);
-            new_content.push('\n');
-        }
-        new_content.push_str("source ");
-        new_content.push_str(source_path);
-        new_content.push('\n');
-        new_content.push('\n');
-
-        Self::write_config_file(&config_path, &new_content)?;
-
-        Ok(true)
+        let shell = Detect::shell()?;
+        Self::add_source_for_shell(&shell, source_path, comment)
     }
 
     /// 移除 source 语句
     ///
     /// 从 shell 配置文件中移除指定的 source 语句。
+    /// 根据检测到的 shell 类型自动使用正确的关键字（PowerShell 使用 `.`，其他使用 `source`）。
     ///
     /// # 参数
     ///
@@ -270,20 +247,8 @@ impl ShellConfigManager {
     ///
     /// 如果读取或写入配置文件失败，返回相应的错误信息。
     pub fn remove_source(source_path: &str) -> Result<bool> {
-        let config_path = Self::get_config_path()?;
-        let content = Self::read_config_file(&config_path).unwrap_or_default();
-
-        // 检查是否存在
-        if !Self::has_source_in_content(&content, source_path)? {
-            return Ok(false);
-        }
-
-        // 移除 source 语句和相关注释
-        let new_content = Self::remove_source_from_content(&content, source_path)?;
-
-        Self::write_config_file(&config_path, &new_content)?;
-
-        Ok(true)
+        let shell = Detect::shell()?;
+        Self::remove_source_for_shell(&shell, source_path)
     }
 
     /// 检查 source 语句是否存在
@@ -300,9 +265,8 @@ impl ShellConfigManager {
     ///
     /// 如果读取配置文件失败，返回相应的错误信息。
     pub fn has_source(source_path: &str) -> Result<bool> {
-        let config_path = Self::get_config_path()?;
-        let content = Self::read_config_file(&config_path).unwrap_or_default();
-        Self::has_source_in_content(&content, source_path)
+        let shell = Detect::shell()?;
+        Self::has_source_for_shell(&shell, source_path)
     }
 
     /// 获取 shell 的 source 语句关键字

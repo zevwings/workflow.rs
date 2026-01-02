@@ -129,6 +129,13 @@ fn test_add_source() -> Result<()> {
     // 设置 HOME 环境变量指向临时目录
     std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
 
+    // Windows 上需要设置 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
+    }
+
     // 创建必要的目录结构
     std::fs::create_dir_all(temp_home.join(".workflow"))?;
 
@@ -170,6 +177,13 @@ fn test_remove_source() -> Result<()> {
 
     // 设置 HOME 环境变量指向临时目录
     std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
+
+    // Windows 上需要设置 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
+    }
 
     // 创建必要的目录结构
     std::fs::create_dir_all(temp_home.join(".workflow"))?;
@@ -239,6 +253,13 @@ fn test_add_source_with_comment() -> Result<()> {
     // 设置 HOME 环境变量指向临时目录
     std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
 
+    // Windows 上需要设置 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
+    }
+
     // 创建必要的目录结构
     std::fs::create_dir_all(temp_home.join(".workflow"))?;
 
@@ -281,10 +302,12 @@ fn test_add_source_twice() -> Result<()> {
     // 设置 HOME 环境变量指向临时目录
     std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
 
-    // Windows 上需要设置 SHELL 环境变量，否则 Detect::shell() 会失败
+    // Windows 上需要设置 SHELL 和 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
     #[cfg(target_os = "windows")]
     {
         std::env::set_var("SHELL", "powershell.exe");
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
     }
     #[cfg(not(target_os = "windows"))]
     {
