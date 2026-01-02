@@ -323,16 +323,26 @@ fn test_detect_shell_empty_env_var() {
     #[cfg(target_os = "windows")]
     {
         // Windows 上，即使 SHELL 为空，也应该返回 PowerShell（默认值）
-        assert!(result.is_ok(), "Windows should return PowerShell as default");
+        assert!(
+            result.is_ok(),
+            "Windows should return PowerShell as default"
+        );
         if let Ok(shell) = result {
-            assert_eq!(shell, Shell::PowerShell, "Should return PowerShell on Windows");
+            assert_eq!(
+                shell,
+                Shell::PowerShell,
+                "Should return PowerShell on Windows"
+            );
         }
     }
 
     #[cfg(not(target_os = "windows"))]
     {
         // 非 Windows 上，空环境变量应该返回错误
-        assert!(result.is_err(), "Non-Windows should return error for empty SHELL");
+        assert!(
+            result.is_err(),
+            "Non-Windows should return error for empty SHELL"
+        );
     }
 
     // EnvGuard 会在 guard 离开作用域时自动恢复环境变量

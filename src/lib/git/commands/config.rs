@@ -15,16 +15,26 @@ impl GitConfigCommand {
     /// 获取配置值
     ///
     /// 使用 `git config --get <key>` 命令
+    /// 当 `GIT_CONFIG` 环境变量被设置且 `global=false` 时，使用 `--file` 参数直接指定配置文件路径
     pub fn get_config(key: &str, global: bool, cwd: Option<&Path>) -> Result<Option<String>> {
-        let mut args = vec!["config", "--get"];
+        let mut args_vec = vec!["config".to_string(), "--get".to_string()];
 
-        if global {
-            args.push("--global");
+        // 当 GIT_CONFIG 环境变量被设置且 global=false 时，使用 --file 参数
+        if !global {
+            if let Ok(git_config_path) = std::env::var("GIT_CONFIG") {
+                args_vec.push("--file".to_string());
+                args_vec.push(git_config_path);
+            }
+        } else if global {
+            args_vec.push("--global".to_string());
         }
 
-        args.push(key);
+        args_vec.push(key.to_string());
 
-        match GitCommand::run(&args, cwd) {
+        // 转换为 &[&str] 以便传递给 GitCommand
+        let args: Vec<&str> = args_vec.iter().map(|s| s.as_str()).collect();
+
+        match GitCommand::run(args.as_slice(), cwd) {
             Ok(output) => {
                 let value = output.trim().to_string();
                 if value.is_empty() {
@@ -53,17 +63,28 @@ impl GitConfigCommand {
     /// 设置配置值
     ///
     /// 使用 `git config <scope> <key> <value>` 命令
+    /// 当 `GIT_CONFIG` 环境变量被设置且 `global=false` 时，使用 `--file` 参数直接指定配置文件路径
     pub fn set_config(key: &str, value: &str, global: bool, cwd: Option<&Path>) -> Result<()> {
-        let mut args = vec!["config"];
+        let mut args_vec = vec!["config".to_string()];
 
-        if global {
-            args.push("--global");
+        // 当 GIT_CONFIG 环境变量被设置且 global=false 时，使用 --file 参数
+        // 这样可以确保 Git 命令能够正确写入配置，即使配置文件是空的
+        if !global {
+            if let Ok(git_config_path) = std::env::var("GIT_CONFIG") {
+                args_vec.push("--file".to_string());
+                args_vec.push(git_config_path);
+            }
+        } else if global {
+            args_vec.push("--global".to_string());
         }
 
-        args.push(key);
-        args.push(value);
+        args_vec.push(key.to_string());
+        args_vec.push(value.to_string());
 
-        GitCommand::execute(&args, cwd)
+        // 转换为 &[&str] 以便传递给 GitCommand
+        let args: Vec<&str> = args_vec.iter().map(|s| s.as_str()).collect();
+
+        GitCommand::execute(args.as_slice(), cwd)
             .map_err(|e| color_eyre::eyre::eyre!("{}", e))
             .wrap_err_with(|| format!("Failed to set config: {} = {}", key, value))
     }
@@ -73,16 +94,26 @@ impl GitConfigCommand {
     /// 使用 `git config --unset <key>` 命令
     ///
     /// 注意：如果配置项不存在，Git 会返回退出代码 5，这是正常的，不会返回错误。
+    /// 当 `GIT_CONFIG` 环境变量被设置且 `global=false` 时，使用 `--file` 参数直接指定配置文件路径
     pub fn unset_config(key: &str, global: bool, cwd: Option<&Path>) -> Result<()> {
-        let mut args = vec!["config", "--unset"];
+        let mut args_vec = vec!["config".to_string(), "--unset".to_string()];
 
-        if global {
-            args.push("--global");
+        // 当 GIT_CONFIG 环境变量被设置且 global=false 时，使用 --file 参数
+        if !global {
+            if let Ok(git_config_path) = std::env::var("GIT_CONFIG") {
+                args_vec.push("--file".to_string());
+                args_vec.push(git_config_path);
+            }
+        } else if global {
+            args_vec.push("--global".to_string());
         }
 
-        args.push(key);
+        args_vec.push(key.to_string());
 
-        match GitCommand::execute(&args, cwd) {
+        // 转换为 &[&str] 以便传递给 GitCommand
+        let args: Vec<&str> = args_vec.iter().map(|s| s.as_str()).collect();
+
+        match GitCommand::execute(args.as_slice(), cwd) {
             Ok(()) => Ok(()),
             Err(e) => {
                 // Git 在配置项不存在时返回退出代码 5，这是正常的
@@ -135,12 +166,22 @@ impl GitConfigCommand {
     ///
     /// 注意：此方法使用平台相关的超时时间（Windows 120秒，其他平台 60秒），
     /// 因为读取全局配置可能需要较长时间，特别是在配置项很多或系统较慢的情况下。
+    /// 当 `GIT_CONFIG` 环境变量被设置且 `global=false` 时，使用 `--file` 参数直接指定配置文件路径
     pub fn list_config(global: bool, cwd: Option<&Path>) -> Result<Vec<(String, String)>> {
-        let mut args = vec!["config", "--list"];
+        let mut args_vec = vec!["config".to_string(), "--list".to_string()];
 
-        if global {
-            args.push("--global");
+        // 当 GIT_CONFIG 环境变量被设置且 global=false 时，使用 --file 参数
+        if !global {
+            if let Ok(git_config_path) = std::env::var("GIT_CONFIG") {
+                args_vec.push("--file".to_string());
+                args_vec.push(git_config_path);
+            }
+        } else if global {
+            args_vec.push("--global".to_string());
         }
+
+        // 转换为 &[&str] 以便传递给 GitCommand
+        let args: Vec<&str> = args_vec.iter().map(|s| s.as_str()).collect();
 
         // 使用平台相关的超时时间（Windows 120秒，其他平台 60秒）
         // 因为读取全局配置可能需要较长时间，特别是在配置项很多或系统较慢的情况下
@@ -149,7 +190,7 @@ impl GitConfigCommand {
         #[cfg(not(target_os = "windows"))]
         let timeout = std::time::Duration::from_secs(120);
 
-        let output = GitCommand::run_with_timeout(&args, cwd, timeout)
+        let output = GitCommand::run_with_timeout(args.as_slice(), cwd, timeout)
             .map_err(|e| color_eyre::eyre::eyre!("{}", e))?;
 
         let mut configs = Vec::new();

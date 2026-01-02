@@ -554,7 +554,14 @@ impl BranchSync {
                 // Squash 合并后需要手动提交
                 // 获取源分支的提交信息用于提交消息
                 let current_branch = GitBranch::current_branch_in(repo_path)?;
-                let commits = GitBranch::get_commits_between(&current_branch, source_branch)?;
+                // 使用 rev_list 直接获取提交列表，传入正确的仓库路径
+                let commits = GitCommitCommand::rev_list(
+                    &format!("{}..{}", current_branch, source_branch),
+                    Some(repo_path),
+                )
+                .map_err(|e| {
+                    color_eyre::eyre::eyre!("Failed to get commits between branches: {}", e)
+                })?;
                 let mut message = format!("Squashed commit of branch '{}'\n\n", source_branch);
                 for commit_sha in commits.iter().take(10) {
                     // 获取每个提交的消息（只取前10个，避免消息过长）

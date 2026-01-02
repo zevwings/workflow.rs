@@ -29,7 +29,7 @@ impl Detect {
                 // 如果 from_env() 失败，尝试从 SHELL 环境变量解析
                 std::env::var("SHELL").ok().and_then(Shell::from_shell_path)
             })
-            .or_else(|| {
+            .or({
                 // Windows 上如果没有设置 SHELL，默认使用 PowerShell
                 #[cfg(target_os = "windows")]
                 {

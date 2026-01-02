@@ -2,7 +2,7 @@
 //!
 //! 测试分支同步命令的功能。
 
-// Removed serial_test::serial - tests can run in parallel with GitTestEnv + MockServer isolation
+use serial_test::serial;
 use workflow::commands::branch::sync::BranchSyncCommand;
 
 use crate::common::environments::GitTestEnv;
@@ -35,7 +35,7 @@ use rstest::rstest;
 /// - 命令结构正确
 /// - Mock 服务器正常工作
 #[rstest]
-#[ignore]
+#[serial]
 fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
     // 设置非交互式模式，避免对话框阻塞测试
     let _guard = DialogTestGuard::new()
@@ -103,7 +103,7 @@ fn test_branch_sync_command_structure(git_repo_with_commit: GitTestEnv) -> color
 /// ## 预期结果
 /// - Rebase同步成功
 #[rstest]
-#[ignore]
+#[serial]
 fn test_branch_sync_command_with_rebase(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
@@ -167,7 +167,7 @@ fn test_branch_sync_command_with_rebase(
 /// ## 预期结果
 /// - FF-only同步成功
 #[rstest]
-#[ignore]
+#[serial]
 fn test_branch_sync_command_with_ff_only(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
@@ -229,7 +229,7 @@ fn test_branch_sync_command_with_ff_only(
 /// ## 预期结果
 /// - Squash同步成功
 #[rstest]
-#[ignore]
+#[serial]
 fn test_branch_sync_command_with_squash(
     git_repo_with_commit: GitTestEnv,
 ) -> color_eyre::Result<()> {
@@ -271,7 +271,14 @@ fn test_branch_sync_command_with_squash(
     );
 
     // Assert: 验证（目录自动恢复）
-    assert!(result.is_ok(), "Squash sync should succeed");
+    if let Err(e) = &result {
+        eprintln!("Squash sync failed: {:?}", e);
+    }
+    assert!(
+        result.is_ok(),
+        "Squash sync should succeed. Error: {:?}",
+        result
+    );
 
     // 确保mock被调用（可选，用于调试）
     _mock.assert();

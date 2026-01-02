@@ -503,7 +503,6 @@ mod tests {
     /// - Git 测试环境创建成功
     /// - Git 仓库已初始化
     #[test]
-    #[ignore]
     fn test_git_repo_with_commit_fixture_return_ok() -> Result<()> {
         let env = git_repo_with_commit();
         assert!(env.path().join(".git").exists());
@@ -582,7 +581,6 @@ mod tests {
     /// - Git 仓库已初始化
     /// - 已切换到指定分支
     #[test]
-    #[ignore]
     fn test_git_repo_with_branch_fixture_return_ok() -> Result<()> {
         let env = git_repo_with_branch("feature/test-branch");
         assert!(env.path().join(".git").exists());

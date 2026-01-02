@@ -84,9 +84,10 @@ impl GitConfigGuard {
                     color_eyre::eyre::eyre!("Failed to create temp Git config file: {}", e)
                 })?;
 
-            // 确保文件存在（创建空文件）
+            // 确保文件存在（创建包含基本配置节的文件）
             // 这对于后续操作在 Windows 上正常工作很重要
-            std::fs::write(temp_file.path(), "")
+            // 添加一个空的 [core] 节，这样 Git 命令就能正确写入配置
+            std::fs::write(temp_file.path(), "[core]\n")
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to initialize config file: {}", e))?;
 
             // 在 Windows 上，使用 canonicalize() 获取长路径格式，避免短路径（8.3格式）问题
@@ -194,9 +195,10 @@ impl GitConfigGuard {
                 color_eyre::eyre::eyre!("Failed to create temp Git config file: {}", e)
             })?;
 
-            // 确保文件存在（创建空文件）
+            // 确保文件存在（创建包含基本配置节的文件）
             // 这对于 Git 命令正常工作很重要，因为 Git 需要有效的配置文件格式
-            std::fs::write(temp_file.path(), "")
+            // 添加一个空的 [core] 节，这样 Git 命令就能正确写入配置
+            std::fs::write(temp_file.path(), "[core]\n")
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to initialize config file: {}", e))?;
 
             let config_path = temp_file.path().to_path_buf();
@@ -217,8 +219,8 @@ impl GitConfigGuard {
 
     /// 设置Git配置项
     ///
-    /// 在 Windows 上直接操作配置文件以避免 `git config` 命令可能导致的超时问题。
-    /// 在其他平台上使用 Git 命令设置配置项到临时配置文件（通过 GIT_CONFIG 环境变量）。
+    /// 直接操作配置文件以避免 `git config` 命令可能导致的超时问题或环境变量问题。
+    /// 在所有平台上都使用直接操作配置文件的方式，确保配置能够正确写入。
     ///
     /// # 参数
     ///
@@ -231,8 +233,7 @@ impl GitConfigGuard {
     ///
     /// # 错误
     ///
-    /// - Git命令执行失败（非 Windows 平台）
-    /// - 配置文件读写失败（Windows 平台）
+    /// - 配置文件读写失败
     ///
     /// # 示例
     ///
@@ -244,26 +245,15 @@ impl GitConfigGuard {
     /// guard.set("user.email", "test@example.com")?;
     /// ```
     pub fn set(&self, key: &str, value: &str) -> Result<()> {
-        #[cfg(target_os = "windows")]
-        {
-            // Windows 上直接操作配置文件，避免 git config 命令可能导致的超时问题
-            self.set_config_direct(key, value)
-                .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            // 非 Windows 平台使用 Git 命令
-            // GIT_CONFIG 环境变量已经设置（在 new() 方法中），GitCommand 会显式传递它
-            // 不使用 --global 标志，因为我们使用的是 GIT_CONFIG 环境变量指向的临时文件
-            // 环境隔离已通过 GitCommand 显式传递 GIT_CONFIG 环境变量得到保证
-            GitConfigCommand::set_config(key, value, false, None)
-                .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
-        }
+        // 在所有平台上都使用直接操作配置文件的方式
+        // 这样可以避免 Git 命令可能导致的超时问题或环境变量问题
+        self.set_config_direct(key, value)
+            .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
     }
 
-    /// 直接设置Git配置项（Windows平台专用）
+    /// 直接设置Git配置项
     ///
-    /// 直接操作配置文件，避免使用 `git config` 命令可能导致的超时问题。
+    /// 直接操作配置文件，避免使用 `git config` 命令可能导致的超时问题或环境变量问题。
     ///
     /// # 参数
     ///
@@ -273,7 +263,6 @@ impl GitConfigGuard {
     /// # 返回
     ///
     /// 成功时返回`Ok(())`，失败时返回错误
-    #[cfg(target_os = "windows")]
     fn set_config_direct(&self, key: &str, value: &str) -> Result<()> {
         use std::fs::OpenOptions;
         use std::io::{Read, Write};
