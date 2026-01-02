@@ -165,6 +165,12 @@ impl GitCommand {
                 // GIT_PAGER=cat: 使用 cat 作为分页器，避免等待用户交互
                 command = command.env("GIT_TERMINAL_PROMPT", "0").env("GIT_PAGER", "cat");
 
+                // 显式传递 GIT_CONFIG 环境变量（如果存在），确保配置隔离正常工作
+                // 这对于 GitConfigGuard 等测试基础设施很重要
+                if let Ok(git_config) = std::env::var("GIT_CONFIG") {
+                    command = command.env("GIT_CONFIG", git_config);
+                }
+
                 if let Some(cwd) = cwd_clone.as_ref() {
                     command = command.dir(cwd);
                 }
@@ -236,6 +242,11 @@ impl GitCommand {
                     .env("GIT_TERMINAL_PROMPT", "0")
                     .env("GIT_PAGER", "cat");
 
+                // 显式传递 GIT_CONFIG 环境变量（如果存在），确保配置隔离正常工作
+                if let Ok(git_config) = std::env::var("GIT_CONFIG") {
+                    command = command.env("GIT_CONFIG", git_config);
+                }
+
                 if let Some(cwd) = cwd_clone.as_ref() {
                     command = command.dir(cwd);
                 }
@@ -295,6 +306,11 @@ impl GitCommand {
                 .stderr_null()
                 .env("GIT_TERMINAL_PROMPT", "0")
                 .env("GIT_PAGER", "cat");
+
+            // 显式传递 GIT_CONFIG 环境变量（如果存在），确保配置隔离正常工作
+            if let Ok(git_config) = std::env::var("GIT_CONFIG") {
+                command = command.env("GIT_CONFIG", git_config);
+            }
 
             if let Some(cwd) = cwd_clone.as_ref() {
                 command = command.dir(cwd);

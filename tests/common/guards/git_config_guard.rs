@@ -25,10 +25,10 @@
 //! ```
 
 use color_eyre::{eyre::WrapErr, Result};
-use git2::Config;
 use serial_test::serial;
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
+use workflow::git::commands::GitConfigCommand;
 
 /// Git配置隔离守卫
 ///
@@ -212,7 +212,7 @@ impl GitConfigGuard {
 
     /// 设置Git配置项
     ///
-    /// 使用 git2 API 设置配置项到临时配置文件。
+    /// 使用 Git 命令设置配置项到临时配置文件（通过 GIT_CONFIG 环境变量）。
     ///
     /// # 参数
     ///
@@ -237,314 +237,12 @@ impl GitConfigGuard {
     /// guard.set("user.email", "test@example.com")?;
     /// ```
     pub fn set(&self, key: &str, value: &str) -> Result<()> {
-        // Windows 上需要更多的重试次数和更长的延迟
-        #[cfg(target_os = "windows")]
-        const MAX_RETRIES: usize = 10;
-        #[cfg(not(target_os = "windows"))]
-        const MAX_RETRIES: usize = 3;
-
-        #[cfg(target_os = "windows")]
-        const RETRY_DELAY_MS: u64 = 300; // Windows 上需要更长的延迟（从 200ms 增加到 300ms）
-        #[cfg(not(target_os = "windows"))]
-        const RETRY_DELAY_MS: u64 = 100;
-
-        // 重试机制：处理锁文件冲突和短暂的并发锁定
-        for attempt in 0..MAX_RETRIES {
-            // Windows 上需要清理所有可能的临时文件和锁文件
-            #[cfg(target_os = "windows")]
-            {
-                // 清理锁文件（使用规范化后的路径）
-                // Windows 上锁文件清理需要更多重试和更长的等待时间
-                let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
-                if std::path::Path::new(&lock_file).exists() {
-                    const LOCK_CLEANUP_RETRIES: usize = 5;
-                    const LOCK_CLEANUP_DELAY_MS: u64 = 100; // 从 50ms 增加到 100ms
-                    for retry in 0..LOCK_CLEANUP_RETRIES {
-                        if std::fs::remove_file(&lock_file).is_ok() {
-                            break;
-                        }
-                        if retry < LOCK_CLEANUP_RETRIES - 1 {
-                            // 使用指数退避
-                            let delay = LOCK_CLEANUP_DELAY_MS * (1 << retry.min(3));
-                            std::thread::sleep(std::time::Duration::from_millis(delay));
-                        }
-                    }
-                }
-
-                // 清理 git2 创建的临时文件（.tmpXXXXX）
-                // git2 在写入配置时会创建临时文件，如果操作失败可能残留
-                if let Some(parent) = self.config_path.parent() {
-                    if let Some(_file_name) = self.config_path.file_name() {
-                        // 查找所有以 .tmp 开头的临时文件
-                        if let Ok(entries) = std::fs::read_dir(parent) {
-                            for entry in entries.flatten() {
-                                let path = entry.path();
-                                if let Some(name) = path.file_name() {
-                                    let name_str = name.to_string_lossy();
-                                    // 匹配 git2 创建的临时文件模式（.tmp + 随机字符）
-                                    if name_str.starts_with(".tmp") && name_str.len() > 4 {
-                                        // 尝试删除临时文件（忽略失败，可能正在被使用）
-                                        let _ = std::fs::remove_file(&path);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Windows 上需要额外等待，确保文件完全释放
-                // 从 100ms 增加到 200ms，提高文件释放的可靠性
-                if attempt > 0 {
-                    std::thread::sleep(std::time::Duration::from_millis(200));
-                }
-            }
-
-            #[cfg(not(target_os = "windows"))]
-            {
-                // 清理可能存在的锁文件（解决锁文件残留问题）
-                // Git 在写入配置文件时会创建锁文件（.tmpXXXXX.lock）
-                // 如果之前的测试异常退出，锁文件可能残留
-                let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
-                if std::path::Path::new(&lock_file).exists() {
-                    // 忽略清理失败（锁文件可能正在被使用）
-                    let _ = std::fs::remove_file(&lock_file);
-                }
-            }
-
-            // 使用 git2 API 打开并设置配置
-            // 统一使用规范化后的路径（Windows上已转换为长路径）
-            let config_path = &self.config_path;
-
-            let config_result = Config::open(config_path);
-            match config_result {
-                Ok(mut config) => {
-                    // Windows 上先检查文件权限和可访问性（使用规范化后的路径）
-                    #[cfg(target_os = "windows")]
-                    {
-                        // 确保文件存在且可写（使用规范化后的长路径）
-                        // 使用重试机制，因为 Windows 上文件系统操作可能有延迟
-                        // 使用 Option<Config> 来安全管理 config 的所有权
-                        let mut config_opt = Some(config);
-                        let mut file_check_retries = 0;
-                        const FILE_CHECK_MAX_RETRIES: usize = 3;
-                        const FILE_CHECK_DELAY_MS: u64 = 100;
-                        let mut file_check_passed = false;
-
-                        // 文件权限检查循环
-                        while !file_check_passed && file_check_retries < FILE_CHECK_MAX_RETRIES {
-                            match std::fs::metadata(config_path) {
-                                Ok(_metadata) => {
-                                    // 检查文件是否可写（通过尝试打开文件）
-                                    match std::fs::OpenOptions::new().write(true).open(config_path)
-                                    {
-                                        Ok(_) => {
-                                            file_check_passed = true;
-                                            break; // 文件可写，继续
-                                        }
-                                        Err(_)
-                                            if file_check_retries < FILE_CHECK_MAX_RETRIES - 1 =>
-                                        {
-                                            // 文件不可写，等待后重试
-                                            file_check_retries += 1;
-                                            std::thread::sleep(std::time::Duration::from_millis(
-                                                FILE_CHECK_DELAY_MS * file_check_retries as u64,
-                                            ));
-                                            // 重新打开 config（因为文件可能被其他进程锁定）
-                                            // 安全地 drop config
-                                            config_opt = None;
-                                            match Config::open(config_path) {
-                                                Ok(new_config) => {
-                                                    config_opt = Some(new_config);
-                                                    continue;
-                                                }
-                                                Err(_) => {
-                                                    // 无法重新打开，跳出内层循环，在外层重试
-                                                    // config_opt 已经是 None，安全
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        Err(e) => {
-                                            // 文件检查失败且重试次数用尽
-                                            // 安全地 drop config
-                                            config_opt = None;
-                                            if attempt < MAX_RETRIES - 1 {
-                                                std::thread::sleep(
-                                                    std::time::Duration::from_millis(
-                                                        RETRY_DELAY_MS * 2,
-                                                    ),
-                                                );
-                                                continue; // 继续外层重试
-                                            }
-                                            return Err(color_eyre::eyre::eyre!(
-                                                "Config file is not writable after {} retries: {}",
-                                                FILE_CHECK_MAX_RETRIES,
-                                                e
-                                            ));
-                                        }
-                                    }
-                                }
-                                Err(e) if file_check_retries < FILE_CHECK_MAX_RETRIES - 1 => {
-                                    // On Windows, file might not be immediately accessible after creation
-                                    // Retry with exponential backoff
-                                    file_check_retries += 1;
-                                    std::thread::sleep(std::time::Duration::from_millis(
-                                        FILE_CHECK_DELAY_MS * file_check_retries as u64,
-                                    ));
-                                    // 重新打开 config
-                                    // 安全地 drop config
-                                    config_opt = None;
-                                    match Config::open(config_path) {
-                                        Ok(new_config) => {
-                                            config_opt = Some(new_config);
-                                            continue;
-                                        }
-                                        Err(_) => {
-                                            // 无法重新打开，跳出内层循环，在外层重试
-                                            // config_opt 已经是 None，安全
-                                            break;
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    // 文件访问失败且重试次数用尽
-                                    // 安全地 drop config
-                                    config_opt = None;
-                                    if attempt < MAX_RETRIES - 1 {
-                                        std::thread::sleep(std::time::Duration::from_millis(
-                                            RETRY_DELAY_MS * 2,
-                                        ));
-                                        continue; // 继续外层重试
-                                    }
-                                    // Provide more context about the error
-                                    let file_exists = config_path.exists();
-                                    return Err(color_eyre::eyre::eyre!(
-                                        "Failed to access config file {} after {} retries: {} (file exists: {})",
-                                        config_path.display(),
-                                        FILE_CHECK_MAX_RETRIES,
-                                        e,
-                                        file_exists
-                                    ));
-                                }
-                            }
-                        }
-
-                        // 如果文件检查未通过，继续外层重试
-                        if !file_check_passed {
-                            // 安全地 drop config（如果还存在）
-                            config_opt = None;
-                            if attempt < MAX_RETRIES - 1 {
-                                std::thread::sleep(std::time::Duration::from_millis(
-                                    RETRY_DELAY_MS * 2,
-                                ));
-                                continue; // 继续外层重试
-                            }
-                            return Err(color_eyre::eyre::eyre!(
-                                "Failed to verify config file accessibility after {} attempts",
-                                MAX_RETRIES
-                            ));
-                        }
-
-                        // 从 Option 中恢复 config，如果不存在则重新打开
-                        config = match config_opt {
-                            Some(cfg) => cfg,
-                            None => {
-                                // config 在循环中被 drop 了，需要重新打开
-                                Config::open(config_path).map_err(|e| {
-                                    color_eyre::eyre::eyre!(
-                                        "Failed to reopen config file after file check: {}",
-                                        e.message()
-                                    )
-                                })?
-                            }
-                        };
-                    }
-
-                    match config.set_str(key, value) {
-                        Ok(()) => {
-                            // Windows 上需要显式关闭 Config 对象，确保文件完全释放
-                            #[cfg(target_os = "windows")]
-                            {
-                                drop(config);
-                                // 在 CI 环境中可能需要更长的等待时间
-                                // 确保文件系统操作完成，特别是重命名操作
-                                // 从 150ms 增加到 300ms，确保文件句柄完全释放
-                                std::thread::sleep(std::time::Duration::from_millis(300));
-                            }
-                            return Ok(());
-                        }
-                        Err(e) => {
-                            // Windows 上显式关闭 Config 对象
-                            #[cfg(target_os = "windows")]
-                            {
-                                drop(config);
-                            }
-
-                            // 检查是否是锁文件错误（包括 Windows 特定的错误消息）
-                            let error_msg = e.message();
-                            let is_lock_error = error_msg.contains("could not lock config file")
-                                || error_msg.contains("failed to rename lockfile")
-                                || error_msg.contains("Access is denied")
-                                || error_msg.contains("failed to rename"); // 更通用的匹配
-
-                            // 如果是锁文件错误且还有重试机会，等待后重试
-                            if is_lock_error && attempt < MAX_RETRIES - 1 {
-                                // Windows 上使用指数退避策略，并增加基础延迟
-                                #[cfg(target_os = "windows")]
-                                {
-                                    // 基础延迟更长，指数增长
-                                    // 从 400ms 增加到 600ms 基础延迟，提高成功率
-                                    let base_delay = RETRY_DELAY_MS * 2; // 600ms 基础延迟
-                                    let delay_ms = base_delay * (1 << attempt.min(4)); // 最多 16 倍（9.6秒）
-                                                                                       // 添加额外的随机抖动，避免所有重试同时发生
-                                    let jitter = (delay_ms as f64 * 0.1) as u64; // 10% 抖动
-                                    let final_delay = delay_ms + jitter;
-                                    std::thread::sleep(std::time::Duration::from_millis(
-                                        final_delay,
-                                    ));
-                                }
-                                #[cfg(not(target_os = "windows"))]
-                                {
-                                    std::thread::sleep(std::time::Duration::from_millis(
-                                        RETRY_DELAY_MS,
-                                    ));
-                                }
-                                continue;
-                            }
-
-                            // 其他错误或重试次数用尽，返回错误
-                            return Err(color_eyre::eyre::eyre!(
-                                "Failed to set Git config {}={} after {} attempts: {}",
-                                key,
-                                value,
-                                attempt + 1,
-                                error_msg
-                            ));
-                        }
-                    }
-                }
-                Err(e) => {
-                    // 如果配置文件不存在，创建一个新的
-                    if e.code() == git2::ErrorCode::NotFound {
-                        // 创建空配置文件（使用规范化后的路径）
-                        std::fs::write(&self.config_path, "")
-                            .wrap_err("Failed to create config file")?;
-                        // 重试
-                        if attempt < MAX_RETRIES - 1 {
-                            std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
-                            continue;
-                        }
-                    }
-                    return Err(color_eyre::eyre::eyre!(
-                        "Failed to open Git config file {}: {}",
-                        self.config_path.display(),
-                        e.message()
-                    ));
-                }
-            }
-        }
-
-        unreachable!()
+        // 使用 GitConfigCommand 设置配置
+        // GIT_CONFIG 环境变量已经设置（在 new() 方法中），GitCommand 会显式传递它
+        // 不使用 --global 标志，因为我们使用的是 GIT_CONFIG 环境变量指向的临时文件
+        // 环境隔离已通过 GitCommand 显式传递 GIT_CONFIG 环境变量得到保证
+        GitConfigCommand::set_config(key, value, false, None)
+            .wrap_err_with(|| format!("Failed to set Git config {}={}", key, value))
     }
 
     /// 从全局配置复制
@@ -651,29 +349,10 @@ mod tests {
             ));
         }
 
-        // Windows 上，git2 的 Config::open() 可能需要使用环境变量
-        // 或者我们需要确保使用正确的路径格式
-        #[cfg(target_os = "windows")]
-        {
-            // 在 Windows 上，优先使用环境变量中的路径
-            if let Ok(env_path) = std::env::var("GIT_CONFIG") {
-                if let Ok(config) = Config::open(std::path::Path::new(&env_path)) {
-                    if let Ok(name) = config.get_string("user.name") {
-                        assert_eq!(name, "Test User");
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
-        // 打开配置文件（使用绝对路径）
-        // canonicalize 需要 &Path，而 config_path 是 &PathBuf，需要解引用
-        let abs_path =
-            std::fs::canonicalize(config_path.as_path()).unwrap_or_else(|_| config_path.clone());
-        let config = Config::open(&abs_path)?;
-
-        // 读取配置值
-        let name = config.get_string("user.name")?;
+        // 使用 GitConfigCommand 读取配置
+        // GIT_CONFIG 环境变量已经设置，git config 命令会自动读取它
+        let name = GitConfigCommand::get_config("user.name", false, None)?
+            .ok_or_else(|| color_eyre::eyre::eyre!("Config key 'user.name' not found"))?;
         assert_eq!(name, "Test User");
 
         Ok(())
