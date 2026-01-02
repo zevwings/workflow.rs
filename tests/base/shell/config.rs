@@ -281,6 +281,19 @@ fn test_add_source_twice() -> Result<()> {
     // 设置 HOME 环境变量指向临时目录
     std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
 
+    // Windows 上需要设置 SHELL 环境变量，否则 Detect::shell() 会失败
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("SHELL", "powershell.exe");
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // macOS/Linux 上如果 SHELL 未设置，设置一个默认值
+        if std::env::var("SHELL").is_err() {
+            std::env::set_var("SHELL", "/bin/zsh");
+        }
+    }
+
     // 创建必要的目录结构
     std::fs::create_dir_all(temp_home.join(".workflow"))?;
 

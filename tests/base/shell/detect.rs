@@ -299,28 +299,42 @@ fn test_detect_shell_from_shell_path_fallback() -> Result<()> {
     Ok(())
 }
 
-/// 测试空环境变量的情况（应返回错误）
+/// 测试空环境变量的情况
 ///
 /// ## 测试目的
-/// 验证测试函数能够正确执行预期功能。
+/// 验证当 `SHELL` 环境变量为空字符串时的行为。
 ///
 /// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
+/// 1. 设置 `SHELL` 环境变量为空字符串
+/// 2. 调用 `Detect::shell()`
 /// 3. 验证结果
 ///
 /// ## 预期结果
-/// - 测试通过，无错误
+/// - Windows 上：返回 PowerShell（默认值）
+/// - 非 Windows 上：返回错误（因为无法从空字符串解析 shell）
 #[test]
 fn test_detect_shell_empty_env_var() {
-    // Arrange: 使用 EnvGuard 设置空环境变量（覆盖 detect.rs:31-33）
+    // Arrange: 使用 EnvGuard 设置空环境变量
     let mut guard = EnvGuard::new();
     guard.set("SHELL", "");
 
     let result = Detect::shell();
 
-    // 空环境变量应该返回错误
-    assert!(result.is_err());
+    #[cfg(target_os = "windows")]
+    {
+        // Windows 上，即使 SHELL 为空，也应该返回 PowerShell（默认值）
+        assert!(result.is_ok(), "Windows should return PowerShell as default");
+        if let Ok(shell) = result {
+            assert_eq!(shell, Shell::PowerShell, "Should return PowerShell on Windows");
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // 非 Windows 上，空环境变量应该返回错误
+        assert!(result.is_err(), "Non-Windows should return error for empty SHELL");
+    }
+
     // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 }
 

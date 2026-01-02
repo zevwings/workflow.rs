@@ -548,7 +548,7 @@ impl ShellConfigManager {
     /// 写入配置文件内容
     fn write_config_file(path: &std::path::Path, content: &str) -> Result<()> {
         FileWriter::new(path)
-            .write_str(content)
+            .write_str_with_dir(content)
             .wrap_err("Failed to write to shell config file")?;
         Ok(())
     }

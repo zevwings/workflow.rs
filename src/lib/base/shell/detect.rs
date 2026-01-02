@@ -14,6 +14,8 @@ impl Detect {
     /// 根据 `SHELL` 环境变量检测当前 shell 类型。
     /// 支持的 shell 类型：zsh、bash、fish、powershell、elvish。
     ///
+    /// 在 Windows 上，如果无法检测到 shell 类型，默认返回 PowerShell。
+    ///
     /// # 返回
     ///
     /// 返回检测到的 `Shell` 类型。
@@ -26,6 +28,17 @@ impl Detect {
             .or_else(|| {
                 // 如果 from_env() 失败，尝试从 SHELL 环境变量解析
                 std::env::var("SHELL").ok().and_then(Shell::from_shell_path)
+            })
+            .or_else(|| {
+                // Windows 上如果没有设置 SHELL，默认使用 PowerShell
+                #[cfg(target_os = "windows")]
+                {
+                    Some(Shell::PowerShell)
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    None
+                }
             })
             .ok_or_else(|| {
                 let shell = std::env::var("SHELL").unwrap_or_else(|_| "unknown".to_string());

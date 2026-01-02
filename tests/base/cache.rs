@@ -5,6 +5,7 @@
 
 use crate::common::cache::{cache_size, clear_cache, get_cached_fixture, is_cached};
 use color_eyre::Result;
+use serial_test::serial;
 
 /// 测试缓存基本功能
 ///
@@ -121,7 +122,9 @@ fn test_cache_clear() -> Result<()> {
 /// ## 注意事项
 /// - 在并行测试时，其他测试可能已经加载了相同的 fixture
 /// - 测试验证 fixture 是否在缓存中，而不是严格检查缓存大小增加
+/// - 使用 `#[serial]` 属性串行执行，避免并行测试时的竞态条件
 #[test]
+#[serial]
 fn test_multiple_fixtures() -> Result<()> {
     // 记录初始缓存大小（可能其他测试已经加载了 fixture）
     let initial_size = cache_size();
@@ -166,7 +169,9 @@ fn test_multiple_fixtures() -> Result<()> {
 /// ## 注意事项
 /// - 在并行测试时，其他测试可能已经加载了相同的 fixture
 /// - 测试验证 fixture 是否在缓存中，并根据是否已缓存来验证大小变化
+/// - 使用 `#[serial]` 属性串行执行，避免并行测试时的竞态条件
 #[test]
+#[serial]
 fn test_cache_stats() -> Result<()> {
     // 记录初始缓存大小（可能其他测试已经加载了 fixture）
     let initial_size = cache_size();
