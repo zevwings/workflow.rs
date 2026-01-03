@@ -216,8 +216,24 @@ impl GitConfigCommand {
         // 构建 .git/config 文件路径
         let config_path = repo_path.join(".git").join("config");
 
-        // 使用 --file 参数直接指定配置文件路径
-        let config_path_str = config_path.to_string_lossy().to_string();
+        // 在 Windows 上规范化路径，将短路径格式（8.3格式）转换为长路径格式
+        // 这样可以避免 "The filename, directory name, or volume label syntax is incorrect" 错误
+        let config_path_str = if cfg!(target_os = "windows") && config_path.exists() {
+            config_path
+                .canonicalize()
+                .map_err(|e| {
+                    color_eyre::eyre::eyre!(
+                        "Failed to canonicalize config path: {}: {}",
+                        config_path.display(),
+                        e
+                    )
+                })?
+                .to_string_lossy()
+                .to_string()
+        } else {
+            config_path.to_string_lossy().to_string()
+        };
+
         let args = vec!["config", "--file", &config_path_str, "--get", key];
 
         match GitCommand::run(&args, cwd) {
@@ -258,8 +274,32 @@ impl GitConfigCommand {
         // 构建 .git/config 文件路径
         let config_path = repo_path.join(".git").join("config");
 
-        // 使用 --file 参数直接指定配置文件路径
-        let config_path_str = config_path.to_string_lossy().to_string();
+        // 在 Windows 上规范化路径，将短路径格式（8.3格式）转换为长路径格式
+        // 这样可以避免 "The filename, directory name, or volume label syntax is incorrect" 错误
+        let config_path_str = if cfg!(target_os = "windows") {
+            // 规范化 .git 目录路径（通常已存在）
+            let git_dir = repo_path.join(".git");
+            if git_dir.exists() {
+                git_dir
+                    .canonicalize()
+                    .map_err(|e| {
+                        color_eyre::eyre::eyre!(
+                            "Failed to canonicalize .git directory: {}: {}",
+                            git_dir.display(),
+                            e
+                        )
+                    })?
+                    .join("config")
+                    .to_string_lossy()
+                    .to_string()
+            } else {
+                // 如果 .git 目录不存在，使用原始路径（这种情况不应该发生，但作为后备）
+                config_path.to_string_lossy().to_string()
+            }
+        } else {
+            config_path.to_string_lossy().to_string()
+        };
+
         let args = vec!["config", "--file", &config_path_str, key, value];
 
         GitCommand::execute(&args, cwd)
