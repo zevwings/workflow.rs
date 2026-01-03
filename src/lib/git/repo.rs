@@ -98,7 +98,7 @@ impl GitRepo {
 
     /// 获取远程仓库 URL
     ///
-    /// 使用 git2 库获取远程仓库的 URL。
+    /// 使用 GitCommand 获取远程仓库的 URL。
     ///
     /// # 返回
     ///
@@ -111,15 +111,12 @@ impl GitRepo {
         let mut repo = GitRepository::open()?;
         let remote = repo.find_origin_remote()?;
 
-        remote
-            .url()
-            .ok_or_else(|| color_eyre::eyre::eyre!("Remote 'origin' has no URL"))
-            .map(|url| url.to_string())
+        remote.url()
     }
 
     /// 获取远程仓库 URL（指定仓库路径）
     ///
-    /// 使用 git2 库获取指定仓库的远程 URL。
+    /// 使用 GitCommand 获取指定仓库的远程 URL。
     ///
     /// # 参数
     ///
@@ -136,17 +133,14 @@ impl GitRepo {
         let mut repo = GitRepository::open_at(repo_path)?;
         let remote = repo.find_origin_remote()?;
 
-        remote
-            .url()
-            .ok_or_else(|| color_eyre::eyre::eyre!("Remote 'origin' has no URL"))
-            .map(|url| url.to_string())
+        remote.url()
     }
 
     /// 获取 Git 目录路径
     ///
-    /// 使用 git2 库获取 `.git` 目录的路径。
+    /// 使用 `git rev-parse --git-dir` 命令获取 `.git` 目录的路径。
     /// 对于标准仓库，返回 `.git` 目录的绝对路径。
-    /// 对于 worktree 和 submodule，git2 库会自动处理正确的路径。
+    /// 对于 worktree 和 submodule，git 命令会自动处理正确的路径。
     ///
     /// # 返回
     ///
@@ -156,17 +150,22 @@ impl GitRepo {
     ///
     /// 如果不在 Git 仓库中或操作失败，返回相应的错误信息。
     pub(crate) fn get_git_dir() -> Result<String> {
-        let repo = GitRepository::open()?;
-        let git_dir = repo.as_inner().path();
+        use super::commands::repo::GitRepoCommand;
+
+        // 使用 git rev-parse --git-dir 获取 .git 目录路径
+        let git_dir = GitRepoCommand::get_git_dir(None)
+            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .wrap_err("Failed to get Git directory")?;
 
         // 转换为绝对路径
-        let absolute_path = if git_dir.is_absolute() {
-            git_dir.to_path_buf()
+        let git_dir_path = Path::new(&git_dir);
+        let absolute_path = if git_dir_path.is_absolute() {
+            git_dir_path.to_path_buf()
         } else {
             // 如果是相对路径，基于当前工作目录转换为绝对路径
             std::env::current_dir()
                 .wrap_err("Failed to get current directory")?
-                .join(git_dir)
+                .join(git_dir_path)
         };
 
         // 规范化路径（解析符号链接等）
@@ -180,7 +179,7 @@ impl GitRepo {
 
     /// 从远程仓库获取更新
     ///
-    /// 使用 git2 库从远程仓库获取最新的分支和提交信息。
+    /// 使用 GitCommand 从远程仓库获取最新的分支和提交信息。
     /// 支持 SSH 和 HTTPS 认证，适用于私有仓库。
     /// 包含超时和重试机制，提高网络操作的可靠性。
     ///
@@ -199,15 +198,9 @@ impl GitRepo {
                 let mut repo = GitRepository::open()?;
                 let mut remote = repo.find_origin_remote()?;
 
-                // 配置获取选项
-                let mut fetch_options = GitRepository::get_fetch_options();
-
                 // 获取远程更新
                 // 使用空数组表示获取所有默认的 refspecs
-                let refs: &[&str] = &[];
-                remote
-                    .fetch(refs, Some(&mut fetch_options), None)
-                    .wrap_err("Failed to fetch from origin")?;
+                remote.fetch(&[]).wrap_err("Failed to fetch from origin")?;
 
                 Ok(())
             },
@@ -218,7 +211,7 @@ impl GitRepo {
 
     /// 清理远程分支引用
     ///
-    /// 使用 git2 库移除已删除的远程分支引用。
+    /// 使用 GitCommand 移除已删除的远程分支引用。
     /// 通过获取远程引用列表，然后删除本地不存在的远程引用。
     /// 包含超时保护，防止网络操作卡住。
     ///
@@ -232,61 +225,50 @@ impl GitRepo {
         let timeout_config =
             TimeoutConfig::new(default_download_timeout()).with_platform_specific();
 
-        // 保护 connect_auth 操作
+        // 保护远程操作
         execute_with_timeout_and_retry(
             timeout_config,
             RetryConfig::platform_default(),
             || -> Result<()> {
                 let mut repo = GitRepository::open()?;
-                let mut remote = repo.find_origin_remote()?;
-
-                // 连接远程并获取引用列表
-                let callbacks = super::GitAuth::get_remote_callbacks();
-                remote
-                    .as_inner_mut()
-                    .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
-                    .wrap_err("Failed to connect to remote")?;
+                let remote = repo.find_origin_remote()?;
 
                 // 获取远程引用列表
-                let remote_refs =
-                    remote.as_inner().list().wrap_err("Failed to list remote references")?;
+                let remote_refs = remote.list().wrap_err("Failed to list remote references")?;
 
-                // 构建远程引用名称集合
+                // 构建远程引用名称集合（只包含分支引用）
                 let mut remote_ref_names = std::collections::HashSet::new();
-                for remote_ref in remote_refs {
-                    remote_ref_names.insert(remote_ref.name().to_string());
+                for (ref_name, _sha) in remote_refs {
+                    if ref_name.starts_with("refs/heads/") {
+                        remote_ref_names.insert(ref_name);
+                    }
                 }
 
-                // 释放 remote 的借用
-                drop(remote);
+                // 获取本地所有远程引用（refs/remotes/origin/*）
+                use crate::git::commands::GitRepoCommand;
+                let output =
+                    GitRepoCommand::for_each_ref("refs/remotes/origin/", Some(repo.path()))
+                        .wrap_err("Failed to list local remote references")?;
 
-                // 遍历本地所有远程引用（refs/remotes/origin/*）
-                let local_remote_refs: Vec<String> = {
-                    let repo_inner = repo.as_inner();
-                    repo_inner
-                        .references()?
-                        .filter_map(|reference| {
-                            reference.ok().and_then(|ref_| {
-                                ref_.name()
-                                    .and_then(|name| name.strip_prefix("refs/remotes/origin/"))
-                                    .map(|name| name.to_string())
-                            })
-                        })
-                        .collect()
-                };
+                let local_remote_refs: Vec<String> = output
+                    .iter()
+                    .filter_map(|line| {
+                        line.strip_prefix("refs/remotes/origin/").map(|name| name.to_string())
+                    })
+                    .collect();
 
                 // 删除本地存在但远程不存在的引用
                 let mut deleted_count = 0;
-                let repo_inner_mut = repo.as_inner_mut();
                 for local_ref_name in local_remote_refs {
                     let remote_ref_name = format!("refs/heads/{}", local_ref_name);
                     if !remote_ref_names.contains(&remote_ref_name) {
                         // 远程引用不存在，删除本地引用
                         let ref_name = format!("refs/remotes/origin/{}", local_ref_name);
-                        if let Ok(mut reference) = repo_inner_mut.find_reference(&ref_name) {
-                            reference.delete().wrap_err_with(|| {
-                                format!("Failed to delete reference: {}", ref_name)
-                            })?;
+                        if GitRepoCommand::ref_exists(&ref_name, Some(repo.path())) {
+                            GitRepoCommand::delete_ref(&ref_name, Some(repo.path()))
+                                .wrap_err_with(|| {
+                                    format!("Failed to delete reference: {}", ref_name)
+                                })?;
                             deleted_count += 1;
                         }
                     }

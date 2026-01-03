@@ -10,7 +10,7 @@ use crate::common::guards::DialogTestGuard;
 use crate::common::mock::server::MockServer;
 use crate::common::test_data::TestDataFactory;
 use color_eyre::Result;
-use git2::Repository;
+use workflow::git::commands::GitBranchCommand;
 
 // ==================== Jira Ticket 创建测试 ====================
 
@@ -49,9 +49,7 @@ username = "test@example.com"
         .create_commit(&format!("feat({}): add feature", ticket_id))?;
 
     // 验证分支存在
-    let repo = Repository::open(env.path())?;
-    let head = repo.head()?;
-    let current_branch = head.name().unwrap().strip_prefix("refs/heads/").unwrap();
+    let current_branch = GitBranchCommand::current_branch(Some(env.path().as_path()))?;
     assert_eq!(current_branch, branch_name);
 
     Ok(())
@@ -71,7 +69,6 @@ username = "test@example.com"
 /// 4. 创建PR（dry-run模式）
 /// 5. 验证Jira状态同步逻辑
 #[test]
-#[ignore]
 fn test_jira_status_sync_on_pr_creation() -> Result<()> {
     // 设置Mock Jira API
     let mut mock_server = MockServer::new();

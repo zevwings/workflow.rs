@@ -453,7 +453,6 @@ fn test_get_branch_commits_error_handling_with_invalid_environment_handles_grace
 /// - 提交操作成功
 /// - Git 集成操作成功
 #[rstest]
-#[ignore]
 fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
     let env = &git_repo_with_commit;

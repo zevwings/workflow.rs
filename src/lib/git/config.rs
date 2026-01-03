@@ -6,6 +6,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
+use crate::git::commands::GitConfigCommand;
 use crate::trace_info;
 
 /// Git 配置结果
@@ -23,7 +24,7 @@ pub struct GitConfig;
 impl GitConfig {
     /// 设置 Git 全局配置（email 和 name）
     ///
-    /// 使用 git2 库根据提供的 email 和 name 设置 Git 的全局 user.email 和 user.name 配置。
+    /// 使用 Git 命令行工具根据提供的 email 和 name 设置 Git 的全局 user.email 和 user.name 配置。
     ///
     /// # 参数
     ///
@@ -40,19 +41,9 @@ impl GitConfig {
     pub fn set_global_user(email: &str, name: &str) -> Result<GitConfigResult> {
         trace_info!("Updating Git global config: email={}, name={}", email, name);
 
-        // 打开全局配置
-        let mut config =
-            git2::Config::open_default().wrap_err("Failed to open Git global config")?;
-
-        // 设置全局 user.email
-        config
-            .set_str("user.email", email)
-            .wrap_err("Failed to set git global user.email")?;
-
-        // 设置全局 user.name
-        config
-            .set_str("user.name", name)
-            .wrap_err("Failed to set git global user.name")?;
+        // 使用 GitConfigCommand 设置全局用户配置
+        GitConfigCommand::set_user(email, name, true, None)
+            .wrap_err("Failed to set git global user config")?;
 
         trace_info!("Git global config updated successfully");
 
@@ -64,7 +55,7 @@ impl GitConfig {
 
     /// 读取 Git 全局配置
     ///
-    /// 使用 git2 库读取 Git 的全局 user.email 和 user.name 配置。
+    /// 使用 Git 命令行工具读取 Git 的全局 user.email 和 user.name 配置。
     ///
     /// # 返回
     ///
@@ -74,21 +65,19 @@ impl GitConfig {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn get_global_user() -> Result<(Option<String>, Option<String>)> {
-        // 打开全局配置
-        let config = git2::Config::open_default().wrap_err("Failed to open Git global config")?;
+        // 使用 GitConfigCommand 读取全局用户配置
+        let email = GitConfigCommand::get_user_email(true, None)
+            .wrap_err("Failed to get git global user.email")?;
 
-        // 读取 user.email
-        let email = config.get_string("user.email").ok().filter(|s| !s.is_empty());
-
-        // 读取 user.name
-        let name = config.get_string("user.name").ok().filter(|s| !s.is_empty());
+        let name = GitConfigCommand::get_user_name(true, None)
+            .wrap_err("Failed to get git global user.name")?;
 
         Ok((email, name))
     }
 
     /// 读取 Git 配置项
     ///
-    /// 使用 git2 库读取指定配置项的值。
+    /// 使用 Git 命令行工具读取指定配置项的值。
     ///
     /// # 参数
     ///
@@ -102,12 +91,7 @@ impl GitConfig {
     ///
     /// 如果操作失败，返回相应的错误信息。
     pub fn get_config_string(key: &str) -> Result<Option<String>> {
-        let config = git2::Config::open_default().wrap_err("Failed to open Git config")?;
-
-        match config.get_string(key) {
-            Ok(value) => Ok(Some(value)),
-            Err(e) if e.code() == git2::ErrorCode::NotFound => Ok(None),
-            Err(e) => Err(e).wrap_err_with(|| format!("Failed to read config: {}", key)),
-        }
+        GitConfigCommand::get_config(key, true, None)
+            .wrap_err_with(|| format!("Failed to read config: {}", key))
     }
 }

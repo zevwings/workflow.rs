@@ -25,7 +25,6 @@ use crate::common::guards::DialogTestGuard;
 /// - 返回默认分支（main）
 #[test]
 #[serial]
-#[ignore]
 fn test_resolve_target_branch_based_on_default() -> Result<()> {
     let env = GitTestEnv::new()?;
     let default_branch = "main";
@@ -79,7 +78,6 @@ fn test_resolve_target_branch_based_on_default() -> Result<()> {
 /// - 检测到基础分支 feature/base
 #[test]
 #[serial]
-#[ignore]
 fn test_resolve_target_branch_based_on_non_default() -> Result<()> {
     let env = GitTestEnv::new()?;
     let default_branch = "main";
@@ -139,7 +137,6 @@ fn test_resolve_target_branch_based_on_non_default() -> Result<()> {
 /// - 因此必须设置 `DialogTestGuard` 来避免测试卡住
 #[test]
 #[serial]
-#[ignore]
 fn test_resolve_target_branch_no_base_detected() -> Result<()> {
     let env = GitTestEnv::new()?;
     let default_branch = "main";
@@ -205,7 +202,6 @@ fn test_resolve_target_branch_no_base_detected() -> Result<()> {
 /// - 返回默认分支（main）
 #[test]
 #[serial]
-#[ignore]
 fn test_resolve_target_branch_detection_failure() -> Result<()> {
     let env = GitTestEnv::new()?;
     let default_branch = "main";
@@ -260,7 +256,6 @@ fn test_resolve_target_branch_detection_failure() -> Result<()> {
 /// - 返回默认分支（main）
 #[test]
 #[serial]
-#[ignore]
 fn test_resolve_target_branch_user_cancelled() -> Result<()> {
     let env = GitTestEnv::new()?;
     let default_branch = "main";
@@ -318,7 +313,6 @@ fn test_resolve_target_branch_user_cancelled() -> Result<()> {
 /// - 返回基础分支（feature/base）
 #[test]
 #[serial]
-#[ignore]
 fn test_resolve_target_branch_select_base_branch() -> Result<()> {
     let env = GitTestEnv::new()?;
     let default_branch = "main";

@@ -60,7 +60,7 @@ impl BranchSyncCommand {
     ) -> Result<()> {
         // 运行检查
         log_info!("Running pre-flight checks...");
-        check::CheckCommand::run_all()?;
+        check::CheckCommand::run_all_in(&repo_path)?;
 
         let options = BranchSyncOptions {
             source_branch: source_branch.clone(),

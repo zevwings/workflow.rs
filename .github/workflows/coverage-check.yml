@@ -23,6 +23,26 @@ jobs:
           # 使用 PAT 以支持推送报告到仓库
           token: ${{ secrets.WORKFLOW_PAT }}
 
+      - name: 🔍 Verify Git is available
+        shell: bash
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            echo "❌ Error: Git is required but not found"
+            echo "Installing Git..."
+            if [[ "${{ runner.os }}" == "Linux" ]]; then
+              sudo apt-get update
+              sudo apt-get install -y git
+            elif [[ "${{ runner.os }}" == "macOS" ]]; then
+              if ! brew list git >/dev/null 2>&1; then
+                brew install git || echo "⚠️  Git installation failed, but may be pre-installed"
+              fi
+            elif [[ "${{ runner.os }}" == "Windows" ]]; then
+              echo "⚠️  Git should be pre-installed on Windows runner"
+            fi
+          fi
+          git --version
+          echo "✅ Git is available"
+
       - name: 🔧 Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 

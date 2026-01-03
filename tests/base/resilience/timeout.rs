@@ -133,7 +133,6 @@ fn test_timeout_boundary_completion() -> Result<()> {
 /// 注意：此测试涉及并发操作，在并行测试环境中可能不稳定。
 /// 使用 `cargo test --test-threads=1` 运行以确保稳定性。
 #[test]
-#[ignore]
 fn test_concurrent_execute_with_timeout() -> Result<()> {
     let config = TimeoutConfig::new(Duration::from_millis(200));
     let results = Arc::new(Mutex::new(Vec::new()));

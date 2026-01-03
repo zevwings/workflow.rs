@@ -1327,7 +1327,6 @@ type = "invalid  # 缺少闭合引号和括号
 /// ## 预期结果
 /// - 返回错误，不panic
 #[rstest]
-// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_with_corrupted_private_config_return_ok(
     mut cli_env_with_git: CliTestEnv,
 ) -> Result<()> {

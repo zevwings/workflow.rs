@@ -1,19 +1,18 @@
 //! Git 仓库封装
 //!
-//! 提供统一的 Git 仓库操作接口，封装 git2::Repository 的所有常用操作。
+//! 提供统一的 Git 仓库操作接口，使用 GitCommand 执行 git 命令。
 
 use color_eyre::{eyre::WrapErr, Result};
-use git2::{FetchOptions, PushOptions, Repository, Signature};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::remote::GitRemote;
-use crate::git::GitAuth;
+use crate::git::commands::{GitBranchCommand, GitCommitCommand, GitConfigCommand, GitRepoCommand};
 
 /// Git 仓库封装
 ///
-/// 提供统一的 Git 仓库操作接口，封装 git2::Repository 的所有常用操作。
+/// 提供统一的 Git 仓库操作接口，使用 GitCommand 执行 git 命令。
 pub struct GitRepository {
-    inner: Repository,
+    path: PathBuf,
 }
 
 impl GitRepository {
@@ -41,9 +40,18 @@ impl GitRepository {
     /// # }
     /// ```
     pub fn open() -> Result<Self> {
-        let repo = Repository::open(".")
-            .wrap_err("Failed to open Git repository. Make sure you're in a Git repository.")?;
-        Ok(Self { inner: repo })
+        // 使用 git rev-parse --show-toplevel 获取仓库根目录
+        let workdir = GitRepoCommand::get_workdir(None).map_err(|e| match e {
+            _ if e.to_string().contains("Not in a Git repository") => {
+                color_eyre::eyre::eyre!(
+                    "Not in a Git repository. Make sure you're in a Git repository."
+                )
+            }
+            _ => color_eyre::eyre::eyre!("Failed to open Git repository: {}", e),
+        })?;
+
+        let path = PathBuf::from(workdir.trim());
+        Ok(Self { path })
     }
 
     /// 打开指定路径的 Git 仓库
@@ -73,9 +81,18 @@ impl GitRepository {
     /// # }
     /// ```
     pub fn open_at(path: impl AsRef<Path>) -> Result<Self> {
-        let repo = Repository::open(path.as_ref())
-            .wrap_err_with(|| format!("Failed to open Git repository at: {:?}", path.as_ref()))?;
-        Ok(Self { inner: repo })
+        let path_ref = path.as_ref();
+        // 使用 git rev-parse --show-toplevel 获取仓库根目录
+        let workdir = GitRepoCommand::get_workdir(Some(path_ref)).map_err(|e| {
+            if e.to_string().contains("Not in a Git repository") {
+                color_eyre::eyre::eyre!("Not in a Git repository at: {:?}", path_ref)
+            } else {
+                color_eyre::eyre::eyre!("Failed to open Git repository at: {:?}: {}", path_ref, e)
+            }
+        })?;
+
+        let path = PathBuf::from(workdir.trim());
+        Ok(Self { path })
     }
 
     /// 初始化 Git 仓库
@@ -118,12 +135,12 @@ impl GitRepository {
         }
 
         // 初始化仓库
-        let mut init_opts = git2::RepositoryInitOptions::new();
-        init_opts.initial_head(initial_branch);
-        let repo = Repository::init_opts(path, &init_opts)
-            .wrap_err("Failed to initialize git repository")?;
+        GitRepoCommand::init(Some(initial_branch), Some(path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to initialize git repository: {}", e))?;
 
-        Ok(Self { inner: repo })
+        Ok(Self {
+            path: path.to_path_buf(),
+        })
     }
 
     /// 初始化 Git 仓库并创建初始提交
@@ -185,45 +202,22 @@ impl GitRepository {
         let commit_message = commit_message.unwrap_or("Initial commit");
 
         // 初始化仓库
-        let mut repo = Self::init(path, Some(initial_branch))?;
+        let repo = Self::init(path, Some(initial_branch))?;
 
         // 配置用户（本地配置）
-        let mut config = repo.as_inner().config().wrap_err("Failed to open repository config")?;
-        config.set_str("user.name", user_name).wrap_err("Failed to set user.name")?;
-        config.set_str("user.email", user_email).wrap_err("Failed to set user.email")?;
+        GitConfigCommand::set_local("user.name", user_name, Some(&repo.path))
+            .wrap_err("Failed to set user.name")?;
+        GitConfigCommand::set_local("user.email", user_email, Some(&repo.path))
+            .wrap_err("Failed to set user.email")?;
 
         // 创建初始文件
         std::fs::write(path.join(initial_file), initial_content)
             .wrap_err("Failed to write initial file")?;
 
-        // 添加所有文件到索引
-        let tree_id = {
-            let mut index = repo.as_inner().index().wrap_err("Failed to open repository index")?;
-            index
-                .add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None)
-                .wrap_err("Failed to add files to index")?;
-            let tree_id = index.write_tree().wrap_err("Failed to write index to tree")?;
-            index.write().wrap_err("Failed to write index")?;
-            tree_id
-        };
-
-        // 创建提交
-        let signature =
-            git2::Signature::now(user_name, user_email).wrap_err("Failed to create signature")?;
-        {
-            let repo_inner = repo.as_inner_mut();
-            let tree = repo_inner.find_tree(tree_id).wrap_err("Failed to find tree")?;
-            repo_inner
-                .commit(
-                    Some("HEAD"),
-                    &signature,
-                    &signature,
-                    commit_message,
-                    &tree,
-                    &[],
-                )
-                .wrap_err("Failed to create initial commit")?;
-        }
+        // 添加所有文件并提交
+        GitCommitCommand::add_all(Some(&repo.path)).wrap_err("Failed to add files to index")?;
+        GitCommitCommand::commit(commit_message, false, Some(&repo.path))
+            .wrap_err("Failed to create initial commit")?;
 
         Ok(repo)
     }
@@ -234,13 +228,19 @@ impl GitRepository {
     ///
     /// # 返回
     ///
-    /// 返回 `Signature` 对象，包含用户名和邮箱。
+    /// 返回元组 `(name, email)`，包含用户名和邮箱。
     ///
     /// # 错误
     ///
     /// 如果无法获取签名信息，返回相应的错误信息。
-    pub fn signature(&self) -> Result<Signature<'_>> {
-        self.inner.signature().wrap_err("Failed to get repository signature")
+    pub fn signature(&self) -> Result<(String, String)> {
+        let name = GitConfigCommand::get_local("user.name", Some(&self.path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to get user.name: {}", e))?;
+
+        let email = GitConfigCommand::get_local("user.email", Some(&self.path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to get user.email: {}", e))?;
+
+        Ok((name, email))
     }
 
     /// 查找 origin 远程仓库
@@ -259,25 +259,8 @@ impl GitRepository {
     /// # 注意
     ///
     /// 返回的 `GitRemote` 的生命周期与 `GitRepository` 相关。
-    pub fn find_origin_remote(&mut self) -> Result<GitRemote<'_>> {
-        let remote = self.inner.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
-
-        // 规范化 SSH URL 格式（git2 库不支持简写格式）
-        if let Some(url) = remote.url() {
-            if let Some(normalized_url) = Self::normalize_ssh_url(url) {
-                // 使用 remote_set_url 更新已存在的 remote URL
-                // remote() 方法只能创建新的 remote，如果 remote 已存在会失败
-                self.inner
-                    .remote_set_url("origin", &normalized_url)
-                    .wrap_err("Failed to normalize remote URL")?;
-                // 重新获取 remote（因为 URL 已更新）
-                let remote =
-                    self.inner.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
-                return Ok(GitRemote::new(remote));
-            }
-        }
-
-        Ok(GitRemote::new(remote))
+    pub fn find_origin_remote(&mut self) -> Result<GitRemote> {
+        self.find_remote("origin")
     }
 
     /// 查找指定名称的远程仓库
@@ -293,34 +276,30 @@ impl GitRepository {
     /// # 错误
     ///
     /// 如果找不到指定名称的远程仓库，返回相应的错误信息。
-    ///
-    /// # 注意
-    ///
-    /// 返回的 `GitRemote` 的生命周期与 `GitRepository` 相关。
-    pub fn find_remote(&mut self, name: &str) -> Result<GitRemote<'_>> {
-        let remote = self
-            .inner
-            .find_remote(name)
-            .wrap_err_with(|| format!("Failed to find remote '{}'", name))?;
+    pub fn find_remote(&mut self, name: &str) -> Result<GitRemote> {
+        // 检查远程是否存在
+        let remotes = GitRepoCommand::list_remotes(Some(&self.path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to list remotes: {}", e))?;
 
-        // 规范化 SSH URL 格式（git2 库不支持简写格式）
-        if let Some(url) = remote.url() {
-            if let Some(normalized_url) = Self::normalize_ssh_url(url) {
-                // 使用 remote_set_url 更新已存在的 remote URL
-                // remote() 方法只能创建新的 remote，如果 remote 已存在会失败
-                self.inner
-                    .remote_set_url(name, &normalized_url)
-                    .wrap_err("Failed to normalize remote URL")?;
-                // 重新获取 remote（因为 URL 已更新）
-                let remote = self
-                    .inner
-                    .find_remote(name)
-                    .wrap_err_with(|| format!("Failed to find remote '{}'", name))?;
-                return Ok(GitRemote::new(remote));
-            }
+        if !remotes.contains(&name.to_string()) {
+            return Err(color_eyre::eyre::eyre!("Failed to find remote '{}'", name));
         }
 
-        Ok(GitRemote::new(remote))
+        // 获取远程 URL
+        let url = GitRepoCommand::get_remote_url(Some(name), Some(&self.path)).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to get remote URL for '{}': {}", name, e)
+        })?;
+
+        // 规范化 SSH URL 格式（如果需要）
+        // 注意：Git 命令本身支持简写 SSH URL，所以不需要规范化
+        // 但为了保持兼容性，我们仍然检查是否需要规范化
+        let normalized_url = Self::normalize_ssh_url(&url);
+        if let Some(normalized) = normalized_url {
+            GitRepoCommand::set_remote_url(name, &normalized, Some(&self.path))
+                .wrap_err("Failed to normalize remote URL")?;
+        }
+
+        Ok(GitRemote::new(name.to_string(), self.path.clone()))
     }
 
     /// 规范化 SSH URL 格式
@@ -349,17 +328,18 @@ impl GitRepository {
         None
     }
 
-    /// 获取 HEAD 引用
+    /// 获取 HEAD 引用的 SHA
     ///
     /// # 返回
     ///
-    /// 返回 HEAD 引用对象。
+    /// 返回 HEAD 指向的提交 SHA。
     ///
     /// # 错误
     ///
     /// 如果无法获取 HEAD 引用，返回相应的错误信息。
-    pub fn head(&self) -> Result<git2::Reference<'_>> {
-        self.inner.head().wrap_err("Failed to get HEAD reference")
+    pub fn head(&self) -> Result<String> {
+        GitCommitCommand::get_head_sha(Some(&self.path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to get HEAD reference: {}", e))
     }
 
     /// 获取当前分支名
@@ -368,96 +348,40 @@ impl GitRepository {
     ///
     /// # 返回
     ///
-    /// 返回当前分支名称（不包含 `refs/heads/` 前缀）。
+    /// 返回当前分支的名称（不包含 `refs/heads/` 前缀）。
     ///
     /// # 错误
     ///
     /// 如果 HEAD 不是指向分支（如 detached HEAD 状态），返回相应的错误信息。
     pub fn current_branch_name(&self) -> Result<String> {
-        let head = self.head()?;
-        head.name()
-            .and_then(|name| name.strip_prefix("refs/heads/"))
-            .ok_or_else(|| color_eyre::eyre::eyre!("HEAD is not pointing to a branch"))
-            .map(|s| s.to_string())
+        GitBranchCommand::current_branch(Some(&self.path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to get current branch: {}", e))
     }
 
-    /// 查找引用
+    /// 查找引用的 SHA
     ///
     /// # 参数
     ///
-    /// * `name` - 引用名称（如 "refs/heads/main", "refs/remotes/origin/main"）
+    /// * `name` - 引用名称（如 "refs/heads/main", "refs/remotes/origin/main", "HEAD"）
     ///
     /// # 返回
     ///
-    /// 返回找到的引用对象。
+    /// 返回引用指向的提交 SHA。
     ///
     /// # 错误
     ///
     /// 如果找不到指定引用，返回相应的错误信息。
-    pub fn find_reference(&self, name: &str) -> Result<git2::Reference<'_>> {
-        self.inner
-            .find_reference(name)
-            .wrap_err_with(|| format!("Failed to find reference '{}'", name))
+    pub fn find_reference(&self, name: &str) -> Result<String> {
+        GitCommitCommand::rev_parse(name, Some(&self.path))
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to find reference '{}': {}", name, e))
     }
 
-    /// 获取索引
+    /// 获取仓库路径
     ///
     /// # 返回
     ///
-    /// 返回仓库的索引对象。
-    ///
-    /// # 错误
-    ///
-    /// 如果无法获取索引，返回相应的错误信息。
-    pub fn index(&mut self) -> Result<git2::Index> {
-        self.inner.index().wrap_err("Failed to get repository index")
-    }
-
-    /// 获取配置的 FetchOptions（包含认证）
-    ///
-    /// 创建一个新的 `FetchOptions` 对象，并配置好认证回调。
-    ///
-    /// # 返回
-    ///
-    /// 返回配置好的 `FetchOptions` 对象。
-    pub fn get_fetch_options() -> FetchOptions<'static> {
-        let mut options = FetchOptions::new();
-        options.remote_callbacks(GitAuth::get_remote_callbacks());
-        options
-    }
-
-    /// 获取配置的 PushOptions（包含认证）
-    ///
-    /// 创建一个新的 `PushOptions` 对象，并配置好认证回调。
-    ///
-    /// # 返回
-    ///
-    /// 返回配置好的 `PushOptions` 对象。
-    pub fn get_push_options() -> PushOptions<'static> {
-        let mut options = PushOptions::new();
-        options.remote_callbacks(GitAuth::get_remote_callbacks());
-        options
-    }
-
-    /// 逃生舱：直接访问底层 Repository
-    ///
-    /// 用于需要直接使用 git2 高级功能的场景。
-    ///
-    /// # 返回
-    ///
-    /// 返回底层 `Repository` 的不可变引用。
-    pub fn as_inner(&self) -> &Repository {
-        &self.inner
-    }
-
-    /// 逃生舱：可变访问底层 Repository
-    ///
-    /// 用于需要直接使用 git2 高级功能的场景。
-    ///
-    /// # 返回
-    ///
-    /// 返回底层 `Repository` 的可变引用。
-    pub fn as_inner_mut(&mut self) -> &mut Repository {
-        &mut self.inner
+    /// 返回仓库的根目录路径。
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 }

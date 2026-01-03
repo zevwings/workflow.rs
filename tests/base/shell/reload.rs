@@ -615,9 +615,40 @@ fn test_reload_shell_reload_hint_contains_config_path_windows() {
 /// - 测试通过，无错误
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：使用 Zsh，Windows 上不支持
+#[serial_test::serial] // 使用 serial 避免并行测试时环境变量冲突
 fn test_reload_shell_consistency() -> Result<()> {
+    // 使用测试隔离确保 HOME 环境变量在测试期间保持一致
+    use crate::common::guards::EnvGuard;
+    use tempfile::tempdir;
+
+    // 创建临时目录作为测试用的 HOME（确保在整个测试期间保持存活）
+    let temp_home =
+        tempdir().map_err(|e| color_eyre::eyre::eyre!("Failed to create temp home: {}", e))?;
+    let home_path = temp_home.path().to_string_lossy().to_string();
+
+    // 使用 EnvGuard 隔离 HOME 环境变量（确保在整个测试期间保持设置）
+    let mut _env_guard = EnvGuard::new();
+    _env_guard.set("HOME", &home_path);
+
+    // 验证 HOME 环境变量已正确设置
+    let current_home =
+        std::env::var("HOME").map_err(|e| color_eyre::eyre::eyre!("HOME should be set: {}", e))?;
+    assert_eq!(
+        current_home, home_path,
+        "HOME should be set to temp directory"
+    );
+
     // Arrange: 准备测试多次调用的一致性
     let result1 = Reload::shell(&Shell::Zsh);
+
+    // 再次验证 HOME 环境变量仍然正确（防止被其他测试修改）
+    let current_home_after_first = std::env::var("HOME")
+        .map_err(|e| color_eyre::eyre::eyre!("HOME should still be set after first call: {}", e))?;
+    assert_eq!(
+        current_home_after_first, home_path,
+        "HOME should remain set after first call"
+    );
+
     let result2 = Reload::shell(&Shell::Zsh);
 
     // 两次调用都应该返回结果
@@ -631,7 +662,11 @@ fn test_reload_shell_consistency() -> Result<()> {
     })?;
 
     // reload_hint 应该相同（配置文件路径应该相同）
-    assert_eq!(reload_result1.reload_hint, reload_result2.reload_hint);
+    assert_eq!(
+        reload_result1.reload_hint, reload_result2.reload_hint,
+        "reload_hint should be consistent between calls (first: {}, second: {})",
+        reload_result1.reload_hint, reload_result2.reload_hint
+    );
     Ok(())
 }
 
@@ -648,9 +683,41 @@ fn test_reload_shell_consistency() -> Result<()> {
 /// - 测试通过，无错误
 #[test]
 #[cfg(target_os = "windows")]
+#[serial_test::serial] // 使用 serial 避免并行测试时环境变量冲突
 fn test_reload_shell_consistency_windows() -> Result<()> {
+    // 使用测试隔离确保 USERPROFILE 环境变量在测试期间保持一致
+    use crate::common::guards::EnvGuard;
+    use tempfile::tempdir;
+
+    // 创建临时目录作为测试用的 USERPROFILE（确保在整个测试期间保持存活）
+    let temp_home =
+        tempdir().map_err(|e| color_eyre::eyre::eyre!("Failed to create temp home: {}", e))?;
+    let home_path = temp_home.path().to_string_lossy().to_string();
+
+    // 使用 EnvGuard 隔离 USERPROFILE 环境变量（确保在整个测试期间保持设置）
+    let mut _env_guard = EnvGuard::new();
+    _env_guard.set("USERPROFILE", &home_path);
+
+    // 验证 USERPROFILE 环境变量已正确设置
+    let current_home = std::env::var("USERPROFILE")
+        .map_err(|e| color_eyre::eyre::eyre!("USERPROFILE should be set: {}", e))?;
+    assert_eq!(
+        current_home, home_path,
+        "USERPROFILE should be set to temp directory"
+    );
+
     // Arrange: 准备测试多次调用的一致性（Windows 版本）
     let result1 = Reload::shell(&Shell::PowerShell);
+
+    // 再次验证 USERPROFILE 环境变量仍然正确（防止被其他测试修改）
+    let current_home_after_first = std::env::var("USERPROFILE").map_err(|e| {
+        color_eyre::eyre::eyre!("USERPROFILE should still be set after first call: {}", e)
+    })?;
+    assert_eq!(
+        current_home_after_first, home_path,
+        "USERPROFILE should remain set after first call"
+    );
+
     let result2 = Reload::shell(&Shell::PowerShell);
 
     // 两次调用都应该返回结果
@@ -664,6 +731,10 @@ fn test_reload_shell_consistency_windows() -> Result<()> {
     })?;
 
     // reload_hint 应该相同（配置文件路径应该相同）
-    assert_eq!(reload_result1.reload_hint, reload_result2.reload_hint);
+    assert_eq!(
+        reload_result1.reload_hint, reload_result2.reload_hint,
+        "reload_hint should be consistent between calls (first: {}, second: {})",
+        reload_result1.reload_hint, reload_result2.reload_hint
+    );
     Ok(())
 }

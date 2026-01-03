@@ -454,13 +454,35 @@ fn test_invalid_command() {
 /// - 理想情况下，不应初始化不必要的客户端
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：错误消息格式可能不同
-#[ignore] // 忽略：可能尝试初始化 Jira 客户端，导致长时间阻塞
 fn test_missing_required_argument() {
-    // 注意：此测试可能尝试初始化 Jira 客户端，即使缺少参数也可能导致阻塞
-    // Windows 上已通过 #[cfg] 跳过，因为错误消息格式可能不同
-    // 如果需要运行此测试，请使用: cargo test -- --ignored
+    // 设置Mock服务器，避免初始化真实客户端导致阻塞
+    let mut mock_server = MockServer::new();
+    mock_server.setup_jira_base_url();
+
+    // Mock Jira基础端点（即使不会调用，也设置以避免意外连接）
+    let _mock_jira = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/")
+        .with_status(200)
+        .with_body("OK")
+        .create();
+
+    let env = CliTestEnv::new().expect("Failed to create test env");
+    env.create_config(&format!(
+        r#"
+[jira]
+url = "{}"
+username = "test@example.com"
+token = "test_token"
+"#,
+        mock_server.base_url()
+    ))
+    .expect("Failed to create config");
+
     let binding = CliCommandBuilder::new()
         .args(["jira", "info"]) // 缺少 issue ID
+        .current_dir(env.path())
         .assert_failure();
     let output = binding.get_output();
 
@@ -553,21 +575,53 @@ fn test_help_command_performance() -> color_eyre::Result<()> {
 /// - 配置正确加载和使用
 #[rstest]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：多个命令执行和路径处理可能有问题
-#[ignore] // 忽略：执行多个命令，可能涉及网络请求或 LLM 调用，导致长时间阻塞
 fn test_complete_workflow_dry_run_return_ok(
     cli_env_with_git: CliTestEnv,
 ) -> color_eyre::Result<()> {
-    // 注意：此测试执行多个命令，其中一些可能尝试初始化服务或调用 LLM，导致阻塞
-    // Windows 上已通过 #[cfg] 跳过，因为：
-    // - 多个 Git 命令执行可能更慢
-    // - 路径处理在多个命令间可能不一致
-    // - 配置文件路径格式差异
-    // 如果需要运行此测试，请使用: cargo test -- --ignored
+    // 设置Mock服务器，避免初始化真实客户端导致阻塞
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+    mock_server.setup_jira_base_url();
+
+    // Mock GitHub和Jira的基础端点（即使不会调用，也设置以避免意外连接）
+    let _mock_github = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/")
+        .with_status(200)
+        .with_body("OK")
+        .create();
+    let _mock_jira = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/")
+        .with_status(200)
+        .with_body("OK")
+        .create();
+
     // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
     cli_env_with_git
         .create_file("src/main.rs", "fn main() {}")?
         .create_commit("Initial commit")?
-        .create_config(&TestDataGenerator::config_content())?;
+        .create_config(&format!(
+            r#"
+{}
+[jira]
+url = "{}"
+username = "test@example.com"
+token = "test_token"
+"#,
+            TestDataGenerator::config_content(),
+            mock_server.base_url()
+        ))?;
+
+    // 禁用 LLM 调用以避免网络请求超时
+    cli_env_with_git.create_home_workflow_config(
+        r#"
+[llm]
+provider = "invalid_provider"
+"#,
+    )?;
 
     // 设置 DialogTestGuard 来配置 Dialog 交互
     // 这样可以让 Dialog 自然触发，而不是通过命令行参数避免

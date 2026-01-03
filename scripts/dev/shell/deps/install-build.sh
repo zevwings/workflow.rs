@@ -38,6 +38,12 @@ sudo apt-get install -y \
 # 验证构建依赖
 echo -e "${GREEN}🔍 Verifying build dependencies...${NC}"
 
+# 验证 Git（由 install-basic.sh 安装）
+if ! git --version >/dev/null 2>&1; then
+    echo -e "${RED}❌ Error: Git not found${NC}"
+    exit 1
+fi
+
 # 验证 xcbgen 模块
 if ! python3 -c "import xcbgen" 2>/dev/null; then
     echo -e "${RED}❌ Error: xcbgen module not available${NC}"

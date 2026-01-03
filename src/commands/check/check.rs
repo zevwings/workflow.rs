@@ -1,11 +1,12 @@
 use crate::base::constants::{errors::http_client, git::check_errors, messages::log};
 use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, RequestConfig};
-use crate::git::{GitCommit, GitRepo};
+use crate::git::{commands::commit::GitCommitCommand, GitRepo};
 use crate::{log_break, log_error, log_info, log_message, log_success};
 use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 use serde_json::Value;
+use std::path::Path;
 use std::time::Duration;
 
 /// 环境检查命令
@@ -16,16 +17,30 @@ impl CheckCommand {
     ///
     /// 检查 Git 仓库状态和到 GitHub 的网络连接。
     pub fn run_all() -> Result<()> {
+        Self::run_all_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// 执行综合环境检查（指定仓库路径）
+    ///
+    /// 检查指定路径的 Git 仓库状态和到 GitHub 的网络连接。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn run_all_in(repo_path: impl AsRef<Path>) -> Result<()> {
+        let repo_path = repo_path.as_ref();
         log_message!("Running environment checks...");
         log_break!();
 
         log_message!("[1/2] Checking Git repository status...");
-        if !GitRepo::is_git_repo() {
+        if !GitRepo::is_git_repo_at(repo_path) {
             log_error!("Not in a Git repository");
             color_eyre::eyre::bail!("{}", check_errors::NOT_GIT_REPO);
         }
 
-        let git_output = GitCommit::status().wrap_err("Failed to check git status")?;
+        let git_output = GitCommitCommand::status(Some(repo_path))
+            .map_err(|e| color_eyre::eyre::eyre!("{}", e))
+            .wrap_err("Failed to check git status")?;
         if git_output.trim().is_empty() {
             log_success!("Git repository is clean (no uncommitted changes)");
         } else {

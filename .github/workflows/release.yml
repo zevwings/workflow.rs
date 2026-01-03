@@ -224,6 +224,28 @@ jobs:
           fetch-depth: 0  # 需要完整历史记录来检查 tag
           # 使用默认的 GITHUB_TOKEN，有 contents: write 权限，可以推送 tag
 
+      - name: 🔍 Verify Git is available
+        shell: bash
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            echo "❌ Error: Git is required but not found"
+            echo "Installing Git..."
+            if [[ "${{ runner.os }}" == "Linux" ]]; then
+              sudo apt-get update
+              sudo apt-get install -y git
+            elif [[ "${{ runner.os }}" == "macOS" ]]; then
+              # macOS runner 通常已预装 git，但验证一下
+              if ! brew list git >/dev/null 2>&1; then
+                brew install git || echo "⚠️  Git installation failed, but may be pre-installed"
+              fi
+            elif [[ "${{ runner.os }}" == "Windows" ]]; then
+              # Windows runner 通常已预装 git
+              echo "⚠️  Git should be pre-installed on Windows runner"
+            fi
+          fi
+          git --version
+          echo "✅ Git is available"
+
       - name: 🔍 Get latest version from git tags
         id: get_latest_version
         shell: bash
@@ -676,6 +698,26 @@ jobs:
           # 使用 PAT 以支持推送指向修改了 workflow 文件的 commit 的 tag
           # 当 tag 指向的 commit 修改了 workflow 文件时，GITHUB_TOKEN 无法推送，必须使用 PAT
           token: ${{ secrets.WORKFLOW_PAT }}
+
+      - name: 🔍 Verify Git is available
+        shell: bash
+        run: |
+          if ! command -v git >/dev/null 2>&1; then
+            echo "❌ Error: Git is required but not found"
+            echo "Installing Git..."
+            if [[ "${{ runner.os }}" == "Linux" ]]; then
+              sudo apt-get update
+              sudo apt-get install -y git
+            elif [[ "${{ runner.os }}" == "macOS" ]]; then
+              if ! brew list git >/dev/null 2>&1; then
+                brew install git || echo "⚠️  Git installation failed, but may be pre-installed"
+              fi
+            elif [[ "${{ runner.os }}" == "Windows" ]]; then
+              echo "⚠️  Git should be pre-installed on Windows runner"
+            fi
+          fi
+          git --version
+          echo "✅ Git is available"
 
       - name: 🐍 Setup Python 3.13
         uses: actions/setup-python@v5

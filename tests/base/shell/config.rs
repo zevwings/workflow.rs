@@ -9,6 +9,7 @@ use workflow::base::shell::ShellConfigManager;
 
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env;
+use crate::common::isolation::TestIsolation;
 use rstest::rstest;
 
 // ==================== ShellConfigManager Environment Variables Tests ====================
@@ -113,16 +114,30 @@ fn test_remove_env_vars() {
 /// 验证测试函数能够正确执行预期功能。
 ///
 /// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
+/// 1. 使用隔离的测试环境
+/// 2. 添加 source 语句
 /// 3. 验证结果
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_add_source() {
-    // Arrange: 准备测试添加 source 语句
-    // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
+fn test_add_source() -> Result<()> {
+    // Arrange: 使用隔离的测试环境
+    let isolation = TestIsolation::new()?;
+    let temp_home = isolation.work_dir();
+
+    // 设置 HOME 环境变量指向临时目录
+    std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
+
+    // Windows 上需要设置 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
+    }
+
+    // 创建必要的目录结构
+    std::fs::create_dir_all(temp_home.join(".workflow"))?;
 
     let source_path = "$HOME/.workflow/.completions";
     let comment = Some("Test completion");
@@ -136,6 +151,9 @@ fn test_add_source() {
 
     // 清理：移除测试 source 语句
     let _ = ShellConfigManager::remove_source(source_path);
+
+    // isolation 在 drop 时自动清理
+    Ok(())
 }
 
 /// 测试移除source语句
@@ -144,16 +162,31 @@ fn test_add_source() {
 /// 验证测试函数能够正确执行预期功能。
 ///
 /// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
-/// 3. 验证结果
+/// 1. 使用隔离的测试环境
+/// 2. 添加 source 语句
+/// 3. 移除 source 语句
+/// 4. 验证结果
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_remove_source() {
-    // Arrange: 准备测试移除 source 语句
-    // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
+fn test_remove_source() -> Result<()> {
+    // Arrange: 使用隔离的测试环境
+    let isolation = TestIsolation::new()?;
+    let temp_home = isolation.work_dir();
+
+    // 设置 HOME 环境变量指向临时目录
+    std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
+
+    // Windows 上需要设置 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
+    }
+
+    // 创建必要的目录结构
+    std::fs::create_dir_all(temp_home.join(".workflow"))?;
 
     let source_path = "$HOME/.workflow/.completions";
 
@@ -167,6 +200,9 @@ fn test_remove_source() {
     if let Ok(removed) = result {
         assert!(removed || !removed); // 可能已存在或成功移除
     }
+
+    // isolation 在 drop 时自动清理
+    Ok(())
 }
 
 /// 测试检查source语句是否存在
@@ -202,15 +238,31 @@ fn test_has_source() {
 /// 验证测试函数能够正确执行预期功能。
 ///
 /// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
+/// 1. 使用隔离的测试环境
+/// 2. 添加带注释的 source 语句
 /// 3. 验证结果
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_add_source_with_comment() {
-    // Arrange: 准备测试添加带注释的 source 语句
+fn test_add_source_with_comment() -> Result<()> {
+    // Arrange: 使用隔离的测试环境
+    let isolation = TestIsolation::new()?;
+    let temp_home = isolation.work_dir();
+
+    // 设置 HOME 环境变量指向临时目录
+    std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
+
+    // Windows 上需要设置 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
+    }
+
+    // 创建必要的目录结构
+    std::fs::create_dir_all(temp_home.join(".workflow"))?;
+
     let source_path = "$HOME/.workflow/test_completions";
     let comment = Some("Test comment for completions");
 
@@ -223,6 +275,9 @@ fn test_add_source_with_comment() {
 
     // 清理
     let _ = ShellConfigManager::remove_source(source_path);
+
+    // isolation 在 drop 时自动清理
+    Ok(())
 }
 
 /// 测试添加相同的source语句两次（应跳过重复）
@@ -231,34 +286,63 @@ fn test_add_source_with_comment() {
 /// 验证测试函数能够正确执行预期功能。
 ///
 /// ## 测试场景
-/// 1. 准备测试数据
-/// 2. 执行被测试的操作
-/// 3. 验证结果
+/// 1. 使用隔离的测试环境
+/// 2. 第一次添加 source 语句
+/// 3. 第二次添加相同的 source 语句（应该跳过）
+/// 4. 验证结果
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_add_source_twice() {
-    // Arrange: 准备测试添加相同的 source 语句两次（应该跳过）
+fn test_add_source_twice() -> Result<()> {
+    // Arrange: 使用隔离的测试环境
+    let isolation = TestIsolation::new()?;
+    let temp_home = isolation.work_dir();
+
+    // 设置 HOME 环境变量指向临时目录
+    std::env::set_var("HOME", temp_home.to_string_lossy().as_ref());
+
+    // Windows 上需要设置 SHELL 和 USERPROFILE 环境变量
+    // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+    #[cfg(target_os = "windows")]
+    {
+        std::env::set_var("SHELL", "powershell.exe");
+        std::env::set_var("USERPROFILE", temp_home.to_string_lossy().as_ref());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        // macOS/Linux 上如果 SHELL 未设置，设置一个默认值
+        if std::env::var("SHELL").is_err() {
+            std::env::set_var("SHELL", "/bin/zsh");
+        }
+    }
+
+    // 创建必要的目录结构
+    std::fs::create_dir_all(temp_home.join(".workflow"))?;
+
     let source_path = "$HOME/.workflow/duplicate_test";
 
     // 第一次添加
     let result1 = ShellConfigManager::add_source(source_path, None);
+    assert!(result1.is_ok(), "First add should succeed");
+    let added1 = result1.unwrap();
+    assert!(added1, "First add should return true");
+
+    // 验证第一次添加成功
+    let has_source = ShellConfigManager::has_source(source_path)?;
+    assert!(has_source, "Source should exist after first add");
 
     // 第二次添加（应该返回 false，因为已存在）
     let result2 = ShellConfigManager::add_source(source_path, None);
-
-    if let (Ok(added1), Ok(added2)) = (result1, result2) {
-        // 第一次应该成功添加，第二次应该跳过
-        assert!(added1 || !added1);
-        if added1 {
-            // 如果第一次成功，第二次应该返回 false（已存在）
-            assert!(!added2);
-        }
-    }
+    assert!(result2.is_ok(), "Second add should succeed");
+    let added2 = result2.unwrap();
+    assert!(!added2, "Second add should return false (already exists)");
 
     // 清理
     let _ = ShellConfigManager::remove_source(source_path);
+
+    // isolation 在 drop 时自动清理
+    Ok(())
 }
 
 /// 测试移除不存在的source语句
