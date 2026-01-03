@@ -42,14 +42,17 @@ impl GitResetCommand {
     /// ```rust,no_run
     /// use workflow::git::commands::{GitResetCommand, ResetMode};
     ///
-    /// // 硬重置到上一个提交
-    /// GitResetCommand::reset(ResetMode::Hard, Some("HEAD~1"), None)?;
+    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     // 硬重置到上一个提交
+    ///     GitResetCommand::reset(ResetMode::Hard, Some("HEAD~1"), None)?;
     ///
-    /// // 软重置到指定分支
-    /// GitResetCommand::reset(ResetMode::Soft, Some("main"), None)?;
+    ///     // 软重置到指定分支
+    ///     GitResetCommand::reset(ResetMode::Soft, Some("main"), None)?;
     ///
-    /// // 取消暂存（重置索引到 HEAD）
-    /// GitResetCommand::reset(ResetMode::Mixed, None, None)?;
+    ///     // 取消暂存（重置索引到 HEAD）
+    ///     GitResetCommand::reset(ResetMode::Mixed, None, None)?;
+    ///     Ok(())
+    /// }
     /// ```
     pub fn reset(mode: ResetMode, target: Option<&str>, cwd: Option<&Path>) -> Result<()> {
         let mut args = vec!["reset"];
@@ -91,8 +94,11 @@ impl GitResetCommand {
     /// ```rust,no_run
     /// use workflow::git::commands::GitResetCommand;
     ///
-    /// // 硬重置到上一个提交
-    /// GitResetCommand::reset_hard(Some("HEAD~1"), None)?;
+    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     // 硬重置到上一个提交
+    ///     GitResetCommand::reset_hard(Some("HEAD~1"), None)?;
+    ///     Ok(())
+    /// }
     /// ```
     pub fn reset_hard(target: Option<&str>, cwd: Option<&Path>) -> Result<()> {
         Self::reset(ResetMode::Hard, target, cwd)
@@ -107,8 +113,11 @@ impl GitResetCommand {
     /// ```rust,no_run
     /// use workflow::git::commands::GitResetCommand;
     ///
-    /// // 软重置到上一个提交（保留更改在暂存区）
-    /// GitResetCommand::reset_soft(Some("HEAD~1"), None)?;
+    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     // 软重置到上一个提交（保留更改在暂存区）
+    ///     GitResetCommand::reset_soft(Some("HEAD~1"), None)?;
+    ///     Ok(())
+    /// }
     /// ```
     pub fn reset_soft(target: Option<&str>, cwd: Option<&Path>) -> Result<()> {
         Self::reset(ResetMode::Soft, target, cwd)
@@ -123,8 +132,11 @@ impl GitResetCommand {
     /// ```rust,no_run
     /// use workflow::git::commands::GitResetCommand;
     ///
-    /// // 取消暂存（重置索引到 HEAD）
-    /// GitResetCommand::reset_mixed(None, None)?;
+    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     // 取消暂存（重置索引到 HEAD）
+    ///     GitResetCommand::reset_mixed(None, None)?;
+    ///     Ok(())
+    /// }
     /// ```
     pub fn reset_mixed(target: Option<&str>, cwd: Option<&Path>) -> Result<()> {
         Self::reset(ResetMode::Mixed, target, cwd)
