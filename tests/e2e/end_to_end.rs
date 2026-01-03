@@ -127,7 +127,6 @@ model = "test_model"
 /// - PR描述中包含Jira ticket信息（如果支持）
 /// - 使用Mock API，不会阻塞
 #[test]
-#[ignore]
 fn test_pr_creation_with_jira_workflow() -> Result<()> {
     // 设置Mock Jira API
     let mut mock_server = MockServer::new();

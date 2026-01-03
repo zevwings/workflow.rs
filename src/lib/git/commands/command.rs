@@ -197,6 +197,58 @@ impl GitCommand {
         }
     }
 
+    /// 查找 git 命令的绝对路径
+    ///
+    /// 尝试多种方法查找 git 命令：
+    /// 1. 使用 which/where 命令查找
+    /// 2. 尝试常见的 git 路径
+    /// 3. 如果都失败，返回 "git"（依赖 PATH）
+    ///
+    /// # 返回
+    ///
+    /// 返回 git 命令的路径（可能是绝对路径或 "git"）
+    fn find_git_command() -> String {
+        // 首先尝试使用 which/where 命令查找
+        #[cfg(target_os = "windows")]
+        let which_cmd = "where";
+        #[cfg(not(target_os = "windows"))]
+        let which_cmd = "which";
+
+        if let Ok(output) = std::process::Command::new(which_cmd).arg("git").output() {
+            if output.status.success() {
+                if let Ok(path) = String::from_utf8(output.stdout) {
+                    let path = path.trim();
+                    if !path.is_empty() {
+                        return path.to_string();
+                    }
+                }
+            }
+        }
+
+        // 尝试常见的 git 路径
+        let common_paths = if cfg!(target_os = "windows") {
+            vec![
+                "C:\\Program Files\\Git\\cmd\\git.exe",
+                "C:\\Program Files (x86)\\Git\\cmd\\git.exe",
+            ]
+        } else {
+            vec![
+                "/usr/bin/git",
+                "/usr/local/bin/git",
+                "/opt/homebrew/bin/git",
+            ]
+        };
+
+        for path in common_paths {
+            if std::path::Path::new(path).exists() {
+                return path.to_string();
+            }
+        }
+
+        // 如果都失败，返回 "git"（依赖 PATH）
+        "git".to_string()
+    }
+
     /// 解析 Git 命令输出为行列表
     ///
     /// 将 Git 命令的输出按行分割，去除空白行和前后空格。
@@ -296,12 +348,16 @@ impl GitCommand {
         // 将 args 转换为拥有所有权的 Vec<String>
         let args_owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
+        // 获取 git 命令的绝对路径，避免依赖 PATH 环境变量
+        // 这在并行测试时很重要，因为某些测试可能会修改 PATH
+        let git_path = Self::find_git_command();
+
         // 使用超时机制执行命令
         let output =
             execute_with_timeout(TimeoutConfig::new(timeout), move || -> Result<Output> {
                 // 将 Vec<String> 转换为 &[&str]
                 let args_refs: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
-                let mut command = cmd("git", &args_refs);
+                let mut command = cmd(&git_path, &args_refs);
 
                 // 设置环境变量以避免 Git 等待终端输入
                 // GIT_TERMINAL_PROMPT=0: 禁用终端提示，避免 Git 等待用户输入
@@ -393,12 +449,16 @@ impl GitCommand {
         // 将 args 转换为拥有所有权的 Vec<String>
         let args_owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
+        // 获取 git 命令的绝对路径，避免依赖 PATH 环境变量
+        // 这在并行测试时很重要，因为某些测试可能会修改 PATH
+        let git_path = Self::find_git_command();
+
         // 使用超时机制执行命令
         let output =
             execute_with_timeout(TimeoutConfig::new(timeout), move || -> Result<Output> {
                 // 将 Vec<String> 转换为 &[&str]
                 let args_refs: Vec<&str> = args_owned.iter().map(|s| s.as_str()).collect();
-                let mut command = cmd("git", &args_refs)
+                let mut command = cmd(&git_path, &args_refs)
                     .stdout_null()
                     .stderr_capture()
                     .env("GIT_TERMINAL_PROMPT", "0")

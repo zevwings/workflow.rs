@@ -13,6 +13,7 @@ use std::collections::{HashMap, HashSet};
 use crate::common::performance::measure_test_time_with_threshold;
 use color_eyre::Result;
 use rstest::rstest;
+use serial_test::serial;
 use std::time::Duration;
 
 use crate::common::environments::CliTestEnv;
@@ -1403,8 +1404,10 @@ mod tests {
     ///
     /// ## 为什么被忽略
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
+    ///
+    /// 注意：此测试已添加 `#[serial]` 标记以确保串行执行，避免 Settings 初始化冲突
     #[rstest]
-    #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
+    #[serial]
     fn test_alias_manager_add_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
         // 测试 AliasManager::add() 方法 - 使用临时配置文件（覆盖 manager.rs:162-181）
         use workflow::base::fs::FileWriter;
@@ -1464,7 +1467,11 @@ aliases = {}
     ///
     /// ## 为什么被忽略
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
+    ///
+    /// 注意：此测试已添加 `#[serial]` 标记，但在与其他测试一起运行时仍可能失败
+    /// 因为 Settings 可能在之前的测试中已经初始化
     #[rstest]
+    #[serial]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_remove_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 使用临时配置文件（覆盖 manager.rs:198-222）
@@ -1573,6 +1580,7 @@ aliases = {}
     /// ## 为什么被忽略
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[rstest]
+    #[serial]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 使用临时配置文件（覆盖 manager.rs:54-98）
@@ -1629,6 +1637,7 @@ aliases = { test_expand_alias = "git status" }
     /// ## 为什么被忽略
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[rstest]
+    #[serial]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_nested_with_temp_config_return_ok(
         mut cli_env: CliTestEnv,
@@ -1689,6 +1698,7 @@ aliases = {
     /// ## 为什么被忽略
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[rstest]
+    #[serial]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_circular_with_temp_config_return_ok(
         mut cli_env: CliTestEnv,
@@ -1745,6 +1755,7 @@ aliases = {
     /// ## 为什么被忽略
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[rstest]
+    #[serial]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_args_with_temp_config_return_ok(
         mut cli_env: CliTestEnv,

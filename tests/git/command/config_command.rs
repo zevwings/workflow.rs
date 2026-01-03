@@ -51,7 +51,6 @@ fn test_get_config_returns_value() -> Result<()> {
 /// - 配置设置成功
 #[test]
 #[serial]
-#[ignore]
 fn test_set_config_sets_value() -> Result<()> {
     // Arrange: 使用隔离的Git配置环境
     let _guard = GitConfigGuard::new()?;
@@ -92,7 +91,6 @@ fn test_set_config_sets_value() -> Result<()> {
 /// - 配置删除成功
 #[test]
 #[serial]
-#[ignore]
 fn test_unset_config_removes_config() -> Result<()> {
     // Arrange: 使用隔离的Git配置环境
     let _guard = GitConfigGuard::new()?;
@@ -183,7 +181,6 @@ fn test_get_user_name_returns_name() -> Result<()> {
 /// - 用户信息设置成功
 #[test]
 #[serial]
-#[ignore]
 fn test_set_user_sets_email_and_name() -> Result<()> {
     // Arrange: 使用隔离的Git配置环境
     let _guard = GitConfigGuard::new()?;
@@ -231,7 +228,6 @@ fn test_set_user_sets_email_and_name() -> Result<()> {
 /// - 返回配置项列表（可能为空或包含配置）
 #[test]
 #[serial]
-#[ignore]
 fn test_list_config_returns_config_list() -> Result<()> {
     // Arrange: 使用隔离的Git配置环境
     let _guard = GitConfigGuard::new()?;

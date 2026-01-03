@@ -598,25 +598,6 @@ impl ShellConfigManager {
         Ok(final_content)
     }
 
-    /// 检查内容中是否包含 source 语句
-    fn has_source_in_content(content: &str, source_path: &str) -> Result<bool> {
-        // 检查相对路径模式
-        if content.contains(source_path) {
-            return Ok(true);
-        }
-
-        // 检查绝对路径（如果 source_path 是相对路径）
-        if source_path.contains("$HOME") {
-            let home = Paths::home_dir()?;
-            let abs_path = source_path.replace("$HOME", &home.to_string_lossy());
-            if content.contains(&abs_path) {
-                return Ok(true);
-            }
-        }
-
-        Ok(false)
-    }
-
     /// 检查内容中是否包含 source 语句（指定 shell 类型）
     ///
     /// 支持不同 shell 的 source 语句格式（PowerShell 使用 `.`，其他使用 `source`）。

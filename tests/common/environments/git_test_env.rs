@@ -804,8 +804,13 @@ mod tests {
         let result: Arc<Mutex<Option<Result<()>>>> = Arc::new(Mutex::new(None));
         let result_clone = result.clone();
 
+        // 在主线程中预先设置环境变量，确保子线程能够访问
+        // 注意：在 Rust 中，环境变量是进程级别的，子线程应该能够访问
+        // 但是为了确保测试的可靠性，我们在子线程中重新创建 GitTestEnv
         let handle = thread::spawn(move || {
             let test_result: Result<()> = (|| {
+                // 在子线程中创建 GitTestEnv，它会设置 GIT_CONFIG 环境变量
+                // 这确保了环境变量在子线程中正确设置
                 let env = GitTestEnv::new()?;
 
                 // 添加假的远程引用（带超时检测和 Windows 特定的 url.insteadOf 配置）
