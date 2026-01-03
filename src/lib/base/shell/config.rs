@@ -382,7 +382,7 @@ impl ShellConfigManager {
     pub fn has_source_for_shell(shell: &Shell, source_path: &str) -> Result<bool> {
         let config_path = Paths::config_file(shell)?;
         let content = Self::read_config_file(&config_path).unwrap_or_default();
-        Self::has_source_in_content(&content, source_path)
+        Self::has_source_in_content_for_shell(&content, shell, source_path)
     }
 
     // === 配置块管理 ===
