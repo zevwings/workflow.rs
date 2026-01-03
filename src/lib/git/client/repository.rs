@@ -126,6 +126,11 @@ impl GitRepository {
         let path = path.as_ref();
         let initial_branch = initial_branch.unwrap_or("main");
 
+        // 确保目录存在（在 Windows 上，如果目录不存在，git init 可能会失败）
+        std::fs::create_dir_all(path).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to create directory: {}", e)
+        })?;
+
         // 删除现有 .git 目录（如果存在）
         let git_dir = path.join(".git");
         if git_dir.exists() {
