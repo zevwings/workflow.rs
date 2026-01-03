@@ -354,6 +354,10 @@ impl GitConfigGuard {
                 self.config_path.display()
             )
         })?;
+        // 确保文件内容被写入磁盘，以便 git 命令能够立即读取
+        file.sync_all().wrap_err_with(|| {
+            format!("Failed to sync config file: {}", self.config_path.display())
+        })?;
 
         Ok(())
     }
