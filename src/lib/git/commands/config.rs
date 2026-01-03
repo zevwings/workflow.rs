@@ -205,10 +205,44 @@ impl GitConfigCommand {
 
     /// 获取本地配置值
     ///
-    /// 使用 `git config --get <key>` 命令（本地配置）
+    /// 使用 `git config --file <path>/.git/config --get <key>` 命令（本地配置）
+    /// 直接指定 `.git/config` 文件路径，确保从仓库的本地配置文件读取，
+    /// 即使 GIT_CONFIG 环境变量被设置也能正常工作。
     pub fn get_local(key: &str, cwd: Option<&Path>) -> Result<String> {
-        Self::get_config(key, false, cwd)?
-            .ok_or_else(|| color_eyre::eyre::eyre!("Config key '{}' not found", key))
+        // 确定仓库路径
+        let repo_path =
+            cwd.ok_or_else(|| color_eyre::eyre::eyre!("cwd is required for get_local"))?;
+
+        // 构建 .git/config 文件路径
+        let config_path = repo_path.join(".git").join("config");
+
+        // 使用 --file 参数直接指定配置文件路径
+        let config_path_str = config_path.to_string_lossy().to_string();
+        let args = vec!["config", "--file", &config_path_str, "--get", key];
+
+        match GitCommand::run(&args, cwd) {
+            Ok(output) => {
+                let value = output.trim().to_string();
+                if value.is_empty() {
+                    Err(color_eyre::eyre::eyre!("Config key '{}' not found", key))
+                } else {
+                    Ok(value)
+                }
+            }
+            Err(e) => {
+                // 如果配置不存在，Git 会返回错误（退出码 1），这是正常的
+                let error_str = format!("{}", e);
+                if error_str.contains("not found")
+                    || error_str.contains("no such key")
+                    || error_str.contains("exited with code 1")
+                {
+                    Err(color_eyre::eyre::eyre!("Config key '{}' not found", key))
+                } else {
+                    Err(color_eyre::eyre::eyre!("{}", e))
+                        .wrap_err_with(|| format!("Failed to get local config: {}", key))
+                }
+            }
+        }
     }
 
     /// 设置本地配置值

@@ -1427,6 +1427,13 @@ aliases = {}
         let home_path = env.path().to_string_lossy().to_string();
         env.env_guard().set("HOME", &home_path);
 
+        // Windows 上需要设置 USERPROFILE 环境变量
+        // USERPROFILE 用于 Paths::home_dir()，确保使用隔离的测试环境
+        #[cfg(target_os = "windows")]
+        {
+            env.env_guard().set("USERPROFILE", &home_path);
+        }
+
         // 添加别名
         let result = workflow::base::alias::AliasManager::add("test_add_alias", "echo hello");
         // EnvGuard 会在 env 离开作用域时自动恢复 HOME
