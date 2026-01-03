@@ -222,6 +222,19 @@ jobs:
         if: runner.os == 'Linux'
         run: bash scripts/dev/shell/deps/install-basic.sh
 
+      - name: 🔍 Verify Git is available (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (!(Get-Command git -ErrorAction SilentlyContinue)) {
+            Write-Host "❌ Error: Git is required but not found on Windows runner"
+            Write-Host "GitHub Actions Windows runners should have Git pre-installed."
+            Write-Host "If this error occurs, please report it as an issue."
+            exit 1
+          }
+          git --version
+          Write-Host "✅ Git is available"
+
       - name: 🐍 Setup Python 3.13
         uses: actions/setup-python@v5
         with:
