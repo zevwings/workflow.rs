@@ -143,8 +143,11 @@ impl GitRepoCommand {
             args.push(branch);
         }
         GitCommand::execute(&args, cwd)
-            .map_err(GitCommand::to_eyre_error)
-            .wrap_err("Failed to initialize repository")
+            .map_err(|e| {
+                // 将 GitError 转换为详细的错误消息，确保包含 Git 命令的 stderr
+                let error_msg = format!("{}", e);
+                color_eyre::eyre::eyre!("Failed to initialize repository: {}", error_msg)
+            })
     }
 
     /// 设置远程仓库 URL
