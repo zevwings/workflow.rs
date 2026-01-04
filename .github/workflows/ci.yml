@@ -244,6 +244,9 @@ jobs:
         timeout-minutes: ${{ matrix.test_timeout }}
         id: test_run
         shell: bash
+        env:
+          # 启用详细的错误信息和堆栈跟踪以帮助调试
+          RUST_BACKTRACE: 1
         run: |
           echo "🧪 Running ${{ matrix.test_type }} tests on ${{ matrix.platform }}..."
           # 记录测试开始时间（Unix 时间戳）
@@ -269,6 +272,13 @@ jobs:
           else
             echo "slow_tests=false" >> $GITHUB_OUTPUT
           fi
+          
+          # 如果测试失败，输出失败测试的相关信息（最后200行，包含错误详情）
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo "❌ Tests failed. Showing last 200 lines of output with errors:"
+            tail -n 200 test-output.log | grep -E "(failures:|test.*FAILED|Error:|panic|thread.*panicked)" -A 10 -B 5 || tail -n 200 test-output.log
+          fi
+          
           exit $TEST_EXIT_CODE
 
       - name: ⚠️  Report slow tests
