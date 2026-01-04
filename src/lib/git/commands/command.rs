@@ -142,6 +142,25 @@ impl GitCommand {
     /// 默认分支名称（按优先级排序）
     pub const DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
 
+    /// 移除 Windows 路径的长路径前缀（\\?\）
+    ///
+    /// Git 命令和 cmd crate 的 dir 方法不支持 Windows 的扩展路径前缀（\\?\），
+    /// 因此在传递给命令之前需要移除该前缀。
+    #[cfg(target_os = "windows")]
+    fn remove_verbatim_prefix_from_path(path: &Path) -> std::path::PathBuf {
+        let path_str = path.to_string_lossy();
+        if path_str.starts_with("\\\\?\\") {
+            std::path::PathBuf::from(&path_str[4..])
+        } else {
+            path.to_path_buf()
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn remove_verbatim_prefix_from_path(path: &Path) -> std::path::PathBuf {
+        path.to_path_buf()
+    }
+
     /// 将 GitError 转换为 color_eyre::eyre::Error
     ///
     /// 这是一个通用的错误转换方法，用于将 `GitError` 转换为 `color_eyre::eyre::Error`。
@@ -371,7 +390,9 @@ impl GitCommand {
                 }
 
                 if let Some(cwd) = cwd_clone.as_ref() {
-                    command = command.dir(cwd);
+                    // 在 Windows 上，移除长路径前缀（\\?\），因为 cmd crate 的 dir 方法不支持该前缀
+                    let normalized_cwd = Self::remove_verbatim_prefix_from_path(cwd);
+                    command = command.dir(&normalized_cwd);
                 }
 
                 command
@@ -470,7 +491,9 @@ impl GitCommand {
                 }
 
                 if let Some(cwd) = cwd_clone.as_ref() {
-                    command = command.dir(cwd);
+                    // 在 Windows 上，移除长路径前缀（\\?\），因为 cmd crate 的 dir 方法不支持该前缀
+                    let normalized_cwd = Self::remove_verbatim_prefix_from_path(cwd);
+                    command = command.dir(&normalized_cwd);
                 }
 
                 command
@@ -554,7 +577,9 @@ impl GitCommand {
             }
 
             if let Some(cwd) = cwd_clone.as_ref() {
-                command = command.dir(cwd);
+                // 在 Windows 上，移除长路径前缀（\\?\），因为 cmd crate 的 dir 方法不支持该前缀
+                let normalized_cwd = Self::remove_verbatim_prefix_from_path(cwd);
+                command = command.dir(&normalized_cwd);
             }
 
             Ok(command.run().map(|output| output.status.success()).unwrap_or(false))
