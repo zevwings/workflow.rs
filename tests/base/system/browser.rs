@@ -2,6 +2,7 @@
 //!
 //! 测试浏览器操作工具的核心功能，包括 Browser 结构体。
 
+#[cfg(not(target_os = "windows"))]
 use workflow::base::system::Browser;
 
 // ==================== Browser Open Tests ====================

@@ -65,3 +65,15 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    // install 二进制文件需要管理员权限，不适合在测试环境中运行
+    // 添加一个被忽略的测试，防止 Cargo 尝试运行二进制文件本身作为测试
+    #[test]
+    #[ignore]
+    fn test_install_binary_requires_admin() {
+        // 此测试被忽略，因为 install 二进制文件需要管理员权限
+        // 实际的安装功能测试应该在集成测试中进行
+    }
+}

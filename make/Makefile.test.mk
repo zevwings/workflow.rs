@@ -16,19 +16,22 @@ define HELP_TEST
 endef
 
 # 运行测试（包括单元测试、集成测试和文档测试）
+# 排除二进制文件测试（install 需要管理员权限）
 test:
 	@echo "运行测试..."
-	cargo test
+	cargo test --lib --test module_test --test e2e_test --test completeness && cargo test --doc
 
 # 运行所有测试（包括被忽略的）
+# 排除二进制文件测试（install 需要管理员权限）
 test-all:
 	@echo "运行所有测试（包括被忽略的）..."
-	cargo test -- --include-ignored
+	cargo test --lib --test module_test --test e2e_test --test completeness -- --include-ignored && cargo test --doc -- --include-ignored
 
 # 在 release 模式下运行测试（覆盖 release 模式下的代码）
+# 排除二进制文件测试（install 需要管理员权限）
 test-release:
 	@echo "在 release 模式下运行测试..."
-	cargo test --release
+	cargo test --lib --test module_test --test e2e_test --test completeness --release && cargo test --doc --release
 
 # 生成覆盖率报告（HTML格式）
 coverage:

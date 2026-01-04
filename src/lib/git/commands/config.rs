@@ -12,6 +12,24 @@ use std::path::Path;
 pub struct GitConfigCommand;
 
 impl GitConfigCommand {
+    /// 移除 Windows 路径的长路径前缀（\\?\）
+    ///
+    /// Git 命令不支持 Windows 的扩展路径前缀（\\?\），
+    /// 因此在传递给 Git 命令之前需要移除该前缀。
+    #[cfg(target_os = "windows")]
+    fn remove_verbatim_prefix(path_str: &str) -> String {
+        if path_str.starts_with("\\\\?\\") {
+            path_str[4..].to_string()
+        } else {
+            path_str.to_string()
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn remove_verbatim_prefix(path_str: &str) -> String {
+        path_str.to_string()
+    }
+
     /// 获取配置值
     ///
     /// 使用 `git config --get <key>` 命令
@@ -219,7 +237,7 @@ impl GitConfigCommand {
         // 在 Windows 上规范化路径，将短路径格式（8.3格式）转换为长路径格式
         // 这样可以避免 "The filename, directory name, or volume label syntax is incorrect" 错误
         let config_path_str = if cfg!(target_os = "windows") && config_path.exists() {
-            config_path
+            let canonical_path = config_path
                 .canonicalize()
                 .map_err(|e| {
                     color_eyre::eyre::eyre!(
@@ -227,9 +245,9 @@ impl GitConfigCommand {
                         config_path.display(),
                         e
                     )
-                })?
-                .to_string_lossy()
-                .to_string()
+                })?;
+            // 移除 Windows 长路径前缀（\\?\），因为 Git 命令不支持该前缀
+            Self::remove_verbatim_prefix(&canonical_path.to_string_lossy())
         } else {
             config_path.to_string_lossy().to_string()
         };
@@ -280,7 +298,7 @@ impl GitConfigCommand {
             // 规范化 .git 目录路径（通常已存在）
             let git_dir = repo_path.join(".git");
             if git_dir.exists() {
-                git_dir
+                let canonical_git_dir = git_dir
                     .canonicalize()
                     .map_err(|e| {
                         color_eyre::eyre::eyre!(
@@ -288,10 +306,10 @@ impl GitConfigCommand {
                             git_dir.display(),
                             e
                         )
-                    })?
-                    .join("config")
-                    .to_string_lossy()
-                    .to_string()
+                    })?;
+                let canonical_config_path = canonical_git_dir.join("config");
+                // 移除 Windows 长路径前缀（\\?\），因为 Git 命令不支持该前缀
+                Self::remove_verbatim_prefix(&canonical_config_path.to_string_lossy())
             } else {
                 // 如果 .git 目录不存在，使用原始路径（这种情况不应该发生，但作为后备）
                 config_path.to_string_lossy().to_string()
