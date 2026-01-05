@@ -147,6 +147,7 @@ impl GitCommand {
     /// 在 Windows 上，路径规范化包括：
     /// 1. 移除 Windows 扩展路径前缀（\\?\），因为 Git 命令和 cmd crate 不支持该前缀
     /// 2. 确保路径是绝对路径（如果不是，转换为绝对路径）
+    /// 3. 如果路径存在，使用 canonicalize() 规范化路径格式
     ///
     /// # 参数
     ///
@@ -171,13 +172,28 @@ impl GitCommand {
         let mut normalized = PathBuf::from(path_without_prefix);
 
         // 如果路径是相对路径，尝试转换为绝对路径
-        // 注意：对于 git init 命令，路径可能不存在，所以不能使用 canonicalize()
         if !normalized.is_absolute() {
             // 尝试基于当前工作目录转换为绝对路径
             if let Ok(current_dir) = std::env::current_dir() {
                 normalized = current_dir.join(&normalized);
             }
             // 如果无法获取当前目录，返回移除前缀后的路径（这种情况很少见）
+        }
+
+        // 如果路径存在，使用 canonicalize() 规范化路径格式
+        // 这可以解决路径格式问题，如短路径名、符号链接等
+        // 注意：canonicalize() 可能会重新引入 \\?\ 前缀，所以需要再次移除
+        if normalized.exists() {
+            if let Ok(canonical) = normalized.canonicalize() {
+                let canonical_str = canonical.to_string_lossy();
+                // 移除 canonicalize() 可能引入的 \\?\ 前缀
+                if canonical_str.starts_with("\\\\?\\") {
+                    normalized = PathBuf::from(&canonical_str[4..]);
+                } else {
+                    normalized = canonical;
+                }
+            }
+            // 如果 canonicalize() 失败，继续使用原始路径
         }
 
         normalized
