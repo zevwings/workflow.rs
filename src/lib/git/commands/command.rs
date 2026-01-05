@@ -197,14 +197,20 @@ impl GitCommand {
             // 如果 canonicalize() 失败，继续使用原始路径
         }
 
-        // 最终验证：确保路径字符串不包含 null 字符或其他无效字符
-        // Windows 路径不应该包含 null 字符
+        // 最终验证和清理：确保路径字符串格式正确
         let final_path_str = normalized.to_string_lossy();
+
+        // 检查并清理无效字符
         if final_path_str.contains('\0') {
             // 如果包含 null 字符，尝试清理（这种情况很少见）
             let cleaned: String = final_path_str.chars().filter(|&c| c != '\0').collect();
             normalized = PathBuf::from(cleaned);
         }
+
+        // 规范化路径分隔符：统一使用反斜杠（Windows 标准）
+        // 这可以避免混合使用正斜杠和反斜杠导致的问题
+        let normalized_str = normalized.to_string_lossy().replace('/', "\\");
+        normalized = PathBuf::from(normalized_str);
 
         normalized
     }
@@ -472,8 +478,18 @@ impl GitCommand {
                                 normalized_cwd
                             ));
                         }
+
+                        // 验证路径存在（如果不存在，cmd crate 的 dir 方法可能会失败）
+                        if !normalized_cwd.exists() {
+                            return Err(color_eyre::eyre::eyre!(
+                                "Invalid path: directory does not exist. Original: {:?}, Normalized: {:?}",
+                                cwd,
+                                normalized_cwd
+                            ));
+                        }
                     }
 
+                    // 使用规范化后的路径设置工作目录
                     command = command.dir(&normalized_cwd);
                 }
 
@@ -599,8 +615,18 @@ impl GitCommand {
                                 normalized_cwd
                             ));
                         }
+
+                        // 验证路径存在（如果不存在，cmd crate 的 dir 方法可能会失败）
+                        if !normalized_cwd.exists() {
+                            return Err(color_eyre::eyre::eyre!(
+                                "Invalid path: directory does not exist. Original: {:?}, Normalized: {:?}",
+                                cwd,
+                                normalized_cwd
+                            ));
+                        }
                     }
 
+                    // 使用规范化后的路径设置工作目录
                     command = command.dir(&normalized_cwd);
                 }
 
@@ -687,6 +713,17 @@ impl GitCommand {
             if let Some(cwd) = cwd_clone.as_ref() {
                 // 在 Windows 上，移除长路径前缀（\\?\），因为 cmd crate 的 dir 方法不支持该前缀
                 let normalized_cwd = Self::remove_verbatim_prefix_from_path(cwd);
+
+                // 在 Windows 上，验证路径格式
+                #[cfg(target_os = "windows")]
+                {
+                    // 验证路径是绝对路径且存在
+                    if !normalized_cwd.is_absolute() || !normalized_cwd.exists() {
+                        // 对于 check_with_timeout，如果路径无效，直接返回 false
+                        return Ok(false);
+                    }
+                }
+
                 command = command.dir(&normalized_cwd);
             }
 
