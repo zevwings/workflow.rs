@@ -1413,17 +1413,8 @@ mod tests {
         use workflow::base::fs::FileWriter;
 
         let env = &mut cli_env;
-        let config_dir = env.path().join(".workflow").join("config");
-        std::fs::create_dir_all(&config_dir)?;
-        let config_path = config_dir.join("workflow.toml");
 
-        // 创建初始配置文件
-        let initial_config = r#"
-aliases = {}
-"#;
-        FileWriter::new(&config_path).write_str(initial_config)?;
-
-        // 设置临时 HOME 目录
+        // 先设置临时 HOME 目录（在创建配置文件之前）
         let home_path = env.path().to_string_lossy().to_string();
         env.env_guard().set("HOME", &home_path);
 
@@ -1433,6 +1424,24 @@ aliases = {}
         {
             env.env_guard().set("USERPROFILE", &home_path);
         }
+
+        // 禁用 iCloud，确保使用本地路径（避免 macOS 上使用 iCloud 路径导致路径不一致）
+        env.env_guard().set("WORKFLOW_DISABLE_ICLOUD", "1");
+
+        // 获取实际的配置文件路径（使用 Paths::workflow_config() 确保路径一致）
+        let config_path = workflow::base::settings::paths::Paths::workflow_config()
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to get config path: {}", e))?;
+
+        // 确保配置目录存在
+        if let Some(parent) = config_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        // 创建初始配置文件
+        let initial_config = r#"
+aliases = {}
+"#;
+        FileWriter::new(&config_path).write_str(initial_config)?;
 
         // 添加别名
         let result = workflow::base::alias::AliasManager::add("test_add_alias", "echo hello");
