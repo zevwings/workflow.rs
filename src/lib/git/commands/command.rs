@@ -212,7 +212,98 @@ impl GitCommand {
         let normalized_str = normalized.to_string_lossy().replace('/', "\\");
         normalized = PathBuf::from(normalized_str);
 
+        // 检查路径中是否包含以点开头的目录名（Windows 上可能导致问题）
+        // 例如：C:\Users\...\.tmpwMq0id\...
+        // 如果路径包含以点开头的目录名，尝试使用 canonicalize() 来获取实际路径
+        // 但要注意 canonicalize() 可能会重新引入 \\?\ 前缀
+        let path_components: Vec<_> = normalized.components().collect();
+        let has_dot_prefix = path_components.iter().any(|comp| {
+            if let std::path::Component::Normal(name) = comp {
+                if let Some(name_str) = name.to_str() {
+                    return name_str.starts_with('.');
+                }
+            }
+            false
+        });
+
+        // 如果路径包含以点开头的目录名，且路径存在，尝试使用 canonicalize() 获取实际路径
+        // 这可以解决 Windows 上以点开头的目录名导致的路径问题
+        if has_dot_prefix && normalized.exists() {
+            if let Ok(canonical) = normalized.canonicalize() {
+                let canonical_str = canonical.to_string_lossy();
+                // 移除 canonicalize() 可能重新引入的 \\?\ 前缀
+                if canonical_str.starts_with("\\\\?\\") {
+                    normalized = PathBuf::from(&canonical_str[4..]);
+                } else {
+                    normalized = canonical;
+                }
+                // 再次规范化路径分隔符
+                let normalized_str = normalized.to_string_lossy().replace('/', "\\");
+                normalized = PathBuf::from(normalized_str);
+            }
+        }
+
         normalized
+    }
+
+    /// 在 Windows 上安全地设置命令的工作目录
+    ///
+    /// 处理以点开头的目录名等 Windows 特定问题，确保路径可以安全地传递给 cmd crate 的 dir 方法。
+    ///
+    /// # 参数
+    ///
+    /// * `command` - 要设置工作目录的命令构建器
+    /// * `normalized_cwd` - 规范化后的工作目录路径
+    ///
+    /// # 返回
+    ///
+    /// 返回设置了工作目录的命令构建器
+    #[cfg(target_os = "windows")]
+    fn set_command_dir_safe(command: duct::Expression, normalized_cwd: &Path) -> duct::Expression {
+        use std::path::PathBuf;
+
+        // 检查路径是否包含以点开头的目录名（这可能导致 Windows 错误 123）
+        let path_components: Vec<_> = normalized_cwd.components().collect();
+        let has_dot_prefix = path_components.iter().any(|comp| {
+            if let std::path::Component::Normal(name) = comp {
+                if let Some(name_str) = name.to_str() {
+                    return name_str.starts_with('.') && name_str.len() > 1;
+                }
+            }
+            false
+        });
+
+        if has_dot_prefix {
+            // 如果路径包含以点开头的目录名，尝试最后一次 canonicalize
+            // 这可能会将 .tmpXXX 转换为实际的短路径名
+            if let Ok(canonical) = normalized_cwd.canonicalize() {
+                let canonical_str = canonical.to_string_lossy();
+                let final_path = if canonical_str.starts_with("\\\\?\\") {
+                    PathBuf::from(&canonical_str[4..])
+                } else {
+                    canonical
+                };
+
+                // 确保路径分隔符正确
+                let final_path_str = final_path.to_string_lossy().replace('/', "\\");
+                let final_path = PathBuf::from(final_path_str);
+
+                if final_path.exists() && final_path.is_absolute() {
+                    return command.dir(&final_path);
+                }
+            }
+        }
+
+        // 使用原始规范化路径
+        command.dir(normalized_cwd)
+    }
+
+    /// 在非 Windows 平台上设置命令的工作目录
+    ///
+    /// 在非 Windows 平台上，直接设置工作目录。
+    #[cfg(not(target_os = "windows"))]
+    fn set_command_dir_safe(command: duct::Expression, normalized_cwd: &Path) -> duct::Expression {
+        command.dir(normalized_cwd)
     }
 
     /// 规范化路径（非 Windows 平台）
@@ -489,8 +580,8 @@ impl GitCommand {
                         }
                     }
 
-                    // 使用规范化后的路径设置工作目录
-                    command = command.dir(&normalized_cwd);
+                    // 使用规范化后的路径设置工作目录（Windows 上会处理以点开头的目录名）
+                    command = Self::set_command_dir_safe(command, &normalized_cwd);
                 }
 
                 command
@@ -626,8 +717,8 @@ impl GitCommand {
                         }
                     }
 
-                    // 使用规范化后的路径设置工作目录
-                    command = command.dir(&normalized_cwd);
+                    // 使用规范化后的路径设置工作目录（Windows 上会处理以点开头的目录名）
+                    command = Self::set_command_dir_safe(command, &normalized_cwd);
                 }
 
                 command
@@ -724,7 +815,7 @@ impl GitCommand {
                     }
                 }
 
-                command = command.dir(&normalized_cwd);
+                command = Self::set_command_dir_safe(command, &normalized_cwd);
             }
 
             Ok(command.run().map(|output| output.status.success()).unwrap_or(false))
