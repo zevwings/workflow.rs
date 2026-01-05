@@ -237,15 +237,13 @@ impl GitConfigCommand {
         // 在 Windows 上规范化路径，将短路径格式（8.3格式）转换为长路径格式
         // 这样可以避免 "The filename, directory name, or volume label syntax is incorrect" 错误
         let config_path_str = if cfg!(target_os = "windows") && config_path.exists() {
-            let canonical_path = config_path
-                .canonicalize()
-                .map_err(|e| {
-                    color_eyre::eyre::eyre!(
-                        "Failed to canonicalize config path: {}: {}",
-                        config_path.display(),
-                        e
-                    )
-                })?;
+            let canonical_path = config_path.canonicalize().map_err(|e| {
+                color_eyre::eyre::eyre!(
+                    "Failed to canonicalize config path: {}: {}",
+                    config_path.display(),
+                    e
+                )
+            })?;
             // 移除 Windows 长路径前缀（\\?\），因为 Git 命令不支持该前缀
             Self::remove_verbatim_prefix(&canonical_path.to_string_lossy())
         } else {
@@ -298,15 +296,13 @@ impl GitConfigCommand {
             // 规范化 .git 目录路径（通常已存在）
             let git_dir = repo_path.join(".git");
             if git_dir.exists() {
-                let canonical_git_dir = git_dir
-                    .canonicalize()
-                    .map_err(|e| {
-                        color_eyre::eyre::eyre!(
-                            "Failed to canonicalize .git directory: {}: {}",
-                            git_dir.display(),
-                            e
-                        )
-                    })?;
+                let canonical_git_dir = git_dir.canonicalize().map_err(|e| {
+                    color_eyre::eyre::eyre!(
+                        "Failed to canonicalize .git directory: {}: {}",
+                        git_dir.display(),
+                        e
+                    )
+                })?;
                 let canonical_config_path = canonical_git_dir.join("config");
                 // 移除 Windows 长路径前缀（\\?\），因为 Git 命令不支持该前缀
                 Self::remove_verbatim_prefix(&canonical_config_path.to_string_lossy())

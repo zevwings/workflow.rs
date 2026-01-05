@@ -142,20 +142,50 @@ impl GitCommand {
     /// 默认分支名称（按优先级排序）
     pub const DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
 
-    /// 移除 Windows 路径的长路径前缀（\\?\）
+    /// 规范化 Windows 路径以便传递给 git 命令
     ///
-    /// Git 命令和 cmd crate 的 dir 方法不支持 Windows 的扩展路径前缀（\\?\），
-    /// 因此在传递给命令之前需要移除该前缀。
+    /// 在 Windows 上，路径规范化包括：
+    /// 1. 移除 Windows 扩展路径前缀（\\?\），因为 Git 命令和 cmd crate 不支持该前缀
+    /// 2. 确保路径是绝对路径（如果不是，转换为绝对路径）
+    ///
+    /// # 参数
+    ///
+    /// * `path` - 要规范化的路径
+    ///
+    /// # 返回
+    ///
+    /// 返回规范化后的路径，确保可以安全地传递给 git 命令和 cmd crate 的 dir 方法
     #[cfg(target_os = "windows")]
     fn remove_verbatim_prefix_from_path(path: &Path) -> std::path::PathBuf {
+        use std::path::PathBuf;
+
+        // 首先处理路径字符串，移除 \\?\ 前缀
         let path_str = path.to_string_lossy();
-        if path_str.starts_with("\\\\?\\") {
-            std::path::PathBuf::from(&path_str[4..])
+        let path_without_prefix = if path_str.starts_with("\\\\?\\") {
+            // 移除 \\?\ 前缀
+            &path_str[4..]
         } else {
-            path.to_path_buf()
+            &path_str[..]
+        };
+
+        let mut normalized = PathBuf::from(path_without_prefix);
+
+        // 如果路径是相对路径，尝试转换为绝对路径
+        // 注意：对于 git init 命令，路径可能不存在，所以不能使用 canonicalize()
+        if !normalized.is_absolute() {
+            // 尝试基于当前工作目录转换为绝对路径
+            if let Ok(current_dir) = std::env::current_dir() {
+                normalized = current_dir.join(&normalized);
+            }
+            // 如果无法获取当前目录，返回移除前缀后的路径（这种情况很少见）
         }
+
+        normalized
     }
 
+    /// 规范化路径（非 Windows 平台）
+    ///
+    /// 在非 Windows 平台上，路径规范化只是简单返回路径的副本。
     #[cfg(not(target_os = "windows"))]
     fn remove_verbatim_prefix_from_path(path: &Path) -> std::path::PathBuf {
         path.to_path_buf()
