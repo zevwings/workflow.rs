@@ -147,7 +147,8 @@ impl GitCommand {
     /// 在 Windows 上，路径规范化包括：
     /// 1. 移除 Windows 扩展路径前缀（\\?\），因为 Git 命令和 cmd crate 不支持该前缀
     /// 2. 确保路径是绝对路径（如果不是，转换为绝对路径）
-    /// 3. 如果路径存在，使用 canonicalize() 规范化路径格式
+    /// 3. 如果路径存在，使用 canonicalize() 规范化路径格式（解决短路径名、符号链接等问题）
+    /// 4. 验证路径格式，确保不包含无效字符
     ///
     /// # 参数
     ///
@@ -181,7 +182,7 @@ impl GitCommand {
         }
 
         // 如果路径存在，使用 canonicalize() 规范化路径格式
-        // 这可以解决路径格式问题，如短路径名、符号链接等
+        // 这可以解决路径格式问题，如短路径名（8.3格式）、符号链接等
         // 注意：canonicalize() 可能会重新引入 \\?\ 前缀，所以需要再次移除
         if normalized.exists() {
             if let Ok(canonical) = normalized.canonicalize() {
@@ -194,6 +195,15 @@ impl GitCommand {
                 }
             }
             // 如果 canonicalize() 失败，继续使用原始路径
+        }
+
+        // 最终验证：确保路径字符串不包含 null 字符或其他无效字符
+        // Windows 路径不应该包含 null 字符
+        let final_path_str = normalized.to_string_lossy();
+        if final_path_str.contains('\0') {
+            // 如果包含 null 字符，尝试清理（这种情况很少见）
+            let cleaned: String = final_path_str.chars().filter(|&c| c != '\0').collect();
+            normalized = PathBuf::from(cleaned);
         }
 
         normalized
@@ -438,6 +448,32 @@ impl GitCommand {
                 if let Some(cwd) = cwd_clone.as_ref() {
                     // 在 Windows 上，移除长路径前缀（\\?\），因为 cmd crate 的 dir 方法不支持该前缀
                     let normalized_cwd = Self::remove_verbatim_prefix_from_path(cwd);
+
+                    // 在 Windows 上，验证路径格式并添加调试信息
+                    #[cfg(target_os = "windows")]
+                    {
+                        // 验证路径格式：确保路径是有效的 Windows 路径
+                        let path_str = normalized_cwd.to_string_lossy();
+
+                        // 检查路径是否包含无效字符（null 字符）
+                        if path_str.contains('\0') {
+                            return Err(color_eyre::eyre::eyre!(
+                                "Invalid path: contains null character. Original: {:?}, Normalized: {:?}",
+                                cwd,
+                                normalized_cwd
+                            ));
+                        }
+
+                        // 验证路径是绝对路径
+                        if !normalized_cwd.is_absolute() {
+                            return Err(color_eyre::eyre::eyre!(
+                                "Invalid path: not an absolute path. Original: {:?}, Normalized: {:?}",
+                                cwd,
+                                normalized_cwd
+                            ));
+                        }
+                    }
+
                     command = command.dir(&normalized_cwd);
                 }
 
@@ -539,6 +575,32 @@ impl GitCommand {
                 if let Some(cwd) = cwd_clone.as_ref() {
                     // 在 Windows 上，移除长路径前缀（\\?\），因为 cmd crate 的 dir 方法不支持该前缀
                     let normalized_cwd = Self::remove_verbatim_prefix_from_path(cwd);
+
+                    // 在 Windows 上，验证路径格式并添加调试信息
+                    #[cfg(target_os = "windows")]
+                    {
+                        // 验证路径格式：确保路径是有效的 Windows 路径
+                        let path_str = normalized_cwd.to_string_lossy();
+
+                        // 检查路径是否包含无效字符（null 字符）
+                        if path_str.contains('\0') {
+                            return Err(color_eyre::eyre::eyre!(
+                                "Invalid path: contains null character. Original: {:?}, Normalized: {:?}",
+                                cwd,
+                                normalized_cwd
+                            ));
+                        }
+
+                        // 验证路径是绝对路径
+                        if !normalized_cwd.is_absolute() {
+                            return Err(color_eyre::eyre::eyre!(
+                                "Invalid path: not an absolute path. Original: {:?}, Normalized: {:?}",
+                                cwd,
+                                normalized_cwd
+                            ));
+                        }
+                    }
+
                     command = command.dir(&normalized_cwd);
                 }
 
