@@ -134,6 +134,115 @@ jobs:
       - name: 🧪 Run tests
         run: cargo test --verbose
 
+  # 验证所有平台构建成功
+  build-verify:
+    name: 🔨 Build Verify - ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    needs: [check-skip-ci, check-lint]
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true' && needs.check-lint.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macOS-Intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macOS-AppleSilicon
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: Linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: Linux-ARM64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: Linux-x86_64-static
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: Windows-x86_64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            platform: Windows-ARM64
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust for ${{ matrix.target }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 📦 Install musl target
+        if: contains(matrix.target, 'musl')
+        run: |
+          rustup target add ${{ matrix.target }}
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: 📦 Install cross-compilation toolchain (Linux ARM64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu python3
+
+      - name: 📦 Install system dependencies (Linux x86_64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: bash scripts/dev/shell/deps/install-build.sh
+
+      - name: 📦 Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          if ! command -v pkg-config >/dev/null 2>&1; then
+            brew install pkg-config
+          else
+            echo "✅ pkg-config is already installed"
+          fi
+
+      - name: 🔨 Build binaries
+        shell: bash
+        run: |
+          # 设置交叉编译环境变量（仅 Linux ARM64）
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            echo "🔧 Cross-compiling for Linux ARM64"
+          fi
+
+          # 对于 Linux x86_64，设置环境变量以支持 xcb 构建
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if ! python3 -c "import xcbgen" 2>/dev/null; then
+              XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_DIR" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
+              fi
+            fi
+            # 基本验证
+            python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
+            pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
+          fi
+
+          # 构建项目
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            # Linux x86_64 使用详细输出以便调试
+            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+          elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            # Linux ARM64 交叉编译
+            echo "🔨 Building for Linux ARM64..."
+            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+          else
+            # 其他目标（macOS, Windows, musl）
+            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+          fi
+
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
   # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
@@ -146,7 +255,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests]
+    needs: [check-skip-ci, check-lint, tests, build-verify]
     if: always()
     steps:
       - name: ✅ Check lint and test status
@@ -159,11 +268,13 @@ jobs:
           SKIP_CI_SHOULD_SKIP="${{ needs.check-skip-ci.outputs.should_skip }}"
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
+          BUILD_RESULT="${{ needs.build-verify.result }}"
 
           echo "📊 Checking job status:"
           echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
           echo "  check-lint: $LINT_RESULT"
           echo "  tests: $TEST_RESULT"
+          echo "  build-verify: $BUILD_RESULT"
 
           # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
@@ -205,11 +316,24 @@ jobs:
             fi
           fi
 
-          # 如果 check-lint 和 tests 都成功或被跳过，则通过
+          # 检查 build-verify 状态
+          if [ -n "$BUILD_RESULT" ]; then
+            if [ "$BUILD_RESULT" == "failure" ] || [ "$BUILD_RESULT" == "cancelled" ]; then
+              echo "❌ Build verify failed: $BUILD_RESULT"
+              exit 1
+            elif [ "$BUILD_RESULT" != "success" ] && [ "$BUILD_RESULT" != "skipped" ]; then
+              echo "❌ Build verify has unexpected status: $BUILD_RESULT"
+              exit 1
+            fi
+          fi
+
+          # 如果所有检查都成功或被跳过，则通过
           if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
-              echo "✅ All checks passed or were skipped"
-              exit 0
+              if [ -z "$BUILD_RESULT" ] || [ "$BUILD_RESULT" == "success" ] || [ "$BUILD_RESULT" == "skipped" ]; then
+                echo "✅ All checks passed or were skipped"
+                exit 0
+              fi
             fi
           fi
 
