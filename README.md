@@ -57,10 +57,10 @@ brew install workflow
 
 ```bash
 # 安装最新版本
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 
 # 安装指定版本
-VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 ```
 
 **功能特性**：
@@ -89,7 +89,7 @@ VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevw
 
 ```bash
 # 使用卸载脚本
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.sh)"
 
 # 或使用已安装的命令
 workflow uninstall

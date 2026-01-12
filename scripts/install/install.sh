@@ -2,10 +2,10 @@
 # Workflow CLI 安装脚本
 #
 # 使用方法:
-#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 #
 # 指定版本:
-#   VERSION=v1.4.8 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+#   VERSION=v1.4.8 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 
 set -euo pipefail
 

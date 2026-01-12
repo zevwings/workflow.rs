@@ -1,10 +1,10 @@
 # Workflow CLI 卸载脚本 (Windows PowerShell)
 #
 # 使用方法:
-#   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
+#   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
 #
 # 或一行命令:
-#   powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
+#   powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
 
 [CmdletBinding()]
 param()

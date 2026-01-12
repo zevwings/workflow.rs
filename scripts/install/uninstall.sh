@@ -2,7 +2,7 @@
 # Workflow CLI 卸载脚本
 #
 # 使用方法:
-#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.sh)"
+#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.sh)"
 
 set -euo pipefail
 

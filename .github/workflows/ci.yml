@@ -32,42 +32,30 @@ jobs:
         with:
           fetch-depth: 0  # 需要完整历史来检查提交者
 
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/deps/install-basic.sh
+
       - name: 🔍 Check if version bump branch
         id: check
+        env:
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_PR_CREATOR: ${{ github.event.pull_request.user.login }}
+          WORKFLOW_USER_NAME: ${{ env.WORKFLOW_USER_NAME }}
         run: |
-          # 获取分支名称（对于 PR 事件使用 head_ref，对于其他事件使用 ref）
-          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
-
-          echo "🔍 Checking branch: $BRANCH_NAME"
-          echo "   Event: ${{ github.event_name }}"
-          echo "   Head ref: ${{ github.head_ref }}"
-          echo "   Ref name: ${{ github.ref_name }}"
-
-          # 只检查是否是版本更新分支（bump-version-*）
-          if [[ "$BRANCH_NAME" =~ ^bump-version- ]]; then
-            echo "✅ Detected bump-version-* branch: $BRANCH_NAME"
-
-            # 对于 PR 事件，验证分支是否由 CI 创建
-            if [ "${{ github.event_name }}" == "pull_request" ]; then
-              PR_CREATOR="${{ github.event.pull_request.user.login }}"
-              WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
-
-              echo "   PR creator: ${PR_CREATOR:-'unknown'}"
-              echo "   Expected user: $WORKFLOW_USER_NAME"
-
-              if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
-                echo "❌ Error: bump-version-* branches can only be created by authorized user"
-                echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
-                exit 1
-              fi
-            fi
-
-            echo "✅ Setting should_skip=true (bump-version-* branch detected)"
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️  Not a bump-version-* branch, CI will run normally"
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-          fi
+          # 使用 Python dev 工具
+          python3 scripts/dev/py/dev.py ci check-skip \
+            --branch "${{ github.head_ref || github.ref_name }}" \
+            --pr-creator "${{ github.event.pull_request.user.login }}" \
+            --expected-user "${{ env.WORKFLOW_USER_NAME }}" \
+            --ci
   # 代码质量检查（Lint）
   check-lint:
     name: 🔍 Code Quality Check
@@ -99,40 +87,8 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/deps/install-basic.sh
 
       - name: ✨ Check code formatting
         run: cargo fmt --check
@@ -172,40 +128,8 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
-        run: |
-          sudo apt-get update
-          # 安装 XCB 开发库（clipboard 依赖）
-          # xcb crate 需要 xcb-proto 来生成代码模块
-          # xcb-proto 需要 Python 来运行代码生成脚本
-          sudo apt-get install -y \
-            python3 \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            xcb-proto \
-            libxcb-keysyms1-dev \
-            libxcb-image0-dev \
-            libxcb-util-dev \
-            libxcb-icccm4-dev \
-            libxcb-sync-dev \
-            libxcb-xinerama0-dev \
-            libxcb-randr0-dev \
-            libxcb-xinput-dev \
-            libxcb-dri3-dev \
-            libxcb-present-dev \
-            libxcb-xv0-dev \
-            libxcb-glx0-dev \
-            libxcb-shm0-dev \
-            libxcb-composite0-dev \
-            libxcb-damage0-dev \
-            libxcb-record0-dev \
-            libxcb-screensaver0-dev \
-            libxcb-res0-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev
-          # 基本验证
-          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+        if: runner.os == 'Linux'
+        run: bash scripts/dev/shell/deps/install-basic.sh
 
       - name: 🧪 Run tests
         run: cargo test --verbose
