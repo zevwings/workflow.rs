@@ -19,7 +19,7 @@ struct TestBranchCli {
 #[test]
 fn test_branch_create_command_structure() {
     // 测试 Create 命令结构（带所有参数）
-    let cli = TestBranchCli::try_parse_from(&[
+    let cli = TestBranchCli::try_parse_from([
         "test-branch",
         "create",
         "PROJ-123",
@@ -45,7 +45,7 @@ fn test_branch_create_command_structure() {
 #[test]
 fn test_branch_create_command_minimal() {
     // 测试 Create 命令最小参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create"]).unwrap();
+    let cli = TestBranchCli::try_parse_from(["test-branch", "create"]).unwrap();
 
     match cli.command {
         BranchSubcommand::Create {
@@ -64,7 +64,7 @@ fn test_branch_create_command_minimal() {
 #[test]
 fn test_branch_create_command_with_jira_ticket_only() {
     // 测试 Create 命令只带 JIRA ticket
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "PROJ-456"]).unwrap();
+    let cli = TestBranchCli::try_parse_from(["test-branch", "create", "PROJ-456"]).unwrap();
 
     match cli.command {
         BranchSubcommand::Create {
@@ -83,7 +83,7 @@ fn test_branch_create_command_with_jira_ticket_only() {
 #[test]
 fn test_branch_create_command_with_from_default() {
     // 测试 Create 命令带 --from-default 参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--from-default"]).unwrap();
+    let cli = TestBranchCli::try_parse_from(["test-branch", "create", "--from-default"]).unwrap();
 
     match cli.command {
         BranchSubcommand::Create {
@@ -102,7 +102,7 @@ fn test_branch_create_command_with_from_default() {
 #[test]
 fn test_branch_create_command_with_dry_run() {
     // 测试 Create 命令带 --dry-run 参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--dry-run"]).unwrap();
+    let cli = TestBranchCli::try_parse_from(["test-branch", "create", "--dry-run"]).unwrap();
 
     match cli.command {
         BranchSubcommand::Create {

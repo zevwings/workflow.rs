@@ -20,7 +20,10 @@ out/
 .rustrover/
 
 # IDE - Cursor
-.cursor/
+# Override global .cursor/ ignore for rules directory
+
+# ID - Claude
+.claude/
 
 # macOS
 .DS_Store
@@ -85,17 +88,11 @@ __pycache__/
 *.so
 .Python
 
-report/
-requirements/
-
-docs/**
-!docs/README.md
-!docs/architecture/
-!docs/architecture/**
-!docs/guidelines/
-!docs/guidelines/**
-!docs/todo/
-!docs/todo/**
-!docs/migration/
-!docs/migration/**
 handlebars
+
+# Project
+
+docs/analysis/**
+!docs/analysis/.gitkeep
+docs/report/**
+!docs/report/.gitkeep

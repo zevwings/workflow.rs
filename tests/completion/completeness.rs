@@ -228,7 +228,7 @@ fn test_completion_generation() {
             Some(shell_type.to_string()),
             Some(output_dir.to_string_lossy().to_string()),
         )
-        .expect(&format!("Failed to create generator for {}", shell_type));
+        .unwrap_or_else(|_| panic!("Failed to create generator for {}", shell_type));
 
         let result = generator.generate_all();
         assert!(
@@ -240,7 +240,7 @@ fn test_completion_generation() {
 
         // 验证文件已生成
         let filename = get_completion_filename(shell_type, "workflow")
-            .expect(&format!("Failed to get filename for {}", shell_type));
+            .unwrap_or_else(|_| panic!("Failed to get filename for {}", shell_type));
         let file_path = output_dir.join(&filename);
 
         assert!(
@@ -251,10 +251,8 @@ fn test_completion_generation() {
         );
 
         // 验证文件不为空
-        let content = fs::read_to_string(&file_path).expect(&format!(
-            "Failed to read completion file for {}",
-            shell_type
-        ));
+        let content = fs::read_to_string(&file_path)
+            .unwrap_or_else(|_| panic!("Failed to read completion file for {}", shell_type));
 
         assert!(
             !content.is_empty(),
@@ -499,7 +497,7 @@ fn test_completion_filename_generation() {
 
     for (shell_type, expected_filename) in shell_types.iter().zip(expected_filenames.iter()) {
         let filename = get_completion_filename(shell_type, "workflow")
-            .expect(&format!("Failed to get filename for {}", shell_type));
+            .unwrap_or_else(|_| panic!("Failed to get filename for {}", shell_type));
         assert_eq!(
             &filename, expected_filename,
             "Wrong filename for {}: expected {}, got {}",
@@ -572,7 +570,7 @@ fn test_all_shell_types_completion_generation() {
             Some(shell_type.to_string()),
             Some(output_dir.to_string_lossy().to_string()),
         )
-        .expect(&format!("Failed to create generator for {}", shell_type));
+        .unwrap_or_else(|_| panic!("Failed to create generator for {}", shell_type));
 
         // 生成补全脚本
         let result = generator.generate_all();
@@ -585,7 +583,7 @@ fn test_all_shell_types_completion_generation() {
 
         // 验证文件命名
         let filename = get_completion_filename(shell_type, "workflow")
-            .expect(&format!("Failed to get filename for {}", shell_type));
+            .unwrap_or_else(|_| panic!("Failed to get filename for {}", shell_type));
         assert_eq!(
             &filename, expected_filename,
             "Wrong filename for {}: expected {}, got {}",
@@ -602,10 +600,8 @@ fn test_all_shell_types_completion_generation() {
         );
 
         // 验证文件内容
-        let content = fs::read_to_string(&file_path).expect(&format!(
-            "Failed to read completion file for {}",
-            shell_type
-        ));
+        let content = fs::read_to_string(&file_path)
+            .unwrap_or_else(|_| panic!("Failed to read completion file for {}", shell_type));
 
         assert!(
             !content.is_empty(),
@@ -659,7 +655,7 @@ fn test_all_commands_with_subcommands() {
         let subcommand = cmd
             .get_subcommands()
             .find(|sc| sc.get_name() == *cmd_name)
-            .expect(&format!("{} command should exist", cmd_name));
+            .unwrap_or_else(|| panic!("{} command should exist", cmd_name));
 
         let actual_subcommands: Vec<String> =
             subcommand.get_subcommands().map(|sc| sc.get_name().to_string()).collect();

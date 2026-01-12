@@ -18,7 +18,7 @@ struct TestCheckCli {
 #[test]
 fn test_check_command_structure() {
     // 测试 Check 命令结构
-    let cli = TestCheckCli::try_parse_from(&["test-workflow", "check"]).unwrap();
+    let cli = TestCheckCli::try_parse_from(["test-workflow", "check"]).unwrap();
 
     match cli.command {
         Some(Commands::Check) => {
@@ -33,13 +33,13 @@ fn test_check_command_structure() {
 #[test]
 fn test_check_command_parsing() {
     // 测试 Check 命令可以正确解析
-    let cli = TestCheckCli::try_parse_from(&["test-workflow", "check"]).unwrap();
+    let cli = TestCheckCli::try_parse_from(["test-workflow", "check"]).unwrap();
     assert!(matches!(cli.command, Some(Commands::Check)));
 }
 
 #[test]
 fn test_check_command_error_handling_extra_arguments() {
     // 测试 Check 命令不接受额外参数
-    let result = TestCheckCli::try_parse_from(&["test-workflow", "check", "extra-arg"]);
+    let result = TestCheckCli::try_parse_from(["test-workflow", "check", "extra-arg"]);
     assert!(result.is_err(), "Should fail on extra arguments");
 }

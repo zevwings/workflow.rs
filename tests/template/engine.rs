@@ -244,7 +244,7 @@ fn test_template_engine_type() {
     assert_eq!(debug_str, "Handlebars");
 
     // 测试 Clone 实现
-    let cloned_type = engine_type.clone();
+    let cloned_type = engine_type;
     assert!(matches!(cloned_type, TemplateEngineType::Handlebars));
 
     // 测试 Copy 实现

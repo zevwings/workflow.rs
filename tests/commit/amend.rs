@@ -205,7 +205,7 @@ fn test_should_show_force_push_warning_pushed() {
     match result {
         Ok(is_pushed) => {
             // 验证返回值是布尔类型
-            assert!(is_pushed == true || is_pushed == false);
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
@@ -224,7 +224,7 @@ fn test_should_show_force_push_warning_not_pushed() {
     match result {
         Ok(is_pushed) => {
             // 验证返回值是布尔类型
-            assert!(is_pushed == true || is_pushed == false);
+            assert!(is_pushed || !is_pushed);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的

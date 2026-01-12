@@ -44,7 +44,7 @@ fn test_jira_subcommand_enum_creation() {
 #[case("comments", "PROJ-123")]
 #[case("attachments", "PROJ-456")]
 fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id]).unwrap();
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -78,7 +78,7 @@ fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) {
 #[case("attachments")]
 #[case("clean")]
 fn test_jira_command_without_id(#[case] subcommand: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand]).unwrap();
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -114,7 +114,7 @@ fn test_jira_command_without_id(#[case] subcommand: &str) {
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
 fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--table"]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id, "--table"]).unwrap();
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -151,7 +151,7 @@ fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
 fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--json"]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id, "--json"]).unwrap();
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -188,7 +188,7 @@ fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_i
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
 fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--yaml"]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id, "--yaml"]).unwrap();
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -226,7 +226,7 @@ fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_i
 #[case("comments", "PROJ-123")]
 fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] jira_id: &str) {
     let cli =
-        TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--markdown"]).unwrap();
+        TestJiraCli::try_parse_from(["test-jira", subcommand, jira_id, "--markdown"]).unwrap();
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -262,7 +262,7 @@ fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] ji
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] jira_id: &str) {
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         subcommand,
         jira_id,
@@ -301,7 +301,7 @@ fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] j
 #[test]
 fn test_jira_clean_command_structure() {
     // 测试 Clean 命令结构（带所有参数）
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "clean",
         "PROJ-789",
@@ -381,7 +381,7 @@ fn test_jira_clean_command_flags(
 #[test]
 fn test_jira_clean_command_short_flags() {
     // 测试 Clean 命令的短标志
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "-a", "-n", "-l"]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", "clean", "-a", "-n", "-l"]).unwrap();
 
     match cli.command {
         JiraSubcommand::Clean {
@@ -403,7 +403,7 @@ fn test_jira_clean_command_short_flags() {
 
 #[test]
 fn test_jira_comments_command_with_limit() {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])
+    let cli = TestJiraCli::try_parse_from(["test-jira", "comments", "PROJ-123", "--limit", "10"])
         .unwrap();
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.limit, Some(10)),
@@ -413,7 +413,7 @@ fn test_jira_comments_command_with_limit() {
 
 #[test]
 fn test_jira_comments_command_with_offset() {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])
+    let cli = TestJiraCli::try_parse_from(["test-jira", "comments", "PROJ-123", "--offset", "5"])
         .unwrap();
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.offset, Some(5)),
@@ -423,7 +423,7 @@ fn test_jira_comments_command_with_offset() {
 
 #[test]
 fn test_jira_comments_command_with_author() {
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -441,7 +441,7 @@ fn test_jira_comments_command_with_author() {
 
 #[test]
 fn test_jira_comments_command_with_since() {
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -460,7 +460,7 @@ fn test_jira_comments_command_with_since() {
 #[test]
 fn test_jira_comments_command_all_filters() {
     // 测试所有过滤参数组合
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -496,7 +496,7 @@ fn test_jira_comments_command_all_filters() {
 #[test]
 fn test_jira_comments_command_pagination() {
     // 测试分页参数组合（limit + offset）
-    let cli = TestJiraCli::try_parse_from(&[
+    let cli = TestJiraCli::try_parse_from([
         "test-jira",
         "comments",
         "PROJ-123",
@@ -535,7 +535,7 @@ fn test_jira_command_parsing_all_subcommands(
     #[case] subcommand: &str,
     #[case] assert_fn: fn(&JiraSubcommand) -> bool,
 ) {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", subcommand]).unwrap();
     assert!(
         assert_fn(&cli.command),
         "Command should match expected variant"
@@ -545,7 +545,7 @@ fn test_jira_command_parsing_all_subcommands(
 #[test]
 fn test_jira_command_error_handling_invalid_subcommand() {
     // 测试无效子命令的错误处理
-    let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
+    let result = TestJiraCli::try_parse_from(["test-jira", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
@@ -556,7 +556,7 @@ fn test_jira_changelog_command_with_field_filter() {
     // 测试 --field 参数
     // 注意：当前 Changelog 命令的枚举定义中没有 field 字段
     // 如果将来添加了 field 字段，这个测试需要更新
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"]).unwrap();
+    let cli = TestJiraCli::try_parse_from(["test-jira", "changelog", "PROJ-123"]).unwrap();
 
     match cli.command {
         JiraSubcommand::Changelog { args, .. } => {
