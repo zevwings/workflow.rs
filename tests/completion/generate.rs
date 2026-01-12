@@ -101,7 +101,7 @@ fn test_completion_generator_generate_all(#[case] shell: &str) {
     match result {
         Ok(generate_result) => {
             assert!(
-                generate_result.messages.len() > 0,
+                !generate_result.messages.is_empty(),
                 "Should have generation messages"
             );
             // 对于 zsh，验证文件是否生成
@@ -112,7 +112,7 @@ fn test_completion_generator_generate_all(#[case] shell: &str) {
                     .collect();
                 // 应该至少有一个 completion 文件
                 assert!(
-                    files.len() > 0,
+                    !files.is_empty(),
                     "Should generate at least one completion file"
                 );
             }

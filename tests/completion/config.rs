@@ -135,7 +135,7 @@ fn test_remove_completion_files(#[case] shell: Shell) {
     let removal_result = result.unwrap();
     assert!(true, "Removed count should be non-negative");
     assert!(
-        removal_result.removed_files.len() == removal_result.removed_count as usize,
+        removal_result.removed_files.len() == removal_result.removed_count,
         "Removed files count should match removed count"
     );
 }

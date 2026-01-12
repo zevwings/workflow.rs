@@ -20,7 +20,7 @@ struct TestConfigCli {
 #[test]
 fn test_config_show_command_structure() {
     // 测试 Show 命令基本结构
-    let cli = TestConfigCli::try_parse_from(&["test-config", "show"]).unwrap();
+    let cli = TestConfigCli::try_parse_from(["test-config", "show"]).unwrap();
 
     match cli.command {
         ConfigSubcommand::Show => {
@@ -35,10 +35,10 @@ fn test_config_show_command_structure() {
 fn test_config_show_command_no_arguments() {
     // 测试命令不接受参数
     // Show 命令不应该接受任何参数，如果传入参数应该失败
-    let _result = TestConfigCli::try_parse_from(&["test-config", "show", "invalid-arg"]);
+    let _result = TestConfigCli::try_parse_from(["test-config", "show", "invalid-arg"]);
     // 注意：clap 可能会接受额外的参数，这取决于配置
     // 这里主要验证命令可以正确解析
-    let cli = TestConfigCli::try_parse_from(&["test-config", "show"]).unwrap();
+    let cli = TestConfigCli::try_parse_from(["test-config", "show"]).unwrap();
     assert!(matches!(cli.command, ConfigSubcommand::Show));
 }
 
@@ -87,7 +87,7 @@ fn test_config_validate_command(
 #[test]
 fn test_config_export_command_structure() {
     // 测试 Export 命令基本结构
-    let cli = TestConfigCli::try_parse_from(&["test-config", "export", "output.toml"]).unwrap();
+    let cli = TestConfigCli::try_parse_from(["test-config", "export", "output.toml"]).unwrap();
 
     match cli.command {
         ConfigSubcommand::Export {
@@ -177,7 +177,7 @@ fn test_config_export_command_output_formats(
     #[case] yaml: bool,
 ) {
     let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", flag]).unwrap();
+        TestConfigCli::try_parse_from(["test-config", "export", "output.toml", flag]).unwrap();
     match cli.command {
         ConfigSubcommand::Export {
             toml: t,
@@ -267,7 +267,7 @@ fn test_config_command_parsing_all_subcommands(
 #[test]
 fn test_config_command_error_handling_invalid_subcommand() {
     // 测试无效子命令的错误处理
-    let result = TestConfigCli::try_parse_from(&["test-config", "invalid"]);
+    let result = TestConfigCli::try_parse_from(["test-config", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
@@ -275,6 +275,6 @@ fn test_config_command_error_handling_invalid_subcommand() {
 fn test_config_command_error_handling_missing_subcommand() {
     // 测试缺少子命令的错误处理
     // 由于 TestConfigCli 中的 command 字段是必需的（不是 Option），缺少子命令应该失败
-    let result = TestConfigCli::try_parse_from(&["test-config"]);
+    let result = TestConfigCli::try_parse_from(["test-config"]);
     assert!(result.is_err(), "Should fail when subcommand is missing");
 }

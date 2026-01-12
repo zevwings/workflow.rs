@@ -665,7 +665,7 @@ workflow jira log search [PROJ-123] [SEARCH_TERM]  # 搜索关键词（所有参
 > **注意**：日志操作命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。
 
 
-> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [PR 模块架构文档](./docs/architecture/lib/PR_ARCHITECTURE.md)。
+> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [架构设计文档](./docs/architecture.md)。
 
 ## 🚀 发布
 
@@ -757,32 +757,24 @@ make lint
 
 ### 开发规范
 
-详细的开发规范请参考 [开发规范文档](./docs/guidelines/DEVELOPMENT_GUIDELINES.md)，包括：
-- 代码风格规范（格式化、Lint、命名约定）
+详细的开发规范请参考 [开发规范](./docs/development.md)，包括：
+- 代码风格规范（格式化、Clippy、命名约定）
 - 错误处理规范
 - 文档规范
-- Git 工作流和提交规范
-- 测试规范
-- 代码审查指南
+- 提交规范
+- 检查流程（pre-commit、review）
 
 ## 📚 文档
 
-完整的架构文档和使用说明请查看 [docs/README.md](./docs/README.md)。
+完整的文档索引请查看 [docs/README.md](./docs/README.md)。
 
-主要文档包括：
-- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 总体架构设计文档
-- [docs/architecture/lib/PR_ARCHITECTURE.md](./docs/architecture/lib/PR_ARCHITECTURE.md) - PR 模块架构文档
-- [docs/architecture/commands/LOG_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/LOG_COMMAND_ARCHITECTURE.md) - 日志操作命令架构文档
-- [docs/architecture/commands/JIRA_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/JIRA_COMMAND_ARCHITECTURE.md) - Jira 操作命令架构文档
-- [docs/architecture/lib/LLM_ARCHITECTURE.md](./docs/architecture/lib/LLM_ARCHITECTURE.md) - LLM 统一配置驱动架构文档
-- [docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md) - 配置管理命令架构文档
-- [docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md) - 生命周期管理命令架构文档
-- [docs/architecture/lib/PROXY_ARCHITECTURE.md](./docs/architecture/lib/PROXY_ARCHITECTURE.md) - 代理管理模块架构文档
-- [docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md) - 分支管理命令架构文档
-- [docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md) - 环境检查命令架构文档
-- [docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md) - GitHub 账号管理命令架构文档
-- [docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md) - 代理管理命令架构文档
-- [docs/architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md) - 迁移命令架构文档
+主要参考文档：
+- [架构设计](./docs/architecture.md) - 项目整体架构设计
+- [开发规范](./docs/development.md) - 代码风格、错误处理、命名、模块组织、文档规范、提交规范、检查流程
+- [测试规范](./docs/testing.md) - 测试组织、编写、命令参考
+- [迁移文档](./docs/migration/README.md) - 版本迁移指南
+
+**API 文档**：运行 `cargo doc --open` 查看完整的 API 文档。
 
 
 ## 🏗️ 架构总览
@@ -867,6 +859,6 @@ graph TB
 
 请参考以下文档了解更多信息：
 - [docs/README.md](./docs/README.md) - 完整文档索引
-- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 了解架构设计和核心模块详情
+- [架构设计](./docs/architecture.md) - 了解架构设计和核心模块详情
 
 ---

@@ -218,7 +218,7 @@ fn test_dialog_configuration_completeness() {
     let _input = InputDialog::new("Enter value")
         .with_default("default")
         .with_validator(|s: &str| {
-            if s.len() > 0 {
+            if !s.is_empty() {
                 Ok(())
             } else {
                 Err("Empty".to_string())

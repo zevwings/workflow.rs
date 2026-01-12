@@ -164,7 +164,7 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
 #[test]
 fn test_pr_update_command_structure() {
     // 测试 Update 命令结构（无参数）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "update"]).unwrap();
+    let cli = TestPRCli::try_parse_from(["test-pr", "update"]).unwrap();
 
     match cli.command {
         PRCommands::Update => {
@@ -328,7 +328,7 @@ fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
 #[test]
 fn test_pr_comment_command_structure() {
     let cli =
-        TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"]).unwrap();
+        TestPRCli::try_parse_from(["test-pr", "comment", "123", "This is a comment"]).unwrap();
 
     match cli.command {
         PRCommands::Comment {
@@ -344,7 +344,7 @@ fn test_pr_comment_command_structure() {
 
 #[test]
 fn test_pr_comment_command_with_multiple_words() {
-    let cli = TestPRCli::try_parse_from(&[
+    let cli = TestPRCli::try_parse_from([
         "test-pr",
         "comment",
         "123",
@@ -371,7 +371,7 @@ fn test_pr_comment_command_with_multiple_words() {
 #[test]
 fn test_pr_comment_command_without_id() {
     // 测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "single-arg"]).unwrap();
+    let cli = TestPRCli::try_parse_from(["test-pr", "comment", "single-arg"]).unwrap();
 
     match cli.command {
         PRCommands::Comment {
@@ -505,7 +505,7 @@ fn test_pr_commands_enum_all_variants(
 #[test]
 fn test_pr_commands_error_handling_invalid_subcommand() {
     // 测试无效子命令的错误处理
-    let result = TestPRCli::try_parse_from(&["test-pr", "invalid"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
@@ -514,20 +514,20 @@ fn test_pr_commands_required_parameters() {
     // 测试必需参数的错误处理
 
     // Sync 需要 source_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "sync"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "sync"]);
     assert!(result.is_err(), "Sync should require source_branch");
 
     // Rebase 需要 target_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "rebase"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "rebase"]);
     assert!(result.is_err(), "Rebase should require target_branch");
 
     // Pick 需要 from_branch 和 to_branch
-    let result = TestPRCli::try_parse_from(&["test-pr", "pick"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "pick"]);
     assert!(
         result.is_err(),
         "Pick should require from_branch and to_branch"
     );
 
-    let result = TestPRCli::try_parse_from(&["test-pr", "pick", "from"]);
+    let result = TestPRCli::try_parse_from(["test-pr", "pick", "from"]);
     assert!(result.is_err(), "Pick should require to_branch");
 }

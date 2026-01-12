@@ -20,7 +20,7 @@ struct TestLifecycleCli {
 #[test]
 fn test_setup_command_structure() {
     // 测试 Setup 命令结构
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "setup"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "setup"]).unwrap();
 
     match cli.command {
         Some(Commands::Setup) => {
@@ -35,7 +35,7 @@ fn test_setup_command_structure() {
 #[test]
 fn test_uninstall_command_structure() {
     // 测试 Uninstall 命令结构
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "uninstall"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "uninstall"]).unwrap();
 
     match cli.command {
         Some(Commands::Uninstall) => {
@@ -50,7 +50,7 @@ fn test_uninstall_command_structure() {
 #[test]
 fn test_version_command_structure() {
     // 测试 Version 命令结构
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "version"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "version"]).unwrap();
 
     match cli.command {
         Some(Commands::Version) => {
@@ -65,7 +65,7 @@ fn test_version_command_structure() {
 #[test]
 fn test_update_command_structure_with_version() {
     // 测试 Update 命令结构（带 --version 参数）
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update", "--version", "1.2.3"])
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "update", "--version", "1.2.3"])
         .unwrap();
 
     match cli.command {
@@ -79,8 +79,7 @@ fn test_update_command_structure_with_version() {
 #[test]
 fn test_update_command_structure_with_short_version() {
     // 测试 Update 命令结构（带 -v 参数）
-    let cli =
-        TestLifecycleCli::try_parse_from(&["test-workflow", "update", "-v", "1.2.3"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "update", "-v", "1.2.3"]).unwrap();
 
     match cli.command {
         Some(Commands::Update { version }) => {
@@ -93,7 +92,7 @@ fn test_update_command_structure_with_short_version() {
 #[test]
 fn test_update_command_structure_minimal() {
     // 测试 Update 命令最小参数
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "update"]).unwrap();
 
     match cli.command {
         Some(Commands::Update { version }) => {
@@ -110,19 +109,19 @@ fn test_lifecycle_commands_parsing() {
     // 测试所有 lifecycle 命令都可以正确解析
 
     // Setup
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "setup"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "setup"]).unwrap();
     assert!(matches!(cli.command, Some(Commands::Setup)));
 
     // Uninstall
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "uninstall"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "uninstall"]).unwrap();
     assert!(matches!(cli.command, Some(Commands::Uninstall)));
 
     // Version
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "version"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "version"]).unwrap();
     assert!(matches!(cli.command, Some(Commands::Version)));
 
     // Update
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"]).unwrap();
+    let cli = TestLifecycleCli::try_parse_from(["test-workflow", "update"]).unwrap();
     assert!(matches!(cli.command, Some(Commands::Update { .. })));
 }
 
@@ -132,7 +131,7 @@ fn test_lifecycle_commands_error_handling_extra_arguments() {
     let commands = ["setup", "uninstall", "version"];
 
     for cmd in commands.iter() {
-        let result = TestLifecycleCli::try_parse_from(&["test-workflow", cmd, "extra-arg"]);
+        let result = TestLifecycleCli::try_parse_from(["test-workflow", cmd, "extra-arg"]);
         assert!(
             result.is_err(),
             "{} command should not accept extra arguments",

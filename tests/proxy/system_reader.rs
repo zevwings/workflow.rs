@@ -159,17 +159,17 @@ fn test_system_proxy_reader_read() {
             // 检查 HTTP 代理配置
             if let Some(http_config) = proxy_info.get_config(ProxyType::Http) {
                 // 验证配置字段存在
-                assert!(http_config.enable == true || http_config.enable == false);
+                assert!(http_config.enable || !http_config.enable);
             }
 
             // 检查 HTTPS 代理配置
             if let Some(https_config) = proxy_info.get_config(ProxyType::Https) {
-                assert!(https_config.enable == true || https_config.enable == false);
+                assert!(https_config.enable || !https_config.enable);
             }
 
             // 检查 SOCKS 代理配置
             if let Some(socks_config) = proxy_info.get_config(ProxyType::Socks) {
-                assert!(socks_config.enable == true || socks_config.enable == false);
+                assert!(socks_config.enable || !socks_config.enable);
             }
         }
         Err(_) => {
