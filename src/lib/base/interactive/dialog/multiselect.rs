@@ -1,12 +1,13 @@
 //! 多选提示模块
 
-use crate::base::interactive::common::{OptionListRenderer, OptionRenderer};
-use crate::base::interactive::error::Result;
+use crate::base::interactive::dialog::error::Result;
+use crate::base::interactive::dialog::raw_mode::RawModeGuard;
+use crate::base::interactive::dialog::renderer::{OptionListRenderer, OptionRenderer};
 use crate::base::interactive::style::get_theme;
-use crate::base::interactive::terminal::Terminal;
 use color_eyre::eyre;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashSet;
+use std::io::Write;
 
 /// MultiSelect 选项渲染器
 struct MultiSelectOptionRenderer<'a> {
@@ -69,7 +70,7 @@ where
     }
 
     /// 执行提示
-    pub fn prompt<TR: Terminal>(self, terminal: &mut TR) -> Result<Vec<T>> {
+    pub fn prompt(self) -> Result<Vec<T>> {
         if self.options.is_empty() {
             return Err(eyre::eyre!("选项列表不能为空"));
         }
@@ -90,10 +91,13 @@ where
         // 显示提示信息（单独一行，使用 ? 前缀）
         let question_prefix = theme.warning.apply("? ", theme.enable_color);
         let message_text = theme.prompt.apply(&self.message, theme.enable_color);
-        terminal.write_flush(&format!("{}{}\n", question_prefix, message_text))?;
+
+        let mut stdout = std::io::stdout();
+        writeln!(stdout, "{}{}", question_prefix, message_text)?;
+        stdout.flush()?;
 
         // 进入原始模式
-        let _guard = terminal.enable_raw_mode()?;
+        let _guard = RawModeGuard::new()?;
 
         // 跟踪已渲染的行数（用于正确清除）
         let mut rendered_lines = 0;

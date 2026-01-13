@@ -28,7 +28,7 @@ pub mod retry;
 pub use auth::Authorization;
 pub use client::HttpClient;
 pub use config::{MultipartRequestConfig, RequestConfig};
-pub use method::HttpMethod;
+pub use method::{HttpMethod, HttpMethodError};
 pub use parser::{JsonParser, ResponseParser, TextParser};
 pub use response::HttpResponse;
 pub use retry::{HttpRetry, HttpRetryConfig};

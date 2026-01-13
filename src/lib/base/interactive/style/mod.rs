@@ -2,4 +2,4 @@
 
 mod theme;
 
-pub use theme::{get_theme, Style, Theme};
+pub use theme::{get_theme, Theme};

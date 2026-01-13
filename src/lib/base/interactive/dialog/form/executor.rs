@@ -1,40 +1,34 @@
 //! 表单执行器
 
-use crate::base::interactive::config::PromptConfig;
+use crate::base::interactive::dialog::error::{PromptError, Result};
 use crate::base::interactive::dialog::form::builder::FormBuilder;
 use crate::base::interactive::dialog::form::field::{FieldType, FormField};
 use crate::base::interactive::dialog::form::result::FormResult;
-use crate::base::interactive::error::{PromptError, Result};
-use crate::base::interactive::terminal::Terminal;
+use std::io::Write;
 use unicode_width::UnicodeWidthStr;
 
 /// 表单执行器
-pub struct FormExecutor {
-    _config: PromptConfig,
+pub struct FormExecutor;
+
+impl Default for FormExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FormExecutor {
     /// 创建新的表单执行器
-    pub fn new(config: PromptConfig) -> Self {
-        Self { _config: config }
+    pub fn new() -> Self {
+        Self
     }
 
     /// 执行表单字段序列
-    pub fn execute<TR: Terminal>(
-        &self,
-        builder: &FormBuilder,
-        terminal: &mut TR,
-    ) -> Result<FormResult> {
-        self.execute_with_level(builder, terminal, 0)
+    pub fn execute(&self, builder: &FormBuilder) -> Result<FormResult> {
+        self.execute_with_level(builder, 0)
     }
 
     /// 执行表单字段序列（带层级信息）
-    fn execute_with_level<TR: Terminal>(
-        &self,
-        builder: &FormBuilder,
-        terminal: &mut TR,
-        level: usize,
-    ) -> Result<FormResult> {
+    fn execute_with_level(&self, builder: &FormBuilder, level: usize) -> Result<FormResult> {
         let title = builder.get_title();
 
         // 判断是主表单（level == 0）还是嵌套表单（level > 0）
@@ -44,10 +38,10 @@ impl FormExecutor {
         if let Some(title) = title {
             if is_main_form {
                 // 主表单：显示开始和结束分割线（带 Start/End 后缀）
-                self.print_separator(terminal, title, "start", is_main_form)?;
+                self.print_separator(title, "start", is_main_form)?;
             } else {
                 // 嵌套表单：只显示开始分割线（不带 Start/End 后缀）
-                self.print_nested_form_separator_simple(terminal, title)?;
+                self.print_nested_form_separator_simple(title)?;
             }
         }
 
@@ -64,7 +58,7 @@ impl FormExecutor {
             }
 
             // 执行字段
-            let value = self.execute_field(field, &result, terminal, level)?;
+            let value = self.execute_field(field, &result, level)?;
 
             // 收集结果
             result.set(field.key.clone(), value);
@@ -73,7 +67,7 @@ impl FormExecutor {
         // 输出结束分割线（仅主表单显示）
         if let Some(title) = title {
             if is_main_form {
-                self.print_separator(terminal, title, "end", is_main_form)?;
+                self.print_separator(title, "end", is_main_form)?;
             }
         }
 
@@ -81,28 +75,26 @@ impl FormExecutor {
     }
 
     /// 执行单个字段
-    fn execute_field<TR: Terminal>(
+    fn execute_field(
         &self,
         field: &FormField,
         _current_result: &FormResult,
-        terminal: &mut TR,
         level: usize,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         match field.field_type {
-            FieldType::Confirm => self.execute_confirm_field(field, terminal),
-            FieldType::Input => self.execute_input_field(field, terminal, false),
-            FieldType::Password => self.execute_input_field(field, terminal, true),
-            FieldType::Select => self.execute_select_field(field, terminal),
-            FieldType::MultiSelect => self.execute_multiselect_field(field, terminal),
-            FieldType::Form => self.execute_nested_form(field, terminal, level),
+            FieldType::Confirm => self.execute_confirm_field(field),
+            FieldType::Input => self.execute_input_field(field, false),
+            FieldType::Password => self.execute_input_field(field, true),
+            FieldType::Select => self.execute_select_field(field),
+            FieldType::MultiSelect => self.execute_multiselect_field(field),
+            FieldType::Form => self.execute_nested_form(field, level),
         }
     }
 
     /// 执行确认字段
-    fn execute_confirm_field<TR: Terminal>(
+    fn execute_confirm_field(
         &self,
         field: &FormField,
-        terminal: &mut TR,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         let default_value = field
             .default_value
@@ -113,16 +105,15 @@ impl FormExecutor {
 
         let confirmed = crate::base::interactive::dialog::confirm::confirm(&field.prompt)
             .default(default_value)
-            .prompt(terminal)?;
+            .prompt()?;
 
         Ok(Box::new(confirmed))
     }
 
     /// 执行输入字段（Input 或 Password）
-    fn execute_input_field<TR: Terminal>(
+    fn execute_input_field(
         &self,
         field: &FormField,
-        terminal: &mut TR,
         is_password: bool,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         let default_value = field
@@ -151,21 +142,20 @@ impl FormExecutor {
             builder = builder.validator(ArcValidatorAdapter(std::sync::Arc::clone(validator)));
         }
 
-        let value = builder.prompt(terminal)?;
+        let value = builder.prompt()?;
         Ok(Box::new(value))
     }
 
     /// 执行选择字段
-    fn execute_select_field<TR: Terminal>(
+    fn execute_select_field(
         &self,
         field: &FormField,
-        terminal: &mut TR,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         let default_index = field.default_index.unwrap_or(0);
         let selected =
             crate::base::interactive::dialog::select::select(&field.prompt, field.options.clone())
                 .default(default_index)
-                .prompt(terminal)?;
+                .prompt()?;
 
         // 找到选中项的索引
         let index = field
@@ -180,17 +170,16 @@ impl FormExecutor {
     }
 
     /// 执行多选字段
-    fn execute_multiselect_field<TR: Terminal>(
+    fn execute_multiselect_field(
         &self,
         field: &FormField,
-        terminal: &mut TR,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         let selected = crate::base::interactive::dialog::multiselect::multiselect(
             &field.prompt,
             field.options.clone(),
         )
         .default(field.default_selected.clone())
-        .prompt(terminal)?;
+        .prompt()?;
 
         // 找到选中项的索引列表
         let indices: Vec<usize> = selected
@@ -209,10 +198,9 @@ impl FormExecutor {
     }
 
     /// 执行嵌套表单
-    fn execute_nested_form<TR: Terminal>(
+    fn execute_nested_form(
         &self,
         field: &FormField,
-        terminal: &mut TR,
         level: usize,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         let nested_form = field
@@ -220,18 +208,12 @@ impl FormExecutor {
             .as_ref()
             .ok_or_else(|| PromptError::InvalidInput("嵌套表单不能为空".to_string()))?;
 
-        let nested_result = self.execute_with_level(nested_form, terminal, level + 1)?;
+        let nested_result = self.execute_with_level(nested_form, level + 1)?;
         Ok(Box::new(nested_result))
     }
 
     /// 打印分割线
-    fn print_separator<TR: Terminal>(
-        &self,
-        terminal: &mut TR,
-        title: &str,
-        suffix: &str,
-        is_main_form: bool,
-    ) -> Result<()> {
+    fn print_separator(&self, title: &str, suffix: &str, is_main_form: bool) -> Result<()> {
         const SEPARATOR_CHAR: &str = "─";
         const SEPARATOR_LENGTH: usize = 72;
 
@@ -248,55 +230,47 @@ impl FormExecutor {
         };
         let text = format!("{} {}", title, suffix_capitalized);
 
-        self.print_separator_line(
-            terminal,
-            &text,
-            SEPARATOR_CHAR,
-            SEPARATOR_LENGTH,
-            is_main_form,
-        )
+        self.print_separator_line(&text, SEPARATOR_CHAR, SEPARATOR_LENGTH, is_main_form)
     }
 
     /// 打印嵌套表单分割线（单行格式，不带 Start/End 后缀）
-    fn print_nested_form_separator_simple<TR: Terminal>(
-        &self,
-        terminal: &mut TR,
-        title: &str,
-    ) -> Result<()> {
+    fn print_nested_form_separator_simple(&self, title: &str) -> Result<()> {
         const SEPARATOR_CHAR: &str = "─";
         const SEPARATOR_LENGTH: usize = 72;
-        self.print_separator_line(terminal, title, SEPARATOR_CHAR, SEPARATOR_LENGTH, false)
+        self.print_separator_line(title, SEPARATOR_CHAR, SEPARATOR_LENGTH, false)
     }
 
     /// 打印分割线（统一方法）
-    fn print_separator_line<TR: Terminal>(
+    fn print_separator_line(
         &self,
-        terminal: &mut TR,
         text: &str,
         separator_char: &str,
         total_width: usize,
         format_main: bool,
     ) -> Result<()> {
-        terminal.write_flush("\n")?;
+        let mut stdout = std::io::stdout();
+        writeln!(stdout)?;
+        stdout.flush()?;
 
         if format_main {
-            self.print_main_form_separator(terminal, text, separator_char, total_width)?;
+            self.print_main_form_separator(text, separator_char, total_width)?;
         } else {
-            self.print_nested_form_separator(terminal, text, separator_char, total_width)?;
+            self.print_nested_form_separator(text, separator_char, total_width)?;
         }
 
-        terminal.write_flush("\n")?;
+        writeln!(stdout)?;
+        stdout.flush()?;
         Ok(())
     }
 
     /// 打印主表单分割线（3行格式）
-    fn print_main_form_separator<TR: Terminal>(
+    fn print_main_form_separator(
         &self,
-        terminal: &mut TR,
         text: &str,
         separator_char: &str,
         total_width: usize,
     ) -> Result<()> {
+        let mut stdout = std::io::stdout();
         let text_display_width = text.width();
         let remaining_width = total_width.saturating_sub(text_display_width);
         let left_padding = remaining_width / 2;
@@ -310,20 +284,21 @@ impl FormExecutor {
             " ".repeat(right_padding)
         );
 
-        terminal.write_flush(&format!("{}\n", separator_line))?;
-        terminal.write_flush(&format!("{}\n", text_line))?;
-        terminal.write_flush(&format!("{}\n", separator_line))?;
+        writeln!(stdout, "{}", separator_line)?;
+        writeln!(stdout, "{}", text_line)?;
+        writeln!(stdout, "{}", separator_line)?;
+        stdout.flush()?;
         Ok(())
     }
 
     /// 打印嵌套表单分割线（单行格式）
-    fn print_nested_form_separator<TR: Terminal>(
+    fn print_nested_form_separator(
         &self,
-        terminal: &mut TR,
         text: &str,
         separator_char: &str,
         total_width: usize,
     ) -> Result<()> {
+        let mut stdout = std::io::stdout();
         let text_display_width = text.width();
         let remaining_width = total_width.saturating_sub(text_display_width).saturating_sub(2);
         let left_dashes = remaining_width / 2;
@@ -338,7 +313,8 @@ impl FormExecutor {
         );
         let separator_line = format!("{}{}", separator_line, separator_char.repeat(right_dashes));
 
-        terminal.write_flush(&format!("{}\n", separator_line))?;
+        writeln!(stdout, "{}", separator_line)?;
+        stdout.flush()?;
         Ok(())
     }
 }

@@ -24,6 +24,7 @@ impl Style {
         self
     }
 
+    #[allow(dead_code)]
     pub fn bg(mut self, color: Color) -> Self {
         self.background = Some(color);
         self

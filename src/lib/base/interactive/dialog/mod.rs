@@ -8,12 +8,16 @@
 //! - 表单对话框（form）：组合多个字段的复杂表单
 
 mod confirm;
+mod error; // 错误类型定义
 mod form;
 mod input;
 mod multiselect;
+mod raw_mode; // 原始模式管理
+mod renderer; // 内部使用，不导出
 mod select;
 
 pub use confirm::{confirm, ConfirmBuilder};
+pub use error::{PromptError, Result};
 pub use form::{
     form, Condition, ConfirmFormField, FormBuilder, FormExecutor, FormResult, InputFormField,
     MultiSelectFormField, NestedFormField, PasswordFormField, SelectFormField,

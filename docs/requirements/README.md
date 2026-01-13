@@ -181,7 +181,6 @@
 - **依赖迁移** → [gix-migration.md](./gix-migration.md) ⏳ 待实施
 - **Cursor 规则增强** → [cursor-rules-enhancement.md](./cursor-rules-enhancement.md) ⏳ 待实施
 - **日志系统增强** → [logger-enhancement.md](./logger-enhancement.md) ⏳ 待实施
-- **设计提案** → [prompt-rust-design.md](./prompt-rust-design.md) 📚 设计提案
 
 ---
 

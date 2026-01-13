@@ -1,8 +1,7 @@
 //! 消息输出模块
 
-use crate::base::interactive::error::Result;
 use crate::base::interactive::style::{get_theme, Theme};
-use color_eyre::eyre;
+use color_eyre::{eyre, Result};
 use std::io::Write;
 use std::sync::{Mutex, OnceLock};
 

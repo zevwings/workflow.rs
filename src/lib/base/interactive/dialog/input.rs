@@ -2,11 +2,12 @@
 //!
 //! 提供文本输入功能，支持密码模式、验证器、占位符等
 
-use crate::base::interactive::error::Result;
+use crate::base::interactive::dialog::error::Result;
+use crate::base::interactive::dialog::raw_mode::RawModeGuard;
 use crate::base::interactive::style::get_theme;
-use crate::base::interactive::terminal::Terminal;
 use color_eyre::eyre;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
+use std::io::Write;
 use unicode_width::UnicodeWidthStr;
 
 /// 输入编辑器，管理输入缓冲区和光标位置
@@ -303,7 +304,7 @@ impl InputBuilder {
     }
 
     /// 执行提示
-    pub fn prompt<T: Terminal>(self, terminal: &mut T) -> Result<String> {
+    pub fn prompt(self) -> Result<String> {
         let theme = get_theme();
 
         // 显示提示信息（单独一行，使用 ? 前缀）
@@ -321,10 +322,13 @@ impl InputBuilder {
         // 应用主题颜色：? 使用 yellow (warning)，文本使用 prompt
         let styled_question = theme.warning.apply(question_mark, theme.enable_color);
         let styled_text = theme.prompt.apply(&prompt_text, theme.enable_color);
-        terminal.write_flush(&format!("{}{}\n", styled_question, styled_text))?;
+
+        let mut stdout = std::io::stdout();
+        writeln!(stdout, "{}{}", styled_question, styled_text)?;
+        stdout.flush()?;
 
         // 进入原始模式
-        let _guard = terminal.enable_raw_mode()?;
+        let _guard = RawModeGuard::new()?;
 
         let mut editor = InputEditor::new(self.placeholder.clone());
         let mut has_error = false;
@@ -335,7 +339,7 @@ impl InputBuilder {
         // 输入框应该显示 placeholder（如果有），而不是 default
 
         // 渲染初始状态
-        self.render_input(terminal, &editor, &theme, false)?;
+        self.render_input(&editor, &theme, false)?;
 
         loop {
             // 读取键盘事件
@@ -367,7 +371,7 @@ impl InputBuilder {
                             }
                             // 渲染输入（此时光标应该在输入行，如果有错误，错误行还在）
                             // 注意：输入字符后，placeholder 应该消失
-                            self.render_input(terminal, &editor, &theme, has_error)?;
+                            self.render_input(&editor, &theme, has_error)?;
                         }
                         KeyCode::Backspace => {
                             if editor.backspace() {
@@ -381,7 +385,7 @@ impl InputBuilder {
                                     cursor_on_input_line = true; // 现在光标在输入行
                                 }
                                 // 渲染输入（此时光标应该在输入行，如果有错误，错误行还在）
-                                self.render_input(terminal, &editor, &theme, has_error)?;
+                                self.render_input(&editor, &theme, has_error)?;
                             }
                         }
                         KeyCode::Delete => {
@@ -396,7 +400,7 @@ impl InputBuilder {
                                     cursor_on_input_line = true; // 现在光标在输入行
                                 }
                                 // 渲染输入（此时光标应该在输入行，如果有错误，错误行还在）
-                                self.render_input(terminal, &editor, &theme, has_error)?;
+                                self.render_input(&editor, &theme, has_error)?;
                             }
                         }
                         KeyCode::Left => {
@@ -410,7 +414,7 @@ impl InputBuilder {
                                 execute!(stdout, cursor::MoveUp(1))?;
                                 cursor_on_input_line = true; // 现在光标在输入行
                             }
-                            self.render_input(terminal, &editor, &theme, has_error)?;
+                            self.render_input(&editor, &theme, has_error)?;
                         }
                         KeyCode::Right => {
                             editor.move_right();
@@ -423,7 +427,7 @@ impl InputBuilder {
                                 execute!(stdout, cursor::MoveUp(1))?;
                                 cursor_on_input_line = true; // 现在光标在输入行
                             }
-                            self.render_input(terminal, &editor, &theme, has_error)?;
+                            self.render_input(&editor, &theme, has_error)?;
                         }
                         KeyCode::Enter => {
                             let input = editor.as_str().to_string();
@@ -439,11 +443,7 @@ impl InputBuilder {
                                 match validator.validate(&final_input) {
                                     Ok(()) => {
                                         // 验证通过，清除输入区域并显示结果
-                                        self.clear_and_display_result(
-                                            terminal,
-                                            &final_input,
-                                            has_error,
-                                        )?;
+                                        self.clear_and_display_result(&final_input, has_error)?;
                                         return Ok(final_input);
                                     }
                                     Err(err) => {
@@ -475,17 +475,17 @@ impl InputBuilder {
                                         }
 
                                         // 重新渲染输入行，确保它可见（即使输入为空，也会显示 "> " 前缀）
-                                        self.render_input(terminal, &editor, &theme, has_error)?;
+                                        self.render_input(&editor, &theme, has_error)?;
 
                                         // 现在光标在输入行，显示错误（下移一行）
-                                        self.show_error(terminal, &err)?;
+                                        self.show_error(&err)?;
                                         has_error = true;
                                         cursor_on_input_line = false; // 显示错误后，光标在错误行
                                     }
                                 }
                             } else {
                                 // 没有验证器，直接返回
-                                self.clear_and_display_result(terminal, &final_input, has_error)?;
+                                self.clear_and_display_result(&final_input, has_error)?;
                                 return Ok(final_input);
                             }
                         }
@@ -503,7 +503,6 @@ impl InputBuilder {
 
     fn render_input(
         &self,
-        _terminal: &mut dyn Terminal,
         editor: &InputEditor,
         theme: &crate::base::interactive::style::Theme,
         has_error: bool,
@@ -625,7 +624,7 @@ impl InputBuilder {
         Ok(())
     }
 
-    fn show_error(&self, _terminal: &mut dyn Terminal, error_msg: &str) -> Result<()> {
+    fn show_error(&self, error_msg: &str) -> Result<()> {
         use crate::base::interactive::style::get_theme;
         use crossterm::cursor;
         use crossterm::execute;
@@ -689,12 +688,7 @@ impl InputBuilder {
         Ok(())
     }
 
-    fn clear_and_display_result(
-        &self,
-        _terminal: &mut dyn Terminal,
-        value: &str,
-        had_error: bool,
-    ) -> Result<()> {
+    fn clear_and_display_result(&self, value: &str, had_error: bool) -> Result<()> {
         use crate::base::interactive::style::get_theme;
         use crossterm::cursor;
         use crossterm::execute;

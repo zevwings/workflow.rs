@@ -17,18 +17,16 @@
 //! ```rust,no_run
 //! use workflow::base::interactive::*;
 //!
-//! fn main() -> Result<(), PromptError> {
-//!     let mut terminal = StdTerminal::new()?;
-//!
+//! fn main() -> Result<()> {
 //!     // 输入提示
 //!     let name = input("请输入您的姓名")
 //!         .default("John Doe")
-//!         .prompt(&mut terminal)?;
+//!         .prompt()?;
 //!
 //!     // 确认提示
 //!     let confirmed = confirm("是否继续？")
 //!         .default(true)
-//!         .prompt(&mut terminal)?;
+//!         .prompt()?;
 //!
 //!     // 消息输出
 //!     let msg = Message::global();
@@ -39,25 +37,15 @@
 //! }
 //! ```
 
-mod common;
-mod config;
 mod dialog; // 交互式对话框（input, confirm, select, multiselect, form）
-mod display; // 输出/显示功能（message, table, spinner）
-mod error;
-mod fallback;
+mod output; // 输出功能（message, table, spinner）
 mod style;
-mod terminal;
 
-// 重新导出公共 API（保持向后兼容）
-pub use config::{with_result_title, ConfigManager, PromptConfig};
+// 重新导出公共 API（仅导出外部使用的 API，内部实现不导出）
 pub use dialog::{
     confirm, form, input, multiselect, select, validators, Condition, ConfirmBuilder,
     ConfirmFormField, FormBuilder, FormExecutor, FormResult, InputBuilder, InputFormField,
-    MultiSelectBuilder, MultiSelectFormField, NestedFormField, PasswordFormField, SelectBuilder,
-    SelectFormField, Validator,
+    MultiSelectBuilder, MultiSelectFormField, NestedFormField, PasswordFormField, PromptError,
+    Result, SelectBuilder, SelectFormField, Validator,
 };
-pub use display::{spinner, table, Alignment, Message, MessageRef, SpinnerBuilder, TableBuilder};
-pub use error::{PromptError, Result};
-pub use fallback::{ExecuteFallback, FallbackHandler, FallbackOptions};
-pub use style::{Style, Theme};
-pub use terminal::{RawModeGuard, StdTerminal, Terminal};
+pub use output::{spinner, table, Alignment, Message, MessageRef, SpinnerBuilder, TableBuilder};

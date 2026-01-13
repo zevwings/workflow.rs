@@ -4700,6 +4700,7 @@ dependencies = [
  "tabled",
  "tar",
  "tempfile",
+ "thiserror 1.0.69",
  "toml",
  "tracing",
  "tracing-subscriber",

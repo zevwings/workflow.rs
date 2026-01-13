@@ -6,9 +6,6 @@ use color_eyre::eyre;
 use workflow::base::interactive::*;
 
 fn main() -> Result<()> {
-    let mut terminal =
-        StdTerminal::new().map_err(|e| eyre::eyre!("Failed to create terminal: {}", e))?;
-
     // 1. 消息输出演示
     let msg = Message::global();
     msg.break_line()?;
@@ -26,14 +23,14 @@ fn main() -> Result<()> {
     let name = input("请输入您的姓名")
         .default("John Doe")
         .placeholder("Please enter your name")
-        .prompt(&mut terminal)?;
+        .prompt()?;
     msg.info(format!("您输入的姓名是: {}", name))?;
 
     let email = input("请输入邮箱地址")
         .default("user@example.com")
         .placeholder("Please enter your email")
         .validator(validators::email())
-        .prompt(&mut terminal)?;
+        .prompt()?;
     msg.info(format!("您输入的邮箱是: {}", email))?;
 
     // 3. 密码输入演示
@@ -52,18 +49,16 @@ fn main() -> Result<()> {
                 Ok(())
             }
         })
-        .prompt(&mut terminal)?;
+        .prompt()?;
     msg.info(format!("密码已设置（长度: {}）", password.len()))?;
 
     // 4. 确认提示演示
     msg.break_line()?;
     msg.info("=== 确认提示演示 ===")?;
-    let _confirmed1 = confirm("是否继续操作？").default(true).prompt(&mut terminal)?;
+    let _confirmed1 = confirm("是否继续操作？").default(true).prompt()?;
     msg.info("操作已继续")?;
 
-    let _confirmed2 = confirm("这个操作不可撤销，确定要继续吗？")
-        .default(false)
-        .prompt(&mut terminal)?;
+    let _confirmed2 = confirm("这个操作不可撤销，确定要继续吗？").default(false).prompt()?;
     msg.info("操作是否继续？")?;
 
     // 5. 带验证的输入演示
@@ -73,19 +68,19 @@ fn main() -> Result<()> {
         .validator(|input: &str| {
             input.parse::<u32>().map(|_| ()).map_err(|_| "请输入有效的数字".to_string())
         })
-        .prompt(&mut terminal)?;
+        .prompt()?;
     msg.info(format!("您输入的年龄是: {}", age))?;
 
     // 6. 选择提示演示
     msg.break_line()?;
     msg.info("=== 选择提示演示 ===")?;
     let options = vec!["选项 1", "选项 2", "选项 3", "选项 4", "选项 5"];
-    let selected = select("请选择一个选项", options.clone()).default(0).prompt(&mut terminal)?;
+    let selected = select("请选择一个选项", options.clone()).default(0).prompt()?;
     msg.info(format!("您选择的选项是: {}", selected))?;
 
     let selected2 = select("请选择另一个选项", vec!["红色", "绿色", "蓝色", "黄色"])
         .default(2)
-        .prompt(&mut terminal)?;
+        .prompt()?;
     msg.info(format!("您选择的颜色是: {}", selected2))?;
 
     // 7. 多选提示演示
@@ -94,11 +89,11 @@ fn main() -> Result<()> {
     let multi_options = vec!["功能 A", "功能 B", "功能 C", "功能 D", "功能 E"];
     let selected_items = multiselect("请选择多个功能", multi_options.clone())
         .default(vec![0, 2])
-        .prompt(&mut terminal)?;
+        .prompt()?;
     msg.info(format!("您选择的功能: {}", selected_items.join(", ")))?;
 
     let selected_tags =
-        multiselect("请选择标签", vec!["重要", "紧急", "待办", "已完成"]).prompt(&mut terminal)?;
+        multiselect("请选择标签", vec!["重要", "紧急", "待办", "已完成"]).prompt()?;
     if selected_tags.is_empty() {
         msg.info("未选择任何标签")?;
     } else {

@@ -1,10 +1,12 @@
 //! 确认提示模块
 
-use crate::base::interactive::error::Result;
+use crate::base::interactive::dialog::error::Result;
+use crate::base::interactive::dialog::raw_mode::RawModeGuard;
 use crate::base::interactive::style::get_theme;
-use crate::base::interactive::terminal::Terminal;
 use color_eyre::eyre;
+use crossterm::cursor;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
+use crossterm::execute;
 use std::io::Write;
 
 /// 确认提示构建器
@@ -27,7 +29,7 @@ impl ConfirmBuilder {
     }
 
     /// 执行提示
-    pub fn prompt<T: Terminal>(self, terminal: &mut T) -> Result<bool> {
+    pub fn prompt(self) -> Result<bool> {
         let theme = get_theme();
 
         // 显示提示信息（单独一行，使用 ? 前缀）
@@ -43,18 +45,19 @@ impl ConfirmBuilder {
         let message_text = theme.prompt.apply(&self.message, theme.enable_color);
         let hint_styled = theme.hint.apply(hint_text, theme.enable_color);
 
-        terminal.write_flush(&format!(
-            "{}{} {}\n",
+        let mut stdout = std::io::stdout();
+        writeln!(
+            stdout,
+            "{}{} {}",
             question_prefix, message_text, hint_styled
-        ))?;
+        )?;
+        stdout.flush()?;
 
         // 进入原始模式
-        let _guard = terminal.enable_raw_mode()?;
+        let _guard = RawModeGuard::new()?;
 
         // 隐藏光标
         {
-            use crossterm::cursor;
-            use crossterm::execute;
             let mut stdout = std::io::stdout();
             execute!(stdout, cursor::Hide)?;
             stdout.flush()?;
@@ -69,17 +72,17 @@ impl ConfirmBuilder {
                     match code {
                         KeyCode::Char('y') | KeyCode::Char('Y') => {
                             // 清除提示行，显示结果
-                            self.clear_and_display_result(terminal, true, &theme)?;
+                            self.clear_and_display_result(true, &theme)?;
                             return Ok(true);
                         }
                         KeyCode::Char('n') | KeyCode::Char('N') => {
                             // 清除提示行，显示结果
-                            self.clear_and_display_result(terminal, false, &theme)?;
+                            self.clear_and_display_result(false, &theme)?;
                             return Ok(false);
                         }
                         KeyCode::Enter => {
                             // 清除提示行，显示结果（使用默认值）
-                            self.clear_and_display_result(terminal, default_value, &theme)?;
+                            self.clear_and_display_result(default_value, &theme)?;
                             return Ok(default_value);
                         }
                         KeyCode::Esc => {
@@ -96,14 +99,10 @@ impl ConfirmBuilder {
 
     fn clear_and_display_result(
         &self,
-        _terminal: &mut dyn Terminal,
         value: bool,
         theme: &crate::base::interactive::style::Theme,
     ) -> Result<()> {
-        use crossterm::cursor;
-        use crossterm::execute;
         use crossterm::terminal::ClearType;
-        use std::io::Write;
 
         let mut stdout = std::io::stdout();
 

@@ -1,8 +1,16 @@
 //! HTTP 方法枚举
 
-use color_eyre::Result;
 use std::fmt;
 use std::str::FromStr;
+use thiserror::Error;
+
+/// HTTP 方法解析错误
+#[derive(Debug, Error)]
+pub enum HttpMethodError {
+    /// 无效的 HTTP 方法
+    #[error("Invalid HTTP method: {0}")]
+    InvalidMethod(String),
+}
 
 /// HTTP 方法枚举
 #[derive(Debug, Clone, Copy)]
@@ -15,15 +23,15 @@ pub enum HttpMethod {
 }
 
 impl FromStr for HttpMethod {
-    type Err = color_eyre::eyre::Report;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    type Err = HttpMethodError;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "GET" => Ok(HttpMethod::Get),
             "POST" => Ok(HttpMethod::Post),
             "PUT" => Ok(HttpMethod::Put),
             "DELETE" => Ok(HttpMethod::Delete),
             "PATCH" => Ok(HttpMethod::Patch),
-            _ => color_eyre::eyre::bail!("Invalid HTTP method: {}", s),
+            _ => Err(HttpMethodError::InvalidMethod(s.to_string())),
         }
     }
 }
