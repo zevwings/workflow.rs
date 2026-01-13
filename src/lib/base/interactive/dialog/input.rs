@@ -10,6 +10,26 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use std::io::Write;
 use unicode_width::UnicodeWidthStr;
 
+/// 光标所在的行
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CursorLine {
+    /// 提示行（第1行）
+    PromptLine,
+    /// 输入行（第2行）
+    InputLine,
+}
+
+/// 验证状态
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ValidationStatus {
+    /// 初始状态（未输入）
+    Initial,
+    /// 验证通过
+    Valid,
+    /// 验证失败
+    Invalid,
+}
+
 /// 输入编辑器，管理输入缓冲区和光标位置
 struct InputEditor {
     buffer: String,
@@ -331,15 +351,19 @@ impl InputBuilder {
         let _guard = RawModeGuard::new()?;
 
         let mut editor = InputEditor::new(self.placeholder.clone());
-        let mut has_error = false;
-        let mut cursor_on_input_line = true; // 跟踪光标是否在输入行
+        // 跟踪验证状态
+        let mut validation_status = ValidationStatus::Initial;
+        // 跟踪光标所在的行：writeln! 后光标应该在下一行（输入行）
+        let mut cursor_line = CursorLine::InputLine;
 
         // 注意：default 不应该自动填充到输入框
         // default 只在标题行显示，如果用户直接按 Enter 才使用
         // 输入框应该显示 placeholder（如果有），而不是 default
 
         // 渲染初始状态
-        self.render_input(&editor, &theme, false)?;
+        // 确保光标在输入行（writeln! 后应该已经在输入行了，但为了安全，显式确保）
+        self.ensure_cursor_on_input_line(&mut cursor_line)?;
+        self.render_input(&editor, &theme, &mut cursor_line)?;
 
         loop {
             // 读取键盘事件
@@ -357,77 +381,56 @@ impl InputBuilder {
                         }
                         KeyCode::Char(c) => {
                             editor.insert(c);
-                            // 注意：不要清除错误提示，错误提示应该一直显示直到输入正确
-                            // 只有当用户输入的内容通过验证时，错误提示才会消失
-                            // 如果有错误且光标在错误行，确保光标在输入行（从错误行回到输入行）
-                            if has_error && !cursor_on_input_line {
-                                // 布局：提示行（第1行） -> 输入行（第2行） -> 错误行（第3行）
-                                // 如果光标在错误行，上移一行到输入行
-                                use crossterm::cursor;
-                                use crossterm::execute;
-                                let mut stdout = std::io::stdout();
-                                execute!(stdout, cursor::MoveUp(1))?;
-                                cursor_on_input_line = true; // 现在光标在输入行
-                            }
-                            // 渲染输入（此时光标应该在输入行，如果有错误，错误行还在）
-                            // 注意：输入字符后，placeholder 应该消失
-                            self.render_input(&editor, &theme, has_error)?;
+                            // 从第一个字符开始，每次输入都进行实时验证
+                            // 先验证并更新提示行状态（如果需要）
+                            self.validate_and_update_prompt(
+                                &editor,
+                                &theme,
+                                &mut validation_status,
+                                &mut cursor_line,
+                            )?;
+                            // 渲染输入（render_input 会确保光标在输入行的正确位置）
+                            // 如果提示行状态改变了，render_prompt_line 会更新提示行，
+                            // 然后 render_input 会重新计算并设置正确的光标位置
+                            self.render_input(&editor, &theme, &mut cursor_line)?;
                         }
                         KeyCode::Backspace => {
                             if editor.backspace() {
-                                // 注意：不要清除错误提示，错误提示应该一直显示直到输入正确
-                                // 如果有错误且光标在错误行，确保光标在输入行（从错误行回到输入行）
-                                if has_error && !cursor_on_input_line {
-                                    use crossterm::cursor;
-                                    use crossterm::execute;
-                                    let mut stdout = std::io::stdout();
-                                    execute!(stdout, cursor::MoveUp(1))?;
-                                    cursor_on_input_line = true; // 现在光标在输入行
-                                }
-                                // 渲染输入（此时光标应该在输入行，如果有错误，错误行还在）
-                                self.render_input(&editor, &theme, has_error)?;
+                                // 删除字符后，立即进行实时验证
+                                // 先验证并更新提示行状态（如果需要）
+                                self.validate_and_update_prompt(
+                                    &editor,
+                                    &theme,
+                                    &mut validation_status,
+                                    &mut cursor_line,
+                                )?;
+                                // 渲染输入（render_input 会确保光标在输入行的正确位置）
+                                self.render_input(&editor, &theme, &mut cursor_line)?;
                             }
                         }
                         KeyCode::Delete => {
                             if editor.delete() {
-                                // 注意：不要清除错误提示，错误提示应该一直显示直到输入正确
-                                // 如果有错误且光标在错误行，确保光标在输入行（从错误行回到输入行）
-                                if has_error && !cursor_on_input_line {
-                                    use crossterm::cursor;
-                                    use crossterm::execute;
-                                    let mut stdout = std::io::stdout();
-                                    execute!(stdout, cursor::MoveUp(1))?;
-                                    cursor_on_input_line = true; // 现在光标在输入行
-                                }
-                                // 渲染输入（此时光标应该在输入行，如果有错误，错误行还在）
-                                self.render_input(&editor, &theme, has_error)?;
+                                // 删除字符后，立即进行实时验证
+                                // 先验证并更新提示行状态（如果需要）
+                                self.validate_and_update_prompt(
+                                    &editor,
+                                    &theme,
+                                    &mut validation_status,
+                                    &mut cursor_line,
+                                )?;
+                                // 渲染输入（render_input 会确保光标在输入行的正确位置）
+                                self.render_input(&editor, &theme, &mut cursor_line)?;
                             }
                         }
                         KeyCode::Left => {
                             editor.move_left();
-                            // 注意：不要清除错误提示，错误提示应该一直显示直到输入正确
-                            // 如果有错误且光标在错误行，确保光标在输入行（从错误行回到输入行）
-                            if has_error && !cursor_on_input_line {
-                                use crossterm::cursor;
-                                use crossterm::execute;
-                                let mut stdout = std::io::stdout();
-                                execute!(stdout, cursor::MoveUp(1))?;
-                                cursor_on_input_line = true; // 现在光标在输入行
-                            }
-                            self.render_input(&editor, &theme, has_error)?;
+                            // 渲染输入（render_input 会确保光标在输入行）
+                            self.render_input(&editor, &theme, &mut cursor_line)?;
                         }
                         KeyCode::Right => {
                             editor.move_right();
-                            // 注意：不要清除错误提示，错误提示应该一直显示直到输入正确
-                            // 如果有错误且光标在错误行，确保光标在输入行（从错误行回到输入行）
-                            if has_error && !cursor_on_input_line {
-                                use crossterm::cursor;
-                                use crossterm::execute;
-                                let mut stdout = std::io::stdout();
-                                execute!(stdout, cursor::MoveUp(1))?;
-                                cursor_on_input_line = true; // 现在光标在输入行
-                            }
-                            self.render_input(&editor, &theme, has_error)?;
+                            // 渲染输入（render_input 会确保光标在输入行）
+                            self.render_input(&editor, &theme, &mut cursor_line)?;
                         }
                         KeyCode::Enter => {
                             let input = editor.as_str().to_string();
@@ -443,49 +446,26 @@ impl InputBuilder {
                                 match validator.validate(&final_input) {
                                     Ok(()) => {
                                         // 验证通过，清除输入区域并显示结果
-                                        self.clear_and_display_result(&final_input, has_error)?;
+                                        self.clear_and_display_result(
+                                            &final_input,
+                                            &mut cursor_line,
+                                        )?;
                                         return Ok(final_input);
                                     }
-                                    Err(err) => {
-                                        // 验证失败，显示错误并继续输入
-                                        // 布局：提示行（第1行） -> 输入行（第2行） -> 错误行（第3行）
-                                        // 重要：在显示错误之前，确保输入行已经正确显示
-
-                                        use crossterm::cursor;
-                                        use crossterm::execute;
-                                        let mut stdout = std::io::stdout();
-
-                                        // 确保光标在输入行（第2行）
-                                        // 布局：提示行（第1行） -> 输入行（第2行） -> 错误行（第3行，如果有）
-                                        if has_error && !cursor_on_input_line {
-                                            // 如果有错误行且光标在错误行，上移一行到输入行
-                                            execute!(stdout, cursor::MoveUp(1))?;
-                                        } else if !has_error {
-                                            // 如果没有错误行，光标可能在输入行或提示行
-                                            // 为了确保在输入行，我们需要下移一行（如果光标在提示行）
-                                            // 但是，我们无法确定光标在哪一行
-                                            // 最简单的方法：假设光标在输入行，移动到输入行的开头
-                                            // 如果光标在提示行，MoveToColumn(0) 不会改变行，所以光标还在提示行
-                                            // 所以，我们需要一个更可靠的方法
-                                            //
-                                            // 实际上，在初始渲染时，我们已经调用了 render_input，所以输入行应该已经显示了
-                                            // 如果用户直接按 Enter 而没有输入任何内容，光标应该还在输入行
-                                            // 但是，为了安全，我们移动到输入行的开头
-                                            execute!(stdout, cursor::MoveToColumn(0))?;
-                                        }
-
-                                        // 重新渲染输入行，确保它可见（即使输入为空，也会显示 "> " 前缀）
-                                        self.render_input(&editor, &theme, has_error)?;
-
-                                        // 现在光标在输入行，显示错误（下移一行）
-                                        self.show_error(&err)?;
-                                        has_error = true;
-                                        cursor_on_input_line = false; // 显示错误后，光标在错误行
+                                    Err(_) => {
+                                        // 验证失败，更新提示行状态并继续输入
+                                        validation_status = ValidationStatus::Invalid;
+                                        self.render_prompt_line(
+                                            &theme,
+                                            validation_status,
+                                            &mut cursor_line,
+                                        )?;
+                                        self.render_input(&editor, &theme, &mut cursor_line)?;
                                     }
                                 }
                             } else {
                                 // 没有验证器，直接返回
-                                self.clear_and_display_result(&final_input, has_error)?;
+                                self.clear_and_display_result(&final_input, &mut cursor_line)?;
                                 return Ok(final_input);
                             }
                         }
@@ -501,12 +481,90 @@ impl InputBuilder {
         }
     }
 
+    /// 确保光标在输入行
+    fn ensure_cursor_on_input_line(&self, cursor_line: &mut CursorLine) -> Result<()> {
+        if *cursor_line != CursorLine::InputLine {
+            use crossterm::cursor;
+            use crossterm::execute;
+            let mut stdout = std::io::stdout();
+            if *cursor_line == CursorLine::PromptLine {
+                // 从提示行下移到输入行
+                execute!(stdout, cursor::MoveDown(1))?;
+            }
+            *cursor_line = CursorLine::InputLine;
+            stdout.flush()?;
+        }
+        Ok(())
+    }
+
+    /// 渲染提示行，根据验证状态显示不同的前缀
+    fn render_prompt_line(
+        &self,
+        theme: &crate::base::interactive::style::Theme,
+        validation_status: ValidationStatus,
+        cursor_line: &mut CursorLine,
+    ) -> Result<()> {
+        use crossterm::cursor;
+        use crossterm::execute;
+        use crossterm::terminal::ClearType;
+        use std::io::Write;
+
+        let mut stdout = std::io::stdout();
+
+        // 确保光标在提示行
+        if *cursor_line != CursorLine::PromptLine {
+            if *cursor_line == CursorLine::InputLine {
+                execute!(stdout, cursor::MoveUp(1))?;
+            }
+            *cursor_line = CursorLine::PromptLine;
+        }
+
+        // 清除提示行
+        execute!(stdout, cursor::MoveToColumn(0))?;
+        execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
+
+        // 根据验证状态选择前缀和颜色
+        let (prefix, prefix_style) = match validation_status {
+            ValidationStatus::Initial => ("? ", &theme.warning),
+            ValidationStatus::Valid => ("✓ ", &theme.success),
+            ValidationStatus::Invalid => ("✗ ", &theme.error),
+        };
+
+        // 构建提示文本
+        let prompt_text = if let Some(ref default) = self.default {
+            if self.password {
+                format!("{}[****]", self.message)
+            } else {
+                format!("{}[{}]", self.message, default)
+            }
+        } else {
+            self.message.clone()
+        };
+
+        // 应用样式
+        let styled_prefix = prefix_style.apply(prefix, theme.enable_color);
+        let styled_text = theme.prompt.apply(&prompt_text, theme.enable_color);
+
+        write!(stdout, "{}{}", styled_prefix, styled_text)?;
+        stdout.flush()?;
+
+        // 回到输入行
+        // 注意：只下移一行，不重置列位置
+        // 列位置会在 render_input 中重新计算并设置
+        execute!(stdout, cursor::MoveDown(1))?;
+        *cursor_line = CursorLine::InputLine;
+
+        Ok(())
+    }
+
     fn render_input(
         &self,
         editor: &InputEditor,
         theme: &crate::base::interactive::style::Theme,
-        has_error: bool,
+        cursor_line: &mut CursorLine,
     ) -> Result<()> {
+        // 在渲染前，确保光标在输入行
+        self.ensure_cursor_on_input_line(cursor_line)?;
         use crossterm::cursor;
         use crossterm::execute;
         use crossterm::terminal::ClearType;
@@ -525,9 +583,8 @@ impl InputBuilder {
                 use std::io::Write;
                 let _ = writeln!(
                     file,
-                    "[DEBUG] render_input: 开始渲染输入，输入长度: {}, has_error: {}",
-                    editor.as_str().len(),
-                    has_error
+                    "[DEBUG] render_input: 开始渲染输入，输入长度: {}",
+                    editor.as_str().len()
                 );
             }
         }
@@ -624,71 +681,42 @@ impl InputBuilder {
         Ok(())
     }
 
-    fn show_error(&self, error_msg: &str) -> Result<()> {
-        use crate::base::interactive::style::get_theme;
-        use crossterm::cursor;
-        use crossterm::execute;
-        use crossterm::terminal::ClearType;
-        use std::io::Write;
+    /// 实时验证输入并更新提示行状态
+    ///
+    /// 从第一个字符开始，每次输入/删除字符后都会调用此方法进行验证。
+    /// - 如果验证通过，更新提示行为 ✓
+    /// - 如果验证失败，更新提示行为 ✗
+    /// - 提示行状态会实时更新
+    ///
+    /// 返回：状态是否改变
+    fn validate_and_update_prompt(
+        &self,
+        editor: &InputEditor,
+        theme: &crate::base::interactive::style::Theme,
+        validation_status: &mut ValidationStatus,
+        cursor_line: &mut CursorLine,
+    ) -> Result<bool> {
+        if let Some(ref validator) = self.validator {
+            let current_input = editor.as_str();
+            let new_status = match validator.validate(current_input) {
+                Ok(()) => ValidationStatus::Valid,
+                Err(_) => ValidationStatus::Invalid,
+            };
 
-        let mut stdout = std::io::stdout();
-        let debug_enabled = std::env::var("WORKFLOW_DEBUG_INPUT").is_ok();
-        let theme = get_theme();
-
-        // 调试信息输出到文件，避免干扰终端显示
-        if debug_enabled {
-            if let Ok(mut file) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("/tmp/workflow_debug.log")
-            {
-                use std::io::Write;
-                let _ = writeln!(
-                    file,
-                    "[DEBUG] show_error: 开始显示错误，错误消息: {}",
-                    error_msg
-                );
+            // 如果状态改变，更新提示行
+            if *validation_status != new_status {
+                *validation_status = new_status;
+                self.render_prompt_line(theme, *validation_status, cursor_line)?;
+                Ok(true)
+            } else {
+                Ok(false)
             }
+        } else {
+            Ok(false)
         }
-
-        // 当前光标应该在输入行，移动到下一行显示错误
-        if debug_enabled {
-            if let Ok(mut file) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("/tmp/workflow_debug.log")
-            {
-                use std::io::Write;
-                let _ = writeln!(file, "[DEBUG] show_error: 下移一行到错误行");
-            }
-        }
-        execute!(stdout, cursor::MoveDown(1))?;
-        execute!(stdout, cursor::MoveToColumn(0))?;
-        execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
-
-        // 显示错误信息（使用 * 前缀，应用 error 样式）
-        let error_text = format!("* {}", error_msg);
-        let styled_error = theme.error.apply(&error_text, theme.enable_color);
-        write!(stdout, "{}", styled_error)?;
-        // 注意：不换行，保持光标在错误行的末尾
-        stdout.flush()?;
-        if debug_enabled {
-            if let Ok(mut file) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("/tmp/workflow_debug.log")
-            {
-                use std::io::Write;
-                let _ = writeln!(
-                    file,
-                    "[DEBUG] show_error: 完成显示错误，光标现在在错误行的末尾"
-                );
-            }
-        }
-        Ok(())
     }
 
-    fn clear_and_display_result(&self, value: &str, had_error: bool) -> Result<()> {
+    fn clear_and_display_result(&self, value: &str, cursor_line: &mut CursorLine) -> Result<()> {
         use crate::base::interactive::style::get_theme;
         use crossterm::cursor;
         use crossterm::execute;
@@ -698,29 +726,22 @@ impl InputBuilder {
         let mut stdout = std::io::stdout();
         let theme = get_theme();
 
-        // 布局：提示行（第1行） -> 输入行（第2行） -> 错误行（第3行，如果有）
-        // 目标：清除提示行、输入行和错误行（如果有），在提示行位置显示结果
+        // 布局：提示行（第1行） -> 输入行（第2行）
+        // 目标：清除提示行和输入行，在提示行位置显示结果
 
-        if had_error {
-            // 当前光标在错误行（第3行）的末尾，先移动到错误行的开头
-            execute!(stdout, cursor::MoveToColumn(0))?;
-            // 清除错误行（第3行）
-            execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
-            // 上移一行到输入行（第2行）
-            execute!(stdout, cursor::MoveUp(1))?;
-            // 确保光标在输入行的开头
-            execute!(stdout, cursor::MoveToColumn(0))?;
-            // 清除输入行（第2行）
-            execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
-            // 上移一行到提示行（第1行）
-            execute!(stdout, cursor::MoveUp(1))?;
-        } else {
-            // 当前光标在输入行，清除输入行
-            execute!(stdout, cursor::MoveToColumn(0))?;
-            execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
-            // 上移一行到提示行（第1行）
-            execute!(stdout, cursor::MoveUp(1))?;
+        // 确保光标在输入行
+        if *cursor_line != CursorLine::InputLine {
+            if *cursor_line == CursorLine::PromptLine {
+                execute!(stdout, cursor::MoveDown(1))?;
+            }
+            *cursor_line = CursorLine::InputLine;
         }
+
+        // 清除输入行
+        execute!(stdout, cursor::MoveToColumn(0))?;
+        execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
+        // 上移一行到提示行
+        execute!(stdout, cursor::MoveUp(1))?;
 
         // 清除提示行
         execute!(stdout, cursor::MoveToColumn(0))?;
