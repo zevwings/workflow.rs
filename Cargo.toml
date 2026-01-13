@@ -39,6 +39,8 @@ base64 = "0.22"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 handlebars = "5.1"
+crossterm = "0.28"
+unicode-width = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "1.4"
@@ -63,6 +65,10 @@ path = "src/bin/workflow.rs"
 [[bin]]
 name = "install"
 path = "src/bin/install.rs"
+
+[[bin]]
+name = "demo_interactive"
+path = "src/bin/demo_interactive.rs"
 
 # Release 构建优化配置
 [profile.release]

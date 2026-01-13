@@ -22,7 +22,7 @@
 
 需求文档应使用描述性的名称命名，例如：
 
-- `{topic}.md` - 需求分析文档（例如：`prompt-rust-design.md`、`jira.md`）
+- `{topic}.md` - 需求分析文档（例如：`jira.md`）
 - `{topic}-requirement.md` - 需求文档（例如：`config-sync-requirement.md`）
 - `{topic}-design.md` - 设计提案文档（例如：`prompt-design.md`）
 
@@ -105,11 +105,7 @@
 - **分类**: 依赖迁移
 - **内容**: Git 库迁移到 gix
 
-#### 6. [prompt-rust-design.md](./prompt-rust-design.md)
-- **状态**: 📚 设计提案
-- **分类**: 设计文档
-
-#### 7. [cursor-rules-enhancement.md](./cursor-rules-enhancement.md)
+#### 6. [cursor-rules-enhancement.md](./cursor-rules-enhancement.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 开发工具配置
@@ -121,6 +117,19 @@
   - 文档命名规范和注意事项
 - **优先级**: 高优先级（确保规则正确执行）
 
+#### 8. [logger-enhancement.md](./logger-enhancement.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 日志系统增强
+- **内容**:
+  - 模块级日志分离（每个模块输出到独立文件）
+  - 自动模块识别（通过调用栈或显式指定）
+  - 日志轮转（大小限制、备份管理、自动压缩）
+  - 统一错误日志收集（`error.log`）
+  - 结构化日志字段支持（`WithField/WithFields/WithError`）
+  - JSON 格式输出支持
+- **优先级**: 中优先级（功能增强，非阻塞性）
+
 ---
 
 ## 📊 当前统计
@@ -129,9 +138,8 @@
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 1 个 | 测试架构改进 |
-| ⏳ 待实施 | 4 个 | 集成扩展、文档检查工具、依赖迁移、Cursor 规则增强 |
-| 📚 设计提案 | 1 个 | Prompt Rust 设计 |
-| **总计** | **7 个** | - |
+| ⏳ 待实施 | 5 个 | 集成扩展、文档检查工具、依赖迁移、Cursor 规则增强、日志系统增强 |
+| **总计** | **6 个** | - |
 
 ---
 
@@ -172,6 +180,7 @@
 - **文档检查工具** → [doc-check.md](./doc-check.md) ⏳ 待实施
 - **依赖迁移** → [gix-migration.md](./gix-migration.md) ⏳ 待实施
 - **Cursor 规则增强** → [cursor-rules-enhancement.md](./cursor-rules-enhancement.md) ⏳ 待实施
+- **日志系统增强** → [logger-enhancement.md](./logger-enhancement.md) ⏳ 待实施
 - **设计提案** → [prompt-rust-design.md](./prompt-rust-design.md) 📚 设计提案
 
 ---
@@ -185,4 +194,4 @@
 
 ---
 
-**最后更新**: 2025-01-12
+**最后更新**: 2025-01-15

@@ -20,6 +20,7 @@ pub mod dialog;
 pub mod format;
 pub mod http;
 pub mod indicator;
+pub mod interactive;
 pub mod llm;
 pub mod logger;
 pub mod mcp;
