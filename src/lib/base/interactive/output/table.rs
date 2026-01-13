@@ -171,7 +171,7 @@ impl TableBuilder {
                 };
                 let centered_title = format!("{}{}", " ".repeat(padding), title);
                 let styled_title = if theme.enable_color {
-                    theme.prompt.apply(&centered_title, theme.enable_color)
+                    theme.title.apply(&centered_title, theme.enable_color)
                 } else {
                     centered_title
                 };
@@ -377,7 +377,7 @@ impl TableBuilder {
 
             // 表头样式（在对齐后应用，这样不会影响宽度计算）
             let final_cell = if is_header && theme.enable_color {
-                theme.prompt.apply(&aligned_cell, theme.enable_color)
+                theme.title.apply(&aligned_cell, theme.enable_color)
             } else {
                 aligned_cell
             };

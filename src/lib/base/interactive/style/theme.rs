@@ -79,10 +79,12 @@ pub struct Theme {
     pub warning: Style,
     pub error: Style,
     pub debug: Style,
-    pub prompt: Style,
+    pub title: Style,
     pub answer: Style,
     pub hint: Style,
     pub prefix: Style,
+    pub progress: Style,
+    pub spinner: Style,
     pub enable_color: bool,
 }
 
@@ -94,10 +96,12 @@ impl Default for Theme {
             warning: Style::new().fg(Color::Yellow),
             error: Style::new().fg(Color::Red).bold(),
             debug: Style::new().fg(Color::DarkGrey),
-            prompt: Style::new().fg(Color::White),
+            title: Style::new().fg(Color::White),
             answer: Style::new().fg(Color::Cyan),
             hint: Style::new().fg(Color::DarkGrey),
             prefix: Style::new().fg(Color::Green),
+            progress: Style::new().fg(Color::White),
+            spinner: Style::new().fg(Color::Cyan),
             enable_color: true,
         }
     }

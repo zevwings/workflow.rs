@@ -166,7 +166,7 @@ impl OptionListRenderer {
 
         // 此时光标在提示行位置（"? 请选择一个选项"），显示格式化的结果："> [title] [value]"
         let prefix = theme.success.apply("> ", theme.enable_color);
-        let title = theme.prompt.apply(message, theme.enable_color);
+        let title = theme.title.apply(message, theme.enable_color);
         let answer = theme.answer.apply(result_text, theme.enable_color);
 
         write!(stdout, "{}{} {}", prefix, title, answer)?;

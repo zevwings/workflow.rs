@@ -341,7 +341,7 @@ impl InputBuilder {
         };
         // 应用主题颜色：? 使用 yellow (warning)，文本使用 prompt
         let styled_question = theme.warning.apply(question_mark, theme.enable_color);
-        let styled_text = theme.prompt.apply(&prompt_text, theme.enable_color);
+        let styled_text = theme.title.apply(&prompt_text, theme.enable_color);
 
         let mut stdout = std::io::stdout();
         writeln!(stdout, "{}{}", styled_question, styled_text)?;
@@ -543,7 +543,7 @@ impl InputBuilder {
 
         // 应用样式
         let styled_prefix = prefix_style.apply(prefix, theme.enable_color);
-        let styled_text = theme.prompt.apply(&prompt_text, theme.enable_color);
+        let styled_text = theme.title.apply(&prompt_text, theme.enable_color);
 
         write!(stdout, "{}{}", styled_prefix, styled_text)?;
         stdout.flush()?;
@@ -754,7 +754,7 @@ impl InputBuilder {
         let prefix = theme.prefix.apply("> ", theme.enable_color);
         // 使用 result_title（如果存在），否则使用 message
         let title_text = self.result_title.as_ref().unwrap_or(&self.message);
-        let title = theme.prompt.apply(title_text, theme.enable_color);
+        let title = theme.title.apply(title_text, theme.enable_color);
         let answer = theme.answer.apply(display_value, theme.enable_color);
 
         write!(stdout, "{}{} {}", prefix, title, answer)?;

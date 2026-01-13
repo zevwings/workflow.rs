@@ -166,7 +166,7 @@ impl Spinner {
         self.stop();
         let theme = get_theme();
         let formatted = message.into();
-        let styled = theme.info.apply(&formatted, theme.enable_color);
+        let styled = theme.spinner.apply(&formatted, theme.enable_color);
         eprintln!("{}", styled);
     }
 
@@ -190,7 +190,7 @@ impl Spinner {
         self.stop();
         let theme = get_theme();
         let formatted = format!("ℹ {}", message.into());
-        let styled = theme.info.apply(&formatted, theme.enable_color);
+        let styled = theme.spinner.apply(&formatted, theme.enable_color);
         eprintln!("{}", styled);
     }
 
@@ -360,10 +360,10 @@ fn format_spinner_text(
     theme: &crate::base::interactive::style::Theme,
 ) -> String {
     if message.is_empty() {
-        theme.info.apply(frame, theme.enable_color)
+        theme.spinner.apply(frame, theme.enable_color)
     } else {
-        let spinner_part = theme.info.apply(frame, theme.enable_color);
-        let message_part = theme.info.apply(message, theme.enable_color);
+        let spinner_part = theme.spinner.apply(frame, theme.enable_color);
+        let message_part = theme.spinner.apply(message, theme.enable_color);
         format!("{} {}", spinner_part, message_part)
     }
 }

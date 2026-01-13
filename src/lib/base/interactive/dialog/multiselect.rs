@@ -90,7 +90,7 @@ where
 
         // 显示提示信息（单独一行，使用 ? 前缀）
         let question_prefix = theme.warning.apply("? ", theme.enable_color);
-        let message_text = theme.prompt.apply(&self.message, theme.enable_color);
+        let message_text = theme.title.apply(&self.message, theme.enable_color);
 
         let mut stdout = std::io::stdout();
         writeln!(stdout, "{}{}", question_prefix, message_text)?;

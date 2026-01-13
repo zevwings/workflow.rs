@@ -41,8 +41,8 @@ impl ConfirmBuilder {
         };
 
         // 应用主题颜色：? 和消息使用 prompt 样式，hint 使用 hint 样式
-        let question_prefix = theme.prompt.apply("? ", theme.enable_color);
-        let message_text = theme.prompt.apply(&self.message, theme.enable_color);
+        let question_prefix = theme.title.apply("? ", theme.enable_color);
+        let message_text = theme.title.apply(&self.message, theme.enable_color);
         let hint_styled = theme.hint.apply(hint_text, theme.enable_color);
 
         let mut stdout = std::io::stdout();
@@ -116,7 +116,7 @@ impl ConfirmBuilder {
 
         // 显示格式化的结果："> [title] yes" 或 "> [title] no"
         let prefix = theme.prefix.apply("> ", theme.enable_color);
-        let title = theme.prompt.apply(&self.message, theme.enable_color);
+        let title = theme.title.apply(&self.message, theme.enable_color);
         let result_text = if value {
             theme.answer.apply("yes", theme.enable_color)
         } else {

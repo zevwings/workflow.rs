@@ -300,7 +300,7 @@ impl ProgressBar {
         self.stop();
         let theme = get_theme();
         let formatted = message.into();
-        let styled = theme.info.apply(&formatted, theme.enable_color);
+        let styled = theme.progress.apply(&formatted, theme.enable_color);
         eprintln!("{}", styled);
     }
 
@@ -324,7 +324,7 @@ impl ProgressBar {
         self.stop();
         let theme = get_theme();
         let formatted = format!("ℹ {}", message.into());
-        let styled = theme.info.apply(&formatted, theme.enable_color);
+        let styled = theme.progress.apply(&formatted, theme.enable_color);
         eprintln!("{}", styled);
     }
 
@@ -543,7 +543,7 @@ fn format_progress_text(
         // 如果字符不足，使用默认字符
         return format!(
             "{} {}",
-            theme.info.apply(message, theme.enable_color),
+            theme.progress.apply(message, theme.enable_color),
             current
         );
     }
@@ -579,7 +579,7 @@ fn format_progress_text(
             empty_char.to_string().repeat(empty_width)
         );
 
-        let bar_styled = theme.info.apply(&bar_str, theme.enable_color);
+        let bar_styled = theme.progress.apply(&bar_str, theme.enable_color);
         parts.push(bar_styled);
 
         // 根据模式显示不同的统计信息
@@ -621,12 +621,12 @@ fn format_progress_text(
                     bytes_str, total_bytes_str, percent, speed_str, eta_str
                 )
             };
-            let stats_styled = theme.info.apply(&stats_str, theme.enable_color);
+            let stats_styled = theme.progress.apply(&stats_str, theme.enable_color);
             parts.push(stats_styled);
         } else {
             // 普通模式：显示数量
             let stats_str = format!("{}/{} ({:.0}%)", current, total_val, percent);
-            let stats_styled = theme.info.apply(&stats_str, theme.enable_color);
+            let stats_styled = theme.progress.apply(&stats_str, theme.enable_color);
             parts.push(stats_styled);
         }
     } else {
@@ -637,7 +637,7 @@ fn format_progress_text(
         let frame_idx = (elapsed.as_millis() / 100) as usize % spinner_frames.len();
         let spinner_char = spinner_frames[frame_idx];
 
-        let spinner_styled = theme.info.apply(spinner_char, theme.enable_color);
+        let spinner_styled = theme.progress.apply(spinner_char, theme.enable_color);
         parts.push(spinner_styled);
 
         // 显示当前值
@@ -647,20 +647,20 @@ fn format_progress_text(
             } else {
                 format!("{}", current)
             };
-            let current_styled = theme.info.apply(&current_str, theme.enable_color);
+            let current_styled = theme.progress.apply(&current_str, theme.enable_color);
             parts.push(current_styled);
         }
     }
 
     // 时间信息
     if !time_info.is_empty() {
-        let time_styled = theme.info.apply(&time_info, theme.enable_color);
+        let time_styled = theme.progress.apply(&time_info, theme.enable_color);
         parts.push(time_styled);
     }
 
     // 消息
     if !message.is_empty() {
-        let msg_styled = theme.info.apply(message, theme.enable_color);
+        let msg_styled = theme.progress.apply(message, theme.enable_color);
         parts.push(msg_styled);
     }
 
