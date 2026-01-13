@@ -4,7 +4,7 @@
 
 use crate::base::alias::{AliasManager, CommandsConfig};
 use crate::base::dialog::{ConfirmDialog, FormBuilder, GroupConfig, InputDialog};
-use crate::{log_info, log_success, log_warning};
+use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 别名添加命令
@@ -54,7 +54,7 @@ impl AliasAddCommand {
                 .unwrap_or(false);
 
                 if !should_overwrite {
-                    log_info!("Operation cancelled");
+                    info!("Operation cancelled");
                     return Ok(());
                 }
             }
@@ -135,14 +135,14 @@ impl AliasAddCommand {
             .unwrap_or(false);
 
             if !should_overwrite {
-                log_info!("Operation cancelled");
+                info!("Operation cancelled");
                 return Ok(());
             }
         }
 
         // 保存别名
         AliasManager::add(&alias_name, &alias_command)?;
-        log_success!(
+        success!(
             "Alias '{}' = '{}' added successfully",
             alias_name,
             alias_command
@@ -157,13 +157,11 @@ impl AliasAddCommand {
         if should_update {
             match crate::Completion::generate_all_completions(None, None) {
                 Ok(_) => {
-                    log_success!("Completion scripts updated successfully");
+                    success!("Completion scripts updated successfully");
                 }
                 Err(e) => {
-                    log_warning!("Failed to update completion scripts: {}", e);
-                    log_info!(
-                        "You can manually update them later with: workflow completion generate"
-                    );
+                    warning!("Failed to update completion scripts: {}", e);
+                    info!("You can manually update them later with: workflow completion generate");
                 }
             }
         }

@@ -39,7 +39,7 @@ pub use dialog::{
 pub use format::DisplayFormatter;
 pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};
 pub use indicator::{Progress, Spinner};
-pub use logger::{LogLevel, Logger, Tracer};
+pub use logger::{LogLevel, Tracer};
 pub use prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};

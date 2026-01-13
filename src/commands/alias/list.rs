@@ -4,7 +4,7 @@
 
 use crate::base::alias::AliasManager;
 use crate::base::table::{TableBuilder, TableStyle};
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{br, info, success};
 use color_eyre::Result;
 use tabled::Tabled;
 
@@ -25,14 +25,14 @@ impl AliasListCommand {
     ///
     /// 使用表格格式显示所有已定义的别名。
     pub fn list() -> Result<()> {
-        log_break!();
-        log_message!("Alias List");
+        br!();
+        info!("Alias List");
 
         let aliases = AliasManager::list()?;
 
         if aliases.is_empty() {
-            log_info!("No aliases defined");
-            log_message!("Run 'workflow alias add' to add an alias.");
+            info!("No aliases defined");
+            info!("Run 'workflow alias add' to add an alias.");
             return Ok(());
         }
 
@@ -51,8 +51,8 @@ impl AliasListCommand {
             .with_style(TableStyle::Modern)
             .render();
 
-        log_message!("{}", table);
-        log_success!("Found {} alias/aliases", aliases.len());
+        info!("{}", table);
+        success!("Found {} alias/aliases", aliases.len());
 
         Ok(())
     }

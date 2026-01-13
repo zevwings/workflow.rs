@@ -10,5 +10,5 @@ mod spinner;
 mod table;
 
 pub use message::{Message, MessageRef};
-pub use spinner::{spinner, SpinnerBuilder};
+pub use spinner::{spinner, Spinner, SpinnerBuilder};
 pub use table::{table, Alignment, TableBuilder};

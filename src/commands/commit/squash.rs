@@ -9,7 +9,7 @@ use crate::commands::commit::helpers::{
     check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
 };
 use crate::commit::{CommitSquash, SquashOptions};
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Commit squash command
@@ -24,8 +24,8 @@ impl CommitSquashCommand {
         // 1. Run checks
         check::CheckCommand::run_all()?;
 
-        log_break!();
-        log_message!("Commit Squash");
+        br!();
+        info!("Commit Squash");
 
         // 步骤0: 检查是否是默认分支（保护分支不允许直接修改提交历史）
         let (current_branch, _default_branch) = check_not_on_default_branch("squash")?;
@@ -34,8 +34,8 @@ impl CommitSquashCommand {
         check_has_last_commit()?;
 
         // 步骤2: 获取当前分支创建之后的提交
-        log_break!();
-        log_info!(
+        br!();
+        info!(
             "Getting commits created after branch '{}' was created...",
             current_branch
         );
@@ -51,14 +51,14 @@ impl CommitSquashCommand {
         }
 
         // 步骤3: 显示可用的 commits 并让用户多选
-        log_break!();
-        log_info!(
+        br!();
+        info!(
             "Found {} commit(s) created after branch was created:",
             commits.len()
         );
         for (idx, commit) in commits.iter().enumerate() {
             let marker = if idx == 0 { "[OLDEST] " } else { "" };
-            log_info!(
+            info!(
                 "  {}. {}[{}] {}",
                 idx + 1,
                 marker,
@@ -122,17 +122,17 @@ impl CommitSquashCommand {
                 .cmp(&commits.iter().position(|c| c.sha == b.sha))
         });
 
-        log_break!();
-        log_info!(
+        br!();
+        info!(
             "Selected {} commit(s) to squash:",
             selected_commits_sorted.len()
         );
         for (idx, commit) in selected_commits_sorted.iter().enumerate() {
-            log_info!("  {}. [{}] {}", idx + 1, &commit.sha[..8], commit.message);
+            info!("  {}. [{}] {}", idx + 1, &commit.sha[..8], commit.message);
         }
 
         // 步骤6: 输入新的提交消息
-        log_break!();
+        br!();
         let new_message = InputDialog::new("Enter new commit message for squashed commit")
             .with_validator(|msg: &str| {
                 if msg.trim().is_empty() {
@@ -149,9 +149,9 @@ impl CommitSquashCommand {
             CommitSquash::create_preview(&selected_commits_sorted, &new_message, &current_branch)
                 .wrap_err("Failed to create preview")?;
 
-        log_break!();
-        log_message!("{}", CommitSquash::format_preview(&preview));
-        log_message!("");
+        br!();
+        info!("{}", CommitSquash::format_preview(&preview));
+        info!("");
 
         // 最终确认
         ConfirmDialog::new("Confirm to execute commit squash?")
@@ -172,18 +172,18 @@ impl CommitSquashCommand {
 
         CommitSquash::execute_squash(options).wrap_err("Failed to execute squash")?;
 
-        log_break!();
-        log_success!("✓ Commit squash successful");
-        log_info!(
+        br!();
+        success!("✓ Commit squash successful");
+        info!(
             "  Squashed {} commit(s) into one",
             selected_commits_sorted.len()
         );
-        log_info!("  New commit message: {}", new_message);
+        info!("  New commit message: {}", new_message);
 
         // 步骤9: 显示完成提示
         if let Some(msg) = CommitSquash::format_completion_message(&current_branch, &commit_shas)? {
-            log_break!();
-            log_message!("{}", msg);
+            br!();
+            info!("{}", msg);
         }
 
         // 步骤10: 如果 commits 已推送，询问是否要 force push

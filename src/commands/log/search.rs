@@ -3,7 +3,7 @@ use crate::base::dialog::InputDialog;
 use crate::base::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
-use crate::{log_break, log_debug, log_message, log_success, log_warning};
+use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 搜索关键词命令
@@ -36,7 +36,7 @@ impl SearchCommand {
         };
 
         // 4. 调用库函数执行搜索
-        log_debug!("Searching for: '{}'...", term);
+        debug!("Searching for: '{}'...", term);
 
         // 同时搜索两个文件
         let (api_results, flutter_api_results) = logs
@@ -46,13 +46,13 @@ impl SearchCommand {
         let total_count = api_results.len() + flutter_api_results.len();
 
         if total_count == 0 {
-            log_warning!("No matches found for '{}'", term);
+            warning!("No matches found for '{}'", term);
             return Ok(());
         }
 
-        log_break!();
-        log_success!("Found {} matches:", total_count);
-        log_break!();
+        br!();
+        success!("Found {} matches:", total_count);
+        br!();
 
         // 构建表格数据
         let mut rows: Vec<SearchResultRow> = Vec::new();
@@ -81,7 +81,7 @@ impl SearchCommand {
 
         // 使用表格显示所有结果
         if !rows.is_empty() {
-            log_message!(
+            info!(
                 "{}",
                 TableBuilder::new(rows)
                     .with_title("Search Results")

@@ -2,7 +2,7 @@ use crate::base::constants::{errors::http_client, git::check_errors, messages::l
 use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, RequestConfig};
 use crate::git::{GitCommit, GitRepo};
-use crate::{log_break, log_error, log_info, log_message, log_success};
+use crate::{br, error, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 use serde_json::Value;
@@ -18,35 +18,35 @@ impl CheckCommand {
     ///
     /// 检查 Git 仓库状态和到 GitHub 的网络连接。
     pub fn run_all() -> Result<()> {
-        log_message!("Running environment checks...");
-        log_break!();
+        info!("Running environment checks...");
+        br!();
 
         // 1. 检查 Git 状态
-        log_message!("[1/2] Checking Git repository status...");
+        info!("[1/2] Checking Git repository status...");
         if !GitRepo::is_git_repo() {
-            log_error!("Not in a Git repository");
+            error!("Not in a Git repository");
             color_eyre::eyre::bail!("{}", check_errors::NOT_GIT_REPO);
         }
 
         let git_output = GitCommit::status().wrap_err("Failed to check git status")?;
         if git_output.trim().is_empty() {
-            log_success!("Git repository is clean (no uncommitted changes)");
+            success!("Git repository is clean (no uncommitted changes)");
         } else {
-            log_info!("Git status:\n{}", git_output);
+            info!("Git status:\n{}", git_output);
         }
 
-        log_break!();
+        br!();
 
         // 2. 检查网络连接
-        log_message!("[2/2] Checking network connection to GitHub...");
+        info!("[2/2] Checking network connection to GitHub...");
         let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
         let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
         match client.stream(HttpMethod::Get, crate::git::github::BASE, config) {
             Ok(response) => {
                 if response.status().is_success() {
-                    log_success!("GitHub network is available");
+                    success!("GitHub network is available");
                 } else {
-                    log_error!(
+                    error!(
                         "GitHub network check failed (status: {})",
                         response.status()
                     );
@@ -54,16 +54,16 @@ impl CheckCommand {
                 }
             }
             Err(e) => {
-                log_error!("Failed to check network connection: {}", e);
-                log_error!(
+                error!("Failed to check network connection: {}", e);
+                error!(
                 "  This might be due to network issues, proxy settings, or firewall restrictions"
             );
                 color_eyre::eyre::bail!("Network check failed: {}", e);
             }
         }
 
-        log_break!();
-        log_success!("All checks passed");
+        br!();
+        success!("All checks passed");
         Ok(())
     }
 
@@ -76,8 +76,8 @@ impl CheckCommand {
     ///
     /// 这样可以复用 Makefile 中定义的 lint 规则，保持一致性。
     pub fn run_lint() -> Result<()> {
-        log_message!("Running code quality checks (Lint)...");
-        log_break!();
+        info!("Running code quality checks (Lint)...");
+        br!();
 
         // 检查 make 命令是否可用（跨平台检查）
         let make_available = if cfg!(target_os = "windows") {
@@ -87,16 +87,16 @@ impl CheckCommand {
         };
 
         if !make_available {
-            log_error!("make command is not available");
-            log_error!("Please install make or run lint checks manually:");
-            log_error!("  cargo fmt --check");
-            log_error!("  cargo clippy -- -D warnings");
-            log_error!("  cargo check");
+            error!("make command is not available");
+            error!("Please install make or run lint checks manually:");
+            error!("  cargo fmt --check");
+            error!("  cargo clippy -- -D warnings");
+            error!("  cargo check");
             color_eyre::eyre::bail!("make command not found");
         }
 
         // 使用 make lint 执行检查
-        log_message!("Running 'make lint'...");
+        info!("Running 'make lint'...");
         let lint_output = cmd("make", &["lint"])
             .stdout_capture()
             .stderr_capture()
@@ -106,24 +106,24 @@ impl CheckCommand {
         if !lint_output.status.success() {
             let stderr = String::from_utf8_lossy(&lint_output.stderr);
             let stdout = String::from_utf8_lossy(&lint_output.stdout);
-            log_error!("Lint check failed");
+            error!("Lint check failed");
             if !stderr.is_empty() {
-                log_error!("{}", stderr);
+                error!("{}", stderr);
             }
             if !stdout.is_empty() {
-                log_error!("{}", stdout);
+                error!("{}", stdout);
             }
-            log_error!("Run 'make fix' to auto-fix some issues, or fix them manually");
+            error!("Run 'make fix' to auto-fix some issues, or fix them manually");
             color_eyre::eyre::bail!("Lint check failed");
         }
 
         // 输出 make lint 的结果（成功时）
         let stdout = String::from_utf8_lossy(&lint_output.stdout);
         if !stdout.is_empty() {
-            log_info!("{}", stdout);
+            info!("{}", stdout);
         }
 
-        log_success!("All lint checks passed");
+        success!("All lint checks passed");
         Ok(())
     }
 
@@ -131,11 +131,11 @@ impl CheckCommand {
     ///
     /// 通过调用 `cargo test` 来运行所有测试，确保代码功能正常。
     pub fn run_test() -> Result<()> {
-        log_message!("Running tests...");
-        log_break!();
+        info!("Running tests...");
+        br!();
 
         // 运行 cargo test
-        log_message!("Running 'cargo test'...");
+        info!("Running 'cargo test'...");
         let test_output = cmd("cargo", &["test", "--verbose"])
             .stdout_capture()
             .stderr_capture()
@@ -145,14 +145,14 @@ impl CheckCommand {
         if !test_output.status.success() {
             let stderr = String::from_utf8_lossy(&test_output.stderr);
             let stdout = String::from_utf8_lossy(&test_output.stdout);
-            log_error!("{}", log::TESTS_FAILED);
+            error!("{}", log::TESTS_FAILED);
             if !stderr.is_empty() {
-                log_error!("{}", stderr);
+                error!("{}", stderr);
             }
             if !stdout.is_empty() {
-                log_error!("{}", stdout);
+                error!("{}", stdout);
             }
-            log_error!("Please fix the failing tests before merging");
+            error!("Please fix the failing tests before merging");
             color_eyre::eyre::bail!("{}", log::TESTS_FAILED);
         }
 
@@ -167,17 +167,17 @@ impl CheckCommand {
 
             if let Some(start) = summary_start {
                 let summary: String = lines[start..].join("\n");
-                log_info!("{}", summary);
+                info!("{}", summary);
             } else {
                 // 如果没有找到摘要，显示最后几行
                 let last_lines: Vec<&str> = lines.iter().rev().take(10).rev().copied().collect();
                 if !last_lines.is_empty() {
-                    log_info!("{}", last_lines.join("\n"));
+                    info!("{}", last_lines.join("\n"));
                 }
             }
         }
 
-        log_success!("All tests passed");
+        success!("All tests passed");
         Ok(())
     }
 }

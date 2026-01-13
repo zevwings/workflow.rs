@@ -1,5 +1,5 @@
 use crate::jira::JiraIssueApi;
-use crate::{log_break, log_debug, log_message};
+use crate::{br, debug, info};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
 use serde_saphyr;
@@ -19,7 +19,7 @@ impl ChangelogCommand {
 
         // 根据详细程度控制日志输出
         if args.query_display.verbosity.is_verbose() {
-            log_debug!("Getting changelog for {}...", jira_id);
+            debug!("Getting changelog for {}...", jira_id);
         }
 
         // 确定输出格式
@@ -41,19 +41,19 @@ impl ChangelogCommand {
         let changelog = JiraIssueApi::get_issue_changelog(jira_id)
             .wrap_err_with(|| format!("Failed to get changelog for {}", jira_id))?;
 
-        log_break!();
-        log_break!('=', 40, "Changelog");
+        br!();
+        br!('=', 40, "Changelog");
 
         if changelog.histories.is_empty() {
-            log_message!("No change history available.");
+            info!("No change history available.");
             return Ok(());
         }
 
         for history in &changelog.histories {
-            log_break!();
-            log_message!("Change at {}", format_date(&history.created)?);
+            br!();
+            info!("Change at {}", format_date(&history.created)?);
             if let Some(author) = &history.author {
-                log_message!(
+                info!(
                     "  Author: {} ({})",
                     author.display_name,
                     author.email_address.as_deref().unwrap_or("N/A")
@@ -61,16 +61,16 @@ impl ChangelogCommand {
             }
 
             for item in &history.items {
-                log_message!("  Field: {}", item.field);
+                info!("  Field: {}", item.field);
                 if let Some(from_str) = &item.from_string {
-                    log_message!("    From: {}", from_str);
+                    info!("    From: {}", from_str);
                 } else if let Some(from) = &item.from {
-                    log_message!("    From: {}", from);
+                    info!("    From: {}", from);
                 }
                 if let Some(to_str) = &item.to_string {
-                    log_message!("    To: {}", to_str);
+                    info!("    To: {}", to_str);
                 } else if let Some(to) = &item.to {
-                    log_message!("    To: {}", to);
+                    info!("    To: {}", to);
                 }
             }
         }
@@ -86,7 +86,7 @@ impl ChangelogCommand {
         let mut output: HashMap<String, serde_json::Value> = HashMap::new();
         output.insert("changelog".to_string(), serde_json::to_value(changelog)?);
 
-        log_message!("{}", serde_json::to_string_pretty(&output)?);
+        info!("{}", serde_json::to_string_pretty(&output)?);
         Ok(())
     }
 
@@ -98,7 +98,7 @@ impl ChangelogCommand {
         let mut output: HashMap<String, serde_json::Value> = HashMap::new();
         output.insert("changelog".to_string(), serde_json::to_value(changelog)?);
 
-        log_message!("{}", serde_saphyr::to_string(&output)?);
+        info!("{}", serde_saphyr::to_string(&output)?);
         Ok(())
     }
 
@@ -108,16 +108,16 @@ impl ChangelogCommand {
             .wrap_err_with(|| format!("Failed to get changelog for {}", jira_id))?;
 
         if changelog.histories.is_empty() {
-            log_message!("# Changelog\n\nNo change history available.\n");
+            info!("# Changelog\n\nNo change history available.\n");
             return Ok(());
         }
 
-        log_message!("# Changelog\n");
+        info!("# Changelog\n");
 
         for history in &changelog.histories {
-            log_message!("## {}", format_date(&history.created)?);
+            info!("## {}", format_date(&history.created)?);
             if let Some(author) = &history.author {
-                log_message!(
+                info!(
                     "**Author:** {} ({})\n",
                     author.display_name,
                     author.email_address.as_deref().unwrap_or("N/A")
@@ -125,19 +125,19 @@ impl ChangelogCommand {
             }
 
             for item in &history.items {
-                log_message!("- **{}**", item.field);
+                info!("- **{}**", item.field);
                 if let Some(from_str) = &item.from_string {
-                    log_message!("  - From: {}", from_str);
+                    info!("  - From: {}", from_str);
                 } else if let Some(from) = &item.from {
-                    log_message!("  - From: {}", from);
+                    info!("  - From: {}", from);
                 }
                 if let Some(to_str) = &item.to_string {
-                    log_message!("  - To: {}", to_str);
+                    info!("  - To: {}", to_str);
                 } else if let Some(to) = &item.to {
-                    log_message!("  - To: {}", to);
+                    info!("  - To: {}", to);
                 }
             }
-            log_break!();
+            br!();
         }
 
         Ok(())

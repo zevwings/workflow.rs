@@ -42,8 +42,8 @@ pub use base::format::DisplayFormatter;
 pub use base::settings::{LLMSettings, Paths, Settings};
 pub use base::util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
 pub use base::{
-    Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, LogLevel, Logger,
-    Reload, ShellConfigManager, Tracer,
+    Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, LogLevel, Reload,
+    ShellConfigManager, Tracer,
 };
 // 从 base::prompt 重新导出 Prompt 相关 API
 pub use base::prompt::{

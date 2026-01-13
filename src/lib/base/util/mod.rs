@@ -68,7 +68,4 @@ pub use file::{FileReader, FileWriter};
 // 重新导出 path
 pub use path::PathAccess;
 
-// 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
-pub use crate::base::logger::console::{
-    debug, error, info, separator, separator_with_text, success, warning,
-};
+// 注意：颜色格式化函数已移除，请使用 success!, error!, warning!, info!, debug!, br! 宏代替

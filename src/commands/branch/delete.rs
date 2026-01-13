@@ -7,7 +7,7 @@ use crate::commands::branch::helpers::sort_branches_with_priority;
 use crate::commands::check;
 use crate::git::GitBranch;
 use crate::repo::config::RepoConfig;
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Branch delete command
@@ -25,17 +25,17 @@ impl BranchDeleteCommand {
         // 1. 运行检查
         check::CheckCommand::run_all()?;
 
-        log_break!();
-        log_message!("Branch Delete");
+        br!();
+        info!("Branch Delete");
 
         // 2. 获取当前分支和默认分支
         let current_branch =
             GitBranch::current_branch().wrap_err("Failed to get current branch")?;
-        log_info!("Current branch: {}", current_branch);
+        info!("Current branch: {}", current_branch);
 
         let default_branch =
             GitBranch::get_default_branch().wrap_err("Failed to get default branch")?;
-        log_info!("Default branch: {}", default_branch);
+        info!("Default branch: {}", default_branch);
 
         // 3. 确定要删除的分支
         let branches_to_delete = if let Some(branch) = branch_name {
@@ -46,7 +46,7 @@ impl BranchDeleteCommand {
         };
 
         if branches_to_delete.is_empty() {
-            log_info!("No branches selected for deletion");
+            info!("No branches selected for deletion");
             return Ok(());
         }
 
@@ -58,7 +58,7 @@ impl BranchDeleteCommand {
                 GitBranch::is_branch_exists(branch_name).wrap_err("Failed to check branch")?;
 
             if !exists_local && !exists_remote {
-                log_warning!("Branch '{}' does not exist", branch_name);
+                warning!("Branch '{}' does not exist", branch_name);
                 continue;
             }
 
@@ -90,13 +90,13 @@ impl BranchDeleteCommand {
         }
 
         if branches_info.is_empty() {
-            log_info!("No valid branches to delete");
+            info!("No valid branches to delete");
             return Ok(());
         }
 
         // 5. 显示预览
-        log_break!();
-        log_message!("Branches to be deleted:");
+        br!();
+        info!("Branches to be deleted:");
         for info in &branches_info {
             let locations = {
                 let mut locs = Vec::new();
@@ -117,13 +117,13 @@ impl BranchDeleteCommand {
                 "✅"
             };
 
-            log_info!("  {} {} (locations: {})", status, info.name, locations);
+            info!("  {} {} (locations: {})", status, info.name, locations);
         }
 
         // 6. Dry-run 模式
         if dry_run {
-            log_break!();
-            log_info!("Dry-run mode: branches will not be actually deleted");
+            br!();
+            info!("Dry-run mode: branches will not be actually deleted");
             return Ok(());
         }
 
@@ -132,10 +132,10 @@ impl BranchDeleteCommand {
             branches_info.iter().filter(|info| info.is_protected).collect();
 
         if !protected_branches.is_empty() && !force {
-            log_break!();
-            log_warning!("Warning: The following branches are protected:");
+            br!();
+            warning!("Warning: The following branches are protected:");
             for info in &protected_branches {
-                log_warning!("  - {}", info.name);
+                warning!("  - {}", info.name);
             }
 
             let confirmed = ConfirmDialog::new(
@@ -146,7 +146,7 @@ impl BranchDeleteCommand {
             .wrap_err("Failed to get user confirmation")?;
 
             if !confirmed {
-                log_info!("Operation cancelled");
+                info!("Operation cancelled");
                 return Ok(());
             }
         }
@@ -185,7 +185,7 @@ impl BranchDeleteCommand {
                 .wrap_err("Failed to get user confirmation")?;
 
             if !confirmed {
-                log_info!("Operation cancelled");
+                info!("Operation cancelled");
                 return Ok(());
             }
         }
@@ -214,7 +214,7 @@ impl BranchDeleteCommand {
 
                 // 如果普通删除失败且未使用 force，询问是否强制删除
                 if delete_result.is_err() && !force && !info.is_merged {
-                    log_break!();
+                    br!();
                     let force_confirm = ConfirmDialog::new(format!(
                         "Branch '{}' is not merged. Force delete it?",
                         branch_name
@@ -230,11 +230,11 @@ impl BranchDeleteCommand {
 
                 match delete_result {
                     Ok(_) => {
-                        log_success!("Deleted local branch: {}", branch_name);
+                        success!("Deleted local branch: {}", branch_name);
                         deleted_local += 1;
                     }
                     Err(e) => {
-                        log_warning!("Failed to delete local branch {}: {}", branch_name, e);
+                        warning!("Failed to delete local branch {}: {}", branch_name, e);
                         failed += 1;
                     }
                 }
@@ -244,11 +244,11 @@ impl BranchDeleteCommand {
             if should_delete_remote {
                 match GitBranch::delete_remote(branch_name) {
                     Ok(_) => {
-                        log_success!("Deleted remote branch: {}", branch_name);
+                        success!("Deleted remote branch: {}", branch_name);
                         deleted_remote += 1;
                     }
                     Err(e) => {
-                        log_warning!("Failed to delete remote branch {}: {}", branch_name, e);
+                        warning!("Failed to delete remote branch {}: {}", branch_name, e);
                         failed += 1;
                     }
                 }
@@ -256,18 +256,18 @@ impl BranchDeleteCommand {
         }
 
         // 10. 显示结果
-        log_break!();
+        br!();
         if deleted_local > 0 || deleted_remote > 0 {
-            log_success!("Deletion completed!");
+            success!("Deletion completed!");
             if deleted_local > 0 {
-                log_info!("Deleted {} local branch(es)", deleted_local);
+                info!("Deleted {} local branch(es)", deleted_local);
             }
             if deleted_remote > 0 {
-                log_info!("Deleted {} remote branch(es)", deleted_remote);
+                info!("Deleted {} remote branch(es)", deleted_remote);
             }
         }
         if failed > 0 {
-            log_warning!("Failed to delete {} branch(es)", failed);
+            warning!("Failed to delete {} branch(es)", failed);
         }
 
         Ok(())
@@ -301,7 +301,7 @@ impl BranchDeleteCommand {
             GitBranch::get_all_branches(false).wrap_err("Failed to get branch list")?;
 
         if all_branches.is_empty() {
-            log_info!("No branches available");
+            info!("No branches available");
             return Ok(Vec::new());
         }
 

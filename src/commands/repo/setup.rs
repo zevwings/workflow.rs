@@ -10,7 +10,7 @@ use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
-use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning};
+use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal};
@@ -69,13 +69,13 @@ impl RepoSetupCommand {
         }
 
         // 3. Configuration doesn't exist or is incomplete
-        log_break!();
-        log_warning!("Repository configuration not found or incomplete.");
-        log_info!("Project-level configuration helps:");
-        log_info!("  - Share branch prefix and commit template settings with your team");
-        log_info!("  - Automatically configure commit message format");
-        log_info!("  - Manage ignored branches");
-        log_break!();
+        br!();
+        warning!("Repository configuration not found or incomplete.");
+        info!("Project-level configuration helps:");
+        info!("  - Share branch prefix and commit template settings with your team");
+        info!("  - Automatically configure commit message format");
+        info!("  - Manage ignored branches");
+        br!();
 
         // 4. Ask user if they want to run setup
         let should_setup =
@@ -86,17 +86,17 @@ impl RepoSetupCommand {
 
         if should_setup {
             // 5. Run setup
-            log_break!();
-            log_info!("Running repository setup...");
-            log_break!();
+            br!();
+            info!("Running repository setup...");
+            br!();
 
             Self::run().wrap_err("Failed to run repository setup")?;
 
-            log_break!();
-            log_success!("Repository configuration completed!");
-            log_break!();
+            br!();
+            success!("Repository configuration completed!");
+            br!();
         } else {
-            log_info!("Skipping repository setup. You can run 'workflow repo setup' later.");
+            info!("Skipping repository setup. You can run 'workflow repo setup' later.");
         }
 
         Ok(())
@@ -125,8 +125,8 @@ impl RepoSetupCommand {
         let repo_name = GitRepo::extract_repo_name()
             .wrap_err("Not in a Git repository. Please run this command in a Git repository.")?;
 
-        log_message!("Repository: {}", repo_name);
-        log_break!();
+        info!("Repository: {}", repo_name);
+        br!();
 
         // 2. 加载现有配置（如果存在）
         let existing_config = RepoConfig::load().ok();
@@ -137,17 +137,17 @@ impl RepoSetupCommand {
         // 4. 保存配置
         config.save().wrap_err("Failed to save config")?;
 
-        log_break!();
-        log_success!("Repository configuration saved successfully!");
-        log_debug!(
+        br!();
+        success!("Repository configuration saved successfully!");
+        debug!(
             "Project template configuration: {}",
             Paths::project_config()?.display()
         );
-        log_debug!(
+        debug!(
             "Personal preference configuration: {}",
             Paths::repository_config()?.display()
         );
-        log_success!(
+        success!(
             "You can commit the project template configuration to Git to share with your team."
         );
 
@@ -326,11 +326,11 @@ impl RepoSetupCommand {
         }
 
         // MCP Configuration (顺序交互式流程)
-        log_break!();
-        log_message!("MCP Configuration (Project-level)");
-        log_break!('-', 40);
-        log_debug!("Configure MCP servers for Cursor IDE integration.");
-        log_break!();
+        br!();
+        info!("MCP Configuration (Project-level)");
+        br!('-', 40);
+        debug!("Configure MCP servers for Cursor IDE integration.");
+        br!();
 
         Self::setup_mcp_integration()?;
 
@@ -350,43 +350,43 @@ impl RepoSetupCommand {
         let mut new_config = MCPConfig::default();
 
         // 2. 询问是否配置 JIRA MCP
-        log_debug!("Setting up Jira MCP servers...");
+        debug!("Setting up Jira MCP servers...");
         let configure_jira = ConfirmDialog::new("Configure JIRA MCP server?")
             .with_default(true)
             .prompt()
             .wrap_err("Failed to get JIRA MCP configuration preference")?;
 
         if configure_jira {
-            log_break!();
+            br!();
             let server_config = Self::configure_jira_mcp(&settings)?;
             new_config.mcp_servers.insert("jira".to_string(), server_config);
         }
 
         // 3. 询问是否配置 GitHub MCP
-        log_break!();
-        log_debug!("Setting up GitHub MCP servers...");
+        br!();
+        debug!("Setting up GitHub MCP servers...");
         let configure_github = ConfirmDialog::new("Configure GitHub MCP server?")
             .with_default(true)
             .prompt()
             .wrap_err("Failed to get GitHub MCP configuration preference")?;
 
         if configure_github {
-            log_break!();
+            br!();
             let server_config = Self::configure_github_mcp(&settings)?;
             new_config.mcp_servers.insert("github".to_string(), server_config);
         }
 
         // 4. 保存配置（如果有配置的服务器）
         if !new_config.mcp_servers.is_empty() {
-            log_break!();
-            log_message!("Saving MCP configuration...");
+            br!();
+            info!("Saving MCP configuration...");
             mcp_manager.merge(&new_config)?;
-            log_success!(
+            success!(
                 "MCP configuration saved to: {:?}",
                 mcp_manager.config_path()
             );
         } else {
-            log_warning!("No MCP servers configured, skipping save");
+            warning!("No MCP servers configured, skipping save");
         }
 
         Ok(())
@@ -394,8 +394,8 @@ impl RepoSetupCommand {
 
     /// 配置 JIRA MCP
     fn configure_jira_mcp(settings: &Settings) -> Result<MCPServerConfig> {
-        log_message!("Configuring JIRA MCP...");
-        log_break!('-', 40);
+        info!("Configuring JIRA MCP...");
+        br!('-', 40);
 
         // 尝试从现有 MCP 配置中读取 JIRA 信息
         let mcp_manager = MCPConfigManager::new()?;
@@ -586,8 +586,8 @@ impl RepoSetupCommand {
 
     /// 配置 GitHub MCP
     fn configure_github_mcp(settings: &Settings) -> Result<MCPServerConfig> {
-        log_message!("Configuring GitHub MCP...");
-        log_break!('-', 40);
+        info!("Configuring GitHub MCP...");
+        br!('-', 40);
 
         // 尝试从现有 MCP 配置中读取 GitHub 信息
         let mcp_manager = MCPConfigManager::new()?;
@@ -677,7 +677,7 @@ impl RepoSetupCommand {
         if updated_settings.jira.service_address.is_none() {
             updated_settings.jira.service_address = Some(service_address.to_string());
             needs_update = true;
-            log_info!(
+            info!(
                 "Syncing JIRA server URL to global config: {}",
                 service_address
             );
@@ -687,21 +687,21 @@ impl RepoSetupCommand {
         if updated_settings.jira.email.is_none() {
             updated_settings.jira.email = Some(username.to_string());
             needs_update = true;
-            log_info!("Syncing JIRA email to global config: {}", username);
+            info!("Syncing JIRA email to global config: {}", username);
         }
 
         // 检查并更新 JIRA API Token（只在为空时更新）
         if updated_settings.jira.api_token.is_none() {
             updated_settings.jira.api_token = Some(api_token.to_string());
             needs_update = true;
-            log_info!("Syncing JIRA API token to global config");
+            info!("Syncing JIRA API token to global config");
         }
 
         // 如果有更新，保存配置
         if needs_update {
             let config_path = Paths::workflow_config()?;
             FileWriter::new(&config_path).write_toml(&updated_settings)?;
-            log_success!("Global JIRA configuration updated");
+            success!("Global JIRA configuration updated");
         }
 
         Ok(())
@@ -787,7 +787,7 @@ impl RepoSetupCommand {
             // 保存配置
             let config_path = Paths::workflow_config()?;
             FileWriter::new(&config_path).write_toml(&updated_settings)?;
-            log_success!("GitHub account added to global configuration");
+            success!("GitHub account added to global configuration");
         }
 
         Ok(())

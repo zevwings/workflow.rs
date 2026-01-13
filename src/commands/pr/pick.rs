@@ -1,7 +1,7 @@
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::dialog::{ConfirmDialog, InputDialog};
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
@@ -19,7 +19,7 @@ use crate::pr::helpers::{
 };
 use crate::pr::llm::CreateGenerator;
 use crate::pr::TYPES_OF_CHANGES;
-use crate::{log_break, log_error, log_info, log_success, log_warning};
+use crate::{br, error, info, success, warning};
 
 /// PR Pick 命令
 ///
@@ -57,9 +57,9 @@ impl PullRequestPickCommand {
 
         // 1. 运行预检查
         if !dry_run {
-            log_info!("Running pre-flight checks...");
+            info!("Running pre-flight checks...");
             if let Err(e) = check::CheckCommand::run_all() {
-                log_warning!("Pre-flight checks failed: {}", e);
+                warning!("Pre-flight checks failed: {}", e);
                 ConfirmDialog::new("Continue anyway?")
                     .with_default(false)
                     .with_cancel_message("Operation cancelled by user")
@@ -71,20 +71,19 @@ impl PullRequestPickCommand {
         Self::validate_branches(&from_branch, &to_branch)?;
 
         // 3. 拉取最新代码
-        Spinner::with("Fetching latest changes...", GitRepo::fetch)?;
+        spinner("Fetching latest changes...").with(GitRepo::fetch)?;
 
         // 4. 检测新提交
         let commits = Self::get_new_commits(&from_branch, &to_branch)?;
         if commits.is_empty() {
-            log_info!(
+            info!(
                 "No new commits to cherry-pick from '{}' to '{}'",
-                from_branch,
-                to_branch
+                from_branch, to_branch
             );
             return Ok(());
         }
 
-        log_success!("Found {} commit(s) to cherry-pick", commits.len());
+        success!("Found {} commit(s) to cherry-pick", commits.len());
 
         // 5. 保存当前分支
         let current_branch = GitBranch::current_branch()?;
@@ -93,12 +92,12 @@ impl PullRequestPickCommand {
         let has_stashed = Self::check_working_directory()?;
 
         // 7. 切换到 TO_BRANCH
-        log_info!("Switching to target branch '{}'...", to_branch);
+        info!("Switching to target branch '{}'...", to_branch);
         GitBranch::checkout_branch(&to_branch)?;
-        log_success!("Switched to branch: {}", to_branch);
+        success!("Switched to branch: {}", to_branch);
 
         // 8. Cherry-pick (--no-commit) 所有提交
-        log_info!(
+        info!(
             "Cherry-picking {} commit(s) (without committing)...",
             commits.len()
         );
@@ -107,7 +106,7 @@ impl PullRequestPickCommand {
         // 9. 处理 cherry-pick 结果
         match cherry_pick_result {
             Ok(()) => {
-                log_success!(
+                success!(
                     "Cherry-picked {} commit(s) to working directory",
                     commits.len()
                 );
@@ -160,7 +159,7 @@ impl PullRequestPickCommand {
 
             if !keep_changes {
                 // 清理工作区并恢复原分支
-                log_info!("Cleaning up working directory...");
+                info!("Cleaning up working directory...");
                 GitCommit::reset_hard(None)?;
             }
             // 恢复原分支
@@ -168,7 +167,7 @@ impl PullRequestPickCommand {
             if has_stashed {
                 handle_stash_pop_result(GitStash::stash_pop(None));
             }
-            log_info!("Pick operation completed (PR not created)");
+            info!("Pick operation completed (PR not created)");
             return Ok(());
         }
 
@@ -179,30 +178,30 @@ impl PullRequestPickCommand {
         // 14. 恢复原分支和 stash（无论 PR 创建是否成功）
         let restore_branch_result = GitBranch::checkout_branch(&current_branch);
         if let Err(e) = &restore_branch_result {
-            log_error!("Failed to restore original branch: {}", e);
-            log_error!(
+            error!("Failed to restore original branch: {}", e);
+            error!(
                 "You may need to manually checkout: git checkout {}",
                 current_branch
             );
         }
 
         if has_stashed {
-            log_info!("Restoring stashed changes...");
+            info!("Restoring stashed changes...");
             match GitStash::stash_pop(None) {
                 Ok(result) => {
                     if result.restored {
                         if let Some(ref msg) = result.message {
-                            log_success!("{}", msg);
+                            success!("{}", msg);
                         }
                     }
                     // 显示警告信息
                     for warning in &result.warnings {
-                        log_warning!("{}", warning);
+                        warning!("{}", warning);
                     }
                 }
                 Err(e) => {
-                    log_warning!("Failed to restore stashed changes: {}", e);
-                    log_info!("You may need to manually restore: git stash pop");
+                    warning!("Failed to restore stashed changes: {}", e);
+                    info!("You may need to manually restore: git stash pop");
                 }
             }
         }
@@ -213,8 +212,8 @@ impl PullRequestPickCommand {
         // 如果 PR 创建失败，返回错误
         pr_result?;
 
-        log_break!();
-        log_success!("Pick operation completed successfully!");
+        br!();
+        success!("Pick operation completed successfully!");
         Ok(())
     }
 
@@ -259,15 +258,14 @@ impl PullRequestPickCommand {
 
         // 2. 如果检测到基础分支，自动使用该基础分支
         let actual_base = if let Some(base_branch) = detected_base {
-            log_success!(
+            success!(
                 "Detected that '{}' is based on '{}', using it as base branch",
                 from_branch,
                 base_branch
             );
-            log_info!(
+            info!(
                 "This will only pick commits unique to '{}' (excluding '{}' changes)",
-                from_branch,
-                base_branch
+                from_branch, base_branch
             );
             base_branch
         } else {
@@ -288,10 +286,10 @@ impl PullRequestPickCommand {
     fn check_working_directory() -> Result<bool> {
         let has_changes = !GitCommit::status()?.trim().is_empty();
         if has_changes {
-            log_warning!("Working directory has uncommitted changes");
+            warning!("Working directory has uncommitted changes");
             if ConfirmDialog::new("Stash changes?").with_default(true).prompt()? {
                 GitStash::stash_push(Some("Stashed by workflow pr pick"))?;
-                log_success!("Stashed changes");
+                success!("Stashed changes");
                 Ok(true)
             } else {
                 color_eyre::eyre::bail!(
@@ -306,7 +304,7 @@ impl PullRequestPickCommand {
     /// Cherry-pick 提交列表（不提交）
     fn cherry_pick_commits_no_commit(commits: &[String]) -> Result<()> {
         for (index, commit) in commits.iter().enumerate() {
-            log_info!(
+            info!(
                 "Cherry-picking commit {}/{}: {}",
                 index + 1,
                 commits.len(),
@@ -352,25 +350,24 @@ impl PullRequestPickCommand {
     ) -> Result<()> {
         // 冲突时，保持在 to_branch 上，让用户解决冲突
         // 不能立即切换分支，否则会丢失 cherry-pick 的内容
-        log_error!("Cherry-pick conflict detected!");
-        log_info!(
+        error!("Cherry-pick conflict detected!");
+        info!(
             "You are currently on branch '{}' with cherry-pick conflicts.",
             to_branch
         );
-        log_info!("Please resolve conflicts manually:");
-        log_info!("  1. Edit conflicted files");
-        log_info!("  2. git add <resolved-files>");
-        log_info!("  3. git cherry-pick --continue");
-        log_info!("\nTo abort and return to original branch:");
-        log_info!("  git cherry-pick --abort");
-        log_info!("  git checkout {}", current_branch);
-        log_info!("\nAfter resolving conflicts, you can:");
-        log_info!(
+        info!("Please resolve conflicts manually:");
+        info!("  1. Edit conflicted files");
+        info!("  2. git add <resolved-files>");
+        info!("  3. git cherry-pick --continue");
+        info!("\nTo abort and return to original branch:");
+        info!("  git cherry-pick --abort");
+        info!("  git checkout {}", current_branch);
+        info!("\nAfter resolving conflicts, you can:");
+        info!(
             "  - Continue with: workflow pr pick {} {} (will detect existing changes)",
-            from_branch,
-            to_branch
+            from_branch, to_branch
         );
-        log_info!("  - Or manually create PR");
+        info!("  - Or manually create PR");
 
         // 询问用户是否要放弃并恢复
         let should_abort = ConfirmDialog::new("Abort cherry-pick and return to original branch?")
@@ -379,10 +376,10 @@ impl PullRequestPickCommand {
 
         if should_abort {
             // 用户选择放弃，先清理 cherry-pick 状态
-            log_info!("Aborting cherry-pick...");
+            info!("Aborting cherry-pick...");
             if let Err(abort_err) = GitCherryPick::cherry_pick_abort() {
-                log_warning!("Failed to abort cherry-pick: {}", abort_err);
-                log_info!("You may need to manually run: git cherry-pick --abort");
+                warning!("Failed to abort cherry-pick: {}", abort_err);
+                info!("You may need to manually run: git cherry-pick --abort");
             }
             // 恢复原分支
             GitBranch::checkout_branch(current_branch)?;
@@ -391,8 +388,8 @@ impl PullRequestPickCommand {
             }
         } else {
             // 用户选择保留冲突状态，保持在 to_branch 上
-            log_info!("Staying on branch '{}' for conflict resolution.", to_branch);
-            log_info!("After resolving conflicts, you can continue with the PR creation.");
+            info!("Staying on branch '{}' for conflict resolution.", to_branch);
+            info!("After resolving conflicts, you can continue with the PR creation.");
 
             // 询问用户是否要恢复 stash（在解决冲突时可能需要）
             if has_stashed {
@@ -425,7 +422,7 @@ impl PullRequestPickCommand {
 
         // 如果有未提交的更改，先 stash
         if needs_stash {
-            log_info!("Stashing cherry-picked changes before switching to source branch...");
+            info!("Stashing cherry-picked changes before switching to source branch...");
             GitStash::stash_push(Some("Auto-stash before getting source PR info"))?;
         }
 
@@ -446,8 +443,8 @@ impl PullRequestPickCommand {
             Err(e) => {
                 // 获取 PR 信息失败，尝试恢复分支和 stash
                 if let Err(restore_err) = GitBranch::checkout_branch(&current_branch) {
-                    log_error!("Failed to restore branch after error: {}", restore_err);
-                    log_error!(
+                    error!("Failed to restore branch after error: {}", restore_err);
+                    error!(
                         "You may need to manually checkout: git checkout {}",
                         current_branch
                     );
@@ -473,28 +470,28 @@ impl PullRequestPickCommand {
 
         // 恢复 stash（如果有）
         if needs_stash {
-            log_info!("Restoring stashed cherry-picked changes...");
+            info!("Restoring stashed cherry-picked changes...");
             match GitStash::stash_pop(None) {
                 Ok(result) => {
                     if result.restored {
                         if let Some(ref msg) = result.message {
-                            log_success!("{}", msg);
+                            success!("{}", msg);
                         }
                     }
                     // 显示警告信息
                     for warning in &result.warnings {
-                        log_warning!("{}", warning);
+                        warning!("{}", warning);
                     }
                     // 如果有警告，说明恢复可能有问题
                     if !result.restored && !result.warnings.is_empty() {
-                        log_error!(
+                        error!(
                             "Cherry-picked changes may have been lost. Please check: git stash list"
                         );
                     }
                 }
                 Err(e) => {
-                    log_warning!("Failed to restore stash: {}", e);
-                    log_error!(
+                    warning!("Failed to restore stash: {}", e);
+                    error!(
                         "Cherry-picked changes may have been lost. Please check: git stash list"
                     );
                     color_eyre::eyre::bail!(
@@ -530,14 +527,14 @@ impl PullRequestPickCommand {
                 Ok(issue) => {
                     let jira_title = issue.fields.summary.trim().to_string();
                     if !jira_title.is_empty() {
-                        log_success!("Using Jira ticket title for LLM: {}", jira_title);
+                        success!("Using Jira ticket title for LLM: {}", jira_title);
                         return Ok(jira_title);
                     } else {
-                        log_warning!("Jira ticket title is empty, falling back to source PR title");
+                        warning!("Jira ticket title is empty, falling back to source PR title");
                     }
                 }
                 Err(e) => {
-                    log_warning!(
+                    warning!(
                         "Failed to get Jira ticket title: {}, falling back to source PR title",
                         e
                     );
@@ -548,13 +545,13 @@ impl PullRequestPickCommand {
         // 不能提取到 ticket 或获取 Jira title 失败，使用源 PR 标题
         if let Some(info) = source_pr_info {
             if let Some(ref title) = info.title {
-                log_success!("Using source PR title for LLM: {}", title);
+                success!("Using source PR title for LLM: {}", title);
                 return Ok(title.clone());
             }
         }
 
         // 如果都没有，返回空字符串（LLM 会处理）
-        log_warning!("No title found for LLM input, using empty string");
+        warning!("No title found for LLM input, using empty string");
         Ok(String::new())
     }
 
@@ -590,7 +587,7 @@ impl PullRequestPickCommand {
 
         // 5. 确定最终的 ticket（如果能提取到，不需要输入；否则询问是否需要输入）
         let jira_ticket = if let Some(ref ticket) = extracted_info.jira_ticket {
-            log_success!("Extracted Jira ticket from source PR: {}", ticket);
+            success!("Extracted Jira ticket from source PR: {}", ticket);
             // 确认是否使用提取的 ticket
             let use_extracted =
                 ConfirmDialog::new(format!("Use extracted Jira ticket: '{}'?", ticket))
@@ -634,7 +631,7 @@ impl PullRequestPickCommand {
 
         // 8. 获取描述（优先使用源 PR body 提取的，不使用 LLM 生成的）
         let short_description = if let Some(desc) = &extracted_info.description {
-            log_success!("Extracted description from source PR body");
+            success!("Extracted description from source PR body");
             // 询问用户是否使用提取的描述
             let use_extracted =
                 ConfirmDialog::new(format!("Use description from source PR?\n{}", desc))
@@ -653,7 +650,7 @@ impl PullRequestPickCommand {
 
         // 9. 选择变更类型（优先使用源 PR 的变更类型）
         let selected_types = if let Some(types) = &extracted_info.change_types {
-            log_success!("Extracted change types from source PR");
+            success!("Extracted change types from source PR");
             // 显示提取的变更类型，询问用户是否使用
             let mut types_str = String::new();
             for (i, change_type) in TYPES_OF_CHANGES.iter().enumerate() {
@@ -723,18 +720,18 @@ impl PullRequestPickCommand {
             &pull_request_url,
             &actual_branch_name,
         ) {
-            log_warning!("Failed to update Jira ticket: {}", e);
-            log_info!("PR was created successfully, but Jira update failed");
+            warning!("Failed to update Jira ticket: {}", e);
+            info!("PR was created successfully, but Jira update failed");
         }
 
         // 14. 复制 PR URL 到剪贴板并打开浏览器
         // 即使失败也不影响 PR 创建，只记录警告
         if let Err(e) = copy_and_open_pull_request(&pull_request_url) {
-            log_warning!("Failed to copy PR URL or open browser: {}", e);
-            log_info!("PR URL: {}", pull_request_url);
+            warning!("Failed to copy PR URL or open browser: {}", e);
+            info!("PR URL: {}", pull_request_url);
         }
 
-        log_success!("PR created successfully!");
+        success!("PR created successfully!");
         Ok(())
     }
 
@@ -791,13 +788,13 @@ impl PullRequestPickCommand {
         let (pr_title, branch_name_slug) =
             match CreateGenerator::generate(llm_input, exists_branches, git_diff) {
                 Ok(content) => {
-                    log_success!("Generated branch name using LLM: {}", content.branch_name);
+                    success!("Generated branch name using LLM: {}", content.branch_name);
                     // 提取 slug（移除可能的前缀）
                     let slug = BranchNaming::sanitize(&content.branch_name);
                     (content.pr_title, slug)
                 }
                 Err(e) => {
-                    log_warning!(
+                    warning!(
                         "Failed to generate branch name using LLM: {}, using sanitized input",
                         e
                     );
@@ -862,11 +859,11 @@ impl PullRequestPickCommand {
             if has_uncommitted {
                 // 有 cherry-pick 的修改 → 直接创建新分支
                 // 因为我们已经切换到 TO_BRANCH 并 cherry-pick 了内容
-                log_info!(
+                info!(
                     "You are on branch '{}' with cherry-picked changes.",
                     current_branch
                 );
-                log_info!(
+                info!(
                     "Will create new branch '{}' and commit changes...",
                     branch_name
                 );
@@ -883,7 +880,7 @@ impl PullRequestPickCommand {
                 }
 
                 // 创建新分支（Git 会自动把未提交的修改带到新分支）
-                log_success!("Creating branch: {}", branch_name);
+                success!("Creating branch: {}", branch_name);
                 GitBranch::checkout_branch(branch_name)
                     .wrap_err_with(|| {
                         format!(
@@ -893,12 +890,12 @@ impl PullRequestPickCommand {
                     })?;
 
                 // 提交并推送
-                Spinner::with("Committing changes...", || {
+                spinner("Committing changes...").with(|| {
                     GitCommit::commit(commit_title, true) // no-verify
                 })?;
-                log_break!();
-                log_info!("Pushing to remote...");
-                log_break!();
+                br!();
+                info!("Pushing to remote...");
+                br!();
                 GitBranch::push(branch_name, true)?; // set-upstream
 
                 Ok((branch_name.to_string(), default_branch))
@@ -912,17 +909,17 @@ impl PullRequestPickCommand {
 
     /// 预览模式
     fn dry_run(from_branch: &str, to_branch: &str, commits: &[String]) -> Result<()> {
-        log_info!("[DRY RUN] Would execute the following operations:");
-        log_info!("  From branch: {}", from_branch);
-        log_info!("  To branch: {}", to_branch);
-        log_info!("  Commits to cherry-pick: {}", commits.len());
+        info!("[DRY RUN] Would execute the following operations:");
+        info!("  From branch: {}", from_branch);
+        info!("  To branch: {}", to_branch);
+        info!("  Commits to cherry-pick: {}", commits.len());
         for (index, commit) in commits.iter().enumerate() {
-            log_info!("    {}. {}", index + 1, &commit[..8]);
+            info!("    {}. {}", index + 1, &commit[..8]);
         }
-        log_info!("  Will switch to: {}", to_branch);
-        log_info!("  Will cherry-pick (--no-commit) all commits");
-        log_info!("  Will enter interactive PR creation flow");
-        log_info!("  Will use LLM to generate branch name");
+        info!("  Will switch to: {}", to_branch);
+        info!("  Will cherry-pick (--no-commit) all commits");
+        info!("  Will enter interactive PR creation flow");
+        info!("  Will use LLM to generate branch name");
         Ok(())
     }
 }

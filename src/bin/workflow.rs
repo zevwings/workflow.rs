@@ -129,13 +129,13 @@ fn main() -> Result<()> {
             }
             None => {
                 // 当没有子命令时，显示帮助信息
-                log_message!("Configuration Management");
-                log_message!("\nAvailable subcommands:");
-                log_message!("  workflow config show     - View current configuration");
-                log_message!("  workflow config validate - Validate configuration file");
-                log_message!("  workflow config export   - Export configuration to a file");
-                log_message!("  workflow config import   - Import configuration from a file");
-                log_message!("\nUse 'workflow config <subcommand> --help' for more information.");
+                info!("Configuration Management");
+                info!("\nAvailable subcommands:");
+                info!("  workflow config show     - View current configuration");
+                info!("  workflow config validate - Validate configuration file");
+                info!("  workflow config export   - Export configuration to a file");
+                info!("  workflow config import   - Import configuration from a file");
+                info!("\nUse 'workflow config <subcommand> --help' for more information.");
             }
         },
         // 卸载
@@ -457,28 +457,26 @@ fn main() -> Result<()> {
         },
         // 无命令时显示帮助信息
         None => {
-            log_message!("Workflow CLI - Configuration Management");
-            log_message!("\nAvailable commands:");
-            log_message!("  workflow branch     - Manage Git branches (clean/ignore/prefix)");
-            log_message!("  workflow check      - Run environment checks (Git status and network)");
-            log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
-            log_message!("  workflow config     - View current configuration");
-            log_message!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
-            log_message!("  workflow log        - Manage log level (set/check)");
-            log_message!("  workflow migrate    - Migrate configuration to new format");
-            log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
-            log_message!("  workflow setup      - Initialize or update configuration");
-            log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
-            log_message!("  workflow version    - Show Workflow CLI version");
-            log_message!(
-                "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
-            );
-            log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/sync)");
-            log_message!("  workflow jira       - Jira operations (info/attachments/clean/log)");
-            log_message!("  workflow stash      - Git stash management (list/apply/drop/pop/push)");
-            log_message!("\nOther CLI tools:");
-            log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
-            log_message!("\nUse '<command> --help' for more information about each command.");
+            info!("Workflow CLI - Configuration Management");
+            info!("\nAvailable commands:");
+            info!("  workflow branch     - Manage Git branches (clean/ignore/prefix)");
+            info!("  workflow check      - Run environment checks (Git status and network)");
+            info!("  workflow completion - Manage shell completion (generate/check/remove)");
+            info!("  workflow config     - View current configuration");
+            info!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
+            info!("  workflow log        - Manage log level (set/check)");
+            info!("  workflow migrate    - Migrate configuration to new format");
+            info!("  workflow proxy      - Manage proxy settings (on/off/check)");
+            info!("  workflow setup      - Initialize or update configuration");
+            info!("  workflow uninstall  - Uninstall Workflow CLI configuration");
+            info!("  workflow version    - Show Workflow CLI version");
+            info!("  workflow update     - Update Workflow CLI (rebuild and update binaries)");
+            info!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/sync)");
+            info!("  workflow jira       - Jira operations (info/attachments/clean/log)");
+            info!("  workflow stash      - Git stash management (list/apply/drop/pop/push)");
+            info!("\nOther CLI tools:");
+            info!("  install             - Install Workflow CLI components (binaries and/or completions)");
+            info!("\nUse '<command> --help' for more information about each command.");
         }
     }
 

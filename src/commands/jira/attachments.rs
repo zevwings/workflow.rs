@@ -1,7 +1,8 @@
-use crate::base::indicator::{Progress, Spinner};
+use crate::base::indicator::Progress;
+use crate::base::interactive::spinner;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
-use crate::{log_break, log_info, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use std::sync::{Arc, Mutex};
 
@@ -17,10 +18,10 @@ impl AttachmentsCommand {
         let jira_id = get_jira_id(jira_id, None)?;
 
         // 先获取附件列表以确定总数（使用 Spinner 显示加载状态）
-        let attachments = Spinner::with(
-            format!("Getting attachments info for {}...", jira_id),
-            || Jira::get_attachments(&jira_id).wrap_err("Failed to get attachments from Jira"),
-        )?;
+        let attachments =
+            spinner(format!("Getting attachments info for {}...", jira_id)).with(|| {
+                Jira::get_attachments(&jira_id).wrap_err("Failed to get attachments from Jira")
+            })?;
         let total_files = attachments.len() as u64;
 
         if total_files == 0 {
@@ -28,8 +29,8 @@ impl AttachmentsCommand {
         }
 
         // 显示下载前的提示信息
-        log_info!("{} file(s) will be downloaded", total_files);
-        log_break!();
+        info!("{} file(s) will be downloaded", total_files);
+        br!();
 
         // 创建 Progress Bar
         let progress = Arc::new(Mutex::new(Progress::new(
@@ -76,33 +77,33 @@ impl AttachmentsCommand {
 
         // 显示下载结果
         if !result.failed_files.is_empty() {
-            log_break!();
-            log_info!(
+            br!();
+            info!(
                 "  Warning: {} attachment(s) failed to download:",
                 result.failed_files.len()
             );
             for (filename, error) in &result.failed_files {
-                log_info!("  - {}: {}", filename, error);
+                info!("  - {}: {}", filename, error);
             }
         }
 
-        log_success!("Download completed!");
+        success!("Download completed!");
 
         // 显示下载的文件列表
         if !result.downloaded_files.is_empty() {
-            log_break!();
-            log_info!("Downloaded {} file(s):", result.downloaded_files.len());
+            br!();
+            info!("Downloaded {} file(s):", result.downloaded_files.len());
             for file_path in &result.downloaded_files {
                 // 只显示文件名，让输出更简洁
                 if let Some(file_name) = file_path.file_name() {
-                    log_info!("  ✓ {}", file_name.to_string_lossy());
+                    info!("  ✓ {}", file_name.to_string_lossy());
                 } else {
-                    log_info!("  ✓ {}", file_path.display());
+                    info!("  ✓ {}", file_path.display());
                 }
             }
         }
 
-        log_info!("Files located at: {}/downloads", result.base_dir.display());
+        info!("Files located at: {}/downloads", result.base_dir.display());
 
         Ok(())
     }

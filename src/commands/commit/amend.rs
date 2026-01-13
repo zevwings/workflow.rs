@@ -10,7 +10,7 @@ use crate::commands::commit::helpers::{
 };
 use crate::commit::CommitAmend;
 use crate::git::GitCommit;
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Commit amend command
@@ -44,8 +44,8 @@ impl CommitAmendCommand {
         // 1. Run checks
         check::CheckCommand::run_all()?;
 
-        log_break!();
-        log_message!("Commit Amend");
+        br!();
+        info!("Commit Amend");
 
         // 步骤0: 检查是否是默认分支（保护分支不允许直接修改提交历史）
         let (current_branch, _default_branch) = check_not_on_default_branch("amend")?;
@@ -56,8 +56,8 @@ impl CommitAmendCommand {
         // 步骤2: 显示当前 commit 信息
         let commit_info = GitCommit::get_last_commit_info()?;
         let status = GitCommit::get_worktree_status()?;
-        log_break!();
-        log_message!(
+        br!();
+        info!(
             "{}",
             CommitAmend::format_commit_info_detailed(&commit_info, &current_branch, Some(&status))
         );
@@ -122,9 +122,9 @@ impl CommitAmendCommand {
             operation_str,
             &current_branch,
         )?;
-        log_break!();
-        log_message!("{}", CommitAmend::format_preview(&preview));
-        log_message!("");
+        br!();
+        info!("{}", CommitAmend::format_preview(&preview));
+        info!("");
 
         // 最终确认
         ConfirmDialog::new("Confirm to execute commit amend?")
@@ -138,26 +138,26 @@ impl CommitAmendCommand {
         if !files_to_add.is_empty() {
             GitCommit::add_files(&files_to_add)?;
             for file in &files_to_add {
-                log_success!("✓ Staged file: {}", file);
+                success!("✓ Staged file: {}", file);
             }
         }
 
         // 6.2 和 6.3: 执行 amend（pre-commit hooks 在 amend 方法中处理）
         let new_sha = GitCommit::amend(new_message.as_deref(), no_edit, no_verify)?;
 
-        log_break!();
-        log_success!("✓ Commit amend successful");
-        log_info!("  New Commit SHA: {}", &new_sha[..8]);
+        br!();
+        success!("✓ Commit amend successful");
+        info!("  New Commit SHA: {}", &new_sha[..8]);
         if let Some(msg) = &new_message {
-            log_info!("  Commit message: {}", msg);
+            info!("  Commit message: {}", msg);
         }
 
         // 6.4: 完成提示
         if let Some(msg) =
             CommitAmend::format_completion_message(&current_branch, &commit_info.sha)?
         {
-            log_break!();
-            log_message!("{}", msg);
+            br!();
+            info!("{}", msg);
         }
 
         // 6.5: 如果 commit 已推送，询问是否要 force push
@@ -218,7 +218,7 @@ impl CommitAmendCommand {
         let all_files: Vec<String> = modified_files.into_iter().chain(untracked_files).collect();
 
         if all_files.is_empty() {
-            log_warning!("No files available to add");
+            warning!("No files available to add");
             return Ok(Vec::new());
         }
 

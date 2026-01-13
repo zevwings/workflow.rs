@@ -4,7 +4,7 @@
 use crate::base::settings::settings::{LLMSettings, Settings};
 use crate::base::settings::table::LLMConfigRow;
 use crate::base::table::{TableBuilder, TableStyle};
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::Result;
 
 /// LLM 配置查看命令
@@ -13,16 +13,16 @@ pub struct LLMShowCommand;
 impl LLMShowCommand {
     /// 显示当前 LLM 配置
     pub fn show() -> Result<()> {
-        log_break!('=', 40, "LLM Configuration");
-        log_break!();
+        br!('=', 40, "LLM Configuration");
+        br!();
 
         let settings = Settings::load();
         let llm = &settings.llm;
 
         // 检查是否有 LLM 配置
         if Self::is_empty_config(llm) {
-            log_warning!("No LLM configuration found.");
-            log_message!("Run 'workflow llm setup' to configure LLM settings.");
+            warning!("No LLM configuration found.");
+            info!("Run 'workflow llm setup' to configure LLM settings.");
             return Ok(());
         }
 
@@ -30,20 +30,20 @@ impl LLMShowCommand {
         let llm_config = settings.get_llm_config();
 
         // 使用表格格式显示（与 config show 保持一致）
-        log_info!("LLM Configuration");
+        info!("LLM Configuration");
         let config_rows = vec![LLMConfigRow {
             provider: llm_config.provider.clone(),
             model: llm_config.model.clone(),
             key: llm_config.key.clone(),
             language: llm_config.language.clone(),
         }];
-        log_message!(
+        info!(
             "{}",
             TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
         );
 
-        log_break!();
-        log_success!("LLM configuration displayed.");
+        br!();
+        success!("LLM configuration displayed.");
 
         Ok(())
     }

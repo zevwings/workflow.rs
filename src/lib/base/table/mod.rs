@@ -280,10 +280,10 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// ```rust,no_run
     /// use workflow::base::table::TableBuilder;
-    /// use workflow::log_message;
+    /// use workflow::info;
     /// # let data = vec![("name", "value")];
     /// let output = TableBuilder::new(data).render();
-    /// log_message!("{}", output);
+    /// info!("{}", output);
     /// ```
     pub fn render(self) -> String {
         if self.data.is_empty() {

@@ -5,10 +5,10 @@
 //! - 可选择附加文件内容
 
 use crate::base::dialog::{ConfirmDialog, InputDialog};
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
-use crate::{log_message, log_success};
+use crate::{info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 use std::path::Path;
@@ -62,7 +62,7 @@ impl CommentCommand {
                 message.trim().to_string()
             } else {
                 // 先上传所有文件作为附件
-                log_message!("Uploading {} file(s) as attachment(s)...", file_paths.len());
+                info!("Uploading {} file(s) as attachment(s)...", file_paths.len());
                 let mut uploaded_files = Vec::new();
                 let mut failed_files = Vec::new();
 
@@ -76,11 +76,11 @@ impl CommentCommand {
                         Ok(attachments) => {
                             if let Some(attachment) = attachments.first() {
                                 uploaded_files.push((file_name.to_string(), attachment.clone()));
-                                log_success!("Uploaded: {}", file_name);
+                                success!("Uploaded: {}", file_name);
                             }
                         }
                         Err(e) => {
-                            log_message!("Failed to upload {}: {}", file_name, e);
+                            info!("Failed to upload {}: {}", file_name, e);
                             failed_files.push((file_name.to_string(), file_path.clone()));
                         }
                     }
@@ -137,13 +137,12 @@ impl CommentCommand {
         };
 
         // 步骤 5: 添加评论
-        log_message!("Adding comment to ticket {}...", ticket);
-        Spinner::with(format!("Adding comment to ticket {}...", ticket), || {
-            Jira::add_comment(&ticket, &final_comment)
-        })
-        .wrap_err(format!("Failed to add comment to ticket {}", ticket))?;
+        info!("Adding comment to ticket {}...", ticket);
+        spinner(format!("Adding comment to ticket {}...", ticket))
+            .with(|| Jira::add_comment(&ticket, &final_comment))
+            .wrap_err(format!("Failed to add comment to ticket {}", ticket))?;
 
-        log_success!("Comment added to ticket {} successfully!", ticket);
+        success!("Comment added to ticket {} successfully!", ticket);
 
         Ok(())
     }
@@ -210,18 +209,18 @@ impl CommentCommand {
             // 验证文件
             let path = Path::new(cleaned);
             if !path.exists() {
-                log_message!("File not found: {}. Please try again.", cleaned);
+                info!("File not found: {}. Please try again.", cleaned);
                 continue;
             }
 
             if !path.is_file() {
-                log_message!("Path is not a file: {}. Please try again.", cleaned);
+                info!("Path is not a file: {}. Please try again.", cleaned);
                 continue;
             }
 
             // 添加到列表
             file_paths.push(cleaned.to_string());
-            log_success!("File added: {}", cleaned);
+            success!("File added: {}", cleaned);
 
             // 询问是否继续添加更多文件
             let add_more = ConfirmDialog::new("Do you want to add another file?")

@@ -17,7 +17,7 @@ use crate::base::util::date::get_unix_timestamp;
 use crate::base::util::file::{FileReader, FileWriter};
 use crate::commands::config::helpers::{extract_section, parse_config};
 use crate::commands::config::validate::ConfigValidateCommand;
-use crate::{log_error, log_info, log_message, log_success, log_warning};
+use crate::{error, info, success, warning};
 
 /// 导入事务结构
 /// 用于管理导入过程中的备份和回滚
@@ -64,13 +64,13 @@ impl ImportTransaction {
         let validation = ConfigValidateCommand::validate_config(&restored, &self.config_path)?;
 
         if !validation.errors.is_empty() {
-            log_warning!("Warning: Restored configuration has validation errors");
+            warning!("Warning: Restored configuration has validation errors");
             for error in &validation.errors {
-                log_message!("  - {}: {}", error.field, error.message);
+                info!("  - {}: {}", error.field, error.message);
             }
         }
 
-        log_success!("Configuration restored from backup: {:?}", self.backup_path);
+        success!("Configuration restored from backup: {:?}", self.backup_path);
         Ok(())
     }
 
@@ -137,17 +137,17 @@ impl ConfigImportCommand {
         // 验证导入的配置
         let validation_result = ConfigValidateCommand::validate_config(&imported, &input_path)?;
         if !validation_result.errors.is_empty() {
-            log_error!("Configuration validation failed");
+            error!("Configuration validation failed");
             for error in &validation_result.errors {
-                log_message!("  - {}: {}", error.field, error.message);
+                info!("  - {}: {}", error.field, error.message);
             }
             return Err(eyre!("Import cancelled. Configuration validation failed."));
         }
 
         if dry_run {
-            log_info!("Dry run mode - previewing changes:");
+            info!("Dry run mode - previewing changes:");
             Self::preview_changes(&imported, section.as_deref())?;
-            log_info!("\nNo changes were made. Remove --dry-run to apply changes.");
+            info!("\nNo changes were made. Remove --dry-run to apply changes.");
             return Ok(());
         }
 
@@ -157,7 +157,7 @@ impl ConfigImportCommand {
 
         // 创建事务（包含备份）
         let transaction = ImportTransaction::new(current_config_path.clone())?;
-        log_success!(
+        success!(
             "Configuration backup created: {:?}",
             transaction.backup_path
         );
@@ -182,19 +182,19 @@ impl ConfigImportCommand {
         let final_validation =
             ConfigValidateCommand::validate_config(&final_settings, &current_config_path)?;
         if !final_validation.errors.is_empty() {
-            log_error!("Configuration validation failed after import");
+            error!("Configuration validation failed after import");
             for error in &final_validation.errors {
-                log_message!("  - {}: {}", error.field, error.message);
+                info!("  - {}: {}", error.field, error.message);
             }
             // 自动回滚
             match transaction.rollback() {
                 Ok(_) => {
-                    log_success!("Successfully rolled back to original configuration");
+                    success!("Successfully rolled back to original configuration");
                 }
                 Err(e) => {
-                    log_error!("Failed to rollback configuration: {}", e);
-                    log_error!("Backup file is available at: {:?}", transaction.backup_path);
-                    log_error!("Please manually restore from backup if needed");
+                    error!("Failed to rollback configuration: {}", e);
+                    error!("Backup file is available at: {:?}", transaction.backup_path);
+                    error!("Please manually restore from backup if needed");
                 }
             }
             return Err(eyre!("Import cancelled. Configuration validation failed."));
@@ -202,15 +202,15 @@ impl ConfigImportCommand {
 
         // 保存配置
         if let Err(e) = Self::save_config(&final_settings, &current_config_path) {
-            log_error!("Failed to save configuration: {}", e);
+            error!("Failed to save configuration: {}", e);
             // 保存失败，回滚
             match transaction.rollback() {
                 Ok(_) => {
-                    log_success!("Successfully rolled back due to save failure");
+                    success!("Successfully rolled back due to save failure");
                 }
                 Err(rollback_err) => {
-                    log_error!("Failed to rollback: {}", rollback_err);
-                    log_error!("Backup file is available at: {:?}", transaction.backup_path);
+                    error!("Failed to rollback: {}", rollback_err);
+                    error!("Backup file is available at: {:?}", transaction.backup_path);
                 }
             }
             return Err(e.wrap_err("Failed to save configuration"));
@@ -218,15 +218,15 @@ impl ConfigImportCommand {
 
         // 验证保存后的配置（确保文件写入正确）
         if !Self::verify_saved_config(&current_config_path)? {
-            log_error!("Post-save validation failed");
+            error!("Post-save validation failed");
             // 保存后验证失败，回滚
             match transaction.rollback() {
                 Ok(_) => {
-                    log_success!("Successfully rolled back due to post-save validation failure");
+                    success!("Successfully rolled back due to post-save validation failure");
                 }
                 Err(e) => {
-                    log_error!("Failed to rollback: {}", e);
-                    log_error!("Backup file is available at: {:?}", transaction.backup_path);
+                    error!("Failed to rollback: {}", e);
+                    error!("Backup file is available at: {:?}", transaction.backup_path);
                 }
             }
             return Err(eyre!("Post-save validation failed"));
@@ -237,9 +237,9 @@ impl ConfigImportCommand {
 
         // 显示结果
         if overwrite {
-            log_success!("Configuration imported successfully (overwrite mode)");
+            success!("Configuration imported successfully (overwrite mode)");
         } else {
-            log_success!("Configuration imported successfully (merge mode)");
+            success!("Configuration imported successfully (merge mode)");
             Self::show_changes(&current_settings, &final_settings, section.as_deref())?;
         }
 
@@ -349,9 +349,9 @@ impl ConfigImportCommand {
         let validation = ConfigValidateCommand::validate_config(&saved_settings, config_path)?;
 
         if !validation.errors.is_empty() {
-            log_warning!("Post-save validation found errors:");
+            warning!("Post-save validation found errors:");
             for error in &validation.errors {
-                log_message!("  - {}: {}", error.field, error.message);
+                info!("  - {}: {}", error.field, error.message);
             }
             return Ok(false);
         }
@@ -379,40 +379,39 @@ impl ConfigImportCommand {
         let current = Settings::load();
 
         if let Some(section_name) = section {
-            log_message!("  Section: {}", section_name);
+            info!("  Section: {}", section_name);
             match section_name.to_lowercase().as_str() {
                 "jira" => {
                     if imported.jira.email.is_some() {
-                        log_message!("    - jira.email: will be updated");
+                        info!("    - jira.email: will be updated");
                     }
                     if imported.jira.service_address.is_some() {
-                        log_message!("    - jira.service_address: will be updated");
+                        info!("    - jira.service_address: will be updated");
                     }
                 }
                 "github" => {
                     if !imported.github.accounts.is_empty() {
-                        log_message!(
+                        info!(
                             "    - github.accounts: {} account(s) will be imported",
                             imported.github.accounts.len()
                         );
                     }
                 }
                 "log" => {
-                    log_message!("    - log.output_folder_name: will be updated");
+                    info!("    - log.output_folder_name: will be updated");
                 }
                 "llm" => {
                     if imported.llm.provider != current.llm.provider {
-                        log_message!(
+                        info!(
                             "    - llm.provider: {} -> {}",
-                            current.llm.provider,
-                            imported.llm.provider
+                            current.llm.provider, imported.llm.provider
                         );
                     }
                 }
                 _ => {}
             }
         } else {
-            log_message!("  Full configuration will be imported");
+            info!("  Full configuration will be imported");
         }
 
         Ok(())
@@ -477,9 +476,9 @@ impl ConfigImportCommand {
         }
 
         if !changes.is_empty() {
-            log_info!("Changes applied:");
+            info!("Changes applied:");
             for change in changes {
-                log_message!("{}", change);
+                info!("{}", change);
             }
         }
 

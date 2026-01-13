@@ -51,6 +51,11 @@ impl MessageRef {
         Message::global_mutex().lock().unwrap().error(msg)
     }
 
+    /// 输出调试信息
+    pub fn debug(&self, msg: impl AsRef<str>) -> Result<()> {
+        Message::global_mutex().lock().unwrap().debug(msg)
+    }
+
     /// 输出空行
     pub fn break_line(&self) -> Result<()> {
         Message::global_mutex().lock().unwrap().break_line()
@@ -154,6 +159,14 @@ impl Message {
         Ok(())
     }
 
+    /// 输出调试信息
+    pub fn debug(&mut self, msg: impl AsRef<str>) -> Result<()> {
+        let styled =
+            self.theme.debug.apply(&format!("⚙ {}", msg.as_ref()), self.theme.enable_color);
+        writeln!(self.writer, "{}", styled).map_err(|e| eyre::eyre!("IO error: {}", e))?;
+        Ok(())
+    }
+
     /// 输出空行
     pub fn break_line(&mut self) -> Result<()> {
         writeln!(self.writer).map_err(|e| eyre::eyre!("IO error: {}", e))?;
@@ -166,10 +179,184 @@ impl Message {
         writeln!(self.writer, "{}", line).map_err(|e| eyre::eyre!("IO error: {}", e))?;
         Ok(())
     }
+
+    /// 输出带文本的分隔线
+    ///
+    /// 在分隔线中间插入文本，文本前后用分隔符字符填充。
+    /// 文本前后会自动添加空格。
+    ///
+    /// # 参数
+    ///
+    /// * `char` - 分隔符字符
+    /// * `length` - 总长度
+    /// * `text` - 要插入的文本
+    pub fn separator_with_text(
+        &mut self,
+        char: char,
+        length: usize,
+        text: impl AsRef<str>,
+    ) -> Result<()> {
+        let text_str = format!("  {} ", text.as_ref());
+        let text_len = text_str.chars().count();
+
+        // 如果文本长度大于等于总长度，直接输出文本
+        if text_len >= length {
+            writeln!(self.writer, "{}", text_str).map_err(|e| eyre::eyre!("IO error: {}", e))?;
+            return Ok(());
+        }
+
+        // 计算左右两侧需要填充的字符数
+        let remaining = length - text_len;
+        let left_padding = remaining / 2;
+        let right_padding = remaining - left_padding;
+
+        // 生成分隔线
+        let left_sep: String = std::iter::repeat_n(char, left_padding).collect();
+        let right_sep: String = std::iter::repeat_n(char, right_padding).collect();
+
+        writeln!(self.writer, "{}{}{}", left_sep, text_str, right_sep)
+            .map_err(|e| eyre::eyre!("IO error: {}", e))?;
+        Ok(())
+    }
 }
 
 impl Default for Message {
     fn default() -> Self {
         Self::new()
     }
+}
+
+// ============================================================================
+// 日志宏
+// ============================================================================
+
+/// 格式化并输出成功消息
+///
+/// # Examples
+///
+/// ```
+/// use workflow::success;
+///
+/// success!("Operation completed");
+/// let count = 5;
+/// success!("Found {} items", count);
+/// ```
+#[macro_export]
+macro_rules! success {
+    ($($arg:tt)*) => {
+        let _ = $crate::base::interactive::Message::global().success(&format!($($arg)*));
+    };
+}
+
+/// 格式化并输出错误消息
+///
+/// # Examples
+///
+/// ```
+/// use workflow::error;
+///
+/// error!("Operation failed");
+/// let code = 404;
+/// let message = "Not Found";
+/// error!("Error: {} - {}", code, message);
+/// ```
+#[macro_export]
+macro_rules! error {
+    ($($arg:tt)*) => {
+        let _ = $crate::base::interactive::Message::global().error(&format!($($arg)*));
+    };
+}
+
+/// 格式化并输出警告消息
+///
+/// # Examples
+///
+/// ```
+/// use workflow::warning;
+///
+/// warning!("This is a warning");
+/// let count = 3;
+/// warning!("Warning: {} items missing", count);
+/// ```
+#[macro_export]
+macro_rules! warning {
+    ($($arg:tt)*) => {
+        let _ = $crate::base::interactive::Message::global().warning(&format!($($arg)*));
+    };
+}
+
+/// 格式化并输出信息消息
+///
+/// # Examples
+///
+/// ```
+/// use workflow::info;
+///
+/// info!("Processing data");
+/// let count = 10;
+/// info!("Processing {} items", count);
+/// ```
+#[macro_export]
+macro_rules! info {
+    ($($arg:tt)*) => {
+        let _ = $crate::base::interactive::Message::global().info(&format!($($arg)*));
+    };
+}
+
+/// 格式化并输出调试消息
+///
+/// # Examples
+///
+/// ```
+/// use workflow::debug;
+///
+/// debug!("Debug information");
+/// let key = "version";
+/// let value = "1.0.0";
+/// debug!("Debug: {} = {}", key, value);
+/// ```
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => {
+        let _ = $crate::base::interactive::Message::global().debug(&format!($($arg)*));
+    };
+}
+
+/// 输出分隔线或换行
+///
+/// # Examples
+///
+/// ```
+/// use workflow::br;
+///
+/// // 输出换行符
+/// br!();
+///
+/// // 使用默认分隔符（80个 '-'）
+/// br!('-');
+///
+/// // 指定分隔符字符和长度
+/// br!('=', 100);
+///
+/// // 在分隔线中间插入文本
+/// br!('=', 40, "Section Title");
+/// // 输出: ===========  Section Title ===========
+/// ```
+#[macro_export]
+macro_rules! br {
+    () => {
+        let _ = $crate::base::interactive::Message::global().break_line();
+    };
+    ($char:expr) => {
+        let _ = $crate::base::interactive::Message::global().separator($char, 80);
+    };
+    ($char:expr, $length:expr) => {
+        let _ = $crate::base::interactive::Message::global().separator($char, $length);
+    };
+    ($char:expr, $length:expr, $text:expr) => {
+        let _ = $crate::base::interactive::Message::global_mutex()
+            .lock()
+            .unwrap()
+            .separator_with_text($char, $length, $text);
+    };
 }

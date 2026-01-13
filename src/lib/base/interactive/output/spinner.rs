@@ -63,12 +63,13 @@ impl Spinner {
                 let theme = get_theme();
                 let styled = format_spinner_text(frame, &msg, &theme);
 
-                // 清除当前行并输出（使用 crossterm 而不是直接使用 ANSI 转义序列）
-                let mut stdout = io::stdout();
-                let _ = stdout.queue(cursor::MoveToColumn(0));
-                let _ = stdout.queue(Clear(ClearType::CurrentLine));
-                let _ = write!(stdout, "{}", styled);
-                let _ = stdout.flush();
+                // 清除当前行并输出到 stderr（使用 crossterm 而不是直接使用 ANSI 转义序列）
+                // 输出到 stderr 避免与 stdout 的日志输出冲突
+                let mut stderr = io::stderr();
+                let _ = stderr.queue(cursor::MoveToColumn(0));
+                let _ = stderr.queue(Clear(ClearType::CurrentLine));
+                let _ = write!(stderr, "{}", styled);
+                let _ = stderr.flush();
 
                 *current_frame.lock().unwrap() = frame_idx;
                 frame_idx += 1;
@@ -87,10 +88,11 @@ impl Spinner {
         drop(running);
 
         // 清除当前行（使用 crossterm 而不是直接使用 ANSI 转义序列）
-        let mut stdout = io::stdout();
-        let _ = stdout.queue(cursor::MoveToColumn(0));
-        let _ = stdout.queue(Clear(ClearType::CurrentLine));
-        let _ = stdout.flush();
+        // 输出到 stderr 避免与 stdout 的日志输出冲突
+        let mut stderr = io::stderr();
+        let _ = stderr.queue(cursor::MoveToColumn(0));
+        let _ = stderr.queue(Clear(ClearType::CurrentLine));
+        let _ = stderr.flush();
 
         // 恢复光标
         self.show_cursor();
@@ -106,9 +108,9 @@ impl Spinner {
     fn hide_cursor(&self) {
         let mut hidden = self.cursor_hidden.lock().unwrap();
         if !*hidden {
-            let mut stdout = io::stdout();
-            let _ = stdout.queue(Hide);
-            let _ = stdout.flush();
+            let mut stderr = io::stderr();
+            let _ = stderr.queue(Hide);
+            let _ = stderr.flush();
             *hidden = true;
         }
     }
@@ -116,9 +118,9 @@ impl Spinner {
     fn show_cursor(&self) {
         let mut hidden = self.cursor_hidden.lock().unwrap();
         if *hidden {
-            let mut stdout = io::stdout();
-            let _ = stdout.queue(Show);
-            let _ = stdout.flush();
+            let mut stderr = io::stderr();
+            let _ = stderr.queue(Show);
+            let _ = stderr.flush();
             *hidden = false;
         }
     }
@@ -139,12 +141,37 @@ impl Spinner {
         }
     }
 
+    /// 完成 spinner 并显示完成消息
+    ///
+    /// 停止 spinner 动画并显示完成消息，然后清除。
+    ///
+    /// # 参数
+    ///
+    /// * `message` - 完成消息
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::base::interactive::spinner;
+    ///
+    /// let spinner = spinner("Creating PR...").start();
+    /// // 执行操作
+    /// spinner.finish_with_message("PR created successfully!");
+    /// ```
+    pub fn finish_with_message(self, message: impl Into<String>) {
+        self.stop();
+        let theme = get_theme();
+        let formatted = message.into();
+        let styled = theme.info.apply(&formatted, theme.enable_color);
+        eprintln!("{}", styled);
+    }
+
     pub fn with_success(self, message: impl Into<String>) {
         self.stop();
         let theme = get_theme();
         let formatted = format!("✓ {}", message.into());
         let styled = theme.success.apply(&formatted, theme.enable_color);
-        println!("{}", styled);
+        eprintln!("{}", styled);
     }
 
     pub fn with_error(self, message: impl Into<String>) {
@@ -152,7 +179,7 @@ impl Spinner {
         let theme = get_theme();
         let formatted = format!("✗ {}", message.into());
         let styled = theme.error.apply(&formatted, theme.enable_color);
-        println!("{}", styled);
+        eprintln!("{}", styled);
     }
 
     pub fn with_info(self, message: impl Into<String>) {
@@ -160,7 +187,7 @@ impl Spinner {
         let theme = get_theme();
         let formatted = format!("ℹ {}", message.into());
         let styled = theme.info.apply(&formatted, theme.enable_color);
-        println!("{}", styled);
+        eprintln!("{}", styled);
     }
 
     pub fn do_work<F, E>(self, work: F) -> Result<(), E>
@@ -204,6 +231,101 @@ impl SpinnerBuilder {
     pub fn with_interval(mut self, interval: Duration) -> Self {
         self.interval = Some(interval);
         self
+    }
+
+    /// 使用 spinner 执行一个操作（便捷方法）
+    ///
+    /// 自动创建并启动 spinner，执行操作，然后清理 spinner。
+    /// 如果操作很快完成（< 100ms），会使用 `finish_with_message` 显示完成消息，
+    /// 确保用户至少能看到一次输出。
+    ///
+    /// # 参数
+    ///
+    /// * `operation` - 要执行的操作（闭包）
+    ///
+    /// # 返回
+    ///
+    /// 返回操作的结果
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::base::interactive::spinner;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let result: Result<i32, Box<dyn std::error::Error>> = spinner("Creating PR...").with(|| {
+    ///     // 执行操作
+    ///     Ok(42)
+    /// })?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with<F, T, E>(self, operation: F) -> Result<T, E>
+    where
+        F: FnOnce() -> Result<T, E>,
+    {
+        let message_str = self.message.clone();
+        let spinner = self.start();
+        let start = std::time::Instant::now();
+        let result = operation();
+        let elapsed = start.elapsed();
+
+        // 如果操作很快完成（< 100ms），使用 finish_with_message 显示消息
+        // 确保用户至少能看到一次输出
+        if elapsed < Duration::from_millis(100) {
+            spinner.finish_with_message(&message_str);
+        } else {
+            spinner.stop();
+        }
+
+        result
+    }
+
+    /// 使用 spinner 执行一个会产生输出的操作
+    ///
+    /// 先显示 spinner 消息（250ms），然后完成 spinner，再执行操作。
+    /// 这样可以确保用户能看到消息，同时让子进程的输出正常显示。
+    ///
+    /// 这个方法适用于执行会产生 stdout/stderr 输出的操作（如 `git push`），
+    /// 可以避免子进程的输出与 spinner 动画混合。
+    ///
+    /// **注意**：操作完成后，建议使用 `info!` 或 `success!` 显示完成状态。
+    ///
+    /// # 参数
+    ///
+    /// * `operation` - 要执行的操作（闭包）
+    ///
+    /// # 返回
+    ///
+    /// 返回操作的结果
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::base::interactive::spinner;
+    /// use workflow::success;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let result: Result<(), Box<dyn std::error::Error>> = spinner("Pushing to remote...").with_output(|| {
+    ///     // 执行操作
+    ///     Ok(())
+    /// })?;
+    /// result?;
+    /// success!("Pushed to remote successfully");
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_output<F, T, E>(self, operation: F) -> Result<T, E>
+    where
+        F: FnOnce() -> Result<T, E>,
+    {
+        let spinner = self.start();
+        // 让 spinner 显示足够长的时间（250ms），确保用户能看到消息
+        std::thread::sleep(Duration::from_millis(250));
+        // 完成 spinner（清除它），然后执行操作
+        spinner.stop();
+        // 执行操作，让子进程的输出正常显示
+        operation()
     }
 
     pub fn start(self) -> Spinner {

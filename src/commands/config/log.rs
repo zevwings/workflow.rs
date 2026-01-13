@@ -4,7 +4,7 @@ use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::LogLevel;
 use crate::jira::config::ConfigManager;
-use crate::{log_break, log_message, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 /// 日志级别管理命令
@@ -42,13 +42,13 @@ impl LogCommand {
         Self::save_log_level_to_config(selected_level_str)?;
 
         // 显示结果
-        log_break!();
-        log_success!("Log level set to: {}", selected_level_str);
-        log_message!("  Current log level: {}", selected_level.as_str());
+        br!();
+        success!("Log level set to: {}", selected_level_str);
+        info!("  Current log level: {}", selected_level.as_str());
         if let Ok(config_path) = crate::base::Paths::workflow_config() {
-            log_message!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
+            info!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
         } else {
-            log_message!(
+            info!(
                 "  {} ~/.workflow/config/workflow.toml",
                 log::CONFIG_SAVED_PREFIX
             );
@@ -63,34 +63,34 @@ impl LogCommand {
         let default_level = LogLevel::default_level();
         let config_level = Settings::get().log.level.as_ref();
 
-        log_success!("Current log level: {}", current_level.as_str());
-        log_message!(
+        success!("Current log level: {}", current_level.as_str());
+        info!(
             "Default log level: {} (based on build mode)",
             default_level.as_str()
         );
 
         if let Some(level_str) = config_level {
-            log_message!(
+            info!(
                 "Config file level: {} (from ~/.workflow/config/workflow.toml)",
                 level_str
             );
         } else {
-            log_message!("Config file level: not set (using default)");
+            info!("Config file level: not set (using default)");
         }
 
         if current_level == default_level && config_level.is_none() {
-            log_message!("Log level is at default (not manually set)");
+            info!("Log level is at default (not manually set)");
         } else {
-            log_message!("Log level has been manually set");
+            info!("Log level has been manually set");
         }
 
-        log_break!();
-        log_message!("Available log levels:");
-        log_message!("  none  - No log output");
-        log_message!("  error - Only error messages");
-        log_message!("  warn  - Warning and error messages");
-        log_message!("  info  - Info, warning, and error messages");
-        log_message!("  debug - All log messages (including debug)");
+        br!();
+        info!("Available log levels:");
+        info!("  none  - No log output");
+        info!("  error - Only error messages");
+        info!("  warn  - Warning and error messages");
+        info!("  info  - Info, warning, and error messages");
+        info!("  debug - All log messages (including debug)");
 
         Ok(())
     }
@@ -117,8 +117,8 @@ impl LogCommand {
             "disabled (output to file only)"
         };
 
-        log_message!("Current trace console output: {}", current_status);
-        log_break!();
+        info!("Current trace console output: {}", current_status);
+        br!();
 
         // 显示选项
         let options = vec![
@@ -149,22 +149,22 @@ impl LogCommand {
         })?;
 
         // 显示结果
-        log_break!();
+        br!();
         if selected_idx == 0 {
-            log_success!("Trace console output enabled");
-            log_message!("  Tracing logs will be output to both file and console (stderr)");
+            success!("Trace console output enabled");
+            info!("  Tracing logs will be output to both file and console (stderr)");
             if let Ok(config_path) = crate::base::Paths::workflow_config() {
-                log_message!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
+                info!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
             } else {
-                log_message!(
+                info!(
                     "  {} ~/.workflow/config/workflow.toml",
                     log::CONFIG_SAVED_PREFIX
                 );
             }
         } else {
-            log_success!("Trace console output disabled");
-            log_message!("  Tracing logs will only be output to file");
-            log_message!("  Configuration updated (removed from config file)");
+            success!("Trace console output disabled");
+            info!("  Tracing logs will only be output to file");
+            info!("  Configuration updated (removed from config file)");
         }
 
         Ok(())

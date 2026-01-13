@@ -3,7 +3,7 @@
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::base::util::{Browser, Clipboard};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::status::JiraStatus;
@@ -11,7 +11,7 @@ use crate::jira::Jira;
 use crate::jira::JiraWorkHistory;
 use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
 use crate::pr::{create_provider_auto, TYPES_OF_CHANGES};
-use crate::{log_break, log_info, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{
     eyre::{Report, WrapErr},
     Result,
@@ -29,17 +29,17 @@ pub fn handle_stash_pop_result(result: Result<crate::git::StashPopResult>) {
         Ok(result) => {
             if result.restored {
                 if let Some(ref msg) = result.message {
-                    log_success!("{}", msg);
+                    success!("{}", msg);
                 }
             }
             // 显示警告信息
             for warning in &result.warnings {
-                log_warning!("{}", warning);
+                warning!("{}", warning);
             }
         }
         Err(e) => {
-            log_warning!("Failed to restore stashed changes: {}", e);
-            log_info!("You may need to manually restore: git stash pop");
+            warning!("Failed to restore stashed changes: {}", e);
+            info!("You may need to manually restore: git stash pop");
         }
     }
 }
@@ -150,11 +150,11 @@ pub fn cleanup_branch(
 ) -> Result<()> {
     // 如果当前分支已经是默认分支，不需要清理
     if current_branch == default_branch {
-        log_info!("Already on default branch: {}", default_branch);
+        info!("Already on default branch: {}", default_branch);
         return Ok(());
     }
 
-    log_info!("Switching to default branch: {}", default_branch);
+    info!("Switching to default branch: {}", default_branch);
 
     // 1. 更新远程分支信息
     GitRepo::fetch()?;
@@ -162,7 +162,7 @@ pub fn cleanup_branch(
     // 2. 检查并 stash 未提交的更改
     let has_stashed = GitCommit::has_commit()?;
     if has_stashed {
-        log_info!("Stashing local changes before switching branches...");
+        info!("Stashing local changes before switching branches...");
         GitStash::stash_push(Some(&format!(
             "Auto-stash before {} cleanup",
             operation_name
@@ -179,31 +179,31 @@ pub fn cleanup_branch(
 
     // 5. 删除本地分支
     if GitBranch::has_local_branch(current_branch)? {
-        log_info!("Deleting local branch: {}", current_branch);
+        info!("Deleting local branch: {}", current_branch);
         GitBranch::delete(current_branch, false)
             .or_else(|_| {
-                log_info!("Branch may not be fully merged, trying force delete...");
+                info!("Branch may not be fully merged, trying force delete...");
                 GitBranch::delete(current_branch, true)
             })
             .wrap_err("Failed to delete local branch")?;
-        log_success!("Local branch deleted: {}", current_branch);
+        success!("Local branch deleted: {}", current_branch);
     } else {
-        log_info!("Local branch already deleted: {}", current_branch);
+        info!("Local branch already deleted: {}", current_branch);
     }
 
     // 6. 恢复 stash
     if has_stashed {
-        log_info!("Restoring stashed changes...");
+        info!("Restoring stashed changes...");
         handle_stash_pop_result(GitStash::stash_pop(None));
     }
 
     // 7. 清理远程分支引用
     if let Err(e) = GitRepo::prune_remote() {
-        log_info!("Warning: Failed to prune remote references: {}", e);
-        log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
+        info!("Warning: Failed to prune remote references: {}", e);
+        info!("This is a non-critical cleanup operation. Local cleanup is complete.");
     }
 
-    log_success!(
+    success!(
         "Cleanup completed: switched to {} and deleted local branch {}",
         default_branch,
         current_branch
@@ -237,7 +237,7 @@ pub fn cleanup_branch(
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
-    log_info!("Detecting base branch for '{}'...", branch);
+    info!("Detecting base branch for '{}'...", branch);
 
     // Get all branches (excluding branch and exclude_branch)
     let all_branches = GitBranch::get_all_branches(false)
@@ -267,7 +267,7 @@ pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<S
     for candidate in &candidate_branches {
         match GitBranch::is_branch_based_on(branch, candidate) {
             Ok(true) => {
-                log_success!(
+                success!(
                     "Detected that '{}' is likely based on '{}'",
                     branch,
                     candidate
@@ -279,7 +279,7 @@ pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<S
             }
             Err(e) => {
                 // Check failed, log warning but continue
-                log_warning!(
+                warning!(
                     "Failed to check if '{}' is based on '{}': {}",
                     branch,
                     candidate,
@@ -289,7 +289,7 @@ pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<S
         }
     }
 
-    log_info!("No base branch detected for '{}'", branch);
+    info!("No base branch detected for '{}'", branch);
     Ok(None)
 }
 
@@ -311,7 +311,7 @@ pub fn ensure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>
             Ok(Some(status))
         } else {
             // 如果没有配置，提示配置
-            log_info!(
+            info!(
                 "No status configuration found for {}, configuring...",
                 ticket
             );
@@ -322,12 +322,12 @@ pub fn ensure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>
                         ticket
                     )
                 })?;
-            log_success!("Jira status configuration saved");
-            log_info!(
+            success!("Jira status configuration saved");
+            info!(
                 "  PR created status: {}",
                 config_result.created_pull_request_status
             );
-            log_info!(
+            info!(
                 "  PR merged status: {}",
                 config_result.merged_pull_request_status
             );
@@ -390,7 +390,7 @@ pub fn resolve_description(description: Option<String>) -> Result<String> {
 ///
 /// 返回布尔向量，表示每个 PR 变更类型是否被选中。
 pub fn select_change_types() -> Result<Vec<bool>> {
-    log_info!("Types of changes:");
+    info!("Types of changes:");
     let options: Vec<&str> = TYPES_OF_CHANGES.to_vec();
     let selected_items = MultiSelectDialog::new(
         "Select change types (use space to select, enter to confirm)",
@@ -431,23 +431,23 @@ pub fn create_branch_from_default(
     commit_title: &str,
     default_branch: &str,
 ) -> Result<(String, String)> {
-    log_info!(
+    info!(
         "You are on default branch '{}' with uncommitted changes.",
         default_branch
     );
-    log_info!("Will create new branch and commit changes...");
+    info!("Will create new branch and commit changes...");
 
     // 直接创建新分支（Git 会自动把未提交的修改带到新分支）
-    log_success!("Creating branch: {}", branch_name);
+    success!("Creating branch: {}", branch_name);
     GitBranch::checkout_branch(branch_name)?;
 
     // 提交并推送
-    Spinner::with("Committing changes...", || {
+    spinner("Committing changes...").with(|| {
         GitCommit::commit(commit_title, true) // no-verify
     })?;
-    log_break!();
-    log_info!("Pushing to remote...");
-    log_break!();
+    br!();
+    info!("Pushing to remote...");
+    br!();
     GitBranch::push(branch_name, true)?; // set-upstream
 
     Ok((branch_name.to_string(), default_branch.to_string()))
@@ -463,7 +463,7 @@ pub fn create_branch_from_default(
 pub fn copy_and_open_pull_request(pull_request_url: &str) -> Result<()> {
     // 复制 PR URL 到剪贴板
     Clipboard::copy(pull_request_url)?;
-    log_success!("Copied {} to clipboard", pull_request_url);
+    success!("Copied {} to clipboard", pull_request_url);
 
     // 打开浏览器
     std::thread::sleep(std::time::Duration::from_secs(1));
@@ -494,7 +494,7 @@ pub fn resolve_title(
     // 如果有提供的标题，根据参数决定是否询问确认
     if let Some(t) = title {
         if confirm_if_provided {
-            log_success!("Using source PR title: {}", t);
+            success!("Using source PR title: {}", t);
             let use_source = ConfirmDialog::new(format!("Use source PR title: '{}'?", t))
                 .with_default(true)
                 .prompt()?;
@@ -510,17 +510,17 @@ pub fn resolve_title(
 
     // 如果有 Jira ticket，尝试从 Jira 获取标题
     if let Some(ref ticket) = jira_ticket {
-        log_success!("Getting PR title from Jira ticket...");
+        success!("Getting PR title from Jira ticket...");
 
         if let Ok(issue) = Jira::get_ticket_info(ticket) {
             let summary = issue.fields.summary.trim().to_string();
             if !summary.is_empty() {
-                log_success!("Using Jira ticket summary: {}", summary);
+                success!("Using Jira ticket summary: {}", summary);
                 return Ok(summary);
             }
-            log_warning!("Jira ticket summary is empty, falling back to manual input");
+            warning!("Jira ticket summary is empty, falling back to manual input");
         } else {
-            log_warning!("Failed to get ticket info, falling back to manual input");
+            warning!("Failed to get ticket info, falling back to manual input");
         }
     }
 
@@ -553,7 +553,7 @@ pub fn create_or_get_pull_request(
     let existing_pr = get_current_branch_pr_id()?;
 
     if let Some(pr_id) = existing_pr {
-        log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
+        info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
         let provider = create_provider_auto()?;
         provider.get_pull_request_url(&pr_id)
     } else {
@@ -563,13 +563,13 @@ pub fn create_or_get_pull_request(
             .wrap_err("Failed to check branch commits")?;
 
         if !has_commits {
-            log_warning!(
+            warning!(
                 "Branch '{}' has no commits compared to '{}'.",
                 branch_name,
                 default_branch
             );
-            log_warning!("GitHub does not allow creating PRs for empty branches.");
-            log_warning!("Please make some changes and commit them before creating a PR.");
+            warning!("GitHub does not allow creating PRs for empty branches.");
+            warning!("Please make some changes and commit them before creating a PR.");
             color_eyre::eyre::bail!(
                 "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
                 branch_name
@@ -577,11 +577,11 @@ pub fn create_or_get_pull_request(
         }
 
         let provider = create_provider_auto()?;
-        let pull_request_url = Spinner::with("Creating PR...", || {
+        let pull_request_url = spinner("Creating PR...").with(|| {
             provider.create_pull_request(pr_title, pull_request_body, branch_name, None)
         })?;
 
-        log_success!("PR created: {}", pull_request_url);
+        success!("PR created: {}", pull_request_url);
         Ok(pull_request_url)
     }
 }
@@ -608,7 +608,7 @@ pub fn update_jira_ticket(
 ) -> Result<()> {
     if let Some(ref ticket) = jira_ticket {
         if let Some(ref status) = created_pull_request_status {
-            Spinner::with("Updating Jira ticket...", || -> Result<()> {
+            spinner("Updating Jira ticket...").with(|| -> Result<()> {
                 // 分配任务
                 Jira::assign_ticket(ticket, None)?;
                 // 更新状态

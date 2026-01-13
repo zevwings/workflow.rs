@@ -4,7 +4,7 @@
 
 use crate::base::dialog::ConfirmDialog;
 use crate::git::{GitBranch, GitCommit};
-use crate::{log_break, log_info, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 检查是否在默认分支上（保护分支不允许修改提交历史）
@@ -56,7 +56,7 @@ where
     let is_pushed = should_show_warning(current_branch, commit_sha)?;
 
     if is_pushed {
-        log_break!();
+        br!();
         let should_push = ConfirmDialog::new("Push to remote (force-with-lease)?")
             .with_default(true)
             .with_cancel_message("Push cancelled by user")
@@ -64,16 +64,16 @@ where
             .wrap_err("Failed to get push confirmation")?;
 
         if should_push {
-            log_break!();
-            log_info!("Pushing to remote (force-with-lease)...");
-            log_break!();
+            br!();
+            info!("Pushing to remote (force-with-lease)...");
+            br!();
             GitBranch::push_force_with_lease(current_branch)
                 .wrap_err("Failed to push to remote (force-with-lease)")?;
-            log_break!();
-            log_success!("Pushed to remote successfully");
+            br!();
+            success!("Pushed to remote successfully");
         } else {
-            log_info!("Skipping push as requested by user");
-            log_info!("You can push manually with: git push --force-with-lease");
+            info!("Skipping push as requested by user");
+            info!("You can push manually with: git push --force-with-lease");
         }
     }
 

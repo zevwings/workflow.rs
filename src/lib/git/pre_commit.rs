@@ -6,9 +6,9 @@ use duct::cmd;
 
 use super::commit::GitCommit;
 use super::repo::GitRepo;
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::base::util::file::FileReader;
-use crate::{log_break, log_error, log_success, trace_debug};
+use crate::{br, error, success, trace_debug};
 
 /// Pre-commit 执行结果
 #[derive(Debug, Clone)]
@@ -186,10 +186,10 @@ impl GitPreCommit {
 
                     // 显示错误输出
                     if !filtered_stderr.trim().is_empty() {
-                        log_error!("\n{}", filtered_stderr);
+                        error!("\n{}", filtered_stderr);
                     }
                     if !stdout.trim().is_empty() {
-                        log_error!("{}", stdout);
+                        error!("{}", stdout);
                     }
 
                     color_eyre::eyre::bail!("{}", error_msg);
@@ -246,11 +246,11 @@ impl GitPreCommit {
 
                 // 显示错误输出
                 if !stderr.trim().is_empty() {
-                    log_error!("\n{}", stderr);
+                    error!("\n{}", stderr);
                     error_msg.push_str(&format!("\n\n{}", stderr));
                 }
                 if !stdout.trim().is_empty() {
-                    log_error!("{}", stdout);
+                    error!("{}", stdout);
                     if !error_msg.contains(&stdout.to_string()) {
                         error_msg.push_str(&format!("\n{}", stdout));
                     }
@@ -281,10 +281,10 @@ impl GitPreCommit {
             GitCommit::add_all().wrap_err("Failed to stage files for pre-commit checks")?;
 
             // 使用 Spinner 显示执行过程
-            Spinner::with("Running pre-commit checks...", Self::run_pre_commit)?;
+            spinner("Running pre-commit checks...").with(Self::run_pre_commit)?;
 
-            log_success!("Pre-commit checks passed");
-            log_break!();
+            success!("Pre-commit checks passed");
+            br!();
         }
         Ok(())
     }

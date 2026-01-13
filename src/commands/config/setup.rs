@@ -3,7 +3,7 @@
 
 use crate::base::constants::messages::log;
 use crate::base::dialog::{FormBuilder, GroupConfig, SelectDialog};
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{
@@ -13,7 +13,7 @@ use crate::base::settings::settings::{
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::collections::HashMap;
 
@@ -48,7 +48,7 @@ struct CollectedConfig {
 impl SetupCommand {
     /// 运行初始化设置流程
     pub fn run() -> Result<()> {
-        log_success!("Starting Workflow CLI initialization...\n");
+        success!("Starting Workflow CLI initialization...\n");
 
         // 加载现有配置（从 TOML 文件）
         let existing_config = Self::load_existing_config()?;
@@ -57,45 +57,45 @@ impl SetupCommand {
         let config = Self::collect_config(&existing_config)?;
 
         // 保存配置到 TOML 文件
-        log_message!("Saving configuration...");
+        info!("Saving configuration...");
         Self::save_config(&config)?;
         if let Ok(config_path) = crate::base::Paths::workflow_config() {
-            log_success!("{} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
+            success!("{} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
         } else {
-            log_success!(
+            success!(
                 "{} ~/.workflow/config/workflow.toml",
                 log::CONFIG_SAVED_PREFIX
             );
         }
 
-        log_break!();
-        log_info!("Verifying configuration...");
-        log_break!();
+        br!();
+        info!("Verifying configuration...");
+        br!();
 
-        log_break!('-', 40, "Verifying Configuration");
-        log_break!();
+        br!('-', 40, "Verifying Configuration");
+        br!();
 
         // 检查配置文件权限
         if let Some(warning) = Settings::check_permissions() {
-            log_warning!("{}", warning);
+            warning!("{}", warning);
         }
 
         // 创建 spinner 显示验证进度
-        let spinner = Spinner::new("Verifying configurations...");
+        let spinner = spinner("Verifying configurations...").start();
 
         // 验证配置（使用 load() 获取最新配置，避免 OnceLock 缓存问题）
         let settings = Settings::load();
         let result = settings.verify()?;
 
         // 完成 spinner
-        spinner.finish();
+        spinner.stop();
 
         crate::commands::config::show::ConfigCommand::print_verification_result(&result);
 
-        log_break!();
-        log_success!("Initialization completed successfully!");
-        log_break!();
-        log_message!("You can now use the Workflow CLI commands.");
+        br!();
+        success!("Initialization completed successfully!");
+        br!();
+        info!("You can now use the Workflow CLI commands.");
 
         Ok(())
     }
@@ -133,9 +133,9 @@ impl SetupCommand {
     /// 收集配置信息
     fn collect_config(existing: &CollectedConfig) -> Result<CollectedConfig> {
         // ==================== 必填项：GitHub 配置 ====================
-        log_break!();
-        log_message!("  GitHub Configuration (Required)");
-        log_break!('─', 65);
+        br!();
+        info!("  GitHub Configuration (Required)");
+        br!('─', 65);
 
         let mut github_accounts = existing.github_accounts.clone();
         let mut github_current = existing.github_current.clone();
@@ -225,7 +225,7 @@ impl SetupCommand {
             }
         } else {
             // 没有账号，添加第一个账号
-            log_message!("No GitHub accounts configured. Let's add one:");
+            info!("No GitHub accounts configured. Let's add one:");
             let account = collect_github_account()?;
             github_accounts.push(account);
             let first_account = github_accounts

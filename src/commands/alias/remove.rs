@@ -4,7 +4,7 @@
 
 use crate::base::alias::AliasManager;
 use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
-use crate::{log_info, log_message, log_success, log_warning};
+use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 别名删除命令
@@ -20,7 +20,7 @@ impl AliasRemoveCommand {
         let aliases = AliasManager::list()?;
 
         if aliases.is_empty() {
-            log_info!("No aliases defined");
+            info!("No aliases defined");
             return Ok(());
         }
 
@@ -42,7 +42,7 @@ impl AliasRemoveCommand {
                 .wrap_err("Failed to select aliases")?;
 
             if selected.is_empty() {
-                log_info!("No aliases selected");
+                info!("No aliases selected");
                 return Ok(());
             }
 
@@ -54,10 +54,10 @@ impl AliasRemoveCommand {
         };
 
         // 显示将要删除的别名
-        log_message!("Aliases to be removed:");
+        info!("Aliases to be removed:");
         for name in &names_to_remove {
             if let Some(command) = aliases.get(name) {
-                log_info!("  {} = {}", name, command);
+                info!("  {} = {}", name, command);
             }
         }
 
@@ -71,7 +71,7 @@ impl AliasRemoveCommand {
         .wrap_err("Failed to get user confirmation")?;
 
         if !confirmed {
-            log_info!("Operation cancelled");
+            info!("Operation cancelled");
             return Ok(());
         }
 
@@ -80,20 +80,20 @@ impl AliasRemoveCommand {
         for name in &names_to_remove {
             match AliasManager::remove(name) {
                 Ok(true) => {
-                    log_success!("Alias '{}' removed successfully", name);
+                    success!("Alias '{}' removed successfully", name);
                     removed_count += 1;
                 }
                 Ok(false) => {
-                    log_warning!("Alias '{}' not found (may have been removed already)", name);
+                    warning!("Alias '{}' not found (may have been removed already)", name);
                 }
                 Err(e) => {
-                    log_warning!("Failed to remove alias '{}': {}", name, e);
+                    warning!("Failed to remove alias '{}': {}", name, e);
                 }
             }
         }
 
         if removed_count > 0 {
-            log_success!("Successfully removed {} alias/aliases", removed_count);
+            success!("Successfully removed {} alias/aliases", removed_count);
 
             // 询问是否更新补全脚本
             let should_update = ConfirmDialog::new("Update completion scripts?")
@@ -104,11 +104,11 @@ impl AliasRemoveCommand {
             if should_update {
                 match crate::Completion::generate_all_completions(None, None) {
                     Ok(_) => {
-                        log_success!("Completion scripts updated successfully");
+                        success!("Completion scripts updated successfully");
                     }
                     Err(e) => {
-                        log_warning!("Failed to update completion scripts: {}", e);
-                        log_info!(
+                        warning!("Failed to update completion scripts: {}", e);
+                        info!(
                             "You can manually update them later with: workflow completion generate"
                         );
                     }

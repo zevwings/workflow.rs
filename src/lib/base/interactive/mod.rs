@@ -48,4 +48,6 @@ pub use dialog::{
     MultiSelectBuilder, MultiSelectFormField, NestedFormField, PasswordFormField, PromptError,
     Result, SelectBuilder, SelectFormField, Validator,
 };
-pub use output::{spinner, table, Alignment, Message, MessageRef, SpinnerBuilder, TableBuilder};
+pub use output::{
+    spinner, table, Alignment, Message, MessageRef, Spinner, SpinnerBuilder, TableBuilder,
+};

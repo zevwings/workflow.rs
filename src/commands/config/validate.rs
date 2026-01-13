@@ -16,7 +16,7 @@ use crate::base::settings::settings::Settings;
 use crate::base::util::date::get_unix_timestamp;
 use crate::base::util::file::{FileReader, FileWriter};
 use crate::commands::config::helpers::parse_config;
-use crate::{log_error, log_info, log_message, log_success, log_warning};
+use crate::{error, info, success, warning};
 
 /// 配置验证错误
 #[derive(Debug, Clone)]
@@ -57,9 +57,9 @@ impl ConfigValidateCommand {
         };
 
         if !config_path.exists() {
-            log_warning!("Configuration file does not exist: {:?}", config_path);
+            warning!("Configuration file does not exist: {:?}", config_path);
             if config_path == default_path {
-                log_info!("Run 'workflow setup' to initialize configuration.");
+                info!("Run 'workflow setup' to initialize configuration.");
             }
             return Ok(());
         }
@@ -77,7 +77,7 @@ impl ConfigValidateCommand {
         if fix && !result.errors.is_empty() {
             let fixed_count = Self::attempt_fixes(&mut result, &config_path, &mut settings)?;
             if fixed_count > 0 {
-                log_warning!("Found {} issue(s), fixed automatically:", fixed_count);
+                warning!("Found {} issue(s), fixed automatically:", fixed_count);
                 // 重新验证以获取更新后的错误列表
                 result = Self::validate_config(&settings, &config_path)?;
             }
@@ -89,12 +89,12 @@ impl ConfigValidateCommand {
         // 如果有错误（或在严格模式下有警告），返回错误
         if !result.errors.is_empty() || (strict && !result.warnings.is_empty()) {
             if !fix {
-                log_info!("\nRun 'workflow config validate --fix' to attempt automatic fixes.");
+                info!("\nRun 'workflow config validate --fix' to attempt automatic fixes.");
             }
             std::process::exit(1);
         }
 
-        log_success!("Configuration file is valid");
+        success!("Configuration file is valid");
         Ok(())
     }
 
@@ -283,10 +283,10 @@ impl ConfigValidateCommand {
                 Ok(backup) => {
                     backup_path = Some(backup.clone());
                     backup_created = true;
-                    log_info!("Backup created: {:?}", backup);
+                    info!("Backup created: {:?}", backup);
                 }
                 Err(e) => {
-                    log_warning!("Failed to create backup: {}. Continuing without backup.", e);
+                    warning!("Failed to create backup: {}. Continuing without backup.", e);
                 }
             }
         }
@@ -299,9 +299,9 @@ impl ConfigValidateCommand {
             if fixed {
                 fixed_count += 1;
                 if let Some(ref suggestion) = error.fix_suggestion {
-                    log_info!("  - Fixed: {}", suggestion);
+                    info!("  - Fixed: {}", suggestion);
                 } else {
-                    log_info!("  - Fixed: {}", error.field);
+                    info!("  - Fixed: {}", error.field);
                 }
             }
         }
@@ -310,24 +310,24 @@ impl ConfigValidateCommand {
         if fixed_count > 0 {
             match Self::save_config(settings, config_path) {
                 Ok(_) => {
-                    log_success!("Fixed {} issue(s) and saved configuration", fixed_count);
+                    success!("Fixed {} issue(s) and saved configuration", fixed_count);
                     // 删除备份（修复成功）
                     if let Some(backup) = backup_path {
                         fs::remove_file(&backup).ok();
                     }
                 }
                 Err(e) => {
-                    log_error!("Failed to save fixed configuration: {}", e);
+                    error!("Failed to save fixed configuration: {}", e);
                     // 保存失败，尝试恢复备份
                     if backup_created {
                         if let Some(backup) = backup_path {
                             if let Err(restore_err) =
                                 Self::restore_from_backup(&backup, config_path)
                             {
-                                log_error!("Failed to restore from backup: {}", restore_err);
-                                log_error!("Backup file is available at: {:?}", backup);
+                                error!("Failed to restore from backup: {}", restore_err);
+                                error!("Backup file is available at: {:?}", backup);
                             } else {
-                                log_success!("Restored original configuration from backup");
+                                success!("Restored original configuration from backup");
                             }
                         }
                     }
@@ -463,25 +463,24 @@ impl ConfigValidateCommand {
         }
 
         if !result.errors.is_empty() {
-            log_error!("Configuration validation failed\n");
-            log_message!("Errors:");
+            error!("Configuration validation failed\n");
+            info!("Errors:");
             for error in &result.errors {
-                log_message!(
+                info!(
                     "  - Missing or invalid field: '{}' - {}",
-                    error.field,
-                    error.message
+                    error.field, error.message
                 );
             }
         }
 
         if !result.warnings.is_empty() {
             if strict {
-                log_error!("\nWarnings (treated as errors in strict mode):");
+                error!("\nWarnings (treated as errors in strict mode):");
             } else {
-                log_warning!("\nWarnings:");
+                warning!("\nWarnings:");
             }
             for warning in &result.warnings {
-                log_message!("  - {}: {}", warning.field, warning.message);
+                info!("  - {}: {}", warning.field, warning.message);
             }
         }
 

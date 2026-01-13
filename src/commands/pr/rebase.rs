@@ -1,11 +1,11 @@
 use crate::base::dialog::{ConfirmDialog, SelectDialog};
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::commands::check;
 use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_break, log_error, log_info, log_success, log_warning};
+use crate::{br, error, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// PR Rebase 命令
@@ -278,9 +278,9 @@ impl PullRequestRebaseCommand {
     /// 注意：PR ID 会自动从当前分支检测，如果找到 PR，会提示用户确认是否更新 PR base
     pub fn rebase(target_branch: String, push: bool, dry_run: bool) -> Result<()> {
         // 1. 运行预检查
-        log_info!("Running pre-flight checks...");
+        info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
-            log_warning!("Pre-flight checks failed: {}", e);
+            warning!("Pre-flight checks failed: {}", e);
             ConfirmDialog::new("Continue anyway?")
                 .with_default(false)
                 .with_cancel_message("Operation cancelled by user")
@@ -289,7 +289,7 @@ impl PullRequestRebaseCommand {
 
         // 2. 获取当前分支
         let current_branch = GitBranch::current_branch()?;
-        log_success!("Current branch: {}", current_branch);
+        success!("Current branch: {}", current_branch);
 
         // 3. 验证目标分支存在
         Self::validate_target_branch(&target_branch)?;
@@ -298,7 +298,7 @@ impl PullRequestRebaseCommand {
         let has_stashed = Self::check_working_directory()?;
 
         // 5. 拉取目标分支最新代码
-        Spinner::with("Fetching latest changes...", GitRepo::fetch)?;
+        spinner("Fetching latest changes...").with(GitRepo::fetch)?;
 
         // 6. 检测当前分支的基础分支（用于智能 rebase）
         let detected_base = detect_base_branch(&current_branch, &target_branch)?;
@@ -316,39 +316,35 @@ impl PullRequestRebaseCommand {
 
         // 8. 执行 rebase（智能选择 rebase 方式）
         let rebase_result = if let Some(base_branch) = &detected_base {
-            log_success!(
+            success!(
                 "Detected that '{}' is based on '{}', will only rebase unique commits",
                 current_branch,
                 base_branch
             );
-            log_info!(
+            info!(
                 "Rebasing commits from '{}' (excluding '{}' changes) onto '{}'",
-                current_branch,
-                base_branch,
-                target_branch
+                current_branch, base_branch, target_branch
             );
-            Spinner::with(
-                format!("Rebasing '{}' onto '{}'...", current_branch, target_branch),
-                || {
-                    GitBranch::rebase_onto_with_upstream(
-                        &target_branch,
-                        base_branch,
-                        &current_branch,
-                    )
-                },
-            )
+            spinner(format!(
+                "Rebasing '{}' onto '{}'...",
+                current_branch, target_branch
+            ))
+            .with(|| {
+                GitBranch::rebase_onto_with_upstream(&target_branch, base_branch, &current_branch)
+            })
         } else {
-            Spinner::with(
-                format!("Rebasing '{}' onto '{}'...", current_branch, target_branch),
-                || GitBranch::rebase_onto(&target_branch),
-            )
+            spinner(format!(
+                "Rebasing '{}' onto '{}'...",
+                current_branch, target_branch
+            ))
+            .with(|| GitBranch::rebase_onto(&target_branch))
         };
 
         // 9. 处理 rebase 结果
         if let Err(e) = rebase_result {
             // 如果 rebase 失败，恢复 stash
             if has_stashed {
-                log_info!("Rebase failed, attempting to restore stashed changes...");
+                info!("Rebase failed, attempting to restore stashed changes...");
                 handle_stash_pop_result(GitStash::stash_pop(None));
             }
 
@@ -361,14 +357,14 @@ impl PullRequestRebaseCommand {
             return Err(e);
         }
 
-        log_success!("Rebase completed successfully");
+        success!("Rebase completed successfully");
 
         // 10. 更新 PR base（如果找到 PR，会提示用户确认）
         Self::update_pr_base(&current_branch, &target_branch)?;
 
         // 11. 恢复 stash
         if has_stashed {
-            log_info!("Restoring stashed changes...");
+            info!("Restoring stashed changes...");
             handle_stash_pop_result(GitStash::stash_pop(None));
         }
 
@@ -376,11 +372,11 @@ impl PullRequestRebaseCommand {
         if push {
             Self::push_with_force_lease(&current_branch)?;
         } else {
-            log_info!("Skipping push (use without --no-push to push by default)");
+            info!("Skipping push (use without --no-push to push by default)");
         }
 
-        log_break!();
-        log_success!("Rebase operation completed successfully");
+        br!();
+        success!("Rebase operation completed successfully");
         Ok(())
     }
 
@@ -408,7 +404,7 @@ impl PullRequestRebaseCommand {
             GitCommit::has_commit().wrap_err("Failed to check working directory status")?;
 
         if has_uncommitted {
-            log_warning!("Working directory has uncommitted changes");
+            warning!("Working directory has uncommitted changes");
             let options = vec![
                 "Stash changes and continue".to_string(),
                 "Abort operation".to_string(),
@@ -425,9 +421,9 @@ impl PullRequestRebaseCommand {
 
             match choice {
                 0 => {
-                    log_info!("Stashing uncommitted changes...");
+                    info!("Stashing uncommitted changes...");
                     GitStash::stash_push(Some("Auto-stash before rebase"))?;
-                    log_success!("Changes stashed successfully");
+                    success!("Changes stashed successfully");
                     Ok(true)
                 }
                 1 => {
@@ -448,14 +444,14 @@ impl PullRequestRebaseCommand {
 
     /// 处理 rebase 冲突
     fn handle_rebase_conflict() -> Result<()> {
-        log_error!("Rebase conflicts detected!");
-        log_info!("Please resolve the conflicts manually:");
-        log_info!("  1. Review conflicted files");
-        log_info!("  2. Resolve conflicts");
-        log_info!("  3. Stage resolved files: git add <files>");
-        log_info!("  4. Continue rebase: git rebase --continue");
-        log_info!("  5. Push when ready: git push --force-with-lease");
-        log_info!("\nTo abort: git rebase --abort");
+        error!("Rebase conflicts detected!");
+        info!("Please resolve the conflicts manually:");
+        info!("  1. Review conflicted files");
+        info!("  2. Resolve conflicts");
+        info!("  3. Stage resolved files: git add <files>");
+        info!("  4. Continue rebase: git rebase --continue");
+        info!("  5. Push when ready: git push --force-with-lease");
+        info!("\nTo abort: git rebase --abort");
 
         color_eyre::eyre::bail!("Rebase conflicts detected. Please resolve manually.");
     }
@@ -468,18 +464,17 @@ impl PullRequestRebaseCommand {
         let pr_id = match get_current_branch_pr_id()? {
             Some(id) => id,
             None => {
-                log_warning!("No PR found for current branch '{}'", current_branch);
-                log_info!("Skipping PR base update");
+                warning!("No PR found for current branch '{}'", current_branch);
+                info!("Skipping PR base update");
                 return Ok(());
             }
         };
 
-        log_info!(
+        info!(
             "PR #{} found for current branch '{}'",
-            pr_id,
-            current_branch
+            pr_id, current_branch
         );
-        log_info!(
+        info!(
             "Will update PR base branch from current base to '{}'",
             target_branch
         );
@@ -497,27 +492,25 @@ impl PullRequestRebaseCommand {
         let provider = create_provider_auto()?;
 
         // 更新 PR base
-        Spinner::with(
-            format!(
-                "Updating PR #{} base branch to '{}'...",
-                pr_id, target_branch
-            ),
-            || provider.update_pr_base(&pr_id, target_branch),
-        )
+        spinner(format!(
+            "Updating PR #{} base branch to '{}'...",
+            pr_id, target_branch
+        ))
+        .with(|| provider.update_pr_base(&pr_id, target_branch))
         .wrap_err("Failed to update PR base branch")?;
 
-        log_success!("PR #{} base branch updated to '{}'", pr_id, target_branch);
+        success!("PR #{} base branch updated to '{}'", pr_id, target_branch);
         Ok(())
     }
 
     /// 使用 force-with-lease 推送
     fn push_with_force_lease(current_branch: &str) -> Result<()> {
         // 使用 force-with-lease 推送
-        log_info!("Pushing to remote (force-with-lease)...");
+        info!("Pushing to remote (force-with-lease)...");
         GitBranch::push_force_with_lease(current_branch)
             .wrap_err("Failed to push to remote (force-with-lease)")?;
 
-        log_success!("Pushed to remote successfully");
+        success!("Pushed to remote successfully");
         Ok(())
     }
 
@@ -528,37 +521,33 @@ impl PullRequestRebaseCommand {
         push: bool,
         detected_base: Option<&str>,
     ) -> Result<()> {
-        log_info!("=== Dry Run Mode ===");
-        log_info!("Current branch: {}", current_branch);
-        log_info!("Target branch: {}", target_branch);
+        info!("=== Dry Run Mode ===");
+        info!("Current branch: {}", current_branch);
+        info!("Target branch: {}", target_branch);
 
         if let Some(base_branch) = detected_base {
-            log_info!(
+            info!(
                 "Detected base branch: '{}' (will only rebase unique commits)",
                 base_branch
             );
-            log_info!(
+            info!(
                 "Will rebase commits from '{}' (excluding '{}' changes) onto '{}'",
-                current_branch,
-                base_branch,
-                target_branch
+                current_branch, base_branch, target_branch
             );
         } else {
-            log_info!("No base branch detected, will rebase all commits");
-            log_info!("Will rebase '{}' onto '{}'", current_branch, target_branch);
+            info!("No base branch detected, will rebase all commits");
+            info!("Will rebase '{}' onto '{}'", current_branch, target_branch);
         }
 
-        log_info!(
-            "Will check for PR and prompt to update PR base if found (with user confirmation)"
-        );
+        info!("Will check for PR and prompt to update PR base if found (with user confirmation)");
 
         if push {
-            log_info!("Will push to remote (force-with-lease)");
+            info!("Will push to remote (force-with-lease)");
         } else {
-            log_info!("Will NOT push to remote");
+            info!("Will NOT push to remote");
         }
 
-        log_info!("=== End Dry Run ===");
+        info!("=== End Dry Run ===");
         Ok(())
     }
 }

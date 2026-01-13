@@ -1,8 +1,8 @@
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::git::{GitBranch, GitCommit, GitPreCommit};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_break, log_info, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::Result;
 
 /// 快速更新命令
@@ -20,11 +20,11 @@ impl PullRequestUpdateCommand {
 
         // 确定提交消息
         let message = pull_request_title.unwrap_or_else(|| {
-            log_warning!("No commit message provided, using default message");
+            warning!("No commit message provided, using default message");
             "update".to_string()
         });
 
-        log_success!("Using commit message: {}", message);
+        success!("Using commit message: {}", message);
 
         // 先执行 pre-commit 检查（如果有），避免与 Spinner 输出冲突
         if GitPreCommit::has_pre_commit() {
@@ -37,13 +37,13 @@ impl PullRequestUpdateCommand {
 
         // 执行 git push
         let current_branch = GitBranch::current_branch()?;
-        log_break!();
-        log_info!("Pushing to remote...");
-        log_break!();
+        br!();
+        info!("Pushing to remote...");
+        br!();
         GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
 
-        log_break!();
-        log_success!("Update completed successfully!");
+        br!();
+        success!("Update completed successfully!");
         Ok(())
     }
 
@@ -53,17 +53,16 @@ impl PullRequestUpdateCommand {
         let pr_id = match get_current_branch_pr_id() {
             Ok(Some(id)) => id,
             Ok(None) | Err(_) => {
-                log_warning!("No PR found for current branch");
+                warning!("No PR found for current branch");
                 return Ok(None);
             }
         };
 
         // 获取 PR 标题
         let provider = create_provider_auto()?;
-        let title = Spinner::with(format!("Fetching PR #{} title...", pr_id), || {
-            provider.get_pull_request_title(&pr_id)
-        })
-        .ok();
+        let title = spinner(format!("Fetching PR #{} title...", pr_id))
+            .with(|| provider.get_pull_request_title(&pr_id))
+            .ok();
 
         Ok(title)
     }

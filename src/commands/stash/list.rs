@@ -4,7 +4,7 @@
 
 use crate::base::table::{TableBuilder, TableStyle};
 use crate::git::GitStash;
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use tabled::Tabled;
 
@@ -31,13 +31,13 @@ impl StashListCommand {
     ///
     /// * `show_stat` - Whether to show file change statistics
     pub fn execute(show_stat: bool) -> Result<()> {
-        log_break!();
-        log_message!("Stash List");
+        br!();
+        info!("Stash List");
 
         let entries = GitStash::stash_list().wrap_err("Failed to list stash entries")?;
 
         if entries.is_empty() {
-            log_info!("No stash entries found");
+            info!("No stash entries found");
             return Ok(());
         }
 
@@ -65,28 +65,25 @@ impl StashListCommand {
             .with_style(TableStyle::Modern)
             .render();
 
-        log_message!("{}", table);
+        info!("{}", table);
 
         // 如果请求显示统计信息
         if show_stat {
-            log_break!();
-            log_message!("File Change Statistics");
+            br!();
+            info!("File Change Statistics");
 
             for entry in &entries {
                 let stash_ref = format!("stash@{{{}}}", entry.index);
                 if let Ok(stat) = GitStash::stash_show_stat(&stash_ref) {
-                    log_info!(
+                    info!(
                         "stash@{{{}}}: {} files changed, {} insertions(+), {} deletions(-)",
-                        entry.index,
-                        stat.files_changed,
-                        stat.insertions,
-                        stat.deletions
+                        entry.index, stat.files_changed, stat.insertions, stat.deletions
                     );
                 }
             }
         }
 
-        log_success!("Found {} stash entries", entries.len());
+        success!("Found {} stash entries", entries.len());
 
         Ok(())
     }

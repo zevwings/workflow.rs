@@ -4,7 +4,7 @@ use crate::commands::check;
 use crate::git::GitBranch;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_break, log_debug, log_info, log_success, log_warning};
+use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 分支同步的命令（合并了 integrate 和 sync 的功能）
@@ -22,7 +22,7 @@ impl BranchSyncCallbacks for PRSyncCallbacks {
                 PullRequestSyncCommand::check_and_update_current_branch_pr(&result.current_branch)?;
             if pr_updated {
                 // 已更新 PR，不需要 stash pop（代码已推送）
-                log_info!("PR updated, skipping stash pop");
+                info!("PR updated, skipping stash pop");
             }
             Ok(pr_updated) // 如果更新了 PR，跳过 stash pop
         } else {
@@ -48,9 +48,9 @@ impl PullRequestSyncCommand {
     #[allow(dead_code)]
     pub fn sync(source_branch: String, rebase: bool, ff_only: bool, squash: bool) -> Result<()> {
         // 1. 运行检查（可选，但建议运行）
-        log_info!("Running pre-flight checks...");
+        info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
-            log_warning!("Pre-flight checks failed: {}", e);
+            warning!("Pre-flight checks failed: {}", e);
             ConfirmDialog::new("Continue anyway?")
                 .with_default(false)
                 .with_cancel_message("Operation cancelled by user")
@@ -69,8 +69,8 @@ impl PullRequestSyncCommand {
 
         BranchSync::sync(options, Some(callbacks))?;
 
-        log_break!();
-        log_success!("Sync completed successfully!");
+        br!();
+        success!("Sync completed successfully!");
         Ok(())
     }
 
@@ -83,17 +83,17 @@ impl PullRequestSyncCommand {
         let current_pr_id = get_current_branch_pr_id()?;
 
         if let Some(pr_id) = current_pr_id {
-            log_info!("Current branch '{}' has PR #{}", current_branch, pr_id);
+            info!("Current branch '{}' has PR #{}", current_branch, pr_id);
 
             // 检查当前分支是否在远程存在
             let exists_remote = GitBranch::has_remote_branch(current_branch)
                 .wrap_err("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR
-            log_info!("Pushing changes to update PR...");
+            info!("Pushing changes to update PR...");
             GitBranch::push(current_branch, !exists_remote)
                 .wrap_err("Failed to push to remote to update PR")?;
-            log_success!("PR #{} updated successfully", pr_id);
+            success!("PR #{} updated successfully", pr_id);
             Ok(true)
         } else {
             Ok(false)
@@ -113,10 +113,9 @@ impl PullRequestSyncCommand {
             source_branch,
             remote_url.as_deref(),
         )? {
-            log_debug!(
+            debug!(
                 "Found PR #{} for source branch '{}' from work-history",
-                pr_id,
-                source_branch
+                pr_id, source_branch
             );
             return Ok(Some(pr_id));
         }
@@ -132,7 +131,7 @@ impl PullRequestSyncCommand {
     fn handle_source_branch_cleanup(source_branch: &str, current_branch: &str) -> Result<()> {
         // 不能删除当前分支
         if source_branch == current_branch {
-            log_info!(
+            info!(
                 "Source branch '{}' is the current branch, skipping cleanup",
                 source_branch
             );
@@ -144,7 +143,7 @@ impl PullRequestSyncCommand {
             .wrap_err("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
-            log_info!(
+            info!(
                 "Source branch '{}' does not exist, nothing to cleanup",
                 source_branch
             );
@@ -155,7 +154,7 @@ impl PullRequestSyncCommand {
         let default_branch = GitBranch::get_default_branch().ok();
         if let Some(ref default) = default_branch {
             if source_branch == default {
-                log_warning!(
+                warning!(
                     "Source branch '{}' is the default branch, skipping cleanup for safety",
                     source_branch
                 );
@@ -170,7 +169,7 @@ impl PullRequestSyncCommand {
         match source_pr_id {
             Some(pr_id) => {
                 // 有 PR：询问是否关闭 PR
-                log_info!("Source branch '{}' has PR #{}", source_branch, pr_id);
+                info!("Source branch '{}' has PR #{}", source_branch, pr_id);
                 let should_close = ConfirmDialog::new(format!(
                     "Close PR #{} and delete source branch '{}' (local and remote)?",
                     pr_id, source_branch
@@ -184,18 +183,18 @@ impl PullRequestSyncCommand {
                     let provider = create_provider_auto()?;
                     match provider.close_pull_request(&pr_id) {
                         Ok(()) => {
-                            log_success!("PR #{} closed successfully", pr_id);
+                            success!("PR #{} closed successfully", pr_id);
                         }
                         Err(e) => {
-                            log_warning!("Failed to close PR #{}: {}", pr_id, e);
-                            log_info!("Continuing with branch deletion...");
+                            warning!("Failed to close PR #{}: {}", pr_id, e);
+                            info!("Continuing with branch deletion...");
                         }
                     }
 
                     // 删除分支
                     Self::delete_merged_branch(source_branch)?;
                 } else {
-                    log_info!("Skipping PR closure and branch deletion as requested by user");
+                    info!("Skipping PR closure and branch deletion as requested by user");
                 }
             }
             None => {
@@ -211,7 +210,7 @@ impl PullRequestSyncCommand {
                 if should_delete {
                     Self::delete_merged_branch(source_branch)?;
                 } else {
-                    log_info!("Skipping branch deletion as requested by user");
+                    info!("Skipping branch deletion as requested by user");
                 }
             }
         }
@@ -228,7 +227,7 @@ impl PullRequestSyncCommand {
             .wrap_err("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
-            log_info!(
+            info!(
                 "Source branch '{}' does not exist, nothing to delete",
                 source_branch
             );
@@ -238,27 +237,27 @@ impl PullRequestSyncCommand {
         // 删除本地分支
         // 由于合并已经成功，先尝试普通删除，失败则强制删除
         if exists_local {
-            log_info!("Deleting local branch '{}'...", source_branch);
+            info!("Deleting local branch '{}'...", source_branch);
             GitBranch::delete(source_branch, false)
                 .or_else(|_| {
                     // 如果普通删除失败（可能因为分支未完全合并），尝试强制删除
-                    log_info!("Branch may not be fully merged, attempting force delete...");
+                    info!("Branch may not be fully merged, attempting force delete...");
                     GitBranch::delete(source_branch, true)
                 })
                 .wrap_err_with(|| format!("Failed to delete local branch: {}", source_branch))?;
-            log_success!("Local branch '{}' deleted successfully", source_branch);
+            success!("Local branch '{}' deleted successfully", source_branch);
         }
 
         // 删除远程分支
         if exists_remote {
-            log_info!("Deleting remote branch '{}'...", source_branch);
+            info!("Deleting remote branch '{}'...", source_branch);
             match GitBranch::delete_remote(source_branch) {
                 Ok(()) => {
-                    log_success!("Remote branch '{}' deleted successfully", source_branch);
+                    success!("Remote branch '{}' deleted successfully", source_branch);
                 }
                 Err(e) => {
-                    log_warning!("Failed to delete remote branch '{}': {}", source_branch, e);
-                    log_info!(
+                    warning!("Failed to delete remote branch '{}': {}", source_branch, e);
+                    info!(
                         "You may need to delete it manually: git push origin --delete {}",
                         source_branch
                     );

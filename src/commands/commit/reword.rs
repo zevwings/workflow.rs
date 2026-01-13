@@ -10,7 +10,7 @@ use crate::commands::commit::helpers::{
 };
 use crate::commit::{CommitReword, RewordHistoryOptions};
 use crate::git::{CommitInfo, GitCommit};
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 /// Commit reword command
@@ -29,8 +29,8 @@ impl CommitRewordCommand {
         // 1. Run checks
         check::CheckCommand::run_all()?;
 
-        log_break!();
-        log_message!("Commit Reword");
+        br!();
+        info!("Commit Reword");
 
         // 步骤0: 检查是否是默认分支（保护分支不允许直接修改提交历史）
         let (current_branch, _default_branch) = check_not_on_default_branch("reword")?;
@@ -56,8 +56,8 @@ impl CommitRewordCommand {
             .wrap_err_with(|| format!("Failed to get commit info: {}", &commit_sha[..8]))?;
 
         // 步骤5: 显示 commit 信息并确认
-        log_break!();
-        log_message!(
+        br!();
+        info!(
             "{}",
             CommitReword::format_commit_info(&commit_info, &current_branch)
         );
@@ -81,9 +81,9 @@ impl CommitRewordCommand {
         // 步骤9: 预览和确认
         let preview =
             CommitReword::create_preview(&commit_info, &new_message, is_head, &current_branch)?;
-        log_break!();
-        log_message!("{}", CommitReword::format_preview(&preview));
-        log_message!("");
+        br!();
+        info!("{}", CommitReword::format_preview(&preview));
+        info!("");
 
         // 最终确认
         ConfirmDialog::new("Confirm to execute commit reword?")
@@ -96,10 +96,10 @@ impl CommitRewordCommand {
         if is_head {
             // 修改 HEAD，使用 amend
             let new_sha = GitCommit::amend(Some(&new_message), false, false)?;
-            log_break!();
-            log_success!("✓ Commit reword successful");
-            log_info!("  New Commit SHA: {}", &new_sha[..8]);
-            log_info!("  New commit message: {}", new_message);
+            br!();
+            success!("✓ Commit reword successful");
+            info!("  New Commit SHA: {}", &new_sha[..8]);
+            info!("  New commit message: {}", new_message);
         } else {
             // 修改历史 commit，使用 rebase -i
             let options = RewordHistoryOptions {
@@ -108,17 +108,17 @@ impl CommitRewordCommand {
                 auto_stash: true,
             };
             CommitReword::reword_history_commit(options)?;
-            log_break!();
-            log_success!("✓ Commit reword successful");
-            log_info!("  New commit message: {}", new_message);
+            br!();
+            success!("✓ Commit reword successful");
+            info!("  New commit message: {}", new_message);
         }
 
         // 步骤11: 显示完成提示
         if let Some(msg) =
             CommitReword::format_completion_message(&current_branch, &commit_info.sha)?
         {
-            log_break!();
-            log_message!("{}", msg);
+            br!();
+            info!("{}", msg);
         }
 
         // 步骤12: 如果 commit 已推送，询问是否要 force push

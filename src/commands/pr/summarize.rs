@@ -8,17 +8,17 @@ use color_eyre::{
 };
 use std::path::PathBuf;
 
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::base::settings::settings::default_download_base_dir;
 use crate::base::settings::Settings;
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
-use crate::log_info;
-use crate::log_success;
+use crate::info;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::pr::llm::{FileSummaryGenerator, SummaryGenerator};
 use crate::pr::platform::create_provider_auto;
+use crate::success;
 
 /// PR 总结命令
 pub struct SummarizeCommand;
@@ -58,47 +58,44 @@ impl SummarizeCommand {
         };
 
         // 获取 PR 标题
-        let pr_title = Spinner::with(format!("Fetching PR #{} information...", pr_id), || {
-            provider.get_pull_request_title(&pr_id)
-        })
-        .wrap_err("Failed to get PR title")?;
+        let pr_title = spinner(format!("Fetching PR #{} information...", pr_id))
+            .with(|| provider.get_pull_request_title(&pr_id))
+            .wrap_err("Failed to get PR title")?;
 
-        log_info!("PR Title: {}", pr_title);
+        info!("PR Title: {}", pr_title);
 
         // 获取 PR diff
-        let pr_diff = Spinner::with("Fetching PR diff...", || {
-            provider.get_pull_request_diff(&pr_id)
-        })
-        .wrap_err("Failed to get PR diff")?;
+        let pr_diff = spinner("Fetching PR diff...")
+            .with(|| provider.get_pull_request_diff(&pr_id))
+            .wrap_err("Failed to get PR diff")?;
 
         // 使用 LLM 生成总结
-        let summary = Spinner::with("Generating summary with LLM...", || {
-            SummaryGenerator::summarize_pr(&pr_title, &pr_diff)
-        })
-        .wrap_err("Failed to generate PR summary")?;
+        let summary = spinner("Generating summary with LLM...")
+            .with(|| SummaryGenerator::summarize_pr(&pr_title, &pr_diff))
+            .wrap_err("Failed to generate PR summary")?;
 
         // 解析 diff，提取所有文件的修改
-        log_info!("Parsing PR diff to extract file changes...");
-        log_info!("Diff length: {} characters", pr_diff.len());
+        info!("Parsing PR diff to extract file changes...");
+        info!("Diff length: {} characters", pr_diff.len());
 
         if pr_diff.trim().is_empty() {
-            log_info!("PR diff is empty, skipping code changes extraction");
+            info!("PR diff is empty, skipping code changes extraction");
         } else {
             // 输出 diff 的前几行用于调试
             let preview_lines: Vec<&str> = pr_diff.lines().take(10).collect();
-            log_info!("Diff preview (first 10 lines):");
+            info!("Diff preview (first 10 lines):");
             for (idx, line) in preview_lines.iter().enumerate() {
-                log_info!("  [{}] {}", idx + 1, line);
+                info!("  [{}] {}", idx + 1, line);
             }
         }
 
         let file_changes =
             Self::parse_diff_to_file_changes(&pr_diff).wrap_err("Failed to parse PR diff")?;
-        log_info!("Found {} file(s) with changes", file_changes.len());
+        info!("Found {} file(s) with changes", file_changes.len());
 
         if !file_changes.is_empty() {
             for (file_path, content) in &file_changes {
-                log_info!(
+                info!(
                     "  - {}: {} characters, {} lines",
                     file_path,
                     content.len(),
@@ -106,20 +103,20 @@ impl SummarizeCommand {
                 );
             }
         } else {
-            log_info!(
+            info!(
                 "Warning: No file changes extracted from diff. This may indicate a parsing issue."
             );
         }
 
         // 将文件修改格式化为 markdown（为每个文件生成修改总结）
         let code_changes_section = Self::format_file_changes_as_markdown(&file_changes);
-        log_info!(
+        info!(
             "Code changes section length: {} characters",
             code_changes_section.len()
         );
 
         if code_changes_section.is_empty() {
-            log_info!("Warning: Code changes section is empty. Final document will not include code changes.");
+            info!("Warning: Code changes section is empty. Final document will not include code changes.");
         }
 
         // 确保 PR Title 在文档开头
@@ -159,7 +156,7 @@ impl SummarizeCommand {
             .write_str(&final_summary)
             .wrap_err_with(|| format!("Failed to write summary to: {:?}", output_path))?;
 
-        log_success!("PR summary saved to: {}", output_path.display());
+        success!("PR summary saved to: {}", output_path.display());
 
         Ok(output_path.to_string_lossy().to_string())
     }
@@ -237,10 +234,10 @@ impl SummarizeCommand {
     fn parse_diff_to_file_changes(diff: &str) -> Result<Vec<(String, String)>> {
         let mut file_changes = Vec::new();
         let lines: Vec<&str> = diff.lines().collect();
-        log_info!("Total diff lines: {}", lines.len());
+        info!("Total diff lines: {}", lines.len());
 
         if lines.is_empty() {
-            log_info!("Diff is empty, returning empty file changes");
+            info!("Diff is empty, returning empty file changes");
             return Ok(file_changes);
         }
 
@@ -252,17 +249,16 @@ impl SummarizeCommand {
             // GitHub API 返回标准的 unified diff 格式
             if lines[i].starts_with("diff --git") {
                 diff_start_count += 1;
-                log_info!("Found diff block #{} at line {}", diff_start_count, i + 1);
+                info!("Found diff block #{} at line {}", diff_start_count, i + 1);
                 // 提取文件路径
                 // 格式: diff --git a/path/to/file b/path/to/file
                 let file_path = match Self::extract_file_path_from_diff_line(lines[i]) {
                     Ok(path) => path,
                     Err(e) => {
                         // 如果提取失败，记录错误但继续处理下一个文件
-                        log_info!(
+                        info!(
                             "Failed to extract file path from line: {}, error: {}",
-                            lines[i],
-                            e
+                            lines[i], e
                         );
                         i += 1;
                         continue;
@@ -294,7 +290,7 @@ impl SummarizeCommand {
 
                 // 如果是二进制文件，跳过
                 if is_binary {
-                    log_info!("Skipping binary file: {}", file_path);
+                    info!("Skipping binary file: {}", file_path);
                     i += 1;
                     while i < lines.len() && !lines[i].starts_with("diff --git") {
                         i += 1;
@@ -319,14 +315,12 @@ impl SummarizeCommand {
                         let content_len = content.len();
                         let line_count = change_content.len();
                         file_changes.push((file_path.clone(), content));
-                        log_info!(
+                        info!(
                             "Extracted changes for file: {} ({} lines, {} chars)",
-                            file_path,
-                            line_count,
-                            content_len
+                            file_path, line_count, content_len
                         );
                     } else {
-                        log_info!(
+                        info!(
                             "No content found for file: {} (hunk found but no content)",
                             file_path
                         );
@@ -335,7 +329,7 @@ impl SummarizeCommand {
                     i = end_idx;
                 } else {
                     // 没有找到 @@ 行，可能是新增/删除的空文件，跳过到下一个 diff
-                    log_info!("No hunk found for file: {}, skipping", file_path);
+                    info!("No hunk found for file: {}, skipping", file_path);
                     i += 1;
                     while i < lines.len() && !lines[i].starts_with("diff --git") {
                         i += 1;
@@ -346,7 +340,7 @@ impl SummarizeCommand {
             }
         }
 
-        log_info!(
+        info!(
             "Parsed {} diff block(s), extracted {} file(s) with changes",
             diff_start_count,
             file_changes.len()
@@ -403,10 +397,9 @@ impl SummarizeCommand {
                 Ok(_) => None,
                 Err(e) => {
                     // 如果生成总结失败，记录日志但不中断流程
-                    log_info!(
+                    info!(
                         "Warning: Failed to generate summary for {}: {}",
-                        file_path,
-                        e
+                        file_path, e
                     );
                     None
                 }
@@ -442,7 +435,7 @@ impl SummarizeCommand {
     ///
     /// 使用 LLM 生成文件的修改总结。
     fn generate_file_change_summary(file_path: &str, file_diff: &str) -> Result<String> {
-        log_info!("Generating summary for file: {}", file_path);
+        info!("Generating summary for file: {}", file_path);
         FileSummaryGenerator::summarize_file_change(file_path, file_diff)
             .wrap_err_with(|| format!("Failed to generate summary for file: {}", file_path))
     }

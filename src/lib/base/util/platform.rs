@@ -220,11 +220,11 @@ impl Platform {
 ///
 /// ```rust,no_run
 /// use workflow::base::util::detect_release_platform;
-/// use workflow::log_message;
+/// use workflow::info;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let platform = detect_release_platform()?;
-/// log_message!("Detected platform: {}", platform);
+/// info!("Detected platform: {}", platform);
 /// # Ok(())
 /// # }
 /// ```

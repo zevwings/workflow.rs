@@ -10,7 +10,7 @@ use crate::base::dialog::form::group_builder::GroupBuilder;
 use crate::base::dialog::form::types::{FormGroup, FormStep, GroupConfig, StepType};
 use crate::base::dialog::form::{FieldDefaultValue, FormField, FormFieldType, FormResult};
 use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
-use crate::{log_break, log_debug, log_message};
+use crate::{br, debug, info};
 
 /// 表单构建器
 ///
@@ -181,12 +181,12 @@ impl FormBuilder {
             // 如果是可选组，先询问是否配置
             if group.optional {
                 let should_configure = if let Some(title) = &group.title {
-                    log_break!();
-                    log_message!("{}", title);
-                    log_break!('-', 40);
+                    br!();
+                    info!("{}", title);
+                    br!('-', 40);
                     if let Some(description) = &group.description {
-                        log_debug!("{}", description);
-                        log_break!();
+                        debug!("{}", description);
+                        br!();
                     }
                     ConfirmDialog::new(format!("Configure {}?", title))
                         .with_default(group.default_enabled)
@@ -201,13 +201,13 @@ impl FormBuilder {
             } else {
                 // 必填组：显示标题和描述（如果有）
                 if let Some(title) = &group.title {
-                    log_break!();
-                    log_message!("{}", title);
-                    log_break!('-', 40);
+                    br!();
+                    info!("{}", title);
+                    br!('-', 40);
                 }
                 if let Some(description) = &group.description {
-                    log_debug!("{}", description);
-                    log_break!();
+                    debug!("{}", description);
+                    br!();
                 }
             }
 

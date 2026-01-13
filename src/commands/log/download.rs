@@ -3,7 +3,7 @@ use crate::base::dialog::InputDialog;
 use crate::base::indicator::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
-use crate::{log_break, log_info, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;
 use std::sync::{Arc, Mutex};
@@ -84,18 +84,18 @@ impl DownloadCommand {
 
         // 显示下载结果
         if !result.failed_files.is_empty() {
-            log_break!();
-            log_info!(
+            br!();
+            info!(
                 "  Warning: {} attachment(s) failed to download:",
                 result.failed_files.len()
             );
             for (filename, error) in &result.failed_files {
-                log_info!("  - {}: {}", filename, error);
+                info!("  - {}: {}", filename, error);
             }
         }
 
-        log_success!("Download completed!");
-        log_info!("Files located at: {}/downloads", result.base_dir.display());
+        success!("Download completed!");
+        info!("Files located at: {}/downloads", result.base_dir.display());
 
         Ok(())
     }

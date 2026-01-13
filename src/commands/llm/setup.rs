@@ -6,7 +6,7 @@ use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{LLMSettings, Settings};
 use crate::jira::config::ConfigManager;
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// LLM 配置设置命令
@@ -15,15 +15,15 @@ pub struct LLMSetupCommand;
 impl LLMSetupCommand {
     /// 交互式设置 LLM 配置
     pub fn setup() -> Result<()> {
-        log_break!('=', 40, "LLM Configuration Setup");
-        log_break!();
+        br!('=', 40, "LLM Configuration Setup");
+        br!();
 
         // 加载当前配置
         let settings = Settings::load();
         let existing = &settings.llm;
 
-        log_message!("  LLM/AI Configuration");
-        log_break!('─', 65);
+        info!("  LLM/AI Configuration");
+        br!('─', 65);
 
         // 准备配置字段的提示信息
         let llm_providers = ["openai", "deepseek", "proxy"];
@@ -237,11 +237,11 @@ impl LLMSetupCommand {
                     settings.llm.openai.model = llm_model.clone();
                 })?;
 
-                log_break!();
-                log_success!("LLM configuration saved successfully!");
-                log_info!("Provider: {}", llm_provider);
+                br!();
+                success!("LLM configuration saved successfully!");
+                info!("Provider: {}", llm_provider);
                 if let Some(ref model) = llm_model {
-                    log_info!("Model: {}", model);
+                    info!("Model: {}", model);
                 }
             }
             "deepseek" => {
@@ -278,11 +278,11 @@ impl LLMSetupCommand {
                     settings.llm.deepseek.model = llm_model.clone();
                 })?;
 
-                log_break!();
-                log_success!("LLM configuration saved successfully!");
-                log_info!("Provider: {}", llm_provider);
+                br!();
+                success!("LLM configuration saved successfully!");
+                info!("Provider: {}", llm_provider);
                 if let Some(ref model) = llm_model {
-                    log_info!("Model: {}", model);
+                    info!("Model: {}", model);
                 }
             }
             "proxy" => {
@@ -344,14 +344,14 @@ impl LLMSetupCommand {
                     settings.llm.proxy.model = llm_model.clone();
                 })?;
 
-                log_break!();
-                log_success!("LLM configuration saved successfully!");
-                log_info!("Provider: {}", llm_provider);
+                br!();
+                success!("LLM configuration saved successfully!");
+                info!("Provider: {}", llm_provider);
                 if let Some(ref url) = llm_url {
-                    log_info!("Proxy URL: {}", url);
+                    info!("Proxy URL: {}", url);
                 }
                 if let Some(ref model) = llm_model {
-                    log_info!("Model: {}", model);
+                    info!("Model: {}", model);
                 }
             }
             _ => {
@@ -381,7 +381,7 @@ impl LLMSetupCommand {
             settings.llm.language = llm_language.clone();
         })?;
 
-        log_info!("Output Language: {}", llm_language);
+        info!("Output Language: {}", llm_language);
 
         Ok(())
     }
