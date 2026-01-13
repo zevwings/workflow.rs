@@ -158,6 +158,84 @@ fn main() -> Result<()> {
     std::thread::sleep(std::time::Duration::from_millis(2000));
     spinner5.stop();
 
+    // 10. Progress 演示
+    msg.break_line()?;
+    msg.info("=== Progress 演示 ===")?;
+
+    // 方式 1: 已知总数的进度条（使用 progress_bar 构建器）
+    msg.info("方式 1: 已知总数的进度条")?;
+    let pb1 = progress_bar("正在处理文件...").with_total(100).start();
+    for _i in 0..100 {
+        pb1.inc(1);
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    pb1.finish_with_message("文件处理完成！");
+
+    // 方式 2: 使用 Progress::new（已知总数）
+    msg.break_line()?;
+    msg.info("方式 2: 使用 Progress::new")?;
+    let progress2 = Progress::new(50, "正在下载数据...");
+    for _i in 0..50 {
+        progress2.inc(1);
+        std::thread::sleep(std::time::Duration::from_millis(30));
+    }
+    progress2.finish_with_message("数据下载完成！");
+
+    // 方式 3: 下载模式（显示速度和 ETA）
+    msg.break_line()?;
+    msg.info("方式 3: 下载模式（显示速度和 ETA）")?;
+    let total_bytes = 1024 * 1024; // 1MB
+    let progress3 = Progress::new_download(total_bytes, "正在下载文件...");
+    let chunk_size = 64 * 1024; // 64KB per chunk
+    for i in 0..(total_bytes / chunk_size) {
+        progress3.set_position(i * chunk_size);
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    progress3.set_position(total_bytes);
+    progress3.finish_with_message("文件下载完成！");
+
+    // 方式 4: 未知总数（使用 spinner 模式）
+    msg.break_line()?;
+    msg.info("方式 4: 未知总数的进度条（spinner 模式）")?;
+    let progress4 = Progress::new_unknown("正在搜索...");
+    for _i in 0..20 {
+        progress4.inc(1);
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    progress4.finish_with_message("搜索完成！");
+
+    // 方式 5: 使用 progress_bar 构建器的自定义配置
+    msg.break_line()?;
+    msg.info("方式 5: 自定义配置的进度条")?;
+    let pb5 = progress_bar("正在处理任务...")
+        .with_total(30)
+        .with_bar_width(40)
+        .with_progress_chars("█░")
+        .with_interval(std::time::Duration::from_millis(50))
+        .start();
+    for _i in 0..30 {
+        pb5.inc(1);
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    pb5.with_success("所有任务已完成！");
+
+    // 方式 6: 动态更新消息和总数
+    msg.break_line()?;
+    msg.info("方式 6: 动态更新进度条")?;
+    let pb6 = progress_bar("初始化...").with_total(100).start();
+    for i in 0..100 {
+        if i == 25 {
+            pb6.update_message("处理中...");
+        } else if i == 50 {
+            pb6.update_message("优化中...");
+        } else if i == 75 {
+            pb6.update_message("完成中...");
+        }
+        pb6.inc(1);
+        std::thread::sleep(std::time::Duration::from_millis(15));
+    }
+    pb6.with_info("处理完成！");
+
     msg.break_line()?;
     msg.info("=== Demo 完成 ===")?;
     msg.success("所有演示已完成！")?;

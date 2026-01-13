@@ -49,5 +49,6 @@ pub use dialog::{
     Result, SelectBuilder, SelectFormField, Validator,
 };
 pub use output::{
-    spinner, table, Alignment, Message, MessageRef, Spinner, SpinnerBuilder, TableBuilder,
+    progress_bar, spinner, table, Alignment, Message, MessageRef, Progress, ProgressBar,
+    ProgressBarBuilder, Spinner, SpinnerBuilder, TableBuilder, TableStyle,
 };

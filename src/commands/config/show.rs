@@ -2,10 +2,10 @@
 //! 显示当前的 TOML 配置文件
 
 use crate::base::interactive::spinner;
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::settings::table::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
-use crate::base::table::{TableBuilder, TableStyle};
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::eyre, Result};
 
@@ -75,7 +75,7 @@ impl ConfigCommand {
         }];
         info!(
             "{}",
-            TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
+            TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).render()
         );
 
         // 打印 Jira 配置
@@ -90,7 +90,7 @@ impl ConfigCommand {
                 }];
                 info!(
                     "{}",
-                    TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
+                    TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).render()
                 );
             }
             if let Some(ref verification) = result.jira.verification {
@@ -144,7 +144,7 @@ impl ConfigCommand {
                 .collect();
             info!(
                 "{}",
-                TableBuilder::new(account_rows).with_style(TableStyle::Modern).render()
+                TableBuilder::from_tabled(account_rows).with_style(TableStyle::Modern).render()
             );
 
             // 打印每个账号的详细错误信息（如果有）

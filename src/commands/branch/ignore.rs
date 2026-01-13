@@ -4,7 +4,7 @@
 //! 配置保存在个人偏好配置（~/.workflow/config/repository.toml）中，不提交到 Git。
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::git::BranchRow;
 use crate::repo::config::RepoConfig;
 use crate::{br, info, success, warning};
@@ -194,7 +194,7 @@ impl BranchIgnoreCommand {
         // 使用表格显示
         info!(
             "{}",
-            TableBuilder::new(rows)
+            TableBuilder::from_tabled(rows)
                 .with_title("Ignored Branches")
                 .with_style(TableStyle::Modern)
                 .render()

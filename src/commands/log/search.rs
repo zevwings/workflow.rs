@@ -1,6 +1,6 @@
 use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
 use crate::{br, debug, info, success, warning};
@@ -83,7 +83,7 @@ impl SearchCommand {
         if !rows.is_empty() {
             info!(
                 "{}",
-                TableBuilder::new(rows)
+                TableBuilder::from_tabled(rows)
                     .with_title("Search Results")
                     .with_style(TableStyle::Modern)
                     .render()

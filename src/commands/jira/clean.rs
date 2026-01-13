@@ -11,7 +11,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
 use crate::base::format::DisplayFormatter;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::attachments::AttachmentCleaner;
 use crate::jira::table::FileRow;
 use crate::{br, info, success};
@@ -113,7 +113,7 @@ impl CleanCommand {
                             if let Some(ref ticket) = current_ticket {
                                 info!(
                                     "{}",
-                                    TableBuilder::new(rows.clone())
+                                    TableBuilder::from_tabled(rows.clone())
                                         .with_title(format!("Files: {}", ticket))
                                         .with_style(TableStyle::Modern)
                                         .render()
@@ -137,7 +137,7 @@ impl CleanCommand {
                     if let Some(ref ticket) = current_ticket {
                         info!(
                             "{}",
-                            TableBuilder::new(rows)
+                            TableBuilder::from_tabled(rows)
                                 .with_title(format!("Files: {}", ticket))
                                 .with_style(TableStyle::Modern)
                                 .render()

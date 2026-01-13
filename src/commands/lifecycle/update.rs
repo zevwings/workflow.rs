@@ -20,8 +20,7 @@ use crate::base::http::client::HttpClient;
 use crate::base::http::{
     response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
 };
-use crate::base::indicator::Progress;
-use crate::base::interactive::spinner;
+use crate::base::interactive::{spinner, Progress};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;

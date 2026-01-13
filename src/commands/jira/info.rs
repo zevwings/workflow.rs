@@ -1,6 +1,6 @@
 use crate::base::format::DisplayFormatter;
 use crate::base::interactive::spinner;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
 use crate::{br, info};
@@ -208,7 +208,7 @@ impl InfoCommand {
 
                 info!(
                     "{}",
-                    TableBuilder::new(rows)
+                    TableBuilder::from_tabled(rows)
                         .with_title(format!("Attachments ({})", attachments.len()))
                         .with_style(TableStyle::Modern)
                         .render()

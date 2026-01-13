@@ -1,5 +1,4 @@
-use crate::base::indicator::Progress;
-use crate::base::interactive::spinner;
+use crate::base::interactive::{spinner, Progress};
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::{br, info, success};

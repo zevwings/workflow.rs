@@ -1,9 +1,9 @@
 //! LLM 配置查看命令
 //! 显示当前的 LLM 配置信息
 
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::base::settings::settings::{LLMSettings, Settings};
 use crate::base::settings::table::LLMConfigRow;
-use crate::base::table::{TableBuilder, TableStyle};
 use crate::{br, info, success, warning};
 use color_eyre::Result;
 
@@ -39,7 +39,7 @@ impl LLMShowCommand {
         }];
         info!(
             "{}",
-            TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
+            TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).render()
         );
 
         br!();

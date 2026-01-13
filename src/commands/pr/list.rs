@@ -1,4 +1,4 @@
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::pr::platform::create_provider_auto;
 use crate::{br, info};
 use color_eyre::Result;
@@ -28,7 +28,7 @@ impl PullRequestListCommand {
         // 使用表格显示
         info!(
             "{}",
-            TableBuilder::new(rows)
+            TableBuilder::from_tabled(rows)
                 .with_title("Pull Requests")
                 .with_style(TableStyle::Modern)
                 .render()

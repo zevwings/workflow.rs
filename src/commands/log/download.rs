@@ -1,6 +1,6 @@
 use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
-use crate::base::indicator::Progress;
+use crate::base::interactive::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::{br, info, success};

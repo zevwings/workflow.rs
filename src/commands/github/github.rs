@@ -3,10 +3,10 @@
 
 use crate::base::dialog::{ConfirmDialog, SelectDialog};
 use crate::base::interactive::spinner;
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::settings::table::GitHubAccountListRow;
-use crate::base::table::{TableBuilder, TableStyle};
 use crate::base::util::mask_sensitive_value;
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
@@ -60,7 +60,7 @@ impl GitHubCommand {
         // 使用表格显示
         info!(
             "{}",
-            TableBuilder::new(rows)
+            TableBuilder::from_tabled(rows)
                 .with_title("GitHub Accounts")
                 .with_style(TableStyle::Modern)
                 .render()

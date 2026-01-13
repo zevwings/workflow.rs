@@ -6,8 +6,8 @@
 //! - 格式化工具（format - MessageFormatter, DisplayFormatter）
 //! - 工具函数（string, platform, browser, clipboard, checksum, unzip）
 //! - 交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
-//! - 进度指示器（Spinner, Progress）
-//! - 表格输出工具（TableBuilder, TableStyle）
+//! - 进度指示器（Spinner, Progress）- 位于 `interactive::output`
+//! - 表格输出工具（TableBuilder, TableStyle）- 位于 `interactive::output::table`
 //! - 配置管理
 //! - Shell 检测和管理
 //! - LLM 客户端（通用 LLM 接口）
@@ -19,7 +19,6 @@ pub mod constants;
 pub mod dialog;
 pub mod format;
 pub mod http;
-pub mod indicator;
 pub mod interactive;
 pub mod llm;
 pub mod logger;
@@ -27,7 +26,6 @@ pub mod mcp;
 pub mod prompt;
 pub mod settings;
 pub mod shell;
-pub mod table;
 pub mod util;
 
 // 重新导出常用类型，方便使用
@@ -38,10 +36,8 @@ pub use dialog::{
 };
 pub use format::DisplayFormatter;
 pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};
-pub use indicator::{Progress, Spinner};
 pub use logger::{LogLevel, Tracer};
 pub use prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};
-pub use table::{TableBuilder, TableStyle};
 pub use util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};

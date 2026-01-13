@@ -3,7 +3,7 @@
 //! 显示所有已定义的别名，使用表格格式。
 
 use crate::base::alias::AliasManager;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::{br, info, success};
 use color_eyre::Result;
 use tabled::Tabled;
@@ -46,7 +46,7 @@ impl AliasListCommand {
             .collect();
 
         // 显示表格
-        let table = TableBuilder::new(rows)
+        let table = TableBuilder::from_tabled(rows)
             .with_title("Defined Aliases")
             .with_style(TableStyle::Modern)
             .render();

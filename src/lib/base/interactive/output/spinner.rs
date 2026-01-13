@@ -29,7 +29,7 @@ impl Spinner {
     }
 
     fn start_internal(&self) {
-        let mut running = self.running.lock().unwrap();
+        let mut running = self.running.lock().expect("Spinner running lock poisoned");
         if *running {
             return; // 已经在运行
         }
@@ -52,14 +52,15 @@ impl Spinner {
             let mut frame_idx = 0;
             loop {
                 {
-                    let running_guard = running.lock().unwrap();
+                    let running_guard =
+                        running.lock().expect("Spinner running lock poisoned in thread");
                     if !*running_guard {
                         break;
                     }
                 }
 
                 let frame = &frames[frame_idx % frames.len()];
-                let msg = message.lock().unwrap().clone();
+                let msg = message.lock().expect("Spinner message lock poisoned in thread").clone();
                 let theme = get_theme();
                 let styled = format_spinner_text(frame, &msg, &theme);
 
@@ -71,7 +72,8 @@ impl Spinner {
                 let _ = write!(stderr, "{}", styled);
                 let _ = stderr.flush();
 
-                *current_frame.lock().unwrap() = frame_idx;
+                *current_frame.lock().expect("Spinner current_frame lock poisoned in thread") =
+                    frame_idx;
                 frame_idx += 1;
 
                 thread::sleep(interval);
@@ -80,7 +82,7 @@ impl Spinner {
     }
 
     pub fn stop(&self) {
-        let mut running = self.running.lock().unwrap();
+        let mut running = self.running.lock().expect("Spinner running lock poisoned");
         if !*running {
             return;
         }
@@ -102,11 +104,11 @@ impl Spinner {
     }
 
     pub fn update_message(&self, message: impl Into<String>) {
-        *self.message.lock().unwrap() = message.into();
+        *self.message.lock().expect("Spinner message lock poisoned") = message.into();
     }
 
     fn hide_cursor(&self) {
-        let mut hidden = self.cursor_hidden.lock().unwrap();
+        let mut hidden = self.cursor_hidden.lock().expect("Spinner cursor_hidden lock poisoned");
         if !*hidden {
             let mut stderr = io::stderr();
             let _ = stderr.queue(Hide);
@@ -116,7 +118,7 @@ impl Spinner {
     }
 
     fn show_cursor(&self) {
-        let mut hidden = self.cursor_hidden.lock().unwrap();
+        let mut hidden = self.cursor_hidden.lock().expect("Spinner cursor_hidden lock poisoned");
         if *hidden {
             let mut stderr = io::stderr();
             let _ = stderr.queue(Show);
@@ -126,7 +128,8 @@ impl Spinner {
     }
 
     fn enable_raw_mode(&self) {
-        let mut enabled = self.raw_mode_enabled.lock().unwrap();
+        let mut enabled =
+            self.raw_mode_enabled.lock().expect("Spinner raw_mode_enabled lock poisoned");
         if !*enabled {
             let _ = terminal::enable_raw_mode();
             *enabled = true;
@@ -134,7 +137,8 @@ impl Spinner {
     }
 
     fn disable_raw_mode(&self) {
-        let mut enabled = self.raw_mode_enabled.lock().unwrap();
+        let mut enabled =
+            self.raw_mode_enabled.lock().expect("Spinner raw_mode_enabled lock poisoned");
         if *enabled {
             let _ = terminal::disable_raw_mode();
             *enabled = false;

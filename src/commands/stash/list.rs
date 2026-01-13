@@ -2,7 +2,7 @@
 //!
 //! List all stash entries in a table format.
 
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::git::GitStash;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
@@ -60,7 +60,7 @@ impl StashListCommand {
             .collect();
 
         // 显示表格
-        let table = TableBuilder::new(rows)
+        let table = TableBuilder::from_tabled(rows)
             .with_title("Stash Entries")
             .with_style(TableStyle::Modern)
             .render();
