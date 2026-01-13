@@ -14,7 +14,6 @@ use reqwest::header::HeaderMap;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::base::dialog::ConfirmDialog;
 use crate::base::format::DisplayFormatter;
 use crate::base::http::client::HttpClient;
 use crate::base::http::{
@@ -797,11 +796,7 @@ impl UpdateCommand {
             )
         };
 
-        if !ConfirmDialog::new(&confirm_message)
-            .with_default(true)
-            .with_cancel_message("Update cancelled")
-            .prompt()?
-        {
+        if !crate::confirm!(confirm_message).default(true).prompt()? {
             return Ok(());
         }
         br!();

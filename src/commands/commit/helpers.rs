@@ -2,7 +2,6 @@
 //!
 //! 提供 Commit 命令之间共享的公共功能，避免代码重复。
 
-use crate::base::dialog::ConfirmDialog;
 use crate::git::{GitBranch, GitCommit};
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
@@ -57,9 +56,8 @@ where
 
     if is_pushed {
         br!();
-        let should_push = ConfirmDialog::new("Push to remote (force-with-lease)?")
-            .with_default(true)
-            .with_cancel_message("Push cancelled by user")
+        let should_push = crate::confirm!("Push to remote (force-with-lease)?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get push confirmation")?;
 

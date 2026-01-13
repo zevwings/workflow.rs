@@ -9,7 +9,6 @@
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::constants::errors::input_reading;
-use crate::base::dialog::InputDialog;
 use crate::base::format::DisplayFormatter;
 use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::attachments::AttachmentCleaner;
@@ -44,8 +43,7 @@ impl CleanCommand {
             trimmed.to_string()
         } else {
             // 交互式输入：允许用户输入 JIRA ID，留空表示清理全部
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
-                .allow_empty(true)
+            crate::input!("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
                 .prompt()
                 .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
                 .trim()

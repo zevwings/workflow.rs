@@ -2,7 +2,6 @@
 //!
 //! Delete one or more Git tags (local and/or remote).
 
-use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::git::GitTag;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
@@ -104,12 +103,12 @@ impl TagDeleteCommand {
                 "local and remote"
             };
 
-            let confirmed = ConfirmDialog::new(format!(
+            let confirmed = crate::confirm!(
                 "Are you sure you want to delete {} tag(s) ({})?",
                 tags_info.len(),
                 delete_what
-            ))
-            .with_default(false)
+            )
+            .default(false)
             .prompt()
             .wrap_err("Failed to get user confirmation")?;
 
@@ -226,7 +225,7 @@ impl TagDeleteCommand {
             .collect();
 
         // 多选列表
-        let selected = MultiSelectDialog::new("Select tags to delete", options)
+        let selected = crate::multiselect!("Select tags to delete", options)
             .prompt()
             .wrap_err("Failed to select tags")?;
 

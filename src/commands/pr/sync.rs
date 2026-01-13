@@ -1,4 +1,3 @@
-use crate::base::dialog::ConfirmDialog;
 use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
 use crate::git::GitBranch;
@@ -51,10 +50,7 @@ impl PullRequestSyncCommand {
         info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
             warning!("Pre-flight checks failed: {}", e);
-            ConfirmDialog::new("Continue anyway?")
-                .with_default(false)
-                .with_cancel_message("Operation cancelled by user")
-                .prompt()?;
+            crate::confirm!("Continue anyway?").default(false).prompt()?;
         }
 
         let options = BranchSyncOptions {
@@ -170,11 +166,12 @@ impl PullRequestSyncCommand {
             Some(pr_id) => {
                 // 有 PR：询问是否关闭 PR
                 info!("Source branch '{}' has PR #{}", source_branch, pr_id);
-                let should_close = ConfirmDialog::new(format!(
+                let should_close = crate::confirm!(
                     "Close PR #{} and delete source branch '{}' (local and remote)?",
-                    pr_id, source_branch
-                ))
-                .with_default(true)
+                    pr_id,
+                    source_branch
+                )
+                .default(true)
                 .prompt()
                 .wrap_err("Failed to collect cleanup confirmation")?;
 
@@ -199,11 +196,11 @@ impl PullRequestSyncCommand {
             }
             None => {
                 // 没有 PR：询问是否删除分支
-                let should_delete = ConfirmDialog::new(format!(
+                let should_delete = crate::confirm!(
                     "Delete source branch '{}' (local and remote)?",
                     source_branch
-                ))
-                .with_default(true)
+                )
+                .default(true)
                 .prompt()
                 .wrap_err("Failed to collect cleanup confirmation")?;
 

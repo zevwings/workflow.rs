@@ -4,10 +4,9 @@
 //! - 输入评论文本
 //! - 可选择附加文件内容
 
-use crate::base::dialog::{ConfirmDialog, InputDialog};
-use crate::base::interactive::spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
+use crate::spinner;
 use crate::{info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
@@ -38,7 +37,7 @@ impl CommentCommand {
         let ticket = Self::resolve_jira_ticket(jira_id)?;
 
         // 步骤 2: 输入评论内容
-        let message = InputDialog::new("Enter comment message")
+        let message = crate::input!("Enter comment message")
             .prompt()
             .wrap_err("Failed to get comment message")?;
 
@@ -47,8 +46,8 @@ impl CommentCommand {
         }
 
         // 步骤 3: 询问是否需要附加文件
-        let attach_file = ConfirmDialog::new("Do you want to attach a file?")
-            .with_default(false)
+        let attach_file = crate::confirm!("Do you want to attach a file?")
+            .default(false)
             .prompt()
             .wrap_err("Failed to get file attachment choice")?;
 
@@ -138,7 +137,7 @@ impl CommentCommand {
 
         // 步骤 5: 添加评论
         info!("Adding comment to ticket {}...", ticket);
-        spinner(format!("Adding comment to ticket {}...", ticket))
+        spinner!("Adding comment to ticket {}...", ticket)
             .with(|| Jira::add_comment(&ticket, &final_comment))
             .wrap_err(format!("Failed to add comment to ticket {}", ticket))?;
 
@@ -156,7 +155,7 @@ impl CommentCommand {
             let trimmed = t.trim().to_string();
             if trimmed.is_empty() {
                 // 如果为空，提示输入
-                InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+                crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                     .prompt()
                     .wrap_err("Failed to get Jira ticket ID")?
                     .trim()
@@ -166,7 +165,7 @@ impl CommentCommand {
             }
         } else {
             // 如果没有提供，提示输入
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+            crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
                 .wrap_err("Failed to get Jira ticket ID")?
                 .trim()
@@ -195,9 +194,8 @@ impl CommentCommand {
 
         loop {
             // 输入文件路径
-            let file_path = InputDialog::new("Enter file path")
-                .prompt()
-                .wrap_err("Failed to get file path")?;
+            let file_path =
+                crate::input!("Enter file path").prompt().wrap_err("Failed to get file path")?;
 
             // 去除首尾空白和引号
             let trimmed = file_path.trim();
@@ -223,8 +221,8 @@ impl CommentCommand {
             success!("File added: {}", cleaned);
 
             // 询问是否继续添加更多文件
-            let add_more = ConfirmDialog::new("Do you want to add another file?")
-                .with_default(false)
+            let add_more = crate::confirm!("Do you want to add another file?")
+                .default(false)
                 .prompt()
                 .wrap_err("Failed to get add more files choice")?;
 

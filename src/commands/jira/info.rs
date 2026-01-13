@@ -1,8 +1,8 @@
 use crate::base::format::DisplayFormatter;
-use crate::base::interactive::spinner;
 use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
+use crate::spinner;
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
@@ -28,7 +28,7 @@ impl InfoCommand {
                 .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))?
         } else {
             // 正常/详细模式：显示 Spinner
-            spinner(format!("Getting ticket info for {}...", jira_id)).with(|| {
+            spinner!("Getting ticket info for {}...", jira_id).with(|| {
                 Jira::get_ticket_info(&jira_id)
                     .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))
             })?

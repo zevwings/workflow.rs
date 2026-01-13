@@ -1,36 +1,28 @@
-//! 表单构建器
+//! Step 构建器，用于在 Step 内构建字段
 
-use crate::base::interactive::dialog::form::field::{
-    ConfirmFormField, FieldType, FormField, InputFormField, MultiSelectFormField, NestedFormField,
+use crate::base::interactive::form::field::{
+    ConfirmFormField, FormField, InputFormField, MultiSelectFormField, NestedFormField,
     PasswordFormField, SelectFormField,
 };
 
-/// 表单构建器（链式 API）
-pub struct FormBuilder {
+/// Step 构建器
+///
+/// 用于在 Step 内构建字段，提供便捷的方法来添加各种类型的字段。
+pub struct StepBuilder {
     fields: Vec<FormField>,
-    title: Option<String>,
 }
 
-impl FormBuilder {
-    /// 创建新的表单构建器
+impl StepBuilder {
+    /// 创建新的 Step 构建器
     pub fn new() -> Self {
-        Self {
-            fields: Vec::new(),
-            title: None,
-        }
-    }
-
-    /// 设置表单标题
-    pub fn with_title(mut self, title: impl Into<String>) -> Self {
-        self.title = Some(title.into());
-        self
+        Self { fields: Vec::new() }
     }
 
     /// 添加确认字段
     pub fn add_confirm(mut self, config: ConfirmFormField) -> Self {
         self.fields.push(FormField {
             key: config.key,
-            field_type: FieldType::Confirm,
+            field_type: crate::base::interactive::form::field::FieldType::Confirm,
             prompt: config.prompt,
             default_value: Some(Box::new(config.default_value)),
             validator: None,
@@ -48,7 +40,7 @@ impl FormBuilder {
     pub fn add_input(mut self, config: InputFormField) -> Self {
         self.fields.push(FormField {
             key: config.key,
-            field_type: FieldType::Input,
+            field_type: crate::base::interactive::form::field::FieldType::Input,
             prompt: config.prompt,
             default_value: Some(Box::new(config.default_value)),
             validator: config.validator,
@@ -66,7 +58,7 @@ impl FormBuilder {
     pub fn add_password(mut self, config: PasswordFormField) -> Self {
         self.fields.push(FormField {
             key: config.key,
-            field_type: FieldType::Password,
+            field_type: crate::base::interactive::form::field::FieldType::Password,
             prompt: config.prompt,
             default_value: Some(Box::new(config.default_value)),
             validator: config.validator,
@@ -84,7 +76,7 @@ impl FormBuilder {
     pub fn add_select(mut self, config: SelectFormField) -> Self {
         self.fields.push(FormField {
             key: config.key,
-            field_type: FieldType::Select,
+            field_type: crate::base::interactive::form::field::FieldType::Select,
             prompt: config.prompt,
             default_value: None,
             validator: None,
@@ -102,7 +94,7 @@ impl FormBuilder {
     pub fn add_multiselect(mut self, config: MultiSelectFormField) -> Self {
         self.fields.push(FormField {
             key: config.key,
-            field_type: FieldType::MultiSelect,
+            field_type: crate::base::interactive::form::field::FieldType::MultiSelect,
             prompt: config.prompt,
             default_value: None,
             validator: None,
@@ -120,7 +112,7 @@ impl FormBuilder {
     pub fn add_form(mut self, config: NestedFormField) -> Self {
         self.fields.push(FormField {
             key: config.key,
-            field_type: FieldType::Form,
+            field_type: crate::base::interactive::form::field::FieldType::Form,
             prompt: config.prompt,
             default_value: None,
             validator: None,
@@ -135,17 +127,32 @@ impl FormBuilder {
     }
 
     /// 获取字段列表（内部使用）
-    pub(crate) fn get_fields(&self) -> &[FormField] {
-        &self.fields
+    pub(crate) fn into_fields(self) -> Vec<FormField> {
+        self.fields
     }
 
-    /// 获取表单标题
-    pub fn get_title(&self) -> Option<&str> {
-        self.title.as_deref()
+    /// 添加文本输入字段（便捷方法，兼容旧 API）
+    pub fn add_text(self, key: impl Into<String>, prompt: impl Into<String>) -> Self {
+        self.add_input(InputFormField::new(key, prompt))
+    }
+
+    /// 添加选择字段（便捷方法，兼容旧 API）
+    pub fn add_selection(
+        self,
+        key: impl Into<String>,
+        prompt: impl Into<String>,
+        options: Vec<String>,
+    ) -> Self {
+        self.add_select(SelectFormField::new(key, prompt, options))
+    }
+
+    /// 添加确认字段（便捷方法，兼容旧 API）
+    pub fn add_confirmation(self, key: impl Into<String>, prompt: impl Into<String>) -> Self {
+        self.add_confirm(ConfirmFormField::new(key, prompt))
     }
 }
 
-impl Default for FormBuilder {
+impl Default for StepBuilder {
     fn default() -> Self {
         Self::new()
     }

@@ -4,7 +4,6 @@
 //! Provides interactive workflow following the implementation document.
 
 use crate::base::constants::validation::branch;
-use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::check;
 use crate::git::GitBranch;
@@ -59,11 +58,10 @@ impl BranchRenameCommand {
         let current_branch =
             GitBranch::current_branch().wrap_err("Failed to get current branch")?;
 
-        let rename_current =
-            ConfirmDialog::new(format!("Rename current branch '{}'?", current_branch))
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to get user confirmation")?;
+        let rename_current = crate::confirm!("Rename current branch '{}'?", current_branch)
+            .default(true)
+            .prompt()
+            .wrap_err("Failed to get user confirmation")?;
 
         if rename_current {
             Ok(current_branch)
@@ -87,7 +85,7 @@ impl BranchRenameCommand {
             );
 
             let new_name =
-                InputDialog::new(&prompt).prompt().wrap_err("Failed to get new branch name")?;
+                crate::input!(prompt).prompt().wrap_err("Failed to get new branch name")?;
 
             // Validate new branch name
             // 1. Validate branch name format
@@ -130,9 +128,8 @@ impl BranchRenameCommand {
             info!("  - CI/CD configurations");
             info!("  - Other tools that depend on the default branch");
             info!("");
-            if !ConfirmDialog::new("Confirm to continue renaming the default branch?")
-                .with_default(false)
-                .with_cancel_message("Operation cancelled")
+            if !crate::confirm!("Confirm to continue renaming the default branch?")
+                .default(false)
                 .prompt()
                 .wrap_err("Failed to get confirmation")?
             {
@@ -190,9 +187,8 @@ impl BranchRenameCommand {
         br!('━', 80);
 
         // Final confirmation
-        ConfirmDialog::new("Confirm to execute branch rename?")
-            .with_default(true)
-            .with_cancel_message("Operation cancelled")
+        crate::confirm!("Confirm to execute branch rename?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get confirmation")?;
 
@@ -236,9 +232,8 @@ impl BranchRenameCommand {
             br!();
 
             // Ask if update remote branch (fully interactive)
-            let should_rename_remote = ConfirmDialog::new("Also rename remote branch?")
-                .with_default(false)
-                .with_cancel_message("Operation cancelled")
+            let should_rename_remote = crate::confirm!("Also rename remote branch?")
+                .default(false)
                 .prompt()
                 .wrap_err("Failed to get user confirmation")?;
 
@@ -254,9 +249,8 @@ impl BranchRenameCommand {
                 info!("This operation cannot be undone. Continue?");
                 br!();
 
-                if ConfirmDialog::new("Confirm to continue?")
-                    .with_default(false)
-                    .with_cancel_message("Operation cancelled")
+                if crate::confirm!("Confirm to continue?")
+                    .default(false)
                     .prompt()
                     .wrap_err("Failed to get final confirmation")?
                 {

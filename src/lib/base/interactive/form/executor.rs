@@ -1,9 +1,10 @@
 //! 表单执行器
 
-use crate::base::interactive::dialog::error::{PromptError, Result};
-use crate::base::interactive::dialog::form::builder::FormBuilder;
-use crate::base::interactive::dialog::form::field::{FieldType, FormField};
-use crate::base::interactive::dialog::form::result::FormResult;
+use crate::base::interactive::dialog::{PromptError, Result};
+use crate::base::interactive::form::builder::FormBuilder;
+use crate::base::interactive::form::field::{FieldType, FormField};
+use crate::base::interactive::form::group::{FormStep, StepType};
+use crate::base::interactive::form::result::FormResult;
 use std::io::Write;
 use unicode_width::UnicodeWidthStr;
 
@@ -24,10 +25,91 @@ impl FormExecutor {
 
     /// 执行表单字段序列
     pub fn execute(&self, builder: &FormBuilder) -> Result<FormResult> {
-        self.execute_with_level(builder, 0)
+        // 检查是否使用 Group 模式
+        if builder.has_groups() {
+            self.execute_groups(builder)
+        } else {
+            self.execute_with_level(builder, 0)
+        }
     }
 
-    /// 执行表单字段序列（带层级信息）
+    /// 执行 Group 模式
+    fn execute_groups(&self, builder: &FormBuilder) -> Result<FormResult> {
+        let mut result = FormResult::new();
+        let groups = builder.get_groups();
+
+        // 按顺序执行每个组
+        for group in groups {
+            // 如果是可选组，先询问是否配置
+            if group.optional {
+                let should_configure = if let Some(title) = &group.title {
+                    crate::br!();
+                    crate::info!("{}", title);
+                    crate::br!('-', 40);
+                    if let Some(description) = &group.description {
+                        crate::debug!("{}", description);
+                        crate::br!();
+                    }
+                    crate::confirm!("Configure {}?", title)
+                        .default(group.default_enabled)
+                        .prompt()?
+                } else {
+                    group.default_enabled
+                };
+
+                if !should_configure {
+                    continue;
+                }
+            } else {
+                // 必填组：显示标题和描述（如果有）
+                if let Some(title) = &group.title {
+                    crate::br!();
+                    crate::info!("{}", title);
+                    crate::br!('-', 40);
+                }
+                if let Some(description) = &group.description {
+                    crate::debug!("{}", description);
+                    crate::br!();
+                }
+            }
+
+            // 执行组内的步骤
+            for step in &group.steps {
+                if self.should_execute_step(step, &result) {
+                    for field in &step.fields {
+                        // 评估字段条件（如果有）
+                        if let Some(condition) = &field.condition {
+                            if !condition(&result) {
+                                // 条件不满足，跳过该字段
+                                continue;
+                            }
+                        }
+
+                        // 执行字段
+                        let value = self.execute_field(field, &result, 0)?;
+
+                        // 收集结果
+                        result.set(field.key.clone(), value);
+                    }
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// 判断步骤是否应该执行
+    fn should_execute_step(&self, step: &FormStep, result: &FormResult) -> bool {
+        match &step.step_type {
+            StepType::Unconditional => true,
+            StepType::Conditional(condition) => condition(result),
+            StepType::ConditionalAll(conditions) => conditions.iter().all(|c| c(result)),
+            StepType::ConditionalAny(conditions) => conditions.iter().any(|c| c(result)),
+            StepType::DynamicCondition(f) => f(result),
+        }
+    }
+
+    /// 执行表单字段序列（带层级信息，用于简单模式和嵌套表单）
     fn execute_with_level(&self, builder: &FormBuilder, level: usize) -> Result<FormResult> {
         let title = builder.get_title();
 
@@ -103,7 +185,7 @@ impl FormExecutor {
             .copied()
             .unwrap_or(false);
 
-        let confirmed = crate::base::interactive::dialog::confirm::confirm(&field.prompt)
+        let confirmed = crate::base::interactive::dialog::ConfirmBuilder::new(&field.prompt)
             .default(default_value)
             .prompt()?;
 
@@ -124,9 +206,9 @@ impl FormExecutor {
             .unwrap_or_default();
 
         let mut builder = if is_password {
-            crate::base::interactive::dialog::input::input(&field.prompt).password()
+            crate::base::interactive::dialog::InputBuilder::new(&field.prompt).password()
         } else {
-            crate::base::interactive::dialog::input::input(&field.prompt)
+            crate::base::interactive::dialog::InputBuilder::new(&field.prompt)
         };
 
         if !default_value.is_empty() {
@@ -152,21 +234,12 @@ impl FormExecutor {
         field: &FormField,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         let default_index = field.default_index.unwrap_or(0);
-        let selected =
-            crate::base::interactive::dialog::select::select(&field.prompt, field.options.clone())
-                .default(default_index)
-                .prompt()?;
+        let selected = crate::select!(field.prompt.clone(), field.options.clone())
+            .default(default_index)
+            .prompt()?;
 
-        // 找到选中项的索引
-        let index = field
-            .options
-            .iter()
-            .enumerate()
-            .find(|(_, opt)| *opt == &selected)
-            .map(|(idx, _)| idx)
-            .unwrap_or(default_index);
-
-        Ok(Box::new(index))
+        // 返回选中的选项值（String），而不是索引，以兼容旧 API
+        Ok(Box::new(selected))
     }
 
     /// 执行多选字段
@@ -174,7 +247,7 @@ impl FormExecutor {
         &self,
         field: &FormField,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
-        let selected = crate::base::interactive::dialog::multiselect::multiselect(
+        let selected = crate::base::interactive::dialog::MultiSelectBuilder::new(
             &field.prompt,
             field.options.clone(),
         )
@@ -321,10 +394,10 @@ impl FormExecutor {
 
 /// Arc 验证器适配器，将 Arc<dyn Validator> 转换为 InputBuilder 可接受的类型
 struct ArcValidatorAdapter(
-    std::sync::Arc<dyn crate::base::interactive::dialog::input::Validator + Send + Sync>,
+    std::sync::Arc<dyn crate::base::interactive::dialog::Validator + Send + Sync>,
 );
 
-impl crate::base::interactive::dialog::input::Validator for ArcValidatorAdapter {
+impl crate::base::interactive::dialog::Validator for ArcValidatorAdapter {
     fn validate(&self, input: &str) -> std::result::Result<(), String> {
         self.0.validate(input)
     }

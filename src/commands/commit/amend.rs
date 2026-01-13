@@ -3,7 +3,6 @@
 //! Amend the last commit, including message and files.
 //! Provides interactive workflow following the implementation document.
 
-use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
 use crate::commands::check;
 use crate::commands::commit::helpers::{
     check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
@@ -95,10 +94,10 @@ impl CommitAmendCommand {
             AmendOperation::NoEdit => {
                 // 检查是否有未暂存的更改
                 if GitCommit::has_commit()? {
-                    let should_stage = ConfirmDialog::new(
-                        "Working directory has unstaged changes. Stage these files?",
+                    let should_stage = crate::confirm!(
+                        "Working directory has unstaged changes. Stage these files?"
                     )
-                    .with_default(true)
+                    .default(true)
                     .prompt()?;
                     if should_stage {
                         GitCommit::add_all()?;
@@ -127,9 +126,8 @@ impl CommitAmendCommand {
         info!("");
 
         // 最终确认
-        ConfirmDialog::new("Confirm to execute commit amend?")
-            .with_default(true)
-            .with_cancel_message("Operation cancelled")
+        crate::confirm!("Confirm to execute commit amend?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get confirmation")?;
 
@@ -179,7 +177,7 @@ impl CommitAmendCommand {
             "No changes, just recommit",
         ];
 
-        let selected = SelectDialog::new("Select operation to perform", options)
+        let selected = crate::select!("Select operation to perform", options)
             .prompt()
             .wrap_err("Failed to select operation")?;
 
@@ -194,9 +192,9 @@ impl CommitAmendCommand {
 
     /// 输入新提交消息
     fn input_new_message(current_message: &str) -> Result<String> {
-        let new_message = InputDialog::new("Enter new commit message")
-            .with_default(current_message)
-            .with_validator(|msg: &str| {
+        let new_message = crate::input!("Enter new commit message")
+            .default(current_message)
+            .validator(|msg: &str| {
                 if msg.trim().is_empty() {
                     Err("Commit message cannot be empty".to_string())
                 } else {
@@ -222,16 +220,15 @@ impl CommitAmendCommand {
             return Ok(Vec::new());
         }
 
-        let selected_files = MultiSelectDialog::new("Select files to add to commit", all_files)
+        let selected_files = crate::multiselect!("Select files to add to commit", all_files)
             .prompt()
             .wrap_err("Failed to select files")?;
 
         if selected_files.is_empty() {
             // 询问是否继续（仅修改消息）
-            let continue_without_files =
-                ConfirmDialog::new("No files selected. Modify message only?")
-                    .with_default(true)
-                    .prompt()?;
+            let continue_without_files = crate::confirm!("No files selected. Modify message only?")
+                .default(true)
+                .prompt()?;
 
             if !continue_without_files {
                 color_eyre::eyre::bail!("Operation cancelled");

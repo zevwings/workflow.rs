@@ -2,7 +2,6 @@
 //!
 //! Apply a stash entry without removing it.
 
-use crate::base::dialog::ConfirmDialog;
 use crate::commands::stash::helpers::select_stash_interactively;
 use crate::git::GitStash;
 use crate::{br, info, success, warning};
@@ -35,8 +34,8 @@ impl StashApplyCommand {
             latest_stash_ref, latest_stash.message, latest_stash.branch
         );
 
-        let use_latest = ConfirmDialog::new(&prompt)
-            .with_default(true)
+        let use_latest = crate::confirm!(prompt)
+            .default(true)
             .prompt()
             .wrap_err("Failed to get user confirmation")?;
 

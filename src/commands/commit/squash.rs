@@ -3,7 +3,6 @@
 //! Squash multiple commits into one, simplifying commit history.
 //! Provides interactive workflow with multi-select.
 
-use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::commands::check;
 use crate::commands::commit::helpers::{
     check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
@@ -77,9 +76,9 @@ impl CommitSquashCommand {
             })
             .collect();
 
-        let selected_options = MultiSelectDialog::new(
+        let selected_options = crate::multiselect!(
             "Select commits to squash (use space to select, enter to confirm)",
-            options,
+            options
         )
         .prompt()
         .wrap_err("Failed to select commits")?;
@@ -133,8 +132,8 @@ impl CommitSquashCommand {
 
         // 步骤6: 输入新的提交消息
         br!();
-        let new_message = InputDialog::new("Enter new commit message for squashed commit")
-            .with_validator(|msg: &str| {
+        let new_message = crate::input!("Enter new commit message for squashed commit")
+            .validator(|msg: &str| {
                 if msg.trim().is_empty() {
                     Err("Commit message cannot be empty".to_string())
                 } else {
@@ -154,9 +153,8 @@ impl CommitSquashCommand {
         info!("");
 
         // 最终确认
-        ConfirmDialog::new("Confirm to execute commit squash?")
-            .with_default(true)
-            .with_cancel_message("Operation cancelled")
+        crate::confirm!("Confirm to execute commit squash?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get confirmation")?;
 

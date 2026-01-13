@@ -3,9 +3,10 @@
 //! 支持直接添加和交互式添加别名。
 
 use crate::base::alias::{AliasManager, CommandsConfig};
-use crate::base::dialog::{ConfirmDialog, FormBuilder, GroupConfig, InputDialog};
+use crate::base::interactive::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
+use std::sync::Arc;
 
 /// 别名添加命令
 pub struct AliasAddCommand;
@@ -27,8 +28,8 @@ impl AliasAddCommand {
             let aliases = AliasManager::list()?;
 
             // 收集别名名称
-            let name = InputDialog::new("Enter alias name")
-                .with_validator(|input: &str| {
+            let name = crate::input!("Enter alias name")
+                .validator(|input: &str| {
                     let trimmed = input.trim();
                     if trimmed.is_empty() {
                         Err("Alias name cannot be empty".to_string())
@@ -45,13 +46,11 @@ impl AliasAddCommand {
 
             // 检查别名是否已存在
             if aliases.contains_key(&name) {
-                let should_overwrite = ConfirmDialog::new(format!(
-                    "Alias '{}' already exists. Overwrite? (y/N)",
-                    name
-                ))
-                .with_default(false)
-                .prompt()
-                .unwrap_or(false);
+                let should_overwrite =
+                    crate::confirm!("Alias '{}' already exists. Overwrite? (y/N)", name)
+                        .default(false)
+                        .prompt()
+                        .unwrap_or(false);
 
                 if !should_overwrite {
                     info!("Operation cancelled");
@@ -64,32 +63,37 @@ impl AliasAddCommand {
                 .add_group(
                     "command_input",
                     |g| {
-                        g.step(|f| {
-                            f.add_selection(
+                        g.add_step(|s| {
+                            s.add_select(SelectFormField::new(
                                 "input_method",
                                 "How do you want to enter the command?",
                                 vec![
                                     "Select from common commands".to_string(),
                                     "Enter manually".to_string(),
                                 ],
-                            )
+                            ))
                         })
-                        .step_if("input_method", "Select from common commands", |f| {
+                        .step_if("input_method", "Select from common commands", |s| {
                             // 从常用命令列表选择
                             let commands = CommandsConfig::get_common_commands()
                                 .unwrap_or_else(|_| Vec::new());
-                            f.add_selection("selected_command", "Select a command", commands)
+                            s.add_select(SelectFormField::new(
+                                "selected_command",
+                                "Select a command",
+                                commands,
+                            ))
                         })
-                        .step_if("input_method", "Enter manually", |f| {
-                            f.add_text("manual_command", "Enter command").required().validate(
-                                |input: &str| {
+                        .step_if("input_method", "Enter manually", |s| {
+                            let field = InputFormField::new("manual_command", "Enter command")
+                                .required()
+                                .validator(Arc::new(|input: &str| {
                                     if input.trim().is_empty() {
                                         Err("Command cannot be empty".to_string())
                                     } else {
                                         Ok(())
                                     }
-                                },
-                            )
+                                }));
+                            s.add_input(field)
                         })
                     },
                     GroupConfig::required(),
@@ -98,8 +102,9 @@ impl AliasAddCommand {
                 .wrap_err("Failed to collect command information")?;
 
             // 提取命令
+            // 注意：Select 字段现在返回选项值（String），而不是索引
             let cmd = if command_form_result.get("input_method")
-                == Some(&"Select from common commands".to_string())
+                == Some("Select from common commands".to_string())
             {
                 command_form_result
                     .get_required("selected_command")
@@ -126,13 +131,11 @@ impl AliasAddCommand {
 
         // 检查别名是否已存在（直接模式）
         if is_direct_mode && AliasManager::exists(&alias_name)? {
-            let should_overwrite = ConfirmDialog::new(format!(
-                "Alias '{}' already exists. Overwrite? (y/N)",
-                alias_name
-            ))
-            .with_default(false)
-            .prompt()
-            .unwrap_or(false);
+            let should_overwrite =
+                crate::confirm!("Alias '{}' already exists. Overwrite? (y/N)", alias_name)
+                    .default(false)
+                    .prompt()
+                    .unwrap_or(false);
 
             if !should_overwrite {
                 info!("Operation cancelled");
@@ -149,8 +152,8 @@ impl AliasAddCommand {
         );
 
         // 询问是否更新补全脚本
-        let should_update = ConfirmDialog::new("Update completion scripts?")
-            .with_default(true)
+        let should_update = crate::confirm!("Update completion scripts?")
+            .default(true)
             .prompt()
             .unwrap_or(false);
 

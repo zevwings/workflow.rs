@@ -4,7 +4,6 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::dialog::ConfirmDialog;
 use crate::base::interactive::spinner;
 use crate::br;
 use crate::debug;
@@ -16,6 +15,7 @@ use crate::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_f
 use crate::pr::helpers::{generate_pull_request_body, resolve_pull_request_id};
 use crate::pr::llm::RewordGenerator;
 use crate::pr::platform::create_provider_auto;
+use crate::spinner;
 use crate::success;
 use crate::warning;
 
@@ -53,7 +53,7 @@ impl PullRequestRewordCommand {
         let provider = create_provider_auto()?;
 
         // 获取当前 PR 标题和描述
-        let current_title = spinner(format!("Fetching PR #{} information...", pr_id))
+        let current_title = spinner!("Fetching PR #{} information...", pr_id)
             .with(|| provider.get_pull_request_title(&pr_id))
             .wrap_err("Failed to get PR title")?;
 
@@ -199,7 +199,7 @@ impl PullRequestRewordCommand {
             format!("Update PR #{} description?", pr_id)
         };
 
-        let confirmed = ConfirmDialog::new(&confirm_message).with_default(true).prompt()?;
+        let confirmed = crate::confirm!(confirm_message).default(true).prompt()?;
 
         if !confirmed {
             info!("Update cancelled.");

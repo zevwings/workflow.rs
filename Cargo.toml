@@ -67,10 +67,6 @@ path = "src/bin/workflow.rs"
 name = "install"
 path = "src/bin/install.rs"
 
-[[bin]]
-name = "demo_interactive"
-path = "src/bin/demo_interactive.rs"
-
 # Release 构建优化配置
 [profile.release]
 # 启用链接时优化（Link Time Optimization），可以显著减小二进制文件大小
@@ -79,3 +75,23 @@ lto = true
 strip = true
 # 设置代码生成单元为 1，提高优化效果（但会增加编译时间）
 codegen-units = 1
+
+# Lint 配置（Rust 1.74+）
+# 强制使用顶部导入，避免局部导入
+[lints.rust]
+# 检测未使用的导入（默认启用，但明确声明）
+# 这有助于保持代码整洁，移除不必要的导入
+unused_imports = "warn"
+
+[lints.clippy]
+# 警告函数内语句后的 item 声明（包括 use 语句）
+# 这有助于强制使用顶部导入，避免局部导入
+# 参考：.clippy.toml 注释中的推荐配置
+items_after_statements = "warn"
+
+# 注意：Rust 和 Clippy 没有直接禁止局部导入的 lint
+# 但通过以下方式可以鼓励使用顶部导入：
+# 1. rustfmt 的 reorder_imports 会自动整理导入到顶部
+# 2. unused_imports 会检测未使用的导入
+# 3. items_after_statements 会警告函数内语句后的 item 声明
+# 4. 项目开发规范要求使用顶部导入（见 docs/development.md）

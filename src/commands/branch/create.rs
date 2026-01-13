@@ -8,7 +8,6 @@
 //! 3. Format using template: {type}/{jira-ticket}-{branch-name}
 //! 4. Apply repository prefix if configured
 
-use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::base::format::MessageFormatter;
 use crate::base::interactive::spinner;
 use crate::branch::{BranchNaming, BranchType};
@@ -124,11 +123,10 @@ impl CreateCommand {
             }
         } else {
             // Interactive prompt (optional)
-            let input = InputDialog::new("Jira ticket (optional)")
-                .allow_empty(true)
+            let input_value = crate::input!("Jira ticket (optional)")
                 .prompt()
                 .wrap_err("Failed to get Jira ticket")?;
-            let trimmed = input.trim().to_string();
+            let trimmed = input_value.trim().to_string();
             if trimmed.is_empty() {
                 None
             } else {
@@ -147,8 +145,8 @@ impl CreateCommand {
     /// Resolve branch name (interactive, required if no ticket_id)
     fn resolve_branch_name() -> Result<String> {
         // Interactive prompt (required)
-        let name = InputDialog::new("Branch name (required)")
-            .with_validator(|input: &str| {
+        let name = crate::input!("Branch name (required)")
+            .validator(|input: &str| {
                 if input.trim().is_empty() {
                     Err("Branch name is required and cannot be empty".to_string())
                 } else {
@@ -280,11 +278,10 @@ impl CreateCommand {
         }
 
         // Ask user if they want to pull latest changes
-        let should_pull =
-            ConfirmDialog::new(format!("Pull latest changes from '{}'?", current_branch))
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to confirm pull")?;
+        let should_pull = crate::confirm!("Pull latest changes from '{}'?", current_branch)
+            .default(true)
+            .prompt()
+            .wrap_err("Failed to confirm pull")?;
 
         if !should_pull {
             info!("Skipping pull, using current branch state");

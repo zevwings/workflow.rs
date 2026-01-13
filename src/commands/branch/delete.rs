@@ -2,7 +2,6 @@
 //!
 //! Delete one or more Git branches (local and/or remote).
 
-use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::commands::branch::helpers::sort_branches_with_priority;
 use crate::commands::check;
 use crate::git::GitBranch;
@@ -138,10 +137,10 @@ impl BranchDeleteCommand {
                 warning!("  - {}", info.name);
             }
 
-            let confirmed = ConfirmDialog::new(
-                "Are you sure you want to delete protected branch(es)? This is dangerous!",
+            let confirmed = crate::confirm!(
+                "Are you sure you want to delete protected branch(es)? This is dangerous!"
             )
-            .with_default(false)
+            .default(false)
             .prompt()
             .wrap_err("Failed to get user confirmation")?;
 
@@ -179,8 +178,8 @@ impl BranchDeleteCommand {
                 )
             };
 
-            let confirmed = ConfirmDialog::new(&prompt)
-                .with_default(false)
+            let confirmed = crate::confirm!(prompt)
+                .default(false)
                 .prompt()
                 .wrap_err("Failed to get user confirmation")?;
 
@@ -215,13 +214,11 @@ impl BranchDeleteCommand {
                 // 如果普通删除失败且未使用 force，询问是否强制删除
                 if delete_result.is_err() && !force && !info.is_merged {
                     br!();
-                    let force_confirm = ConfirmDialog::new(format!(
-                        "Branch '{}' is not merged. Force delete it?",
-                        branch_name
-                    ))
-                    .with_default(false)
-                    .prompt()
-                    .wrap_err("Failed to get user confirmation")?;
+                    let force_confirm =
+                        crate::confirm!("Branch '{}' is not merged. Force delete it?", branch_name)
+                            .default(false)
+                            .prompt()
+                            .wrap_err("Failed to get user confirmation")?;
 
                     if force_confirm {
                         delete_result = GitBranch::delete(branch_name, true);
@@ -355,7 +352,7 @@ impl BranchDeleteCommand {
             .collect();
 
         // 多选列表
-        let selected = MultiSelectDialog::new("Select branches to delete", options)
+        let selected = crate::multiselect!("Select branches to delete", options)
             .prompt()
             .wrap_err("Failed to select branches")?;
 

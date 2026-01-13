@@ -1,7 +1,7 @@
 //! 表单字段定义
 
-use crate::base::interactive::dialog::form::result::FormResult;
-use crate::base::interactive::dialog::input::Validator;
+use crate::base::interactive::dialog::Validator;
+use crate::base::interactive::form::result::FormResult;
 use std::sync::Arc;
 
 /// 字段类型
@@ -43,7 +43,7 @@ pub struct FormField {
     /// 输入完成后显示的 title（可选，字段级别）
     pub result_title: Option<String>,
     /// 嵌套表单（仅用于 FieldType::Form）
-    pub nested_form: Option<crate::base::interactive::dialog::form::builder::FormBuilder>,
+    pub nested_form: Option<crate::base::interactive::form::builder::FormBuilder>,
     /// 选项列表（仅用于 FieldType::Select 和 FieldType::MultiSelect）
     pub options: Vec<String>,
     /// 默认选中的索引（仅用于 FieldType::Select）
@@ -66,6 +66,25 @@ pub struct ConfirmFormField {
     pub condition: Option<Condition>,
 }
 
+impl ConfirmFormField {
+    /// 创建新的确认字段
+    pub fn new(key: impl Into<String>, prompt: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            prompt: prompt.into(),
+            default_value: false,
+            result_title: None,
+            condition: None,
+        }
+    }
+
+    /// 设置默认值
+    pub fn default(mut self, value: bool) -> Self {
+        self.default_value = value;
+        self
+    }
+}
+
 /// 输入字段配置
 pub struct InputFormField {
     /// 字段键名（用于结果映射）
@@ -81,6 +100,53 @@ pub struct InputFormField {
     pub result_title: Option<String>,
     /// 条件函数（可选，基于前面字段的值决定是否执行）
     pub condition: Option<Condition>,
+}
+
+impl InputFormField {
+    /// 创建新的输入字段
+    pub fn new(key: impl Into<String>, prompt: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            prompt: prompt.into(),
+            default_value: String::new(),
+            validator: None,
+            result_title: None,
+            condition: None,
+        }
+    }
+
+    /// 设置默认值
+    pub fn default(mut self, value: impl Into<String>) -> Self {
+        self.default_value = value.into();
+        self
+    }
+
+    /// 设置验证器
+    pub fn validator(mut self, validator: Arc<dyn Validator + Send + Sync>) -> Self {
+        self.validator = Some(validator);
+        self
+    }
+
+    /// 标记字段为必填（兼容旧 API）
+    pub fn required(mut self) -> Self {
+        let key = self.key.clone();
+        let validator = Arc::new(move |input: &str| {
+            if input.trim().is_empty() {
+                Err(format!("Field '{}' is required", key))
+            } else {
+                Ok(())
+            }
+        });
+        self.validator = Some(validator);
+        self
+    }
+
+    /// 允许字段为空（兼容旧 API）
+    /// 注意：新模块默认允许空值，这个方法主要用于兼容性
+    pub fn allow_empty(self, _allow: bool) -> Self {
+        // 新模块默认允许空值，如果需要必填，使用 required() 方法
+        self
+    }
 }
 
 /// 密码字段配置
@@ -100,6 +166,41 @@ pub struct PasswordFormField {
     pub condition: Option<Condition>,
 }
 
+impl PasswordFormField {
+    /// 创建新的密码字段
+    pub fn new(key: impl Into<String>, prompt: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            prompt: prompt.into(),
+            default_value: String::new(),
+            validator: None,
+            result_title: None,
+            condition: None,
+        }
+    }
+
+    /// 标记字段为必填（兼容旧 API）
+    pub fn required(mut self) -> Self {
+        let key = self.key.clone();
+        let validator = Arc::new(move |input: &str| {
+            if input.trim().is_empty() {
+                Err(format!("Field '{}' is required", key))
+            } else {
+                Ok(())
+            }
+        });
+        self.validator = Some(validator);
+        self
+    }
+
+    /// 允许字段为空（兼容旧 API）
+    /// 注意：新模块默认允许空值，这个方法主要用于兼容性
+    pub fn allow_empty(self, _allow: bool) -> Self {
+        // 新模块默认允许空值，如果需要必填，使用 required() 方法
+        self
+    }
+}
+
 /// 单选字段配置
 pub struct SelectFormField {
     /// 字段键名（用于结果映射）
@@ -114,6 +215,26 @@ pub struct SelectFormField {
     pub result_title: Option<String>,
     /// 条件函数（可选，基于前面字段的值决定是否执行）
     pub condition: Option<Condition>,
+}
+
+impl SelectFormField {
+    /// 创建新的单选字段
+    pub fn new(key: impl Into<String>, prompt: impl Into<String>, options: Vec<String>) -> Self {
+        Self {
+            key: key.into(),
+            prompt: prompt.into(),
+            options,
+            default_index: 0,
+            result_title: None,
+            condition: None,
+        }
+    }
+
+    /// 设置默认选中的索引
+    pub fn default(mut self, index: usize) -> Self {
+        self.default_index = index;
+        self
+    }
 }
 
 /// 多选字段配置
@@ -139,9 +260,26 @@ pub struct NestedFormField {
     /// 提示消息
     pub prompt: String,
     /// 嵌套表单
-    pub nested_form: crate::base::interactive::dialog::form::builder::FormBuilder,
+    pub nested_form: crate::base::interactive::form::builder::FormBuilder,
     /// 输入完成后显示的 title（可选，字段级别）
     pub result_title: Option<String>,
     /// 条件函数（可选，基于前面字段的值决定是否执行）
     pub condition: Option<Condition>,
+}
+
+impl NestedFormField {
+    /// 创建新的嵌套表单字段
+    pub fn new(
+        key: impl Into<String>,
+        prompt: impl Into<String>,
+        nested_form: crate::base::interactive::form::builder::FormBuilder,
+    ) -> Self {
+        Self {
+            key: key.into(),
+            prompt: prompt.into(),
+            nested_form,
+            result_title: None,
+            condition: None,
+        }
+    }
 }

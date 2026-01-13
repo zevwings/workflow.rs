@@ -1,5 +1,4 @@
 use crate::base::constants::errors::input_reading;
-use crate::base::dialog::InputDialog;
 use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
@@ -16,7 +15,7 @@ impl SearchCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+            crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
                 .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
         };
@@ -30,7 +29,7 @@ impl SearchCommand {
         let term = if let Some(t) = search_term {
             t
         } else {
-            InputDialog::new("Enter search term")
+            crate::input!("Enter search term")
                 .prompt()
                 .wrap_err("Failed to read search term")?
         };

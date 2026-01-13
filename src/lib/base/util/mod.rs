@@ -19,8 +19,8 @@
 //! 注意：以下模块已迁移到独立的目录：
 //! - `lib/base/logger` - 日志相关功能（`LogLevel`、`Logger`、`Tracer`、`colors`）
 //! - `lib/base/interactive/output` - 进度指示器（`Progress`）
-//! - `lib/base/interactive` - 交互式功能（包括 `spinner`）
-//! - `lib/base/dialog` - 交互式对话框（`InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`）
+//! - `lib/base/interactive` - 交互式功能（包括 `spinner`、`dialog`）
+//!   - `lib/base/interactive/dialog` - 交互式对话框（`InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`、`FormBuilder`）
 //! - `lib/base/interactive/output/table` - 表格输出工具（`TableBuilder`、`TableStyle`）
 //! - `lib/completion` - Completion 管理
 //! - `lib/rollback` - 回滚工具

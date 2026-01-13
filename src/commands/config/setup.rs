@@ -2,8 +2,10 @@
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
 use crate::base::constants::messages::log;
-use crate::base::dialog::{FormBuilder, GroupConfig, SelectDialog};
 use crate::base::interactive::spinner;
+use crate::base::interactive::{
+    ConfirmFormField, FormBuilder, GroupConfig, InputFormField, SelectFormField,
+};
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{
@@ -16,6 +18,7 @@ use crate::jira::config::ConfigManager;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -155,8 +158,8 @@ impl SetupCommand {
 
             let keep_option = format!("Keep current accounts ({})", current_email);
             let options = vec!["Add new account".to_string(), keep_option];
-            let selected_option = SelectDialog::new("GitHub account management", options.clone())
-                .with_default(1)
+            let selected_option = crate::select!("GitHub account management", options.clone())
+                .default(1)
                 .prompt()
                 .wrap_err("Failed to get GitHub account management choice")?;
             let selection = options.iter().position(|opt| opt == &selected_option).unwrap_or(1);
@@ -204,8 +207,8 @@ impl SetupCommand {
 
                 let account_names_vec: Vec<String> = account_names.to_vec();
                 let selected_account =
-                    SelectDialog::new("Select current GitHub account", account_names_vec.clone())
-                        .with_default(default_index)
+                    crate::select!("Select current GitHub account", account_names_vec.clone())
+                        .default(default_index)
                         .prompt()
                         .wrap_err("Failed to select current account")?;
                 let selection = account_names_vec
@@ -259,14 +262,14 @@ impl SetupCommand {
             .add_group(
                 "jira",
                 |g| {
-                    g.step(|f| {
+                    g.add_step(|s| {
                         // Jira email
                         let jira_email_prompt = if has_jira_email {
                             "Jira email address (press Enter to keep)"
                         } else {
                             "Jira email address (required)"
                         };
-                        let mut field = f.add_text("jira_email", jira_email_prompt);
+                        let mut field = InputFormField::new("jira_email", jira_email_prompt);
                         if has_jira_email {
                             field = field.allow_empty(true);
                             if let Some(ref email) = existing.jira_email {
@@ -275,24 +278,27 @@ impl SetupCommand {
                         } else {
                             field = field.required();
                         }
-                        field.validate(move |input: &str| {
-                            if input.is_empty() && !has_jira_email {
+                        let has_jira_email_clone = has_jira_email;
+                        field = field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_jira_email_clone {
                                 Err("Jira email address is required".to_string())
                             } else if !input.is_empty() && !input.contains('@') {
                                 Err("Please enter a valid email address".to_string())
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+                        s.add_input(field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // Jira service address
                         let jira_address_prompt = if has_jira_address {
                             "Jira service address (press Enter to keep)"
                         } else {
                             "Jira service address (required)"
                         };
-                        let mut field = f.add_text("jira_service_address", jira_address_prompt);
+                        let mut field =
+                            InputFormField::new("jira_service_address", jira_address_prompt);
                         if has_jira_address {
                             field = field.allow_empty(true);
                             if let Some(ref addr) = existing.jira_service_address {
@@ -301,8 +307,9 @@ impl SetupCommand {
                         } else {
                             field = field.required();
                         }
-                        field.validate(move |input: &str| {
-                            if input.is_empty() && !has_jira_address {
+                        let has_jira_address_clone = has_jira_address;
+                        field = field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_jira_address_clone {
                                 Err("Jira service address is required".to_string())
                             } else if !input.is_empty()
                                 && !input.starts_with("http://")
@@ -315,28 +322,31 @@ impl SetupCommand {
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+                        s.add_input(field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // Jira API token
                         let jira_token_prompt = if has_jira_token {
                             "Jira API token [current: ***] (press Enter to keep)"
                         } else {
                             "Jira API token (required)"
                         };
-                        let mut field = f.add_text("jira_api_token", jira_token_prompt);
+                        let mut field = InputFormField::new("jira_api_token", jira_token_prompt);
                         if has_jira_token {
                             field = field.allow_empty(true);
                         } else {
                             field = field.required();
                         }
-                        field.validate(move |input: &str| {
-                            if input.is_empty() && !has_jira_token {
+                        let has_jira_token_clone = has_jira_token;
+                        field = field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_jira_token_clone {
                                 Err("Jira API token is required".to_string())
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+                        s.add_input(field)
                     })
                 },
                 GroupConfig::required().with_title("Jira Configuration (Required)"),
@@ -345,14 +355,16 @@ impl SetupCommand {
             .add_group(
                 "log",
                 |g| {
-                    g.step(|f| {
-                        f.add_confirmation(
-                            "should_configure_log_folder",
-                            "Do you want to configure log output folder name?",
+                    g.add_step(|s| {
+                        s.add_confirm(
+                            ConfirmFormField::new(
+                                "should_configure_log_folder",
+                                "Do you want to configure log output folder name?",
+                            )
+                            .default(is_custom_folder_name),
                         )
-                        .default(is_custom_folder_name)
                     })
-                    .step_if("should_configure_log_folder", "yes", |f| {
+                    .step_if("should_configure_log_folder", "yes", |s| {
                         let folder_name_prompt = if is_custom_folder_name {
                             "Log output folder name (press Enter to keep)".to_string()
                         } else {
@@ -361,9 +373,9 @@ impl SetupCommand {
                                 default_folder_name
                             )
                         };
-                        let mut field = f
-                            .add_text("log_output_folder_name", &folder_name_prompt)
-                            .allow_empty(true);
+                        let mut field =
+                            InputFormField::new("log_output_folder_name", &folder_name_prompt)
+                                .allow_empty(true);
                         if is_custom_folder_name {
                             if let Some(ref existing_name) = existing.log_output_folder_name {
                                 field = field.default(existing_name.clone());
@@ -371,16 +383,18 @@ impl SetupCommand {
                         } else {
                             field = field.default(default_folder_name.clone());
                         }
-                        field
+                        s.add_input(field)
                     })
-                    .step(|f| {
-                        f.add_confirmation(
-                            "should_configure_doc_dir",
-                            "Do you want to configure document base directory?",
+                    .add_step(|s| {
+                        s.add_confirm(
+                            ConfirmFormField::new(
+                                "should_configure_doc_dir",
+                                "Do you want to configure document base directory?",
+                            )
+                            .default(is_custom_dir),
                         )
-                        .default(is_custom_dir)
                     })
-                    .step_if("should_configure_doc_dir", "yes", |f| {
+                    .step_if("should_configure_doc_dir", "yes", |s| {
                         let base_dir_prompt = if is_custom_dir {
                             "Document base directory (press Enter to keep)".to_string()
                         } else {
@@ -390,7 +404,8 @@ impl SetupCommand {
                             )
                         };
                         let mut field =
-                            f.add_text("log_download_base_dir", &base_dir_prompt).allow_empty(true);
+                            InputFormField::new("log_download_base_dir", &base_dir_prompt)
+                                .allow_empty(true);
                         if is_custom_dir {
                             if let Some(ref existing_dir) = existing.log_download_base_dir {
                                 field = field.default(existing_dir.clone());
@@ -398,25 +413,23 @@ impl SetupCommand {
                         } else {
                             field = field.default(default_dir.clone());
                         }
-                        field
+                        s.add_input(field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // Tracing Console Output
                         let trace_console_options = vec![
                             "Enable (output to both file and console)".to_string(),
                             "Disable (output to file only)".to_string(),
                         ];
-                        let default_option = if current_trace_console {
-                            trace_console_options[0].clone()
-                        } else {
-                            trace_console_options[1].clone()
-                        };
-                        f.add_selection(
-                            "trace_console_mode",
-                            "Select trace console output mode",
-                            trace_console_options,
+                        let default_idx = if current_trace_console { 0 } else { 1 };
+                        s.add_select(
+                            SelectFormField::new(
+                                "trace_console_mode",
+                                "Select trace console output mode",
+                                trace_console_options,
+                            )
+                            .default(default_idx),
                         )
-                        .default(default_option)
                     })
                 },
                 GroupConfig::optional().with_title("Log Configuration (Optional)"),
@@ -486,80 +499,105 @@ impl SetupCommand {
                     let has_existing_proxy_key = existing.llm_proxy_key.is_some();
                     let has_existing_proxy_model = existing.llm_proxy_model.is_some();
 
-                    g.step(|f| {
-                        f.add_selection("llm_provider", &llm_provider_prompt, llm_providers)
-                            .default(existing.llm_provider.clone())
+                    g.add_step(|s| {
+                        // 找到默认 provider 的索引
+                        let default_idx = llm_providers
+                            .iter()
+                            .position(|p| p == &existing.llm_provider)
+                            .unwrap_or(0);
+                        s.add_select(
+                            SelectFormField::new(
+                                "llm_provider",
+                                &llm_provider_prompt,
+                                llm_providers,
+                            )
+                            .default(default_idx),
+                        )
                     })
-                    .step_if("llm_provider", "openai", |f| {
-                        let mut form =
-                            f.add_text("llm_openai_key", openai_key_prompt).allow_empty(true);
+                    .step_if("llm_provider", "openai", |s| {
+                        let mut key_field =
+                            InputFormField::new("llm_openai_key", openai_key_prompt)
+                                .allow_empty(true);
                         if let Some(ref key) = existing.llm_openai_key {
-                            form = form.default(key.clone());
+                            key_field = key_field.default(key.clone());
                         }
-                        form.add_text("llm_openai_model", openai_model_prompt)
-                            .allow_empty(true)
-                            .default(openai_model_default)
+                        let model_field =
+                            InputFormField::new("llm_openai_model", openai_model_prompt)
+                                .allow_empty(true)
+                                .default(openai_model_default);
+                        s.add_input(key_field).add_input(model_field)
                     })
-                    .step_if("llm_provider", "deepseek", |f| {
-                        let mut form =
-                            f.add_text("llm_deepseek_key", deepseek_key_prompt).allow_empty(true);
+                    .step_if("llm_provider", "deepseek", |s| {
+                        let mut key_field =
+                            InputFormField::new("llm_deepseek_key", deepseek_key_prompt)
+                                .allow_empty(true);
                         if let Some(ref key) = existing.llm_deepseek_key {
-                            form = form.default(key.clone());
+                            key_field = key_field.default(key.clone());
                         }
-                        form.add_text("llm_deepseek_model", deepseek_model_prompt)
-                            .allow_empty(true)
-                            .default(deepseek_model_default)
+                        let model_field =
+                            InputFormField::new("llm_deepseek_model", deepseek_model_prompt)
+                                .allow_empty(true)
+                                .default(deepseek_model_default);
+                        s.add_input(key_field).add_input(model_field)
                     })
-                    .step_if("llm_provider", "proxy", |f| {
-                        let mut form = f.add_text("llm_proxy_url", proxy_url_prompt);
+                    .step_if("llm_provider", "proxy", |s| {
+                        let mut url_field = InputFormField::new("llm_proxy_url", proxy_url_prompt);
                         if has_existing_proxy_url {
-                            form = form.allow_empty(true);
+                            url_field = url_field.allow_empty(true);
                             if let Some(ref url) = existing.llm_proxy_url {
-                                form = form.default(url.clone());
+                                url_field = url_field.default(url.clone());
                             }
                         } else {
-                            form = form.required();
+                            url_field = url_field.required();
                         }
-                        form = form.validate(move |input: &str| {
-                            if input.is_empty() && !has_existing_proxy_url {
+                        let has_existing_proxy_url_clone = has_existing_proxy_url;
+                        url_field = url_field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_url_clone {
                                 Err("LLM proxy URL is required".to_string())
                             } else {
                                 Ok(())
                             }
-                        });
+                        }));
 
-                        let mut form = form.add_text("llm_proxy_key", proxy_key_prompt);
+                        let mut key_field = InputFormField::new("llm_proxy_key", proxy_key_prompt);
                         if has_existing_proxy_key {
-                            form = form.allow_empty(true);
+                            key_field = key_field.allow_empty(true);
                         } else {
-                            form = form.required();
+                            key_field = key_field.required();
                         }
-                        form = form.validate(move |input: &str| {
-                            if input.is_empty() && !has_existing_proxy_key {
+                        let has_existing_proxy_key_clone = has_existing_proxy_key;
+                        key_field = key_field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_key_clone {
                                 Err("LLM proxy key is required".to_string())
                             } else {
                                 Ok(())
                             }
-                        });
+                        }));
 
-                        let mut form = form.add_text("llm_proxy_model", proxy_model_prompt);
+                        let mut model_field =
+                            InputFormField::new("llm_proxy_model", proxy_model_prompt);
                         if has_existing_proxy_model {
-                            form = form.allow_empty(true);
+                            model_field = model_field.allow_empty(true);
                             if let Some(ref model) = existing.llm_proxy_model {
-                                form = form.default(model.clone());
+                                model_field = model_field.default(model.clone());
                             }
                         } else {
-                            form = form.required();
+                            model_field = model_field.required();
+                            let default_model = LLMSettings::default_model("proxy");
+                            model_field = model_field.default(default_model);
                         }
-                        form.validate(move |input: &str| {
-                            if input.is_empty() && !has_existing_proxy_model {
+                        let has_existing_proxy_model_clone = has_existing_proxy_model;
+                        model_field = model_field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_model_clone {
                                 Err("Model is required for proxy provider".to_string())
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+
+                        s.add_input(url_field).add_input(key_field).add_input(model_field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // LLM output language (所有 provider 共享)
                         let language_display_names = get_supported_language_display_names();
                         let current_language = if !existing.llm_language.is_empty() {
@@ -577,12 +615,19 @@ impl SetupCommand {
                             .unwrap_or_else(|| language_display_names[0].clone());
                         let llm_language_prompt =
                             format!("Select LLM output language [current: {}]", current_language);
-                        f.add_selection(
-                            "llm_language_display",
-                            &llm_language_prompt,
-                            language_display_names,
+                        // 找到默认显示名称的索引
+                        let default_idx = language_display_names
+                            .iter()
+                            .position(|name| name == &default_display_name)
+                            .unwrap_or(0);
+                        s.add_select(
+                            SelectFormField::new(
+                                "llm_language_display",
+                                &llm_language_prompt,
+                                language_display_names,
+                            )
+                            .default(default_idx),
                         )
-                        .default(default_display_name)
                     })
                 },
                 GroupConfig::optional().with_title("LLM/AI Configuration (Optional)"),
@@ -636,9 +681,9 @@ impl SetupCommand {
         {
             // 用户配置了 Log 组，处理配置
             let log_output_folder_name =
-                if form_result.get("should_configure_log_folder") == Some(&"yes".to_string()) {
+                if form_result.get_bool_opt("should_configure_log_folder") == Some(true) {
                     if let Some(input_value) = form_result.get("log_output_folder_name") {
-                        if input_value.is_empty() || input_value == &default_folder_name {
+                        if input_value.is_empty() || input_value == default_folder_name {
                             None
                         } else {
                             Some(input_value.clone())
@@ -653,9 +698,9 @@ impl SetupCommand {
                 };
 
             let log_download_base_dir =
-                if form_result.get("should_configure_doc_dir") == Some(&"yes".to_string()) {
+                if form_result.get_bool_opt("should_configure_doc_dir") == Some(true) {
                     if let Some(input_value) = form_result.get("log_download_base_dir") {
-                        if input_value.is_empty() || input_value == &default_dir {
+                        if input_value.is_empty() || input_value == default_dir {
                             None
                         } else {
                             Some(input_value.clone())
@@ -670,6 +715,7 @@ impl SetupCommand {
                 };
 
             // Tracing 配置
+            // 注意：Select 字段现在返回选项值（String），而不是索引
             let enable_trace_console = if let Some(mode) = form_result.get("trace_console_mode") {
                 if mode == "Enable (output to both file and console)" {
                     Some(true)

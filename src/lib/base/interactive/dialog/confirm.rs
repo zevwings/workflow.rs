@@ -135,7 +135,50 @@ impl ConfirmBuilder {
     }
 }
 
-/// 便捷函数
-pub fn confirm(message: impl Into<String>) -> ConfirmBuilder {
-    ConfirmBuilder::new(message)
+/// 确认提示宏
+///
+/// 提供格式化字符串的便捷方式，智能判断是否需要格式化：
+/// - 简单字符串字面量：直接传递，不调用 `format!()`
+/// - 格式化字符串：使用 `format!()` 进行格式化
+/// - 变量或表达式：直接传递，不调用 `format!()`
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use workflow::confirm;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// // 简单字符串（直接传递，不格式化）
+/// let result1 = confirm!("Continue?")
+///     .default(true)
+///     .prompt()?;
+///
+/// // 格式化字符串（使用 format!）
+/// let branch = "feature-123";
+/// let result2 = confirm!("Create PR for branch '{}'?", branch)
+///     .default(true)
+///     .prompt()?;
+///
+/// // 变量（直接传递，不格式化）
+/// let msg = "Are you sure?";
+/// let result3 = confirm!(msg)
+///     .default(false)
+///     .prompt()?;
+/// # Ok(())
+/// # }
+/// ```
+#[macro_export]
+macro_rules! confirm {
+    // 格式化字符串：confirm!("Message {}", var) 或 confirm!("Message {}", var1, var2)
+    ($fmt:literal, $($arg:expr),+ $(,)?) => {
+        $crate::base::interactive::ConfirmBuilder::new(format!($fmt, $($arg),+))
+    };
+    // 简单字符串字面量：confirm!("Message") - 直接传递，不格式化
+    ($msg:literal) => {
+        $crate::base::interactive::ConfirmBuilder::new($msg)
+    };
+    // 变量或其他表达式：confirm!(var) - 直接传递，不格式化
+    ($expr:expr) => {
+        $crate::base::interactive::ConfirmBuilder::new($expr)
+    };
 }

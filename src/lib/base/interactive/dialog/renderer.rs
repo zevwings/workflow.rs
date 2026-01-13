@@ -37,7 +37,7 @@ pub trait OptionRenderer {
 pub struct OptionListRenderer;
 
 impl OptionListRenderer {
-    /// 渲染选项列表
+    /// 渲染选项列表（带搜索框）
     ///
     /// # 参数
     /// - `options`: 选项列表
@@ -46,23 +46,38 @@ impl OptionListRenderer {
     /// - `theme`: 主题样式
     /// - `renderer`: 选项渲染器实现
     /// - `hint_text`: 提示文本
+    /// - `search_query`: 搜索查询（如果为 Some，显示搜索框）
     ///
     /// # 返回
-    /// 渲染的总行数（选项数 + 1 提示行）
-    pub fn render_options<OR: OptionRenderer>(
+    /// 渲染的总行数（搜索框 + 选项数 + 1 提示行）
+    pub fn render_options_with_search<OR: OptionRenderer>(
         options: &[impl std::fmt::Display],
         current_index: usize,
         rendered_lines: usize,
         theme: &Theme,
         renderer: &OR,
         hint_text: &str,
+        search_query: Option<&str>,
     ) -> Result<usize> {
         let mut stdout = std::io::stdout();
-        let total_lines = options.len() + 1;
+        let has_search = search_query.is_some();
+        let search_lines = if has_search { 1 } else { 0 };
+        let total_lines = search_lines + options.len() + 1;
 
         // 清除已渲染的行
         if rendered_lines > 0 {
             Self::clear_rendered_lines(rendered_lines)?;
+        }
+
+        // 渲染搜索框（如果有）
+        if let Some(query) = search_query {
+            execute!(stdout, cursor::MoveToColumn(0))?;
+            execute!(stdout, ResetColor)?;
+            let search_label = theme.hint.apply("搜索: ", theme.enable_color);
+            let search_text = theme.answer.apply(query, theme.enable_color);
+            write!(stdout, "{}{}", search_label, search_text)?;
+            execute!(stdout, ResetColor)?;
+            writeln!(stdout)?;
         }
 
         // 渲染所有选项
@@ -124,27 +139,31 @@ impl OptionListRenderer {
         Ok(())
     }
 
-    /// 清除并显示结果
+    /// 清除并显示结果（带搜索框支持）
     ///
     /// # 参数
     /// - `options_count`: 选项数量
     /// - `message`: 提示消息
     /// - `result_text`: 结果文本
     /// - `theme`: 主题样式
-    pub fn clear_and_display_result(
+    /// - `has_search`: 是否有搜索框（需要额外清除一行）
+    pub fn clear_and_display_result_with_search(
         options_count: usize,
         message: &str,
         result_text: &str,
         theme: &Theme,
+        has_search: bool,
     ) -> Result<()> {
         let mut stdout = std::io::stdout();
 
         // 计算需要清除的行数：
+        // - 搜索框行：has_search ? 1 : 0
         // - 选项行：options_count
         // - 提示信息行：1（"使用 ↑/↓ 导航，回车确认"）
         // - 提示行：1（"? 请选择一个选项"）
-        // 总共：options_count + 2
-        let lines_to_clear = options_count + 2;
+        // 总共：has_search + options_count + 2
+        let search_lines = if has_search { 1 } else { 0 };
+        let lines_to_clear = search_lines + options_count + 2;
 
         // 当前光标在提示信息行的下一行（因为 render_hint 输出了换行符）
         // 先向上移动一行回到提示信息行

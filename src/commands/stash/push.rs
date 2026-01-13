@@ -2,7 +2,6 @@
 //!
 //! Save current working directory changes to stash.
 
-use crate::base::dialog::InputDialog;
 use crate::git::{GitCommit, GitStash};
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
@@ -29,8 +28,7 @@ impl StashPushCommand {
         }
 
         // 提示用户输入 stash 消息（可选）
-        let message = InputDialog::new("Stash message (optional, press Enter to skip)")
-            .allow_empty(true)
+        let message = crate::input!("Stash message (optional, press Enter to skip)")
             .prompt()
             .wrap_err("Failed to get stash message")?;
 

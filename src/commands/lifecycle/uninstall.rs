@@ -9,7 +9,6 @@ use duct::cmd;
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-use crate::base::dialog::ConfirmDialog;
 use crate::base::settings::paths::Paths;
 use crate::base::shell::{Detect, Reload};
 use crate::base::util::Clipboard;
@@ -58,8 +57,8 @@ impl UninstallCommand {
         }
 
         // 第一步确认：是否删除二进制文件和 completion 脚本
-        if !ConfirmDialog::new("Remove binary files and shell completion scripts?")
-            .with_default(false)
+        if !crate::confirm!("Remove binary files and shell completion scripts?")
+            .default(false)
             .prompt()?
         {
             info!("Uninstall cancelled.");
@@ -67,8 +66,8 @@ impl UninstallCommand {
         }
 
         // 第二步确认：是否删除 TOML 配置文件
-        let remove_config = ConfirmDialog::new("Remove TOML config file (workflow.toml)?")
-            .with_default(true)
+        let remove_config = crate::confirm!("Remove TOML config file (workflow.toml)?")
+            .default(true)
             .prompt()?;
 
         // 删除二进制文件

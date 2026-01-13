@@ -1,5 +1,4 @@
 use crate::base::constants::errors::input_reading;
-use crate::base::dialog::InputDialog;
 use crate::base::util::Clipboard;
 use crate::jira::logs::JiraLogs;
 use crate::{debug, error, success};
@@ -15,7 +14,7 @@ impl FindCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+            crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
                 .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
         };
@@ -27,7 +26,7 @@ impl FindCommand {
         let req_id = if let Some(id) = request_id {
             id
         } else {
-            InputDialog::new("Enter request ID to find")
+            crate::input!("Enter request ID to find")
                 .prompt()
                 .wrap_err("Failed to read request ID")?
         };

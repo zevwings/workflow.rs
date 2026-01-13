@@ -1,7 +1,7 @@
-use crate::base::interactive::spinner;
 use crate::git::{GitBranch, GitCommit, GitPreCommit};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
+use crate::spinner;
 use crate::{br, info, success, warning};
 use color_eyre::Result;
 
@@ -60,7 +60,7 @@ impl PullRequestUpdateCommand {
 
         // 获取 PR 标题
         let provider = create_provider_auto()?;
-        let title = spinner(format!("Fetching PR #{} title...", pr_id))
+        let title = spinner!("Fetching PR #{} title...", pr_id)
             .with(|| provider.get_pull_request_title(&pr_id))
             .ok();
 

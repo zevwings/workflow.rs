@@ -1,13 +1,14 @@
 //! LLM 配置设置命令
 //! 交互式设置 LLM 相关配置（provider, url, key, model, language）
 
-use crate::base::dialog::{FormBuilder, GroupConfig};
+use crate::base::interactive::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{LLMSettings, Settings};
 use crate::jira::config::ConfigManager;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
+use std::sync::Arc;
 
 /// LLM 配置设置命令
 pub struct LLMSetupCommand;
@@ -90,83 +91,103 @@ impl LLMSetupCommand {
             .add_group(
                 "llm_config",
                 |g| {
-                    g.step(|f| {
-                        f.add_selection("llm_provider", &llm_provider_prompt, llm_providers_vec)
-                            .default(existing.provider.clone())
+                    g.add_step(|s| {
+                        // 找到默认 provider 的索引
+                        let default_idx = llm_providers_vec
+                            .iter()
+                            .position(|p| p == &existing.provider)
+                            .unwrap_or(0);
+                        s.add_select(
+                            SelectFormField::new(
+                                "llm_provider",
+                                &llm_provider_prompt,
+                                llm_providers_vec,
+                            )
+                            .default(default_idx),
+                        )
                     })
-                    .step_if("llm_provider", "openai", |f| {
-                        let mut form =
-                            f.add_text("openai_key", openai_key_prompt).allow_empty(true);
+                    .step_if("llm_provider", "openai", |s| {
+                        let mut key_field =
+                            InputFormField::new("openai_key", openai_key_prompt).allow_empty(true);
                         if let Some(ref key) = existing.openai.key {
-                            form = form.default(key.clone());
+                            key_field = key_field.default(key.clone());
                         }
-                        form.add_text("openai_model", openai_model_prompt)
+                        let model_field = InputFormField::new("openai_model", openai_model_prompt)
                             .allow_empty(true)
-                            .default(openai_model_default)
+                            .default(openai_model_default);
+                        s.add_input(key_field).add_input(model_field)
                     })
-                    .step_if("llm_provider", "deepseek", |f| {
-                        let mut form =
-                            f.add_text("deepseek_key", deepseek_key_prompt).allow_empty(true);
+                    .step_if("llm_provider", "deepseek", |s| {
+                        let mut key_field =
+                            InputFormField::new("deepseek_key", deepseek_key_prompt)
+                                .allow_empty(true);
                         if let Some(ref key) = existing.deepseek.key {
-                            form = form.default(key.clone());
+                            key_field = key_field.default(key.clone());
                         }
-                        form.add_text("deepseek_model", deepseek_model_prompt)
-                            .allow_empty(true)
-                            .default(deepseek_model_default)
+                        let model_field =
+                            InputFormField::new("deepseek_model", deepseek_model_prompt)
+                                .allow_empty(true)
+                                .default(deepseek_model_default);
+                        s.add_input(key_field).add_input(model_field)
                     })
-                    .step_if("llm_provider", "proxy", |f| {
-                        let mut form = f.add_text("proxy_url", proxy_url_prompt);
+                    .step_if("llm_provider", "proxy", |s| {
+                        let mut url_field = InputFormField::new("proxy_url", proxy_url_prompt);
                         if has_existing_proxy_url {
-                            form = form.allow_empty(true);
+                            url_field = url_field.allow_empty(true);
                             if let Some(ref url) = existing.proxy.url {
-                                form = form.default(url.clone());
+                                url_field = url_field.default(url.clone());
                             }
                         } else {
-                            form = form.required();
+                            url_field = url_field.required();
                         }
-                        form = form.validate(move |input: &str| {
-                            if input.is_empty() && !has_existing_proxy_url {
+                        let has_existing_proxy_url_clone = has_existing_proxy_url;
+                        url_field = url_field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_url_clone {
                                 Err("LLM proxy URL is required".to_string())
                             } else {
                                 Ok(())
                             }
-                        });
+                        }));
 
-                        let mut form = form.add_text("proxy_key", proxy_key_prompt);
+                        let mut key_field = InputFormField::new("proxy_key", proxy_key_prompt);
                         if has_existing_proxy_key {
-                            form = form.allow_empty(true);
-                            // 不设置默认值，这样用户按 Enter 时会保留现有值（显示 *** 而不是明文）
+                            key_field = key_field.allow_empty(true);
                         } else {
-                            form = form.required();
+                            key_field = key_field.required();
                         }
-                        form = form.validate(move |input: &str| {
-                            if input.is_empty() && !has_existing_proxy_key {
+                        let has_existing_proxy_key_clone = has_existing_proxy_key;
+                        key_field = key_field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_key_clone {
                                 Err("LLM proxy key is required".to_string())
                             } else {
                                 Ok(())
                             }
-                        });
+                        }));
 
-                        let mut form = form.add_text("proxy_model", proxy_model_prompt);
+                        let mut model_field =
+                            InputFormField::new("proxy_model", proxy_model_prompt);
                         if has_existing_proxy_model {
-                            form = form.allow_empty(true);
+                            model_field = model_field.allow_empty(true);
                             if let Some(ref model) = existing.proxy.model {
-                                form = form.default(model.clone());
+                                model_field = model_field.default(model.clone());
                             }
                         } else {
-                            form = form.required();
+                            model_field = model_field.required();
                             let default_model = LLMSettings::default_model("proxy");
-                            form = form.default(default_model);
+                            model_field = model_field.default(default_model);
                         }
-                        form.validate(move |input: &str| {
-                            if input.is_empty() && !has_existing_proxy_model {
+                        let has_existing_proxy_model_clone = has_existing_proxy_model;
+                        model_field = model_field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_model_clone {
                                 Err("Model is required for proxy provider".to_string())
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+
+                        s.add_input(url_field).add_input(key_field).add_input(model_field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // LLM output language (所有 provider 共享)
                         let language_display_names = get_supported_language_display_names();
                         let current_language = if !existing.language.is_empty() {
@@ -184,12 +205,19 @@ impl LLMSetupCommand {
                             .unwrap_or_else(|| language_display_names[0].clone());
                         let llm_language_prompt =
                             format!("Select LLM output language [current: {}]", current_language);
-                        f.add_selection(
-                            "llm_language_display",
-                            &llm_language_prompt,
-                            language_display_names,
+                        // 找到默认显示名称的索引
+                        let default_idx = language_display_names
+                            .iter()
+                            .position(|name| name == &default_display_name)
+                            .unwrap_or(0);
+                        s.add_select(
+                            SelectFormField::new(
+                                "llm_language_display",
+                                &llm_language_prompt,
+                                language_display_names,
+                            )
+                            .default(default_idx),
                         )
-                        .default(default_display_name)
                     })
                 },
                 GroupConfig::required().with_title("LLM/AI Configuration"),
@@ -198,8 +226,10 @@ impl LLMSetupCommand {
             .wrap_err("Failed to collect LLM configuration")?;
 
         // 从 form 结果中提取值
-        let llm_provider =
-            form_result.get_required("llm_provider").wrap_err("LLM provider is required")?;
+        // 注意：Select 字段现在返回选项值（String），而不是索引
+        let llm_provider = form_result
+            .get("llm_provider")
+            .ok_or_else(|| color_eyre::eyre::eyre!("LLM provider is required"))?;
 
         // 根据选择的 provider 处理配置
         match llm_provider.as_str() {

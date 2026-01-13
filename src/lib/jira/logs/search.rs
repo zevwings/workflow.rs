@@ -202,14 +202,15 @@ impl JiraLogs {
 
     /// 检测是否是新日志条目的开始
     fn is_new_log_entry(&self, line: &str) -> bool {
+        // 使用静态正则表达式避免重复编译
+        static API_LOG_ENTRY_PATTERN: OnceLock<Option<Regex>> = OnceLock::new();
+
         // flutter-api.log 格式：以 💡 开头
         if line.starts_with("💡") {
             return true;
         }
 
         // api.log 格式：包含 `#<数字> <HTTP方法>` 的模式
-        // 使用静态正则表达式避免重复编译
-        static API_LOG_ENTRY_PATTERN: OnceLock<Option<Regex>> = OnceLock::new();
         let api_log_entry_pattern = API_LOG_ENTRY_PATTERN
             .get_or_init(|| Regex::new(r"#\d+\s+(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)").ok());
 

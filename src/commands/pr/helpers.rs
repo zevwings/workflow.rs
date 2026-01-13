@@ -2,7 +2,6 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::interactive::spinner;
 use crate::base::util::{Browser, Clipboard};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
@@ -346,8 +345,8 @@ pub fn ensure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>
 ///
 /// 返回用户输入的 PR 标题。
 pub fn input_pull_request_title() -> Result<String> {
-    let title = InputDialog::new("PR title (required)")
-        .with_validator(|input: &str| {
+    let title = crate::input!("PR title (required)")
+        .validator(|input: &str| {
             if input.trim().is_empty() {
                 Err("PR title is required and cannot be empty".to_string())
             } else {
@@ -374,8 +373,7 @@ pub fn resolve_description(description: Option<String>) -> Result<String> {
     if let Some(desc) = description {
         Ok(desc)
     } else {
-        let desc = InputDialog::new("Short description (optional)")
-            .allow_empty(true)
+        let desc = crate::input!("Short description (optional)")
             .prompt()
             .wrap_err("Failed to get description")?;
         Ok(desc)
@@ -392,9 +390,9 @@ pub fn resolve_description(description: Option<String>) -> Result<String> {
 pub fn select_change_types() -> Result<Vec<bool>> {
     info!("Types of changes:");
     let options: Vec<&str> = TYPES_OF_CHANGES.to_vec();
-    let selected_items = MultiSelectDialog::new(
+    let selected_items = crate::multiselect!(
         "Select change types (use space to select, enter to confirm)",
-        options,
+        options
     )
     .prompt()
     .wrap_err("Failed to select change types")?;
@@ -495,9 +493,8 @@ pub fn resolve_title(
     if let Some(t) = title {
         if confirm_if_provided {
             success!("Using source PR title: {}", t);
-            let use_source = ConfirmDialog::new(format!("Use source PR title: '{}'?", t))
-                .with_default(true)
-                .prompt()?;
+            let use_source =
+                crate::confirm!("Use source PR title: '{}'?", t).default(true).prompt()?;
             if use_source {
                 return Ok(t);
             }

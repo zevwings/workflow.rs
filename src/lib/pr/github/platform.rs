@@ -390,6 +390,11 @@ impl PlatformProvider for GitHub {
 
     /// 添加评论到 Pull Request
     fn add_comment(&self, pull_request_id: &str, comment: &str) -> Result<()> {
+        #[derive(serde::Serialize)]
+        struct CommentRequest {
+            body: String,
+        }
+
         let (owner, repo_name) = Self::get_owner_and_repo()?;
         let pr_number =
             pull_request_id.parse::<u64>().wrap_err(validation_errors::INVALID_PR_NUMBER)?;
@@ -403,11 +408,6 @@ impl PlatformProvider for GitHub {
             repo_name,
             pr_number
         );
-
-        #[derive(serde::Serialize)]
-        struct CommentRequest {
-            body: String,
-        }
 
         let request = CommentRequest {
             body: comment.to_string(),
@@ -425,6 +425,12 @@ impl PlatformProvider for GitHub {
 
     /// 批准 Pull Request
     fn approve_pull_request(&self, pull_request_id: &str) -> Result<()> {
+        #[derive(serde::Serialize)]
+        struct ReviewRequest {
+            event: String,
+            body: String,
+        }
+
         let (owner, repo_name) = Self::get_owner_and_repo()?;
         let pr_number =
             pull_request_id.parse::<u64>().wrap_err(validation_errors::INVALID_PR_NUMBER)?;
@@ -450,12 +456,6 @@ impl PlatformProvider for GitHub {
             repo_name,
             pr_number
         );
-
-        #[derive(serde::Serialize)]
-        struct ReviewRequest {
-            event: String,
-            body: String,
-        }
 
         let request = ReviewRequest {
             event: pull_requests::APPROVE_EVENT.to_string(),
@@ -771,6 +771,7 @@ impl GitHub {
         pr_number: u64,
     ) -> Result<String> {
         const MAX_FILES: usize = 50; // 最多处理 50 个文件
+        const MAX_LINES: usize = 15000; // 限制总行数，留一些余量
 
         // 获取 PR files 列表
         let files = Self::get_pull_request_files_internal(&owner, &repo_name, pr_number)?;
@@ -794,7 +795,6 @@ impl GitHub {
         // 构建 diff 内容
         let mut diff_parts = Vec::new();
         let mut total_lines = 0;
-        const MAX_LINES: usize = 15000; // 限制总行数，留一些余量
 
         for file in files_to_process {
             // 如果文件有 patch 内容（小文件），直接使用

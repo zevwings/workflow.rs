@@ -5,23 +5,21 @@
 //! - 确认对话框（confirm）：Yes/No 选择
 //! - 单选对话框（select）：从选项列表中选择一个
 //! - 多选对话框（multiselect）：从选项列表中选择多个
-//! - 表单对话框（form）：组合多个字段的复杂表单
+//!
+//! 注意：表单对话框（form）已迁移到 `base::interactive::form`
 
 mod confirm;
 mod error; // 错误类型定义
-mod form;
+mod filter; // 模糊匹配过滤器
 mod input;
 mod multiselect;
 mod raw_mode; // 原始模式管理
 mod renderer; // 内部使用，不导出
 mod select;
 
-pub use confirm::{confirm, ConfirmBuilder};
+pub use confirm::ConfirmBuilder;
 pub use error::{PromptError, Result};
-pub use form::{
-    form, Condition, ConfirmFormField, FormBuilder, FormExecutor, FormResult, InputFormField,
-    MultiSelectFormField, NestedFormField, PasswordFormField, SelectFormField,
-};
-pub use input::{input, validators, InputBuilder, Validator};
-pub use multiselect::{multiselect, MultiSelectBuilder};
-pub use select::{select, SelectBuilder};
+pub use filter::FuzzyFilter;
+pub use input::{validators, InputBuilder, Validator};
+pub use multiselect::MultiSelectBuilder;
+pub use select::SelectBuilder;

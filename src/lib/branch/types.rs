@@ -2,7 +2,6 @@
 //!
 //! Defines branch types and provides selection functionality.
 
-use crate::base::dialog::SelectDialog;
 use crate::info;
 use crate::repo::config::RepoConfig;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
@@ -96,8 +95,8 @@ impl BranchType {
         let display_options: Vec<String> =
             options.iter().map(|ty| ty.display_name().to_string()).collect();
 
-        let selected = SelectDialog::new("选择分支类型 (Select branch type)", display_options)
-            .with_default(0) // Default to feature
+        let selected = crate::select!("选择分支类型 (Select branch type)", display_options)
+            .default(0) // Default to feature
             .prompt()
             .wrap_err("Failed to select branch type")?;
 

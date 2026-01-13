@@ -1,6 +1,5 @@
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::base::interactive::spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
@@ -18,7 +17,7 @@ use crate::pr::{
     map_branch_type_to_change_type_index, map_branch_type_to_change_types, TYPES_OF_CHANGES,
 };
 use crate::repo::RepoConfig;
-use crate::{br, info, success, warning};
+use crate::{br, info, spinner, success, warning};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -132,11 +131,10 @@ impl PullRequestCreateCommand {
                 Some(trimmed)
             }
         } else {
-            let input = InputDialog::new("Jira ticket (optional)")
-                .allow_empty(true)
+            let input_value = crate::input!("Jira ticket (optional)")
                 .prompt()
                 .wrap_err("Failed to get Jira ticket")?;
-            let trimmed = input.trim().to_string();
+            let trimmed = input_value.trim().to_string();
             if trimmed.is_empty() {
                 None
             } else {
@@ -194,7 +192,7 @@ impl PullRequestCreateCommand {
                             "Failed to generate branch name using LLM: {}, using JIRA summary slug",
                             e
                         );
-                        let issue = spinner(format!("Getting ticket info for {}...", ticket))
+                        let issue = spinner!("Getting ticket info for {}...", ticket)
                             .with(|| Jira::get_ticket_info(ticket))
                             .wrap_err_with(|| {
                                 format!("Failed to get ticket info for {}", ticket)
@@ -307,8 +305,8 @@ impl PullRequestCreateCommand {
                     ),
                 };
 
-                let confirmed = ConfirmDialog::new(&prompt_message)
-                    .with_default(true)
+                let confirmed = crate::confirm!(prompt_message)
+                    .default(true)
                     .prompt()
                     .wrap_err("Failed to confirm change type")?;
 
@@ -401,11 +399,8 @@ impl PullRequestCreateCommand {
         GitBranch::checkout_branch(default_branch)?;
 
         // 拉取最新的代码
-        spinner(format!(
-            "Pulling latest changes from '{}'...",
-            default_branch
-        ))
-        .with(|| GitBranch::pull(default_branch))?;
+        spinner!("Pulling latest changes from '{}'...", default_branch)
+            .with(|| GitBranch::pull(default_branch))?;
 
         // 检查目标分支是否存在，如果存在则报错（此方法应该创建新分支）
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(branch_name)
@@ -451,13 +446,9 @@ impl PullRequestCreateCommand {
         default_branch: &str,
     ) -> Result<(String, String)> {
         info!("Branch '{}' already exists on remote.", current_branch);
-        ConfirmDialog::new(format!(
-            "Create PR for current branch '{}'?",
-            current_branch
-        ))
-        .with_default(true)
-        .with_cancel_message("Operation cancelled.")
-        .prompt()?;
+        crate::confirm!("Create PR for current branch '{}'?", current_branch)
+            .default(true)
+            .prompt()?;
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -479,12 +470,11 @@ impl PullRequestCreateCommand {
             "Branch '{}' has commits but not pushed to remote.",
             current_branch
         );
-        ConfirmDialog::new(format!(
+        crate::confirm!(
             "Push and create PR for current branch '{}'?",
             current_branch
-        ))
-        .with_default(true)
-        .with_cancel_message("Operation cancelled.")
+        )
+        .default(true)
         .prompt()?;
 
         // 推送
@@ -542,11 +532,12 @@ impl PullRequestCreateCommand {
                     "You are on branch '{}' with uncommitted changes.",
                     current_branch
                 );
-                let should_use_current = ConfirmDialog::new(format!(
+                let should_use_current = crate::confirm!(
                     "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
-                    current_branch, branch_name
-                ))
-                .with_default(true)
+                    current_branch,
+                    branch_name
+                )
+                .default(true)
                 .prompt()?;
 
                 if should_use_current {

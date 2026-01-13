@@ -3,7 +3,6 @@
 //! 管理分支清理时的忽略列表，支持添加、移除、列出操作。
 //! 配置保存在个人偏好配置（~/.workflow/config/repository.toml）中，不提交到 Git。
 
-use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::git::BranchRow;
 use crate::repo::config::RepoConfig;
@@ -22,7 +21,7 @@ impl BranchIgnoreCommand {
         let branch_name = if let Some(name) = branch_name {
             name
         } else {
-            InputDialog::new("Enter branch name to add to ignore list")
+            crate::input!("Enter branch name to add to ignore list")
                 .prompt()
                 .wrap_err("Failed to read branch name")?
         };
@@ -85,9 +84,9 @@ impl BranchIgnoreCommand {
 
             // 使用 MultiSelect 让用户选择
             let options_vec: Vec<String> = options.to_vec();
-            let selected_branches = MultiSelectDialog::new(
+            let selected_branches = crate::multiselect!(
                 "Select branches to remove (space to toggle, Enter to confirm, Esc to cancel)",
-                options_vec,
+                options_vec
             )
             .prompt()
             .wrap_err("Failed to get user selection")?;
@@ -121,11 +120,7 @@ impl BranchIgnoreCommand {
                 "Confirm removing {} selected branch(es) from ignore list?",
                 selections.len()
             );
-            if !ConfirmDialog::new(&confirm_msg)
-                .with_default(false)
-                .with_cancel_message("Operation cancelled")
-                .prompt()?
-            {
+            if !crate::confirm!(confirm_msg).default(false).prompt()? {
                 return Ok(());
             }
 

@@ -1,10 +1,10 @@
-use crate::base::dialog::{ConfirmDialog, SelectDialog};
 use crate::base::interactive::spinner;
 use crate::commands::check;
 use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
+use crate::spinner;
 use crate::{br, error, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -281,10 +281,7 @@ impl PullRequestRebaseCommand {
         info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
             warning!("Pre-flight checks failed: {}", e);
-            ConfirmDialog::new("Continue anyway?")
-                .with_default(false)
-                .with_cancel_message("Operation cancelled by user")
-                .prompt()?;
+            crate::confirm!("Continue anyway?").default(false).prompt()?;
         }
 
         // 2. 获取当前分支
@@ -325,19 +322,12 @@ impl PullRequestRebaseCommand {
                 "Rebasing commits from '{}' (excluding '{}' changes) onto '{}'",
                 current_branch, base_branch, target_branch
             );
-            spinner(format!(
-                "Rebasing '{}' onto '{}'...",
-                current_branch, target_branch
-            ))
-            .with(|| {
+            spinner!("Rebasing '{}' onto '{}'...", current_branch, target_branch).with(|| {
                 GitBranch::rebase_onto_with_upstream(&target_branch, base_branch, &current_branch)
             })
         } else {
-            spinner(format!(
-                "Rebasing '{}' onto '{}'...",
-                current_branch, target_branch
-            ))
-            .with(|| GitBranch::rebase_onto(&target_branch))
+            spinner!("Rebasing '{}' onto '{}'...", current_branch, target_branch)
+                .with(|| GitBranch::rebase_onto(&target_branch))
         };
 
         // 9. 处理 rebase 结果
@@ -409,8 +399,8 @@ impl PullRequestRebaseCommand {
                 "Stash changes and continue".to_string(),
                 "Abort operation".to_string(),
             ];
-            let selected = SelectDialog::new("How would you like to proceed?", options)
-                .with_default(0)
+            let selected = crate::select!("How would you like to proceed?", options)
+                .default(0)
                 .prompt()
                 .wrap_err("Failed to get user choice")?;
             let choice = if selected == "Stash changes and continue" {
@@ -480,22 +470,19 @@ impl PullRequestRebaseCommand {
         );
 
         // 提示用户确认
-        ConfirmDialog::new(format!(
-            "Update PR #{} base branch to '{}'?",
-            pr_id, target_branch
-        ))
-        .with_default(true)
-        .with_cancel_message("PR base update cancelled by user")
-        .prompt()?;
+        crate::confirm!("Update PR #{} base branch to '{}'?", pr_id, target_branch)
+            .default(true)
+            .prompt()?;
 
         // 创建 PR provider
         let provider = create_provider_auto()?;
 
         // 更新 PR base
-        spinner(format!(
+        spinner!(
             "Updating PR #{} base branch to '{}'...",
-            pr_id, target_branch
-        ))
+            pr_id,
+            target_branch
+        )
         .with(|| provider.update_pr_base(&pr_id, target_branch))
         .wrap_err("Failed to update PR base branch")?;
 

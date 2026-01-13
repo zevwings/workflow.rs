@@ -3,7 +3,6 @@
 //! 支持直接删除和交互式多选删除别名。
 
 use crate::base::alias::AliasManager;
-use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -37,7 +36,7 @@ impl AliasRemoveCommand {
                 .map(|(alias_name, command)| format!("{} = {}", alias_name, command))
                 .collect();
 
-            let selected = MultiSelectDialog::new("Select aliases to remove", options)
+            let selected = crate::multiselect!("Select aliases to remove", options)
                 .prompt()
                 .wrap_err("Failed to select aliases")?;
 
@@ -62,11 +61,11 @@ impl AliasRemoveCommand {
         }
 
         // 确认删除
-        let confirmed = ConfirmDialog::new(format!(
+        let confirmed = crate::confirm!(
             "Are you sure you want to remove {} alias/aliases?",
             names_to_remove.len()
-        ))
-        .with_default(false)
+        )
+        .default(false)
         .prompt()
         .wrap_err("Failed to get user confirmation")?;
 
@@ -96,8 +95,8 @@ impl AliasRemoveCommand {
             success!("Successfully removed {} alias/aliases", removed_count);
 
             // 询问是否更新补全脚本
-            let should_update = ConfirmDialog::new("Update completion scripts?")
-                .with_default(true)
+            let should_update = crate::confirm!("Update completion scripts?")
+                .default(true)
                 .prompt()
                 .unwrap_or(false);
 

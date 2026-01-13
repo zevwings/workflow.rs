@@ -1,9 +1,9 @@
 use crate::base::constants::messages::log;
-use crate::base::dialog::SelectDialog;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::LogLevel;
 use crate::jira::config::ConfigManager;
+use crate::select;
 use crate::{br, info, success};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
@@ -24,15 +24,16 @@ impl LogCommand {
         let current_idx =
             log_levels.iter().position(|&level| level == current_level_str).unwrap_or(2); // 默认为 info
 
-        // 创建提示信息
-        let prompt = format!("Select log level [current: {}]", current_level_str);
-
         // 显示选择菜单
         let log_levels_vec: Vec<&str> = log_levels.to_vec();
-        let selected_level_str = SelectDialog::new(&prompt, log_levels_vec)
-            .with_default(current_idx)
-            .prompt()
-            .wrap_err("Failed to select log level")?;
+        let selected_level_str = select!(
+            "Select log level [current: {}]",
+            current_level_str,
+            log_levels_vec
+        )
+        .default(current_idx)
+        .prompt()
+        .wrap_err("Failed to select log level")?;
         let selected_level = selected_level_str.parse::<LogLevel>().map_err(|e| eyre!("{}", e))?;
 
         // 设置日志级别（内存中）
@@ -128,11 +129,10 @@ impl LogCommand {
 
         let current_idx = if current_value { 0 } else { 1 };
 
-        let selected_option =
-            SelectDialog::new("Select trace console output mode", options.clone())
-                .with_default(current_idx)
-                .prompt()
-                .wrap_err("Failed to select trace console option")?;
+        let selected_option = crate::select!("Select trace console output mode", options.clone())
+            .default(current_idx)
+            .prompt()
+            .wrap_err("Failed to select trace console option")?;
 
         let selected_idx = options.iter().position(|&opt| opt == selected_option).unwrap_or(1);
 

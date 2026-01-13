@@ -37,11 +37,11 @@ impl Style {
 
     /// 应用样式到文本
     pub fn apply(&self, text: &str, enable_color: bool) -> String {
+        use crossterm::style::Stylize;
+
         if !enable_color {
             return text.to_string();
         }
-
-        use crossterm::style::Stylize;
         let mut styled = text.stylize();
 
         if let Some(fg) = self.foreground {

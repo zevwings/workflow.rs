@@ -2,7 +2,6 @@
 //!
 //! Clean local branches, keeping main/master, develop, current branch, and branches in ignore list.
 
-use crate::base::dialog::ConfirmDialog;
 use crate::commands::check;
 use crate::git::{GitBranch, GitRepo, GitTag};
 use crate::repo::config::RepoConfig;
@@ -103,10 +102,7 @@ impl RepoCleanCommand {
             merged_branches.len(),
             unmerged_branches.len()
         );
-        ConfirmDialog::new(&prompt)
-            .with_default(false)
-            .with_cancel_message("Operation cancelled")
-            .prompt()?;
+        crate::confirm!(prompt).default(false).prompt()?;
 
         // 12. 删除已合并分支
         let mut deleted_count = 0;
@@ -132,7 +128,7 @@ impl RepoCleanCommand {
                 "There are {} unmerged branch(es), force delete them?",
                 unmerged_branches.len()
             );
-            if ConfirmDialog::new(&prompt).with_default(false).prompt()? {
+            if crate::confirm!(prompt).default(false).prompt()? {
                 for branch in &unmerged_branches {
                     match GitBranch::delete(branch, true) {
                         Ok(()) => {
@@ -204,10 +200,7 @@ impl RepoCleanCommand {
             "Are you sure you want to delete {} local-only tag(s)?",
             local_only_tags.len()
         );
-        ConfirmDialog::new(&prompt)
-            .with_default(false)
-            .with_cancel_message("Tag cleanup cancelled")
-            .prompt()?;
+        crate::confirm!(prompt).default(false).prompt()?;
 
         // 删除本地 tag
         let mut deleted_count = 0;

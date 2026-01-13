@@ -1,7 +1,6 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::base::dialog::{ConfirmDialog, SelectDialog};
 use crate::base::interactive::spinner;
 use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::base::settings::paths::Paths;
@@ -158,12 +157,10 @@ impl GitHubCommand {
             br!();
 
             // 询问是否要将新账号设为当前账号
-            let should_set_current = ConfirmDialog::new(format!(
-                "Set '{}' as the current GitHub account?",
-                account_name
-            ))
-            .with_default(false)
-            .prompt()?;
+            let should_set_current =
+                crate::confirm!("Set '{}' as the current GitHub account?", account_name)
+                    .default(false)
+                    .prompt()?;
 
             if should_set_current {
                 let config_path = Paths::workflow_config()?;
@@ -209,8 +206,8 @@ impl GitHubCommand {
 
         let account_names_vec: Vec<String> = account_names.to_vec();
         let selected_account =
-            SelectDialog::new("Select account to remove", account_names_vec.clone())
-                .with_default(default_index)
+            crate::select!("Select account to remove", account_names_vec.clone())
+                .default(default_index)
                 .prompt()
                 .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
@@ -221,11 +218,11 @@ impl GitHubCommand {
         let account_name = account_names[selection].clone();
 
         // 确认删除
-        if !ConfirmDialog::new(format!(
+        if !crate::confirm!(
             "Are you sure you want to remove account '{}'?",
             account_name
-        ))
-        .with_default(false)
+        )
+        .default(false)
         .prompt()?
         {
             info!("Operation cancelled.");
@@ -331,8 +328,8 @@ impl GitHubCommand {
 
         let account_names_vec: Vec<String> = account_names.to_vec();
         let selected_account =
-            SelectDialog::new("Select account to switch to", account_names_vec.clone())
-                .with_default(default_index)
+            crate::select!("Select account to switch to", account_names_vec.clone())
+                .default(default_index)
                 .prompt()
                 .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
@@ -385,8 +382,8 @@ impl GitHubCommand {
 
         let account_names_vec: Vec<String> = account_names.to_vec();
         let selected_account =
-            SelectDialog::new("Select account to update", account_names_vec.clone())
-                .with_default(default_index)
+            crate::select!("Select account to update", account_names_vec.clone())
+                .default(default_index)
                 .prompt()
                 .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec

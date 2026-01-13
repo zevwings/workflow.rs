@@ -54,14 +54,7 @@ impl CommandsConfig {
     ///
     /// 如果配置文件读取失败，返回相应的错误信息。
     pub fn get_common_commands() -> Result<Vec<String>> {
-        // 1. 优先从 commands.toml 配置文件读取
-        if let Ok(config) = Self::load() {
-            if !config.common_commands.is_empty() {
-                return Ok(config.common_commands);
-            }
-        }
-
-        // 2. 使用硬编码的默认常用命令列表
+        // 硬编码的默认常用命令列表
         const DEFAULT_COMMON_COMMANDS: &[&str] = &[
             "pr create",
             "pr merge",
@@ -79,6 +72,14 @@ impl CommandsConfig {
             "commit reword",
         ];
 
+        // 1. 优先从 commands.toml 配置文件读取
+        if let Ok(config) = Self::load() {
+            if !config.common_commands.is_empty() {
+                return Ok(config.common_commands);
+            }
+        }
+
+        // 2. 使用硬编码的默认常用命令列表
         Ok(DEFAULT_COMMON_COMMANDS.iter().map(|s| s.to_string()).collect())
     }
 }

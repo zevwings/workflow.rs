@@ -726,3 +726,29 @@ fn format_bytes(bytes: u64) -> String {
 pub fn progress_bar(message: impl Into<String>) -> ProgressBarBuilder {
     ProgressBarBuilder::new(message)
 }
+
+/// 格式化进度条宏
+///
+/// 提供格式化字符串的便捷方式，避免手动使用 `format!`。
+/// 使用 `progress!` 作为宏名，与 `spinner!` 保持一致。
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use workflow::progress;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let pb = progress!("Downloading {}...", "file.zip")
+///     .with_total(100)
+///     .start();
+/// // 使用进度条
+/// pb.finish_with_message("Download completed!");
+/// # Ok(())
+/// # }
+/// ```
+#[macro_export]
+macro_rules! progress {
+    ($($arg:tt)*) => {
+        $crate::base::interactive::output::progress_bar(format!($($arg)*))
+    };
+}

@@ -1,5 +1,4 @@
 use crate::base::constants::errors::input_reading;
-use crate::base::dialog::InputDialog;
 use crate::base::interactive::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
@@ -18,7 +17,7 @@ impl DownloadCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+            crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
                 .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
         };

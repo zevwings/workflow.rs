@@ -1,6 +1,7 @@
-use crate::base::interactive::{spinner, Progress};
+use crate::base::interactive::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
+use crate::spinner;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use std::sync::{Arc, Mutex};
@@ -17,10 +18,9 @@ impl AttachmentsCommand {
         let jira_id = get_jira_id(jira_id, None)?;
 
         // 先获取附件列表以确定总数（使用 Spinner 显示加载状态）
-        let attachments =
-            spinner(format!("Getting attachments info for {}...", jira_id)).with(|| {
-                Jira::get_attachments(&jira_id).wrap_err("Failed to get attachments from Jira")
-            })?;
+        let attachments = spinner!("Getting attachments info for {}...", jira_id).with(|| {
+            Jira::get_attachments(&jira_id).wrap_err("Failed to get attachments from Jira")
+        })?;
         let total_files = attachments.len() as u64;
 
         if total_files == 0 {

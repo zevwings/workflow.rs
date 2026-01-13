@@ -18,13 +18,13 @@
 //! use workflow::base::interactive::*;
 //!
 //! fn main() -> Result<()> {
-//!     // 输入提示
-//!     let name = input("请输入您的姓名")
+//!     // 输入提示（使用宏）
+//!     let name = input!("请输入您的姓名")
 //!         .default("John Doe")
 //!         .prompt()?;
 //!
-//!     // 确认提示
-//!     let confirmed = confirm("是否继续？")
+//!     // 确认提示（使用宏）
+//!     let confirmed = confirm!("是否继续？")
 //!         .default(true)
 //!         .prompt()?;
 //!
@@ -37,16 +37,20 @@
 //! }
 //! ```
 
-mod dialog; // 交互式对话框（input, confirm, select, multiselect, form）
+pub mod dialog; // 交互式对话框（input, confirm, select, multiselect）
+pub mod form; // 表单构建器（FormBuilder, FormResult）
 mod output; // 输出功能（message, table, spinner）
 mod style;
 
 // 重新导出公共 API（仅导出外部使用的 API，内部实现不导出）
+// 注意：confirm, input, select, multiselect 现在只通过宏使用（confirm!, input!, select!, multiselect!）
 pub use dialog::{
-    confirm, form, input, multiselect, select, validators, Condition, ConfirmBuilder,
-    ConfirmFormField, FormBuilder, FormExecutor, FormResult, InputBuilder, InputFormField,
-    MultiSelectBuilder, MultiSelectFormField, NestedFormField, PasswordFormField, PromptError,
-    Result, SelectBuilder, SelectFormField, Validator,
+    validators, ConfirmBuilder, InputBuilder, MultiSelectBuilder, PromptError, Result,
+    SelectBuilder, Validator,
+};
+pub use form::{
+    form, Condition, ConfirmFormField, FormBuilder, FormExecutor, FormResult, GroupConfig,
+    InputFormField, MultiSelectFormField, NestedFormField, PasswordFormField, SelectFormField,
 };
 pub use output::{
     progress_bar, spinner, table, Alignment, Message, MessageRef, Progress, ProgressBar,

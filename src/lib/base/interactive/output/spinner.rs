@@ -372,3 +372,28 @@ fn format_spinner_text(
 pub fn spinner(message: impl Into<String>) -> SpinnerBuilder {
     SpinnerBuilder::new(message)
 }
+
+/// 格式化加载指示器宏
+///
+/// 提供格式化字符串的便捷方式，避免手动使用 `format!`。
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use workflow::spinner;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// spinner!("Getting ticket info for {}...", "PROJ-123")
+///     .with(|| {
+///         // 执行操作
+///         Ok(())
+///     })?;
+/// # Ok(())
+/// # }
+/// ```
+#[macro_export]
+macro_rules! spinner {
+    ($($arg:tt)*) => {
+        $crate::base::interactive::spinner(format!($($arg)*))
+    };
+}

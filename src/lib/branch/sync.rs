@@ -3,11 +3,10 @@
 //! This module provides the core branch synchronization functionality,
 //! which can be used by both `branch sync` and `pr sync` commands.
 
-use crate::base::dialog::{ConfirmDialog, SelectDialog};
 use crate::base::interactive::spinner;
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::{br, error, info, success, warning};
+use crate::{br, error, info, spinner, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 源分支信息
@@ -175,8 +174,8 @@ impl BranchSync {
                 "Stash changes and continue".to_string(),
                 "Abort operation".to_string(),
             ];
-            let selected = SelectDialog::new("How would you like to proceed?", options)
-                .with_default(0)
+            let selected = crate::select!("How would you like to proceed?", options)
+                .default(0)
                 .prompt()
                 .wrap_err("Failed to get user choice")?;
             let choice = if selected == "Stash changes and continue" {
@@ -263,11 +262,10 @@ impl BranchSync {
     ) -> Result<bool> {
         match strategy {
             SyncStrategy::Merge(merge_strategy) => {
-                let merge_result = spinner(format!(
-                    "Merging '{}' into '{}'...",
-                    source_branch, current_branch
-                ))
-                .with(|| GitBranch::merge_branch(&source_branch_info.merge_ref, merge_strategy));
+                let merge_result =
+                    spinner!("Merging '{}' into '{}'...", source_branch, current_branch).with(
+                        || GitBranch::merge_branch(&source_branch_info.merge_ref, merge_strategy),
+                    );
 
                 // 如果合并失败，恢复 stash（如果有）
                 if merge_result.is_err() && has_stashed {
@@ -302,11 +300,9 @@ impl BranchSync {
             }
             SyncStrategy::Rebase => {
                 // 执行 rebase
-                let rebase_result = spinner(format!(
-                    "Rebasing '{}' onto '{}'...",
-                    current_branch, source_branch
-                ))
-                .with(|| GitBranch::rebase_onto(&source_branch_info.merge_ref));
+                let rebase_result =
+                    spinner!("Rebasing '{}' onto '{}'...", current_branch, source_branch)
+                        .with(|| GitBranch::rebase_onto(&source_branch_info.merge_ref));
 
                 // 如果 rebase 失败，恢复 stash（如果有）
                 if rebase_result.is_err() && has_stashed {
@@ -353,10 +349,7 @@ impl BranchSync {
             format!("Push '{}' to remote?", result.current_branch)
         };
 
-        let should_push = ConfirmDialog::new(&push_message)
-            .with_default(true)
-            .with_cancel_message("Push cancelled by user")
-            .prompt()?;
+        let should_push = crate::confirm!(push_message).default(true).prompt()?;
 
         if should_push {
             Self::push_after_sync(result)?;

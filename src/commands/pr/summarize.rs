@@ -18,6 +18,7 @@ use crate::info;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::pr::llm::{FileSummaryGenerator, SummaryGenerator};
 use crate::pr::platform::create_provider_auto;
+use crate::spinner;
 use crate::success;
 
 /// PR 总结命令
@@ -58,7 +59,7 @@ impl SummarizeCommand {
         };
 
         // 获取 PR 标题
-        let pr_title = spinner(format!("Fetching PR #{} information...", pr_id))
+        let pr_title = spinner!("Fetching PR #{} information...", pr_id)
             .with(|| provider.get_pull_request_title(&pr_id))
             .wrap_err("Failed to get PR title")?;
 

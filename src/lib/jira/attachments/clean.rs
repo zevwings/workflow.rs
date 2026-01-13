@@ -12,7 +12,6 @@ use std::path::{Path, PathBuf};
 use color_eyre::{eyre::WrapErr, Result};
 use walkdir::WalkDir;
 
-use crate::base::dialog::ConfirmDialog;
 use crate::base::format::DisplayFormatter;
 use crate::trace_info;
 
@@ -147,14 +146,13 @@ impl AttachmentCleaner {
             });
         }
 
-        let confirmed = ConfirmDialog::new(format!(
+        let confirmed = crate::confirm!(
             "Are you sure you want to delete {}? This will remove {} files ({}).",
             dir_name,
             file_count,
             DisplayFormatter::size(size)
-        ))
-        .with_default(false)
-        .with_cancel_message("Operation cancelled")
+        )
+        .default(false)
         .prompt()?;
 
         if !confirmed {

@@ -7,11 +7,10 @@
 //! - Auto-create branch if not exists (with user confirmation)
 //! - Auto-stash uncommitted changes
 
-use crate::base::dialog::ConfirmDialog;
 use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitStash};
-use crate::{info, success};
+use crate::{confirm, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Branch switch command
@@ -50,12 +49,9 @@ impl SwitchCommand {
         // 确认分支创建
         let should_create = if !exists_local && !exists_remote {
             // Branch does not exist, prompt user to confirm creation
-            ConfirmDialog::new(format!(
-                "Branch '{}' does not exist. Create it?",
-                target_branch
-            ))
-            .prompt()
-            .wrap_err("Failed to get user confirmation")?
+            confirm!("Branch '{}' does not exist. Create it?", target_branch)
+                .prompt()
+                .wrap_err("Failed to get user confirmation")?
         } else {
             false
         };

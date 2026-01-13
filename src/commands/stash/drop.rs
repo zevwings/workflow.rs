@@ -2,7 +2,6 @@
 //!
 //! Delete one or more stash entries.
 
-use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::git::GitStash;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
@@ -36,7 +35,7 @@ impl StashDropCommand {
             .collect();
 
         // 多选列表
-        let selected = MultiSelectDialog::new("Select stash entries to delete", options)
+        let selected = crate::multiselect!("Select stash entries to delete", options)
             .prompt()
             .wrap_err("Failed to select stash entries")?;
 
@@ -63,11 +62,11 @@ impl StashDropCommand {
         }
 
         // 确认删除
-        let confirmed = ConfirmDialog::new(format!(
+        let confirmed = crate::confirm!(
             "Are you sure you want to delete {} stash entry/entries?",
             stash_refs.len()
-        ))
-        .with_default(false)
+        )
+        .default(false)
         .prompt()
         .wrap_err("Failed to get user confirmation")?;
 

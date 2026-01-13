@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use clap_complete::shells::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
 use crate::{br, debug, info, success, warning, Completion};
@@ -185,9 +184,9 @@ impl CompletionCommand {
 
         // 使用 MultiSelect 让用户选择
         let options_vec: Vec<String> = options.to_vec();
-        let selected_items = MultiSelectDialog::new(
+        let selected_items = crate::multiselect!(
             "Select completion to remove (use space to select, Enter to confirm, Esc to cancel)",
-            options_vec,
+            options_vec
         )
         .prompt()
         .wrap_err("Failed to get user selection")?;
@@ -221,11 +220,7 @@ impl CompletionCommand {
             "Confirm deletion of {} selected completion configurations?",
             selections.len()
         );
-        if !ConfirmDialog::new(&confirm_msg)
-            .with_default(false)
-            .with_cancel_message("Operation cancelled")
-            .prompt()?
-        {
+        if !crate::confirm!(confirm_msg).default(false).prompt()? {
             return Ok(());
         }
 
