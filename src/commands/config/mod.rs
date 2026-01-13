@@ -6,8 +6,6 @@ pub mod export;
 pub mod helpers;
 pub mod import;
 pub mod log;
-pub mod setup;
-pub mod show;
 pub mod validate;
 
 // 系统环境管理

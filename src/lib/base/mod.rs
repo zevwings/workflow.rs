@@ -29,6 +29,7 @@ pub mod prompt;
 pub mod settings;
 pub mod shell;
 pub mod util;
+pub mod verify;
 
 // 重新导出常用类型，方便使用
 pub use alias::{AliasManager, CommandsConfig};

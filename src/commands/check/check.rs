@@ -1,12 +1,12 @@
-use crate::base::constants::{errors::http_client, git::check_errors, messages::log};
-use crate::base::http::client::HttpClient;
-use crate::base::http::{HttpMethod, RequestConfig};
-use crate::git::{GitCommit, GitRepo};
-use crate::{br, error, info, success};
-use color_eyre::{eyre::WrapErr, Result};
+use crate::base::constants::messages::log;
+use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::base::settings::paths::Paths;
+use crate::base::settings::settings::Settings;
+use crate::base::settings::table::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
+use crate::base::verify::{ConfigVerifier, EnvironmentVerifier};
+use crate::{br, error, info, success, warning};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use duct::cmd;
-use serde_json::Value;
-use std::time::Duration;
 
 /// 环境检查命令
 #[allow(dead_code)]
@@ -14,56 +14,180 @@ pub struct CheckCommand;
 
 #[allow(dead_code)]
 impl CheckCommand {
-    /// 执行综合环境检查
+    /// 执行综合环境检查（类似 Go 版本的 check 命令）
     ///
-    /// 检查 Git 仓库状态和到 GitHub 的网络连接。
+    /// 包括：
+    /// - 显示配置信息
+    /// - 环境检查（Git、网络、配置文件权限）
+    /// - 配置验证（Log、LLM、Jira、GitHub）
     pub fn run_all() -> Result<()> {
-        info!("Running environment checks...");
+        info!("Starting check command");
         br!();
 
-        // 1. 检查 Git 状态
-        info!("[1/2] Checking Git repository status...");
-        if !GitRepo::is_git_repo() {
-            error!("Not in a Git repository");
-            color_eyre::eyre::bail!("{}", check_errors::NOT_GIT_REPO);
-        }
+        // 1. 显示配置信息
+        let workflow_config_path =
+            Paths::workflow_config().map_err(|_| eyre!("Failed to get workflow config path"))?;
 
-        let git_output = GitCommit::status().wrap_err("Failed to check git status")?;
-        if git_output.trim().is_empty() {
-            success!("Git repository is clean (no uncommitted changes)");
+        if workflow_config_path.exists() {
+            br!('=', 80, "Current Configuration");
+            br!();
+            info!("Workflow config: {:?}", workflow_config_path);
+            br!();
         } else {
-            info!("Git status:\n{}", git_output);
+            warning!("Config file not found");
+            br!();
         }
 
-        br!();
+        // 2. 环境检查
+        let env_result = EnvironmentVerifier::verify_all()?;
 
-        // 2. 检查网络连接
-        info!("[2/2] Checking network connection to GitHub...");
-        let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
-        let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
-        match client.stream(HttpMethod::Get, crate::git::github::BASE, config) {
-            Ok(response) => {
-                if response.status().is_success() {
-                    success!("GitHub network is available");
-                } else {
-                    error!(
-                        "GitHub network check failed (status: {})",
-                        response.status()
-                    );
-                    color_eyre::eyre::bail!("Network check failed");
-                }
-            }
-            Err(e) => {
-                error!("Failed to check network connection: {}", e);
-                error!(
-                "  This might be due to network issues, proxy settings, or firewall restrictions"
-            );
-                color_eyre::eyre::bail!("Network check failed: {}", e);
+        // 显示配置文件权限警告（如果有）
+        if let Some(warning_msg) = env_result.config_permissions_warning {
+            warning!("{}", warning_msg);
+            br!();
+        }
+
+        // 3. 配置验证（如果配置文件存在）
+        if workflow_config_path.exists() {
+            let settings = Settings::load();
+
+            // 检查是否有配置（检查关键配置项）
+            let has_config = settings.jira.email.is_some()
+                || settings.jira.api_token.is_some()
+                || !settings.github.accounts.is_empty()
+                || !settings.llm.openai.is_empty()
+                || !settings.llm.deepseek.is_empty()
+                || !settings.llm.proxy.is_empty();
+
+            if has_config {
+                // 逐个验证并展示结果
+                Self::verify_and_display_all(&settings)?;
             }
         }
 
         br!();
         success!("All checks passed");
+        Ok(())
+    }
+
+    /// 逐个验证并展示结果
+    pub fn verify_and_display_all(settings: &Settings) -> Result<()> {
+        // 1. 验证 Log 配置
+        br!();
+        info!("Verifying Log configuration...");
+        let log_config = ConfigVerifier::verify_log_config(&settings.log);
+        info!("Log Output Folder Name: {}", log_config.output_folder_name);
+        if let Some(ref dir) = log_config.download_base_dir {
+            info!("Download Base Dir: {}", dir);
+        }
+
+        // 2. 验证 LLM 配置
+        br!();
+        info!("Verifying LLM configuration...");
+        let llm_config = ConfigVerifier::verify_llm_config(&settings.llm);
+        let config_rows = vec![LLMConfigRow {
+            provider: llm_config.provider.clone(),
+            model: llm_config.model.clone(),
+            key: llm_config.key.clone(),
+            language: llm_config.language.clone(),
+        }];
+        TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).print()?;
+
+        // 3. 验证 Jira 配置
+        br!();
+        info!("Verifying Jira configuration...");
+        let jira_result = ConfigVerifier::verify_jira_config(&settings.jira)?;
+        if jira_result.configured {
+            if let Some(ref config) = jira_result.config {
+                let config_rows = vec![JiraConfigRow {
+                    email: config.email.clone(),
+                    service_address: config.service_address.clone(),
+                    api_token: config.api_token.clone(),
+                }];
+                TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).print();
+            }
+            if let Some(ref verification) = jira_result.verification {
+                match verification {
+                    crate::base::settings::settings::JiraVerificationStatus::Success {
+                        email,
+                        account_id,
+                    } => {
+                        success!(
+                            "Jira verified successfully! Email: {} (Account ID: {})",
+                            email,
+                            account_id
+                        );
+                    }
+                    crate::base::settings::settings::JiraVerificationStatus::Failed {
+                        reason,
+                        details,
+                    } => {
+                        warning!("{}", reason);
+                        for detail in details {
+                            info!("  {}", detail);
+                        }
+                    }
+                }
+            }
+        } else {
+            info!("No Jira configuration found.");
+        }
+
+        // 4. 验证 GitHub 配置
+        br!();
+        info!("Verifying GitHub configuration...");
+        let github_result = ConfigVerifier::verify_github_config(&settings.github)?;
+        if github_result.configured {
+            let account_rows: Vec<GitHubAccountRow> = github_result
+                .accounts
+                .iter()
+                .map(|acc| GitHubAccountRow {
+                    name: if acc.is_current {
+                        format!("{} (current)", acc.name)
+                    } else {
+                        acc.name.clone()
+                    },
+                    email: acc.email.clone(),
+                    token: acc.token.clone(),
+                    status: if acc.is_current {
+                        "Current".to_string()
+                    } else {
+                        "".to_string()
+                    },
+                    verification: acc.verification_status.clone(),
+                })
+                .collect();
+            TableBuilder::from_tabled(account_rows).with_style(TableStyle::Modern).print()?;
+
+            // 打印每个账号的详细错误信息（如果有）
+            for account in &github_result.accounts {
+                if let Some(ref error) = account.verification_error {
+                    info!("  {}: {}", account.name, error);
+                }
+            }
+
+            // 打印验证总结
+            let summary = &github_result.summary;
+            if summary.failed_accounts.is_empty() {
+                br!();
+                success!(
+                    "All {} GitHub account(s) verified successfully!",
+                    summary.total_count
+                );
+            } else {
+                warning!(
+                    "\nGitHub verification completed: {}/{} account(s) verified successfully",
+                    summary.success_count,
+                    summary.total_count
+                );
+                if !summary.failed_accounts.is_empty() {
+                    info!("  Failed accounts: {}", summary.failed_accounts.join(", "));
+                }
+            }
+        } else {
+            info!("No GitHub configuration found.");
+        }
+
         Ok(())
     }
 

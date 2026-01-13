@@ -1,6 +1,8 @@
 //! 表格渲染模块
 
 use crate::base::interactive::style::get_theme;
+use color_eyre::{eyre, Result};
+use std::io::Write;
 use unicode_width::UnicodeWidthStr;
 
 /// 对齐方式
@@ -247,6 +249,33 @@ impl TableBuilder {
         }
 
         output.join("\n")
+    }
+
+    /// 渲染并打印表格到标准输出
+    ///
+    /// 这个方法会直接打印表格，不需要手动调用 `println!`。
+    ///
+    /// # 错误处理
+    ///
+    /// 如果写入标准输出时发生错误，会返回 `Result::Err`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::base::interactive::{TableBuilder, TableStyle};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let table = TableBuilder::new(vec!["Name", "Age"])
+    ///     .add_row(vec!["Alice", "30"])
+    ///     .with_style(TableStyle::Modern);
+    /// table.print()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn print(&self) -> Result<()> {
+        let mut writer = std::io::stdout();
+        writeln!(writer, "{}", self.render()).map_err(|e| eyre::eyre!("IO error: {}", e))?;
+        Ok(())
     }
 
     fn calculate_column_widths(&self) -> Vec<usize> {

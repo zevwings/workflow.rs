@@ -37,6 +37,7 @@ pub struct SelectBuilder<T> {
     message: String,
     options: Vec<T>,
     default: Option<usize>,
+    result_title: Option<String>,
 }
 
 impl<T> SelectBuilder<T>
@@ -48,11 +49,18 @@ where
             message: message.into(),
             options,
             default: None,
+            result_title: None,
         }
     }
 
     pub fn default(mut self, index: usize) -> Self {
         self.default = Some(index);
+        self
+    }
+
+    /// 设置输入完成后显示的 title
+    pub fn result_title(mut self, title: impl Into<String>) -> Self {
+        self.result_title = Some(title.into());
         self
     }
 
@@ -253,9 +261,11 @@ where
                             let selected = self.options[original_index].clone();
                             let result_text = selected.to_string();
                             let has_search = !search_query.is_empty();
+                            // 使用 result_title（如果存在），否则使用 message
+                            let title_text = self.result_title.as_ref().unwrap_or(&self.message);
                             OptionListRenderer::clear_and_display_result_with_search(
                                 filtered_options.len(),
-                                &self.message,
+                                title_text,
                                 &result_text,
                                 &theme,
                                 has_search,

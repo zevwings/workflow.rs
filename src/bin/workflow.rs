@@ -12,7 +12,7 @@ use workflow::commands::branch::{
 };
 use workflow::commands::check::check;
 use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand, CommitSquashCommand};
-use workflow::commands::config::{completion, export, import, log, setup, show, validate};
+use workflow::commands::config::{completion, export, import, log, validate};
 use workflow::commands::github::github;
 use workflow::commands::jira::{
     AttachmentsCommand, ChangelogCommand, CleanCommand, CommentCommand, CommentsCommand,
@@ -28,6 +28,7 @@ use workflow::commands::pr::{
 };
 use workflow::commands::proxy::proxy;
 use workflow::commands::repo::{clean as repo_clean, setup as repo_setup, show as repo_show};
+use workflow::commands::setup;
 use workflow::commands::stash::{apply, drop, list as stash_list, pop, push};
 use workflow::commands::tag::TagDeleteCommand;
 
@@ -89,7 +90,6 @@ fn main() -> Result<()> {
         }
         // 配置管理命令
         Some(Commands::Config { subcommand }) => match subcommand {
-            Some(ConfigSubcommand::Show) => show::ConfigCommand::show()?,
             Some(ConfigSubcommand::Validate {
                 config_path,
                 fix,
@@ -131,7 +131,7 @@ fn main() -> Result<()> {
                 // 当没有子命令时，显示帮助信息
                 info!("Configuration Management");
                 info!("\nAvailable subcommands:");
-                info!("  workflow config show     - View current configuration");
+                info!("  workflow check           - View current configuration and run environment checks");
                 info!("  workflow config validate - Validate configuration file");
                 info!("  workflow config export   - Export configuration to a file");
                 info!("  workflow config import   - Import configuration from a file");

@@ -55,6 +55,7 @@ pub struct MultiSelectBuilder<T> {
     message: String,
     options: Vec<T>,
     default: Vec<usize>,
+    result_title: Option<String>,
 }
 
 impl<T> MultiSelectBuilder<T>
@@ -66,11 +67,18 @@ where
             message: message.into(),
             options,
             default: Vec::new(),
+            result_title: None,
         }
     }
 
     pub fn default(mut self, indices: Vec<usize>) -> Self {
         self.default = indices;
+        self
+    }
+
+    /// 设置输入完成后显示的 title
+    pub fn result_title(mut self, title: impl Into<String>) -> Self {
+        self.result_title = Some(title.into());
         self
     }
 
@@ -341,9 +349,11 @@ where
                             };
 
                             let has_search = !search_query.is_empty();
+                            // 使用 result_title（如果存在），否则使用 message
+                            let title_text = self.result_title.as_ref().unwrap_or(&self.message);
                             OptionListRenderer::clear_and_display_result_with_search(
                                 filtered_options.len(),
-                                &self.message,
+                                title_text,
                                 &result_text,
                                 &theme,
                                 has_search,

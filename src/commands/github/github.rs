@@ -57,13 +57,10 @@ impl GitHubCommand {
             .collect();
 
         // 使用表格显示
-        info!(
-            "{}",
-            TableBuilder::from_tabled(rows)
-                .with_title("GitHub Accounts")
-                .with_style(TableStyle::Modern)
-                .render()
-        );
+        TableBuilder::from_tabled(rows)
+            .with_title("GitHub Accounts")
+            .with_style(TableStyle::Modern)
+            .print()?;
 
         // 显示验证状态
         br!();

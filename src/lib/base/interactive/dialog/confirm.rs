@@ -13,6 +13,7 @@ use std::io::Write;
 pub struct ConfirmBuilder {
     message: String,
     default: Option<bool>,
+    result_title: Option<String>,
 }
 
 impl ConfirmBuilder {
@@ -20,11 +21,18 @@ impl ConfirmBuilder {
         Self {
             message: message.into(),
             default: None,
+            result_title: None,
         }
     }
 
     pub fn default(mut self, value: bool) -> Self {
         self.default = Some(value);
+        self
+    }
+
+    /// 设置输入完成后显示的 title
+    pub fn result_title(mut self, title: impl Into<String>) -> Self {
+        self.result_title = Some(title.into());
         self
     }
 
@@ -116,7 +124,9 @@ impl ConfirmBuilder {
 
         // 显示格式化的结果："> [title] yes" 或 "> [title] no"
         let prefix = theme.prefix.apply("> ", theme.enable_color);
-        let title = theme.title.apply(&self.message, theme.enable_color);
+        // 使用 result_title（如果存在），否则使用 message
+        let title_text = self.result_title.as_ref().unwrap_or(&self.message);
+        let title = theme.title.apply(title_text, theme.enable_color);
         let result_text = if value {
             theme.answer.apply("yes", theme.enable_color)
         } else {

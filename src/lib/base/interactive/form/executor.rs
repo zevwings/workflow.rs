@@ -185,9 +185,14 @@ impl FormExecutor {
             .copied()
             .unwrap_or(false);
 
-        let confirmed = crate::base::interactive::dialog::ConfirmBuilder::new(&field.prompt)
-            .default(default_value)
-            .prompt()?;
+        let mut builder = crate::base::interactive::dialog::ConfirmBuilder::new(&field.prompt)
+            .default(default_value);
+
+        if let Some(ref result_title) = field.result_title {
+            builder = builder.result_title(result_title);
+        }
+
+        let confirmed = builder.prompt()?;
 
         Ok(Box::new(confirmed))
     }
@@ -234,9 +239,17 @@ impl FormExecutor {
         field: &FormField,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
         let default_index = field.default_index.unwrap_or(0);
-        let selected = crate::select!(field.prompt.clone(), field.options.clone())
-            .default(default_index)
-            .prompt()?;
+        let mut builder = crate::base::interactive::dialog::SelectBuilder::new(
+            field.prompt.clone(),
+            field.options.clone(),
+        )
+        .default(default_index);
+
+        if let Some(ref result_title) = field.result_title {
+            builder = builder.result_title(result_title);
+        }
+
+        let selected = builder.prompt()?;
 
         // 返回选中的选项值（String），而不是索引，以兼容旧 API
         Ok(Box::new(selected))
@@ -247,12 +260,17 @@ impl FormExecutor {
         &self,
         field: &FormField,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
-        let selected = crate::base::interactive::dialog::MultiSelectBuilder::new(
+        let mut builder = crate::base::interactive::dialog::MultiSelectBuilder::new(
             &field.prompt,
             field.options.clone(),
         )
-        .default(field.default_selected.clone())
-        .prompt()?;
+        .default(field.default_selected.clone());
+
+        if let Some(ref result_title) = field.result_title {
+            builder = builder.result_title(result_title);
+        }
+
+        let selected = builder.prompt()?;
 
         // 找到选中项的索引列表
         let indices: Vec<usize> = selected
