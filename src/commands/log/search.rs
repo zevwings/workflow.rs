@@ -1,9 +1,8 @@
 use crate::base::constants::errors::input_reading;
-use crate::base::dialog::InputDialog;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
-use crate::{log_break, log_debug, log_message, log_success, log_warning};
+use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 搜索关键词命令
@@ -16,7 +15,7 @@ impl SearchCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+            crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
                 .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
         };
@@ -30,13 +29,13 @@ impl SearchCommand {
         let term = if let Some(t) = search_term {
             t
         } else {
-            InputDialog::new("Enter search term")
+            crate::input!("Enter search term")
                 .prompt()
                 .wrap_err("Failed to read search term")?
         };
 
         // 4. 调用库函数执行搜索
-        log_debug!("Searching for: '{}'...", term);
+        debug!("Searching for: '{}'...", term);
 
         // 同时搜索两个文件
         let (api_results, flutter_api_results) = logs
@@ -46,13 +45,13 @@ impl SearchCommand {
         let total_count = api_results.len() + flutter_api_results.len();
 
         if total_count == 0 {
-            log_warning!("No matches found for '{}'", term);
+            warning!("No matches found for '{}'", term);
             return Ok(());
         }
 
-        log_break!();
-        log_success!("Found {} matches:", total_count);
-        log_break!();
+        br!();
+        success!("Found {} matches:", total_count);
+        br!();
 
         // 构建表格数据
         let mut rows: Vec<SearchResultRow> = Vec::new();
@@ -81,9 +80,9 @@ impl SearchCommand {
 
         // 使用表格显示所有结果
         if !rows.is_empty() {
-            log_message!(
+            info!(
                 "{}",
-                TableBuilder::new(rows)
+                TableBuilder::from_tabled(rows)
                     .with_title("Search Results")
                     .with_style(TableStyle::Modern)
                     .render()

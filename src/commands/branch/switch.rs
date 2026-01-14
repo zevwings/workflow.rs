@@ -7,11 +7,10 @@
 //! - Auto-create branch if not exists (with user confirmation)
 //! - Auto-stash uncommitted changes
 
-use crate::base::dialog::ConfirmDialog;
 use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitStash};
-use crate::{log_info, log_success};
+use crate::{confirm, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Branch switch command
@@ -40,7 +39,7 @@ impl SwitchCommand {
         // Check if already on target branch
         let current_branch = GitBranch::current_branch()?;
         if current_branch == target_branch {
-            log_info!("Already on branch '{}'", target_branch);
+            info!("Already on branch '{}'", target_branch);
             return Ok(());
         }
 
@@ -50,12 +49,9 @@ impl SwitchCommand {
         // 确认分支创建
         let should_create = if !exists_local && !exists_remote {
             // Branch does not exist, prompt user to confirm creation
-            ConfirmDialog::new(format!(
-                "Branch '{}' does not exist. Create it?",
-                target_branch
-            ))
-            .prompt()
-            .wrap_err("Failed to get user confirmation")?
+            confirm!("Branch '{}' does not exist. Create it?", target_branch)
+                .prompt()
+                .wrap_err("Failed to get user confirmation")?
         } else {
             false
         };
@@ -64,7 +60,7 @@ impl SwitchCommand {
             GitCommit::has_commit().wrap_err("Failed to check uncommitted changes")?;
 
         let has_stashed = if has_uncommitted {
-            log_info!("Stashing uncommitted changes before switching branch...");
+            info!("Stashing uncommitted changes before switching branch...");
             GitStash::stash_push(Some(&format!(
                 "Auto-stash before switching to {}",
                 target_branch
@@ -76,9 +72,9 @@ impl SwitchCommand {
 
         // Switch or create branch
         if should_create {
-            log_info!("Creating and switching to branch '{}'...", target_branch);
+            info!("Creating and switching to branch '{}'...", target_branch);
         } else {
-            log_info!("Switching to branch '{}'...", target_branch);
+            info!("Switching to branch '{}'...", target_branch);
         }
 
         if let Err(e) = GitBranch::checkout_branch(&target_branch)
@@ -91,11 +87,11 @@ impl SwitchCommand {
             return Err(e);
         }
 
-        log_success!("Switched to branch '{}'", target_branch);
+        success!("Switched to branch '{}'", target_branch);
 
         // Restore stash if needed
         if has_stashed {
-            log_info!("Restoring stashed changes...");
+            info!("Restoring stashed changes...");
             handle_stash_pop_result(GitStash::stash_pop(None));
         }
 

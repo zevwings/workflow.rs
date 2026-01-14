@@ -26,7 +26,7 @@ fn test_github_subcommand_enum_creation() {
 fn test_github_list_command_structure() {
     // 测试 List 命令结构
     // 验证命令可以解析
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "list"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "list"]).unwrap();
 
     match cli.command {
         GitHubSubcommand::List => {
@@ -40,7 +40,7 @@ fn test_github_list_command_structure() {
 #[test]
 fn test_github_current_command_structure() {
     // 测试 Current 命令结构
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "current"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "current"]).unwrap();
 
     match cli.command {
         GitHubSubcommand::Current => {
@@ -54,7 +54,7 @@ fn test_github_current_command_structure() {
 #[test]
 fn test_github_add_command_structure() {
     // 测试 Add 命令结构
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "add"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "add"]).unwrap();
 
     match cli.command {
         GitHubSubcommand::Add => {
@@ -68,7 +68,7 @@ fn test_github_add_command_structure() {
 #[test]
 fn test_github_remove_command_structure() {
     // 测试 Remove 命令结构
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "remove"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "remove"]).unwrap();
 
     match cli.command {
         GitHubSubcommand::Remove => {
@@ -82,7 +82,7 @@ fn test_github_remove_command_structure() {
 #[test]
 fn test_github_switch_command_structure() {
     // 测试 Switch 命令结构
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "switch"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "switch"]).unwrap();
 
     match cli.command {
         GitHubSubcommand::Switch => {
@@ -96,7 +96,7 @@ fn test_github_switch_command_structure() {
 #[test]
 fn test_github_update_command_structure() {
     // 测试 Update 命令结构
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "update"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "update"]).unwrap();
 
     match cli.command {
         GitHubSubcommand::Update => {
@@ -112,41 +112,41 @@ fn test_github_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // List
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "list"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "list"]).unwrap();
     assert!(matches!(cli.command, GitHubSubcommand::List));
 
     // Current
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "current"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "current"]).unwrap();
     assert!(matches!(cli.command, GitHubSubcommand::Current));
 
     // Add
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "add"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "add"]).unwrap();
     assert!(matches!(cli.command, GitHubSubcommand::Add));
 
     // Remove
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "remove"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "remove"]).unwrap();
     assert!(matches!(cli.command, GitHubSubcommand::Remove));
 
     // Switch
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "switch"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "switch"]).unwrap();
     assert!(matches!(cli.command, GitHubSubcommand::Switch));
 
     // Update
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "update"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(["test-github", "update"]).unwrap();
     assert!(matches!(cli.command, GitHubSubcommand::Update));
 }
 
 #[test]
 fn test_github_command_error_handling_invalid_subcommand() {
     // 测试无效子命令的错误处理
-    let result = TestGitHubCli::try_parse_from(&["test-github", "invalid"]);
+    let result = TestGitHubCli::try_parse_from(["test-github", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
 #[test]
 fn test_github_command_error_handling_missing_subcommand() {
     // 测试缺少子命令的错误处理
-    let result = TestGitHubCli::try_parse_from(&["test-github"]);
+    let result = TestGitHubCli::try_parse_from(["test-github"]);
     assert!(result.is_err(), "Should fail when subcommand is missing");
 }
 
@@ -156,7 +156,7 @@ fn test_github_all_commands_no_extra_arguments() {
     let commands = ["list", "current", "add", "remove", "switch", "update"];
 
     for cmd in commands.iter() {
-        let result = TestGitHubCli::try_parse_from(&["test-github", cmd, "extra-arg"]);
+        let result = TestGitHubCli::try_parse_from(["test-github", cmd, "extra-arg"]);
         assert!(
             result.is_err(),
             "{} command should not accept extra arguments",
@@ -169,19 +169,19 @@ fn test_github_all_commands_no_extra_arguments() {
 fn test_github_command_case_sensitivity() {
     // 测试命令大小写敏感性（clap 默认区分大小写）
     // 大写命令应该失败
-    let result = TestGitHubCli::try_parse_from(&["test-github", "LIST"]);
+    let result = TestGitHubCli::try_parse_from(["test-github", "LIST"]);
     assert!(
         result.is_err(),
         "Uppercase commands should fail (clap is case-sensitive by default)"
     );
 
-    let result = TestGitHubCli::try_parse_from(&["test-github", "CURRENT"]);
+    let result = TestGitHubCli::try_parse_from(["test-github", "CURRENT"]);
     assert!(
         result.is_err(),
         "Uppercase commands should fail (clap is case-sensitive by default)"
     );
 
-    let result = TestGitHubCli::try_parse_from(&["test-github", "ADD"]);
+    let result = TestGitHubCli::try_parse_from(["test-github", "ADD"]);
     assert!(
         result.is_err(),
         "Uppercase commands should fail (clap is case-sensitive by default)"
@@ -192,12 +192,12 @@ fn test_github_command_case_sensitivity() {
 fn test_github_command_enum_variants() {
     // 测试枚举变体的完整性
     // 验证所有预期的命令变体都存在
-    let list_cli = TestGitHubCli::try_parse_from(&["test-github", "list"]).unwrap();
-    let current_cli = TestGitHubCli::try_parse_from(&["test-github", "current"]).unwrap();
-    let add_cli = TestGitHubCli::try_parse_from(&["test-github", "add"]).unwrap();
-    let remove_cli = TestGitHubCli::try_parse_from(&["test-github", "remove"]).unwrap();
-    let switch_cli = TestGitHubCli::try_parse_from(&["test-github", "switch"]).unwrap();
-    let update_cli = TestGitHubCli::try_parse_from(&["test-github", "update"]).unwrap();
+    let list_cli = TestGitHubCli::try_parse_from(["test-github", "list"]).unwrap();
+    let current_cli = TestGitHubCli::try_parse_from(["test-github", "current"]).unwrap();
+    let add_cli = TestGitHubCli::try_parse_from(["test-github", "add"]).unwrap();
+    let remove_cli = TestGitHubCli::try_parse_from(["test-github", "remove"]).unwrap();
+    let switch_cli = TestGitHubCli::try_parse_from(["test-github", "switch"]).unwrap();
+    let update_cli = TestGitHubCli::try_parse_from(["test-github", "update"]).unwrap();
 
     match (
         list_cli.command,

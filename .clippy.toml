@@ -34,6 +34,13 @@ too-many-lines-threshold = 500
 # 允许在某些情况下使用 clone（某些场景下 clone 是必要的）
 # 不禁止使用 unwrap（但建议使用 expect 或更好的错误处理）
 
+# 导入相关
+# 注意：导入相关的 lint 规则需要在 Cargo.toml 的 [lints] 部分配置
+# 推荐配置：
+#   - unused_imports: 检测未使用的导入（默认启用）
+#   - items_after_statements: 警告函数内语句后的 item 声明（包括 use 语句）
+# 这些规则有助于强制使用顶部导入，避免局部导入
+
 # 注意：
 # - 项目使用 `cargo clippy -- -D warnings`，所有警告都会被当作错误
 # - 如果某个警告需要允许，应该在代码中使用 #[allow(clippy::xxx)] 并添加注释说明

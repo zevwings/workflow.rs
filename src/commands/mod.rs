@@ -34,6 +34,7 @@ pub mod config;
 pub mod github;
 pub mod llm;
 pub mod proxy;
+pub mod setup;
 
 // 业务功能
 pub mod alias;

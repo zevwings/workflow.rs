@@ -341,15 +341,15 @@ mod tests {
 
         // 验证回调内容（顺序可能不同，所以按名称查找）
         let task1_log = log.iter().find(|(name, _, _)| name == "task1").unwrap();
-        assert_eq!(task1_log.1, true); // success
+        assert!(task1_log.1); // success
         assert_eq!(task1_log.2, None); // no error
 
         let task2_log = log.iter().find(|(name, _, _)| name == "task2").unwrap();
-        assert_eq!(task2_log.1, false); // failure
+        assert!(!task2_log.1); // failure
         assert_eq!(task2_log.2, Some("error2".to_string())); // error message
 
         let task3_log = log.iter().find(|(name, _, _)| name == "task3").unwrap();
-        assert_eq!(task3_log.1, true); // success
+        assert!(task3_log.1); // success
         assert_eq!(task3_log.2, None); // no error
     }
 
@@ -380,7 +380,7 @@ mod tests {
         let log = progress_log.lock().unwrap();
         assert_eq!(log.len(), 1);
         assert_eq!(log[0].0, "single_task");
-        assert_eq!(log[0].1, true);
+        assert!(log[0].1);
         assert_eq!(log[0].2, None);
     }
 

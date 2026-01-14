@@ -18,7 +18,7 @@ struct TestStashCli {
 #[test]
 fn test_stash_list_command_structure() {
     // 测试 List 命令结构（带 --stat 参数）
-    let cli = TestStashCli::try_parse_from(&["test-stash", "list", "--stat"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "list", "--stat"]).unwrap();
 
     match cli.command {
         StashSubcommand::List { stat } => {
@@ -31,7 +31,7 @@ fn test_stash_list_command_structure() {
 #[test]
 fn test_stash_list_command_minimal() {
     // 测试 List 命令最小参数
-    let cli = TestStashCli::try_parse_from(&["test-stash", "list"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "list"]).unwrap();
 
     match cli.command {
         StashSubcommand::List { stat } => {
@@ -46,7 +46,7 @@ fn test_stash_list_command_minimal() {
 #[test]
 fn test_stash_apply_command_structure() {
     // 测试 Apply 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "apply"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "apply"]).unwrap();
 
     match cli.command {
         StashSubcommand::Apply => {
@@ -61,7 +61,7 @@ fn test_stash_apply_command_structure() {
 #[test]
 fn test_stash_drop_command_structure() {
     // 测试 Drop 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "drop"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "drop"]).unwrap();
 
     match cli.command {
         StashSubcommand::Drop => {
@@ -76,7 +76,7 @@ fn test_stash_drop_command_structure() {
 #[test]
 fn test_stash_pop_command_structure() {
     // 测试 Pop 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "pop"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "pop"]).unwrap();
 
     match cli.command {
         StashSubcommand::Pop => {
@@ -91,7 +91,7 @@ fn test_stash_pop_command_structure() {
 #[test]
 fn test_stash_push_command_structure() {
     // 测试 Push 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "push"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "push"]).unwrap();
 
     match cli.command {
         StashSubcommand::Push => {
@@ -108,36 +108,36 @@ fn test_stash_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // List
-    let cli = TestStashCli::try_parse_from(&["test-stash", "list"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "list"]).unwrap();
     assert!(matches!(cli.command, StashSubcommand::List { .. }));
 
     // Apply
-    let cli = TestStashCli::try_parse_from(&["test-stash", "apply"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "apply"]).unwrap();
     assert!(matches!(cli.command, StashSubcommand::Apply));
 
     // Drop
-    let cli = TestStashCli::try_parse_from(&["test-stash", "drop"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "drop"]).unwrap();
     assert!(matches!(cli.command, StashSubcommand::Drop));
 
     // Pop
-    let cli = TestStashCli::try_parse_from(&["test-stash", "pop"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "pop"]).unwrap();
     assert!(matches!(cli.command, StashSubcommand::Pop));
 
     // Push
-    let cli = TestStashCli::try_parse_from(&["test-stash", "push"]).unwrap();
+    let cli = TestStashCli::try_parse_from(["test-stash", "push"]).unwrap();
     assert!(matches!(cli.command, StashSubcommand::Push));
 }
 
 #[test]
 fn test_stash_command_error_handling_invalid_subcommand() {
     // 测试无效子命令的错误处理
-    let result = TestStashCli::try_parse_from(&["test-stash", "invalid"]);
+    let result = TestStashCli::try_parse_from(["test-stash", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
 #[test]
 fn test_stash_command_error_handling_missing_subcommand() {
     // 测试缺少子命令的错误处理
-    let result = TestStashCli::try_parse_from(&["test-stash"]);
+    let result = TestStashCli::try_parse_from(["test-stash"]);
     assert!(result.is_err(), "Should fail when subcommand is missing");
 }

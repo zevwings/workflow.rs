@@ -43,7 +43,7 @@ fn setup_git_repo() -> (TempDir, std::path::PathBuf) {
 
     // 使用命令行 git 来创建初始提交（在临时目录中执行）
     let add_output = std::process::Command::new("git")
-        .args(&["add", "README.md"])
+        .args(["add", "README.md"])
         .current_dir(temp_path)
         .output()
         .expect("Failed to add file");
@@ -56,7 +56,7 @@ fn setup_git_repo() -> (TempDir, std::path::PathBuf) {
     }
 
     let commit_output = std::process::Command::new("git")
-        .args(&["commit", "-m", "Initial commit"])
+        .args(["commit", "-m", "Initial commit"])
         .current_dir(temp_path)
         .output()
         .expect("Failed to create commit");

@@ -25,14 +25,6 @@ impl SystemProxyReader {
     ///
     /// 如果命令执行失败，返回相应的错误信息。
     pub fn read() -> Result<ProxyInfo> {
-        // 使用 scutil --proxy 获取系统代理设置
-        let output = cmd("scutil", &["--proxy"])
-            .read()
-            .wrap_err("Failed to get system proxy settings")?;
-
-        // 解析输出
-        let mut proxy_info = ProxyInfo::new();
-
         // 定义映射关系：系统键名 -> (代理类型, 字段名)
         const PROXY_KEY_MAP: &[(&str, ProxyType, &str)] = &[
             ("HTTPEnable", ProxyType::Http, "enable"),
@@ -45,6 +37,14 @@ impl SystemProxyReader {
             ("SOCKSProxy", ProxyType::Socks, "address"),
             ("SOCKSPort", ProxyType::Socks, "port"),
         ];
+
+        // 使用 scutil --proxy 获取系统代理设置
+        let output = cmd("scutil", &["--proxy"])
+            .read()
+            .wrap_err("Failed to get system proxy settings")?;
+
+        // 解析输出
+        let mut proxy_info = ProxyInfo::new();
 
         // 解析每行（格式：key : value）
         for line in output.lines() {

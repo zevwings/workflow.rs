@@ -9,13 +9,10 @@ use duct::cmd;
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-use crate::base::dialog::ConfirmDialog;
 use crate::base::settings::paths::Paths;
 use crate::base::shell::{Detect, Reload};
 use crate::base::util::Clipboard;
-use crate::{
-    log_break, log_debug, log_info, log_message, log_success, log_warning, Completion, ProxyManager,
-};
+use crate::{br, debug, info, success, warning, Completion, ProxyManager};
 
 /// 卸载命令
 pub struct UninstallCommand;
@@ -23,14 +20,14 @@ pub struct UninstallCommand;
 impl UninstallCommand {
     /// 运行卸载流程（一次性清理全部）
     pub fn run() -> Result<()> {
-        log_warning!("  Uninstall Workflow CLI");
-        log_break!();
-        log_message!("This will remove all Workflow CLI configuration and binaries.");
-        log_message!("This includes:");
-        log_message!("  - TOML configuration files (workflow.toml)");
-        log_message!("  - Binary files: workflow, install");
-        log_message!("  - Shell completion scripts");
-        log_break!();
+        warning!("  Uninstall Workflow CLI");
+        br!();
+        info!("This will remove all Workflow CLI configuration and binaries.");
+        info!("This includes:");
+        info!("  - TOML configuration files (workflow.toml)");
+        info!("  - Binary files: workflow, install");
+        info!("  - Shell completion scripts");
+        br!();
 
         // 显示将要删除的二进制文件
         let binary_paths = Paths::binary_paths();
@@ -52,57 +49,55 @@ impl UninstallCommand {
         }
 
         if !existing_binaries.is_empty() {
-            log_message!("Binary files to be removed:");
+            info!("Binary files to be removed:");
             for binary_path in &existing_binaries {
-                log_message!("  - {}", binary_path);
+                info!("  - {}", binary_path);
             }
-            log_break!();
+            br!();
         }
 
         // 第一步确认：是否删除二进制文件和 completion 脚本
-        if !ConfirmDialog::new("Remove binary files and shell completion scripts?")
-            .with_default(false)
+        if !crate::confirm!("Remove binary files and shell completion scripts?")
+            .default(false)
             .prompt()?
         {
-            log_message!("Uninstall cancelled.");
+            info!("Uninstall cancelled.");
             return Ok(());
         }
 
         // 第二步确认：是否删除 TOML 配置文件
-        let remove_config = ConfirmDialog::new("Remove TOML config file (workflow.toml)?")
-            .with_default(true)
+        let remove_config = crate::confirm!("Remove TOML config file (workflow.toml)?")
+            .default(true)
             .prompt()?;
 
         // 删除二进制文件
         if !existing_binaries.is_empty() {
-            log_break!();
-            log_message!("Removing binary files...");
+            br!();
+            info!("Removing binary files...");
             match Self::remove_binaries() {
                 Ok((removed, need_sudo)) => {
                     if !removed.is_empty() {
                         for binary_path in &removed {
-                            log_message!("  Removed: {}", binary_path);
+                            info!("  Removed: {}", binary_path);
                         }
                     }
                     if !need_sudo.is_empty() {
                         // 自动使用 sudo 删除需要权限的文件（仅 Unix）
                         #[cfg(unix)]
                         {
-                            log_debug!(
-                                "  Some files require sudo privileges, using sudo to remove..."
-                            );
+                            debug!("  Some files require sudo privileges, using sudo to remove...");
                             for binary_path in &need_sudo {
                                 match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                     Ok(_) => {
-                                        log_message!("  Removed: {}", binary_path);
+                                        info!("  Removed: {}", binary_path);
                                     }
                                     Err(e) => {
-                                        log_warning!(
+                                        warning!(
                                             "    Failed to remove {} with sudo: {}",
                                             binary_path,
                                             e
                                         );
-                                        log_message!(
+                                        info!(
                                             "  You may need to manually remove it with: sudo rm {}",
                                             binary_path
                                         );
@@ -112,36 +107,34 @@ impl UninstallCommand {
                         }
                         #[cfg(windows)]
                         {
-                            log_warning!("  Some files require administrator privileges.");
-                            log_message!(
-                                "  Please run this command as administrator or manually remove:"
-                            );
+                            warning!("  Some files require administrator privileges.");
+                            info!("  Please run this command as administrator or manually remove:");
                             for binary_path in &need_sudo {
-                                log_message!("    {}", binary_path);
+                                info!("    {}", binary_path);
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    log_warning!("  Failed to remove binary files: {}", e);
+                    warning!("  Failed to remove binary files: {}", e);
                     // 尝试使用 sudo 删除所有剩余的文件（仅 Unix）
                     #[cfg(unix)]
                     {
-                        log_message!("Attempting to remove remaining files with sudo...");
+                        info!("Attempting to remove remaining files with sudo...");
                         for binary_path in &existing_binaries {
                             let path = Path::new(binary_path);
                             if path.exists() {
                                 match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                     Ok(_) => {
-                                        log_message!("  Removed: {}", binary_path);
+                                        info!("  Removed: {}", binary_path);
                                     }
                                     Err(e) => {
-                                        log_warning!(
+                                        warning!(
                                             "    Failed to remove {} with sudo: {}",
                                             binary_path,
                                             e
                                         );
-                                        log_message!(
+                                        info!(
                                             "  You may need to manually remove it with: sudo rm {}",
                                             binary_path
                                         );
@@ -152,14 +145,12 @@ impl UninstallCommand {
                     }
                     #[cfg(windows)]
                     {
-                        log_warning!("  Some files could not be removed.");
-                        log_message!(
-                            "  Please run this command as administrator or manually remove:"
-                        );
+                        warning!("  Some files could not be removed.");
+                        info!("  Please run this command as administrator or manually remove:");
                         for binary_path in &existing_binaries {
                             let path = Path::new(binary_path);
                             if path.exists() {
-                                log_message!("    {}", binary_path);
+                                info!("    {}", binary_path);
                             }
                         }
                     }
@@ -173,15 +164,11 @@ impl UninstallCommand {
                 {
                     match cmd("sudo", &["rm", "-f", install_binary_str.as_ref()]).run() {
                         Ok(_) => {
-                            log_message!("  Removed: {}", install_binary_str);
+                            info!("  Removed: {}", install_binary_str);
                         }
                         Err(e) => {
-                            log_warning!(
-                                "  Failed to remove {} with sudo: {}",
-                                install_binary_str,
-                                e
-                            );
-                            log_message!(
+                            warning!("  Failed to remove {} with sudo: {}", install_binary_str, e);
+                            info!(
                                 "  You may need to manually remove it with: sudo rm {}",
                                 install_binary_str
                             );
@@ -192,11 +179,11 @@ impl UninstallCommand {
                 {
                     match fs::remove_file(&install_binary) {
                         Ok(_) => {
-                            log_message!("  Removed: {}", install_binary_str);
+                            info!("  Removed: {}", install_binary_str);
                         }
                         Err(e) => {
-                            log_warning!("  Failed to remove {}: {}", install_binary_str, e);
-                            log_message!(
+                            warning!("  Failed to remove {}: {}", install_binary_str, e);
+                            info!(
                                 "  You may need to manually remove it: {}",
                                 install_binary_str
                             );
@@ -207,24 +194,24 @@ impl UninstallCommand {
         }
 
         // 卸载 shell completion（只要第一步确认就删除）
-        log_break!();
-        log_message!("Removing shell completion scripts...");
+        br!();
+        info!("Removing shell completion scripts...");
         // 删除所有 shell 类型的 completion 文件（不依赖当前 shell）
         let removal_result =
             Completion::remove_completion_files(&clap_complete::shells::Shell::Zsh)?;
 
         // 显示删除的文件
         for file in &removal_result.removed_files {
-            log_info!("  Removed: {}", file.display());
+            info!("  Removed: {}", file.display());
         }
 
         // 显示失败的文件
         for (file, error) in &removal_result.failed_files {
-            log_info!("Failed to delete: {} ({})", file.display(), error);
+            info!("Failed to delete: {} ({})", file.display(), error);
         }
 
         if removal_result.removed_count > 0 {
-            log_info!("  Completion script files removed");
+            info!("  Completion script files removed");
         }
 
         // 删除 completions 文件夹
@@ -234,17 +221,17 @@ impl UninstallCommand {
                 // 先尝试删除空文件夹，如果失败（非空）则删除整个文件夹及其内容
                 match fs::remove_dir(&dir) {
                     Ok(_) => {
-                        log_info!("  Removed: {}", dir.display());
+                        info!("  Removed: {}", dir.display());
                     }
                     Err(e) => {
                         // 如果文件夹非空，使用 remove_dir_all 删除整个文件夹
                         if e.kind() == std::io::ErrorKind::DirectoryNotEmpty {
                             match fs::remove_dir_all(&dir) {
                                 Ok(_) => {
-                                    log_info!("  Removed: {}", dir.display());
+                                    info!("  Removed: {}", dir.display());
                                 }
                                 Err(e2) => {
-                                    log_debug!(
+                                    debug!(
                                         "  Could not remove completions directory: {} ({})",
                                         dir.display(),
                                         e2
@@ -252,7 +239,7 @@ impl UninstallCommand {
                                 }
                             }
                         } else {
-                            log_debug!(
+                            debug!(
                                 "  Could not remove completions directory: {} ({})",
                                 dir.display(),
                                 e
@@ -265,12 +252,12 @@ impl UninstallCommand {
 
         let config_file_removed = Completion::remove_completion_config_file()?;
         if config_file_removed {
-            log_info!(
+            info!(
                 "  Removed: {}",
                 Paths::local_base_dir()?.join(".completions").display()
             );
         } else {
-            log_info!(
+            info!(
                 "  Completion config file not found: {}",
                 Paths::local_base_dir()?.join(".completions").display()
             );
@@ -280,54 +267,54 @@ impl UninstallCommand {
 
         // 删除配置（需要第二步确认）
         if remove_config {
-            log_break!();
-            log_message!("Removing configuration...");
+            br!();
+            info!("Removing configuration...");
             let removed_files =
                 Self::remove_config_files().wrap_err("Failed to uninstall configuration")?;
-            log_message!("Configuration removed successfully");
+            info!("Configuration removed successfully");
             for file in &removed_files {
-                log_message!("  - {} removed", file);
+                info!("  - {} removed", file);
             }
         } else {
-            log_break!();
-            log_message!("Configuration will be kept (not removed).");
+            br!();
+            info!("Configuration will be kept (not removed).");
         }
 
         // 关闭代理（从 shell 环境变量中移除）
-        log_break!();
-        log_message!("Removing proxy settings from shell configuration...");
+        br!();
+        info!("Removing proxy settings from shell configuration...");
         Self::remove_proxy_settings()?;
 
-        log_break!();
-        log_success!("  Uninstall completed successfully!");
+        br!();
+        success!("  Uninstall completed successfully!");
         if remove_config {
-            log_break!();
-            log_message!("All Workflow CLI configuration has been removed from TOML files.");
+            br!();
+            info!("All Workflow CLI configuration has been removed from TOML files.");
         } else {
-            log_message!("Workflow CLI configuration has been kept (not removed).");
+            info!("Workflow CLI configuration has been kept (not removed).");
         }
         if !existing_binaries.is_empty() {
-            log_message!("All Workflow CLI binary files have been removed.");
+            info!("All Workflow CLI binary files have been removed.");
         }
-        log_message!("All Workflow CLI shell completion scripts have been removed.");
+        info!("All Workflow CLI shell completion scripts have been removed.");
 
         // 尝试重新加载 shell 配置
-        log_break!();
-        log_message!("Reloading shell configuration...");
+        br!();
+        info!("Reloading shell configuration...");
         if let Ok(shell) = Detect::shell() {
             let _ = Reload::shell(&shell);
         } else {
-            log_break!();
-            log_message!("Could not detect shell type.");
-            log_message!("Please manually reload your shell configuration:");
+            br!();
+            info!("Could not detect shell type.");
+            info!("Please manually reload your shell configuration:");
             #[cfg(unix)]
             {
-                log_message!("  source ~/.zshrc  # for zsh");
-                log_message!("  source ~/.bashrc  # for bash");
+                info!("  source ~/.zshrc  # for zsh");
+                info!("  source ~/.bashrc  # for bash");
             }
             #[cfg(windows)]
             {
-                log_message!("  . $PROFILE  # for PowerShell");
+                info!("  . $PROFILE  # for PowerShell");
             }
         }
 
@@ -339,16 +326,16 @@ impl UninstallCommand {
         let result = ProxyManager::disable().wrap_err("Failed to remove proxy settings")?;
 
         if !result.found_proxy {
-            log_message!("No proxy settings found in shell configuration.");
+            info!("No proxy settings found in shell configuration.");
             return Ok(());
         }
 
         if let Some(ref shell_config_path) = result.shell_config_path {
-            log_success!("  Proxy settings removed from {:?}", shell_config_path);
+            success!("  Proxy settings removed from {:?}", shell_config_path);
         }
 
         if let Some(ref unset_cmd) = result.unset_command {
-            log_message!("Proxy unset command: {}", unset_cmd);
+            info!("Proxy unset command: {}", unset_cmd);
             // 复制到剪贴板（静默处理，失败不影响卸载流程）
             let _ = Clipboard::copy(unset_cmd);
         }

@@ -1,5 +1,5 @@
 use crate::pr::create_provider_auto;
-use crate::{log_break, log_message};
+use crate::{br, info};
 use color_eyre::Result;
 
 /// PR 状态命令
@@ -41,9 +41,9 @@ impl PullRequestStatusCommand {
         let provider = create_provider_auto()?;
         let info = provider.get_pull_request_info(pr_identifier)?;
 
-        log_break!();
-        log_break!('=', 40, "PR Information");
-        log_message!("{}", info);
+        br!();
+        br!('=', 40, "PR Information");
+        info!("{}", info);
         Ok(())
     }
 }

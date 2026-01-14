@@ -2,11 +2,10 @@
 //!
 //! Clean local branches, keeping main/master, develop, current branch, and branches in ignore list.
 
-use crate::base::dialog::ConfirmDialog;
 use crate::commands::check;
 use crate::git::{GitBranch, GitRepo, GitTag};
 use crate::repo::config::RepoConfig;
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Repository cleanup command
@@ -18,25 +17,25 @@ impl RepoCleanCommand {
         // 1. 运行检查
         check::CheckCommand::run_all()?;
 
-        log_break!();
-        log_message!("Repository Cleanup");
+        br!();
+        info!("Repository Cleanup");
 
         // 2. 初始化：获取当前分支、默认分支、仓库名
         let current_branch =
             GitBranch::current_branch().wrap_err("Failed to get current branch")?;
-        log_info!("Current branch: {}", current_branch);
+        info!("Current branch: {}", current_branch);
 
         let default_branch =
             GitBranch::get_default_branch().wrap_err("Failed to get default branch")?;
-        log_info!("Default branch: {}", default_branch);
+        info!("Default branch: {}", default_branch);
 
         // 获取仓库名
         let repo_name =
             GitRepo::extract_repo_name().wrap_err("Failed to extract repository name")?;
-        log_info!("Repository: {}", repo_name);
+        info!("Repository: {}", repo_name);
 
         // 3. 清理远端引用
-        log_info!("Cleaning remote references...");
+        info!("Cleaning remote references...");
         GitRepo::prune_remote().wrap_err("Failed to prune remote references")?;
 
         // 4. 读取配置文件（项目级配置）
@@ -50,7 +49,7 @@ impl RepoCleanCommand {
         ];
         exclude_branches.extend(ignore_branches);
 
-        log_info!("Excluded branches: {}", exclude_branches.join(", "));
+        info!("Excluded branches: {}", exclude_branches.join(", "));
 
         // 6. 获取所有本地分支
         let all_branches =
@@ -63,7 +62,7 @@ impl RepoCleanCommand {
             .collect();
 
         if branches_to_delete.is_empty() {
-            log_success!("No branches to delete");
+            success!("No branches to delete");
             return Ok(());
         }
 
@@ -72,30 +71,30 @@ impl RepoCleanCommand {
             Self::classify_branches(&branches_to_delete, &default_branch)?;
 
         // 9. 显示预览
-        log_break!();
-        log_message!("Preview of branches to be deleted:");
+        br!();
+        info!("Preview of branches to be deleted:");
         if !merged_branches.is_empty() {
-            log_info!("Merged branches ({}):", merged_branches.len());
+            info!("Merged branches ({}):", merged_branches.len());
             for branch in &merged_branches {
-                log_info!("  {}", branch);
+                info!("  {}", branch);
             }
         }
         if !unmerged_branches.is_empty() {
-            log_warning!("Unmerged branches ({}):", unmerged_branches.len());
+            warning!("Unmerged branches ({}):", unmerged_branches.len());
             for branch in &unmerged_branches {
-                log_warning!("  {}", branch);
+                warning!("  {}", branch);
             }
         }
 
         // 10. Dry-run 模式
         if dry_run {
-            log_break!();
-            log_info!("Dry-run mode: branches will not be actually deleted");
+            br!();
+            info!("Dry-run mode: branches will not be actually deleted");
             return Ok(());
         }
 
         // 11. 确认删除
-        log_break!();
+        br!();
         let total = merged_branches.len() + unmerged_branches.len();
         let prompt = format!(
             "Are you sure you want to delete {} branch(es)? (merged: {}, unmerged: {})",
@@ -103,10 +102,7 @@ impl RepoCleanCommand {
             merged_branches.len(),
             unmerged_branches.len()
         );
-        ConfirmDialog::new(&prompt)
-            .with_default(false)
-            .with_cancel_message("Operation cancelled")
-            .prompt()?;
+        crate::confirm!(prompt).default(false).prompt()?;
 
         // 12. 删除已合并分支
         let mut deleted_count = 0;
@@ -115,11 +111,11 @@ impl RepoCleanCommand {
         for branch in &merged_branches {
             match GitBranch::delete(branch, false) {
                 Ok(()) => {
-                    log_success!("Deleted: {}", branch);
+                    success!("Deleted: {}", branch);
                     deleted_count += 1;
                 }
                 Err(e) => {
-                    log_warning!("Failed to delete {}: {}", branch, e);
+                    warning!("Failed to delete {}: {}", branch, e);
                     skipped_count += 1;
                 }
             }
@@ -127,20 +123,20 @@ impl RepoCleanCommand {
 
         // 13. 处理未合并分支
         if !unmerged_branches.is_empty() {
-            log_break!();
+            br!();
             let prompt = format!(
                 "There are {} unmerged branch(es), force delete them?",
                 unmerged_branches.len()
             );
-            if ConfirmDialog::new(&prompt).with_default(false).prompt()? {
+            if crate::confirm!(prompt).default(false).prompt()? {
                 for branch in &unmerged_branches {
                     match GitBranch::delete(branch, true) {
                         Ok(()) => {
-                            log_success!("Force deleted: {}", branch);
+                            success!("Force deleted: {}", branch);
                             deleted_count += 1;
                         }
                         Err(e) => {
-                            log_warning!("Failed to delete {}: {}", branch, e);
+                            warning!("Failed to delete {}: {}", branch, e);
                             skipped_count += 1;
                         }
                     }
@@ -151,11 +147,11 @@ impl RepoCleanCommand {
         }
 
         // 14. 显示分支清理结果
-        log_break!();
-        log_success!("Branch cleanup completed!");
-        log_info!("Deleted: {} branch(es)", deleted_count);
+        br!();
+        success!("Branch cleanup completed!");
+        info!("Deleted: {} branch(es)", deleted_count);
         if skipped_count > 0 {
-            log_info!("Skipped: {} branch(es)", skipped_count);
+            info!("Skipped: {} branch(es)", skipped_count);
         }
 
         // 15. 清理本地 tag（只存在于本地但不在远程的 tag）
@@ -166,8 +162,8 @@ impl RepoCleanCommand {
 
     /// 清理只存在于本地但不在远程的 tag
     fn clean_local_only_tags(dry_run: bool) -> Result<()> {
-        log_break!();
-        log_message!("Tag Cleanup");
+        br!();
+        info!("Tag Cleanup");
 
         // 获取所有 tag 信息
         let all_tags = GitTag::list_all_tags().wrap_err("Failed to list tags")?;
@@ -180,34 +176,31 @@ impl RepoCleanCommand {
             .collect();
 
         if local_only_tags.is_empty() {
-            log_info!("No local-only tags to clean");
+            info!("No local-only tags to clean");
             return Ok(());
         }
 
         // 显示预览
-        log_break!();
-        log_message!("Local-only tags to be deleted:");
+        br!();
+        info!("Local-only tags to be deleted:");
         for tag in &local_only_tags {
-            log_info!("  {}", tag);
+            info!("  {}", tag);
         }
 
         // Dry-run 模式
         if dry_run {
-            log_break!();
-            log_info!("Dry-run mode: tags will not be actually deleted");
+            br!();
+            info!("Dry-run mode: tags will not be actually deleted");
             return Ok(());
         }
 
         // 确认删除
-        log_break!();
+        br!();
         let prompt = format!(
             "Are you sure you want to delete {} local-only tag(s)?",
             local_only_tags.len()
         );
-        ConfirmDialog::new(&prompt)
-            .with_default(false)
-            .with_cancel_message("Tag cleanup cancelled")
-            .prompt()?;
+        crate::confirm!(prompt).default(false).prompt()?;
 
         // 删除本地 tag
         let mut deleted_count = 0;
@@ -216,22 +209,22 @@ impl RepoCleanCommand {
         for tag_name in &local_only_tags {
             match GitTag::delete_local(tag_name) {
                 Ok(_) => {
-                    log_success!("Deleted local tag: {}", tag_name);
+                    success!("Deleted local tag: {}", tag_name);
                     deleted_count += 1;
                 }
                 Err(e) => {
-                    log_warning!("Failed to delete tag {}: {}", tag_name, e);
+                    warning!("Failed to delete tag {}: {}", tag_name, e);
                     skipped_count += 1;
                 }
             }
         }
 
         // 显示结果
-        log_break!();
-        log_success!("Tag cleanup completed!");
-        log_info!("Deleted: {} tag(s)", deleted_count);
+        br!();
+        success!("Tag cleanup completed!");
+        info!("Deleted: {} tag(s)", deleted_count);
         if skipped_count > 0 {
-            log_info!("Skipped: {} tag(s)", skipped_count);
+            info!("Skipped: {} tag(s)", skipped_count);
         }
 
         Ok(())

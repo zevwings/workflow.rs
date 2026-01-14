@@ -49,10 +49,6 @@ pub enum CompletionSubcommand {
 /// Used to manage configuration files (validate, export, import).
 #[derive(Subcommand)]
 pub enum ConfigSubcommand {
-    /// View current configuration
-    ///
-    /// Display all configured environment variables and settings (sensitive information will be masked).
-    Show,
     /// Validate configuration file
     ///
     /// Verify the integrity and validity of the configuration file.

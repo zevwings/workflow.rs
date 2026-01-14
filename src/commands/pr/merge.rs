@@ -5,7 +5,7 @@ use crate::jira::status::JiraStatus;
 use crate::jira::{extract_jira_ticket_id, Jira, JiraWorkHistory};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
-use crate::{log_break, log_info, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::Result;
 
 /// PR 合并命令
@@ -22,8 +22,8 @@ impl PullRequestMergeCommand {
         // 2. 获取 PR ID
         let pull_request_id = resolve_pull_request_id(pull_request_id)?;
 
-        log_break!();
-        log_success!("Merging PR: #{}", pull_request_id);
+        br!();
+        success!("Merging PR: #{}", pull_request_id);
 
         // 3. 获取当前分支名（合并前保存）
         let current_branch = GitBranch::current_branch()?;
@@ -54,28 +54,28 @@ impl PullRequestMergeCommand {
 
         // 如果已经合并，跳过合并步骤
         if status.merged {
-            log_warning!("PR #{} has already been merged", pull_request_id);
+            warning!("PR #{} has already been merged", pull_request_id);
             if let Some(merged_at) = status.merged_at {
-                log_info!("Merged at: {}", merged_at);
+                info!("Merged at: {}", merged_at);
             }
-            log_info!("Skipping merge step, continuing with cleanup...");
+            info!("Skipping merge step, continuing with cleanup...");
             return Ok(false);
         }
 
         // 执行合并操作
         match provider.merge_pull_request(pull_request_id, true) {
             Ok(()) => {
-                log_success!("PR merged successfully");
+                success!("PR merged successfully");
                 Ok(true)
             }
             Err(e) => {
                 // 检查是否是"已合并"错误
                 if helpers::is_pr_already_merged_error(&e) {
-                    log_warning!(
+                    warning!(
                         "PR #{} has already been merged (detected from merge error)",
                         pull_request_id
                     );
-                    log_info!("Skipping merge step, continuing with cleanup...");
+                    info!("Skipping merge step, continuing with cleanup...");
                     Ok(false)
                 } else {
                     // 其他错误，返回错误
@@ -102,14 +102,14 @@ impl PullRequestMergeCommand {
         if let Some(ticket) = jira_ticket {
             // 读取合并时的状态
             if let Ok(Some(status)) = JiraStatus::read_pull_request_merged_status(&ticket) {
-                log_success!("Updating Jira ticket: {} to status: {}", ticket, status);
+                success!("Updating Jira ticket: {} to status: {}", ticket, status);
                 Jira::move_ticket(&ticket, &status)?;
-                log_success!("Jira ticket updated");
+                success!("Jira ticket updated");
             } else {
-                log_warning!("No Jira status configuration found for ticket: {}", ticket);
+                warning!("No Jira status configuration found for ticket: {}", ticket);
             }
         } else {
-            log_warning!("No Jira ticket associated with this PR");
+            warning!("No Jira ticket associated with this PR");
         }
 
         // 删除工作历史记录中的 PR ID 条目
@@ -118,12 +118,12 @@ impl PullRequestMergeCommand {
 
         // 显示删除消息
         for message in &delete_result.messages {
-            log_info!("{}", message);
+            info!("{}", message);
         }
 
         // 显示警告信息
         for warning in &delete_result.warnings {
-            log_warning!("{}", warning);
+            warning!("{}", warning);
         }
 
         Ok(())
@@ -138,7 +138,7 @@ impl PullRequestMergeCommand {
 
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
-        log_info!(
+        info!(
             "Note: Remote branch '{}' may have already been deleted via API",
             current_branch
         );

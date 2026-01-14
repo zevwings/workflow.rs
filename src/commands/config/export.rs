@@ -2,12 +2,12 @@
 //! 导出配置文件用于备份和迁移
 
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
+use crate::base::settings::Settings;
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileWriter;
 use crate::commands::config::helpers::extract_section;
 use crate::commands::config::validate::ConfigValidateCommand;
-use crate::{log_error, log_info, log_message, log_success, log_warning};
+use crate::{error, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::path::PathBuf;
 
@@ -48,14 +48,14 @@ impl ConfigExportCommand {
         // 如果指定了 section，验证该 section 的配置
         if let Some(ref section_name) = section {
             let export_config = extract_section(&settings, section_name)?;
-            log_info!("Validating configuration before export...");
+            info!("Validating configuration before export...");
             let validation_result =
                 ConfigValidateCommand::validate_config(&export_config, &config_path)?;
 
             if !validation_result.errors.is_empty() {
-                log_error!("Configuration validation failed");
+                error!("Configuration validation failed");
                 for error in &validation_result.errors {
-                    log_message!("  - {}: {}", error.field, error.message);
+                    info!("  - {}: {}", error.field, error.message);
                 }
                 return Err(eyre!(
                     "Export cancelled. Please fix configuration errors before exporting."
@@ -63,22 +63,22 @@ impl ConfigExportCommand {
             }
 
             if !validation_result.warnings.is_empty() {
-                log_warning!("Configuration validation warnings:");
+                warning!("Configuration validation warnings:");
                 for warning in &validation_result.warnings {
-                    log_message!("  - {}: {}", warning.field, warning.message);
+                    info!("  - {}: {}", warning.field, warning.message);
                 }
-                log_info!("Continuing with export despite warnings...");
+                info!("Continuing with export despite warnings...");
             }
         } else {
             // 导出完整配置时验证
-            log_info!("Validating configuration before export...");
+            info!("Validating configuration before export...");
             let validation_result =
                 ConfigValidateCommand::validate_config(&settings, &config_path)?;
 
             if !validation_result.errors.is_empty() {
-                log_error!("Configuration validation failed");
+                error!("Configuration validation failed");
                 for error in &validation_result.errors {
-                    log_message!("  - {}: {}", error.field, error.message);
+                    info!("  - {}: {}", error.field, error.message);
                 }
                 return Err(eyre!(
                     "Export cancelled. Please fix configuration errors before exporting."
@@ -86,11 +86,11 @@ impl ConfigExportCommand {
             }
 
             if !validation_result.warnings.is_empty() {
-                log_warning!("Configuration validation warnings:");
+                warning!("Configuration validation warnings:");
                 for warning in &validation_result.warnings {
-                    log_message!("  - {}: {}", warning.field, warning.message);
+                    info!("  - {}: {}", warning.field, warning.message);
                 }
-                log_info!("Continuing with export despite warnings...");
+                info!("Continuing with export despite warnings...");
             }
         }
 
@@ -135,13 +135,13 @@ impl ConfigExportCommand {
 
         // 显示结果
         if let Some(ref section_name) = section {
-            log_success!(
+            success!(
                 "{} configuration exported to {:?}",
                 section_name,
                 output_path
             );
         } else {
-            log_success!("Configuration exported to {:?}", output_path);
+            success!("Configuration exported to {:?}", output_path);
         }
 
         // 如果指定了 section，需要重新计算 filtered_count
@@ -159,7 +159,7 @@ impl ConfigExportCommand {
         };
 
         if actual_filtered_count > 0 {
-            log_warning!(
+            warning!(
                 "Sensitive information has been filtered ({} field(s))",
                 actual_filtered_count
             );

@@ -3,14 +3,14 @@
 //! Interactively initialize repository-level configuration.
 //! Similar to CheckCommand, provides a static method for other commands to call.
 
-use crate::base::dialog::{ConfirmDialog, FormBuilder, GroupConfig, InputDialog};
+use crate::base::interactive::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField};
 use crate::base::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::{GitHubAccount, Settings};
+use crate::base::settings::{GitHubAccount, Settings};
 use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
-use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning};
+use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal};
@@ -69,34 +69,34 @@ impl RepoSetupCommand {
         }
 
         // 3. Configuration doesn't exist or is incomplete
-        log_break!();
-        log_warning!("Repository configuration not found or incomplete.");
-        log_info!("Project-level configuration helps:");
-        log_info!("  - Share branch prefix and commit template settings with your team");
-        log_info!("  - Automatically configure commit message format");
-        log_info!("  - Manage ignored branches");
-        log_break!();
+        br!();
+        warning!("Repository configuration not found or incomplete.");
+        info!("Project-level configuration helps:");
+        info!("  - Share branch prefix and commit template settings with your team");
+        info!("  - Automatically configure commit message format");
+        info!("  - Manage ignored branches");
+        br!();
 
         // 4. Ask user if they want to run setup
         let should_setup =
-            ConfirmDialog::new("Run 'workflow repo setup' to configure this repository?")
-                .with_default(true)
+            crate::confirm!("Run 'workflow repo setup' to configure this repository?")
+                .default(true)
                 .prompt()
                 .wrap_err("Failed to get user confirmation")?;
 
         if should_setup {
             // 5. Run setup
-            log_break!();
-            log_info!("Running repository setup...");
-            log_break!();
+            br!();
+            info!("Running repository setup...");
+            br!();
 
             Self::run().wrap_err("Failed to run repository setup")?;
 
-            log_break!();
-            log_success!("Repository configuration completed!");
-            log_break!();
+            br!();
+            success!("Repository configuration completed!");
+            br!();
         } else {
-            log_info!("Skipping repository setup. You can run 'workflow repo setup' later.");
+            info!("Skipping repository setup. You can run 'workflow repo setup' later.");
         }
 
         Ok(())
@@ -125,8 +125,8 @@ impl RepoSetupCommand {
         let repo_name = GitRepo::extract_repo_name()
             .wrap_err("Not in a Git repository. Please run this command in a Git repository.")?;
 
-        log_message!("Repository: {}", repo_name);
-        log_break!();
+        info!("Repository: {}", repo_name);
+        br!();
 
         // 2. 加载现有配置（如果存在）
         let existing_config = RepoConfig::load().ok();
@@ -137,17 +137,17 @@ impl RepoSetupCommand {
         // 4. 保存配置
         config.save().wrap_err("Failed to save config")?;
 
-        log_break!();
-        log_success!("Repository configuration saved successfully!");
-        log_debug!(
+        br!();
+        success!("Repository configuration saved successfully!");
+        debug!(
             "Project template configuration: {}",
             Paths::project_config()?.display()
         );
-        log_debug!(
+        debug!(
             "Personal preference configuration: {}",
             Paths::repository_config()?.display()
         );
-        log_success!(
+        success!(
             "You can commit the project template configuration to Git to share with your team."
         );
 
@@ -178,14 +178,14 @@ impl RepoSetupCommand {
             .add_group(
                 "personal_preference",
                 |g| {
-                    g.step(|f| {
+                    g.add_step(|s| {
                         // Branch prefix
                         let prefix_prompt = if current_prefix.is_some() {
                             "Enter branch prefix (press Enter to keep)"
                         } else {
                             "Enter branch prefix (optional, press Enter to skip, e.g., 'feature', 'fix'):"
                         };
-                        let mut field = f.add_text("branch_prefix", prefix_prompt);
+                        let mut field = InputFormField::new("branch_prefix", prefix_prompt);
                         if current_prefix.is_some() {
                             field = field.allow_empty(true);
                             if let Some(ref prefix) = current_prefix {
@@ -194,15 +194,15 @@ impl RepoSetupCommand {
                         } else {
                             field = field.allow_empty(true);
                         }
-                        field
+                        s.add_input(field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // Auto-accept change type
-                        f.add_confirmation(
+                        s.add_confirm(ConfirmFormField::new(
                             "auto_accept_change_type",
                             "Auto-accept auto-selected change type in PR creation? (skip confirmation prompt)",
                         )
-                        .default(current_auto_accept)
+                        .default(current_auto_accept))
                     })
                 },
                 GroupConfig::required()
@@ -213,40 +213,40 @@ impl RepoSetupCommand {
             .add_group(
                 "project_template",
                 |g| {
-                    g.step(|f| {
+                    g.add_step(|s| {
                         // Use scope
-                        f.add_confirmation("use_scope", "Use scope for commit messages?")
-                            .default(current_use_scope)
+                        s.add_confirm(ConfirmFormField::new("use_scope", "Use scope for commit messages?")
+                            .default(current_use_scope))
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // Commit template configuration
-                        f.add_confirmation("configure_commit_template", "Configure commit templates?")
-                            .default(false)
+                        s.add_confirm(ConfirmFormField::new("configure_commit_template", "Configure commit templates?")
+                            .default(false))
                     })
-                    .step_if("configure_commit_template", "yes", |f| {
-                        f.add_text("custom_commit_template", "Enter custom commit template:")
-                            .allow_empty(true)
+                    .step_if("configure_commit_template", "yes", |s| {
+                        s.add_input(InputFormField::new("custom_commit_template", "Enter custom commit template:")
+                            .allow_empty(true))
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // Branch template configuration
-                        f.add_confirmation("configure_branch_template", "Configure branch templates?")
-                            .default(false)
+                        s.add_confirm(ConfirmFormField::new("configure_branch_template", "Configure branch templates?")
+                            .default(false))
                     })
-                    .step_if("configure_branch_template", "yes", |f| {
-                        f.add_text(
+                    .step_if("configure_branch_template", "yes", |s| {
+                        s.add_input(InputFormField::new(
                             "custom_branch_template",
                             "Enter custom default branch template:",
                         )
-                        .allow_empty(true)
+                        .allow_empty(true))
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // PR template configuration
-                        f.add_confirmation("configure_pr_template", "Configure pull request templates?")
-                            .default(false)
+                        s.add_confirm(ConfirmFormField::new("configure_pr_template", "Configure pull request templates?")
+                            .default(false))
                     })
-                    .step_if("configure_pr_template", "yes", |f| {
-                        f.add_text("custom_pr_template", "Enter custom pull request template:")
-                            .allow_empty(true)
+                    .step_if("configure_pr_template", "yes", |s| {
+                        s.add_input(InputFormField::new("custom_pr_template", "Enter custom pull request template:")
+                            .allow_empty(true))
                     })
                 },
                 GroupConfig::required()
@@ -273,7 +273,7 @@ impl RepoSetupCommand {
         }
 
         // 处理结果：Use scope
-        if let Some(use_scope) = form_result.get_bool("use_scope") {
+        if let Some(use_scope) = form_result.get_bool_opt("use_scope") {
             config
                 .template_commit
                 .insert("use_scope".to_string(), Value::Boolean(use_scope));
@@ -281,7 +281,7 @@ impl RepoSetupCommand {
 
         // 处理结果：Commit template
         // 如果用户选择配置且输入了自定义模板，则保存；如果输入为空，则不写入（使用默认模板）
-        if form_result.get("configure_commit_template") == Some(&"yes".to_string()) {
+        if form_result.get_bool_opt("configure_commit_template") == Some(true) {
             if let Some(custom_template) = form_result.get("custom_commit_template") {
                 if !custom_template.trim().is_empty() {
                     config.template_commit.insert(
@@ -294,7 +294,7 @@ impl RepoSetupCommand {
 
         // 处理结果：Branch template
         // 如果用户选择配置且输入了自定义模板，则保存；如果输入为空，则不写入（使用默认模板）
-        if form_result.get("configure_branch_template") == Some(&"yes".to_string()) {
+        if form_result.get_bool_opt("configure_branch_template") == Some(true) {
             if let Some(custom_branch_template) = form_result.get("custom_branch_template") {
                 if !custom_branch_template.trim().is_empty() {
                     config.template_branch.insert(
@@ -307,7 +307,7 @@ impl RepoSetupCommand {
 
         // 处理结果：PR template
         // 如果用户选择配置且输入了自定义模板，则保存；如果输入为空，则不写入（使用默认模板）
-        if form_result.get("configure_pr_template") == Some(&"yes".to_string()) {
+        if form_result.get_bool_opt("configure_pr_template") == Some(true) {
             if let Some(custom_pr_template) = form_result.get("custom_pr_template") {
                 if !custom_pr_template.trim().is_empty() {
                     config.template_pull_requests.insert(
@@ -319,18 +319,18 @@ impl RepoSetupCommand {
         }
 
         // 处理结果：Auto-accept change type
-        if let Some(auto_accept) = form_result.get_bool("auto_accept_change_type") {
+        if let Some(auto_accept) = form_result.get_bool_opt("auto_accept_change_type") {
             config.pr = Some(PullRequestsConfig {
                 auto_accept_change_type: Some(auto_accept),
             });
         }
 
         // MCP Configuration (顺序交互式流程)
-        log_break!();
-        log_message!("MCP Configuration (Project-level)");
-        log_break!('-', 40);
-        log_debug!("Configure MCP servers for Cursor IDE integration.");
-        log_break!();
+        br!();
+        info!("MCP Configuration (Project-level)");
+        br!('-', 40);
+        debug!("Configure MCP servers for Cursor IDE integration.");
+        br!();
 
         Self::setup_mcp_integration()?;
 
@@ -350,43 +350,43 @@ impl RepoSetupCommand {
         let mut new_config = MCPConfig::default();
 
         // 2. 询问是否配置 JIRA MCP
-        log_debug!("Setting up Jira MCP servers...");
-        let configure_jira = ConfirmDialog::new("Configure JIRA MCP server?")
-            .with_default(true)
+        debug!("Setting up Jira MCP servers...");
+        let configure_jira = crate::confirm!("Configure JIRA MCP server?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get JIRA MCP configuration preference")?;
 
         if configure_jira {
-            log_break!();
+            br!();
             let server_config = Self::configure_jira_mcp(&settings)?;
             new_config.mcp_servers.insert("jira".to_string(), server_config);
         }
 
         // 3. 询问是否配置 GitHub MCP
-        log_break!();
-        log_debug!("Setting up GitHub MCP servers...");
-        let configure_github = ConfirmDialog::new("Configure GitHub MCP server?")
-            .with_default(true)
+        br!();
+        debug!("Setting up GitHub MCP servers...");
+        let configure_github = crate::confirm!("Configure GitHub MCP server?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get GitHub MCP configuration preference")?;
 
         if configure_github {
-            log_break!();
+            br!();
             let server_config = Self::configure_github_mcp(&settings)?;
             new_config.mcp_servers.insert("github".to_string(), server_config);
         }
 
         // 4. 保存配置（如果有配置的服务器）
         if !new_config.mcp_servers.is_empty() {
-            log_break!();
-            log_message!("Saving MCP configuration...");
+            br!();
+            info!("Saving MCP configuration...");
             mcp_manager.merge(&new_config)?;
-            log_success!(
+            success!(
                 "MCP configuration saved to: {:?}",
                 mcp_manager.config_path()
             );
         } else {
-            log_warning!("No MCP servers configured, skipping save");
+            warning!("No MCP servers configured, skipping save");
         }
 
         Ok(())
@@ -394,8 +394,8 @@ impl RepoSetupCommand {
 
     /// 配置 JIRA MCP
     fn configure_jira_mcp(settings: &Settings) -> Result<MCPServerConfig> {
-        log_message!("Configuring JIRA MCP...");
-        log_break!('-', 40);
+        info!("Configuring JIRA MCP...");
+        br!('-', 40);
 
         // 尝试从现有 MCP 配置中读取 JIRA 信息
         let mcp_manager = MCPConfigManager::new()?;
@@ -445,9 +445,11 @@ impl RepoSetupCommand {
             .add_group(
                 "jira_mcp",
                 |g| {
-                    g.step(|f| {
+                    g.add_step(|s| {
                         // JIRA server address
-                        let mut field = f.add_text("jira_service_address", jira_address_prompt);
+                        use std::sync::Arc;
+                        let mut field =
+                            InputFormField::new("jira_service_address", jira_address_prompt);
                         if has_jira_address {
                             field = field.allow_empty(true);
                             if let Some(ref addr) = current_jira_address {
@@ -456,8 +458,9 @@ impl RepoSetupCommand {
                         } else {
                             field = field.required();
                         }
-                        field.validate(move |input: &str| {
-                            if input.is_empty() && !has_jira_address {
+                        let has_jira_address_clone = has_jira_address;
+                        field = field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_jira_address_clone {
                                 Err("JIRA server URL is required".to_string())
                             } else if !input.is_empty()
                                 && !input.starts_with("http://")
@@ -470,11 +473,13 @@ impl RepoSetupCommand {
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+                        s.add_input(field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // JIRA email
-                        let mut field = f.add_text("jira_email", jira_email_prompt);
+                        use std::sync::Arc;
+                        let mut field = InputFormField::new("jira_email", jira_email_prompt);
                         if has_jira_email {
                             field = field.allow_empty(true);
                             if let Some(ref email) = current_jira_email {
@@ -483,32 +488,37 @@ impl RepoSetupCommand {
                         } else {
                             field = field.required();
                         }
-                        field.validate(move |input: &str| {
-                            if input.is_empty() && !has_jira_email {
+                        let has_jira_email_clone = has_jira_email;
+                        field = field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_jira_email_clone {
                                 Err("JIRA email address is required".to_string())
                             } else if !input.is_empty() && !input.contains('@') {
                                 Err("Please enter a valid email address".to_string())
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+                        s.add_input(field)
                     })
-                    .step(|f| {
+                    .add_step(|s| {
                         // JIRA API token (不设置默认值，显示 ***)
-                        let mut field = f.add_text("jira_api_token", jira_token_prompt);
+                        use std::sync::Arc;
+                        let mut field = InputFormField::new("jira_api_token", jira_token_prompt);
                         if has_jira_token {
                             field = field.allow_empty(true);
                             // 不设置默认值，这样显示 *** 而不是明文
                         } else {
                             field = field.required();
                         }
-                        field.validate(move |input: &str| {
-                            if input.is_empty() && !has_jira_token {
+                        let has_jira_token_clone = has_jira_token;
+                        field = field.validator(Arc::new(move |input: &str| {
+                            if input.is_empty() && !has_jira_token_clone {
                                 Err("JIRA API token is required".to_string())
                             } else {
                                 Ok(())
                             }
-                        })
+                        }));
+                        s.add_input(field)
                     })
                 },
                 GroupConfig::required().with_title("JIRA MCP Configuration"),
@@ -586,8 +596,8 @@ impl RepoSetupCommand {
 
     /// 配置 GitHub MCP
     fn configure_github_mcp(settings: &Settings) -> Result<MCPServerConfig> {
-        log_message!("Configuring GitHub MCP...");
-        log_break!('-', 40);
+        info!("Configuring GitHub MCP...");
+        br!('-', 40);
 
         // 尝试从现有 MCP 配置中读取 GitHub 信息
         let mcp_manager = MCPConfigManager::new()?;
@@ -619,9 +629,8 @@ impl RepoSetupCommand {
             "GitHub API token".to_string()
         };
 
-        let github_api_token = InputDialog::new(&github_token_prompt)
-            .allow_empty(has_github_token)
-            .with_validator(move |input: &str| {
+        let github_api_token = crate::input!(github_token_prompt)
+            .validator(move |input: &str| {
                 if input.trim().is_empty() && !has_github_token {
                     Err("GitHub API token is required".to_string())
                 } else if !input.trim().is_empty() && input.trim().len() < 10 {
@@ -677,7 +686,7 @@ impl RepoSetupCommand {
         if updated_settings.jira.service_address.is_none() {
             updated_settings.jira.service_address = Some(service_address.to_string());
             needs_update = true;
-            log_info!(
+            info!(
                 "Syncing JIRA server URL to global config: {}",
                 service_address
             );
@@ -687,21 +696,21 @@ impl RepoSetupCommand {
         if updated_settings.jira.email.is_none() {
             updated_settings.jira.email = Some(username.to_string());
             needs_update = true;
-            log_info!("Syncing JIRA email to global config: {}", username);
+            info!("Syncing JIRA email to global config: {}", username);
         }
 
         // 检查并更新 JIRA API Token（只在为空时更新）
         if updated_settings.jira.api_token.is_none() {
             updated_settings.jira.api_token = Some(api_token.to_string());
             needs_update = true;
-            log_info!("Syncing JIRA API token to global config");
+            info!("Syncing JIRA API token to global config");
         }
 
         // 如果有更新，保存配置
         if needs_update {
             let config_path = Paths::workflow_config()?;
             FileWriter::new(&config_path).write_toml(&updated_settings)?;
-            log_success!("Global JIRA configuration updated");
+            success!("Global JIRA configuration updated");
         }
 
         Ok(())
@@ -724,34 +733,18 @@ impl RepoSetupCommand {
             .add_group(
                 "github_sync",
                 |g| {
-                    g.step(|f| {
-                        f.add_confirmation(
+                    g.add_step(|s| {
+                        s.add_confirm(ConfirmFormField::new(
                             "should_sync",
                             "No GitHub account found in global config. Save this token to global config?",
                         )
-                        .default(true)
+                        .default(true))
                     })
-                    .step_if("should_sync", "yes", |f| {
-                        f.add_text("account_name", "GitHub account name (required)")
-                            .required()
-                            .validate(|input: &str| {
-                                if input.trim().is_empty() {
-                                    Err("Account name is required".to_string())
-                                } else {
-                                    Ok(())
-                                }
-                            })
-                            .add_text("account_email", "GitHub account email (required)")
-                            .required()
-                            .validate(|input: &str| {
-                                if input.trim().is_empty() {
-                                    Err("Email is required".to_string())
-                                } else if !input.contains('@') {
-                                    Err("Please enter a valid email address".to_string())
-                                } else {
-                                    Ok(())
-                                }
-                            })
+                    .step_if("should_sync", "yes", |s| {
+                        s.add_input(InputFormField::new("account_name", "GitHub account name (required)")
+                            .required())
+                        .add_input(InputFormField::new("account_email", "GitHub account email (required)")
+                            .required())
                     })
                 },
                 GroupConfig::required(),
@@ -759,7 +752,7 @@ impl RepoSetupCommand {
             .run()
             .wrap_err("Failed to collect GitHub account information")?;
 
-        if github_sync_form_result.get("should_sync") == Some(&"yes".to_string()) {
+        if github_sync_form_result.get_bool_opt("should_sync") == Some(true) {
             // 获取账号信息
             let account_name = github_sync_form_result
                 .get("account_name")
@@ -787,7 +780,7 @@ impl RepoSetupCommand {
             // 保存配置
             let config_path = Paths::workflow_config()?;
             FileWriter::new(&config_path).write_toml(&updated_settings)?;
-            log_success!("GitHub account added to global configuration");
+            success!("GitHub account added to global configuration");
         }
 
         Ok(())

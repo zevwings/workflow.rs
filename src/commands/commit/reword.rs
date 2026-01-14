@@ -3,14 +3,13 @@
 //! Reword a commit message without changing its content.
 //! Provides interactive workflow following the implementation document.
 
-use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
 use crate::commands::check;
 use crate::commands::commit::helpers::{
     check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
 };
 use crate::commit::{CommitReword, RewordHistoryOptions};
 use crate::git::{CommitInfo, GitCommit};
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{br, info, success};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 /// Commit reword command
@@ -29,8 +28,8 @@ impl CommitRewordCommand {
         // 1. Run checks
         check::CheckCommand::run_all()?;
 
-        log_break!();
-        log_message!("Commit Reword");
+        br!();
+        info!("Commit Reword");
 
         // 步骤0: 检查是否是默认分支（保护分支不允许直接修改提交历史）
         let (current_branch, _default_branch) = check_not_on_default_branch("reword")?;
@@ -56,15 +55,15 @@ impl CommitRewordCommand {
             .wrap_err_with(|| format!("Failed to get commit info: {}", &commit_sha[..8]))?;
 
         // 步骤5: 显示 commit 信息并确认
-        log_break!();
-        log_message!(
+        br!();
+        info!(
             "{}",
             CommitReword::format_commit_info(&commit_info, &current_branch)
         );
 
         // 步骤6: 确认使用此 commit
-        if !ConfirmDialog::new("Confirm to reword this commit?")
-            .with_default(true)
+        if !crate::confirm!("Confirm to reword this commit?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get user confirmation")?
         {
@@ -81,14 +80,13 @@ impl CommitRewordCommand {
         // 步骤9: 预览和确认
         let preview =
             CommitReword::create_preview(&commit_info, &new_message, is_head, &current_branch)?;
-        log_break!();
-        log_message!("{}", CommitReword::format_preview(&preview));
-        log_message!("");
+        br!();
+        info!("{}", CommitReword::format_preview(&preview));
+        info!("");
 
         // 最终确认
-        ConfirmDialog::new("Confirm to execute commit reword?")
-            .with_default(true)
-            .with_cancel_message("Operation cancelled")
+        crate::confirm!("Confirm to execute commit reword?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get confirmation")?;
 
@@ -96,10 +94,10 @@ impl CommitRewordCommand {
         if is_head {
             // 修改 HEAD，使用 amend
             let new_sha = GitCommit::amend(Some(&new_message), false, false)?;
-            log_break!();
-            log_success!("✓ Commit reword successful");
-            log_info!("  New Commit SHA: {}", &new_sha[..8]);
-            log_info!("  New commit message: {}", new_message);
+            br!();
+            success!("✓ Commit reword successful");
+            info!("  New Commit SHA: {}", &new_sha[..8]);
+            info!("  New commit message: {}", new_message);
         } else {
             // 修改历史 commit，使用 rebase -i
             let options = RewordHistoryOptions {
@@ -108,17 +106,17 @@ impl CommitRewordCommand {
                 auto_stash: true,
             };
             CommitReword::reword_history_commit(options)?;
-            log_break!();
-            log_success!("✓ Commit reword successful");
-            log_info!("  New commit message: {}", new_message);
+            br!();
+            success!("✓ Commit reword successful");
+            info!("  New commit message: {}", new_message);
         }
 
         // 步骤11: 显示完成提示
         if let Some(msg) =
             CommitReword::format_completion_message(&current_branch, &commit_info.sha)?
         {
-            log_break!();
-            log_message!("{}", msg);
+            br!();
+            info!("{}", msg);
         }
 
         // 步骤12: 如果 commit 已推送，询问是否要 force push
@@ -150,9 +148,9 @@ impl CommitRewordCommand {
             })
             .collect();
 
-        // SelectDialog 默认支持 fuzzy-matcher
-        let selected = SelectDialog::new("Select commit to reword", options)
-            .with_default(0) // 默认选中 HEAD
+        // 注意：当前新 API 暂不支持模糊匹配，后续会实现
+        let selected = crate::select!("Select commit to reword", options)
+            .default(0) // 默认选中 HEAD
             .prompt()
             .wrap_err("Failed to select commit")?;
 
@@ -195,9 +193,9 @@ impl CommitRewordCommand {
     fn input_new_message_with_confirm(current_message: &str) -> Result<String> {
         loop {
             // 输入新消息
-            let new_message = InputDialog::new("Enter new commit message")
-                .with_default(current_message)
-                .with_validator(|msg: &str| {
+            let new_message = crate::input!("Enter new commit message")
+                .default(current_message)
+                .validator(|msg: &str| {
                     if msg.trim().is_empty() {
                         Err("Commit message cannot be empty".to_string())
                     } else {
@@ -208,16 +206,16 @@ impl CommitRewordCommand {
                 .wrap_err("Failed to get new commit message")?;
 
             // 确认修改
-            if ConfirmDialog::new("Confirm to reword this commit?")
-                .with_default(true)
+            if crate::confirm!("Confirm to reword this commit?")
+                .default(true)
                 .prompt()
                 .wrap_err("Failed to get confirmation")?
             {
                 return Ok(new_message);
             } else {
                 // 询问是否重新输入
-                if !ConfirmDialog::new("Re-enter message?")
-                    .with_default(true)
+                if !crate::confirm!("Re-enter message?")
+                    .default(true)
                     .prompt()
                     .wrap_err("Failed to get user choice")?
                 {

@@ -10,7 +10,6 @@ use std::time::{Duration, Instant};
 use color_eyre::{eyre::eyre, Result};
 
 use crate::base::constants::network::errors;
-use crate::base::dialog::ConfirmDialog;
 use crate::{trace_debug, trace_info, trace_warn};
 
 // ==================== 返回结构体 ====================
@@ -191,7 +190,7 @@ impl HttpRetry {
                                 attempt + 1,
                                 config.max_retries + 1
                             );
-                            match ConfirmDialog::new(&prompt).with_default(true).prompt() {
+                            match crate::confirm!(prompt).default(true).prompt() {
                                 Ok(true) => {
                                     // 用户选择继续，显示倒计时
                                     Self::countdown_with_cancel(delay, operation_name)?;

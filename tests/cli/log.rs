@@ -37,7 +37,7 @@ fn test_log_subcommand_enum_creation() {
 fn test_log_download_command_structure() {
     // 测试 Download 命令结构
     // 验证命令可以解析
-    let cli = TestLogCli::try_parse_from(&["test-log", "download", "PROJ-123"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "download", "PROJ-123"]).unwrap();
 
     match cli.command {
         LogSubcommand::Download { jira_id } => {
@@ -50,7 +50,7 @@ fn test_log_download_command_structure() {
 #[test]
 fn test_log_download_command_without_id() {
     // 测试 Download 命令不带 ID（应该为 None）
-    let cli = TestLogCli::try_parse_from(&["test-log", "download"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "download"]).unwrap();
 
     match cli.command {
         LogSubcommand::Download { jira_id } => {
@@ -63,7 +63,7 @@ fn test_log_download_command_without_id() {
 #[test]
 fn test_log_find_command_structure() {
     // 测试 Find 命令结构（带 JIRA ID 和 Request ID）
-    let cli = TestLogCli::try_parse_from(&["test-log", "find", "PROJ-456", "req-12345"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "find", "PROJ-456", "req-12345"]).unwrap();
 
     match cli.command {
         LogSubcommand::Find {
@@ -80,7 +80,7 @@ fn test_log_find_command_structure() {
 #[test]
 fn test_log_find_command_with_jira_id_only() {
     // 测试 Find 命令只带 JIRA ID
-    let cli = TestLogCli::try_parse_from(&["test-log", "find", "PROJ-456"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "find", "PROJ-456"]).unwrap();
 
     match cli.command {
         LogSubcommand::Find {
@@ -97,7 +97,7 @@ fn test_log_find_command_with_jira_id_only() {
 #[test]
 fn test_log_find_command_without_parameters() {
     // 测试 Find 命令不带任何参数
-    let cli = TestLogCli::try_parse_from(&["test-log", "find"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "find"]).unwrap();
 
     match cli.command {
         LogSubcommand::Find {
@@ -114,7 +114,7 @@ fn test_log_find_command_without_parameters() {
 #[test]
 fn test_log_search_command_structure() {
     // 测试 Search 命令结构（带 JIRA ID 和搜索关键词）
-    let cli = TestLogCli::try_parse_from(&["test-log", "search", "PROJ-789", "error"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "search", "PROJ-789", "error"]).unwrap();
 
     match cli.command {
         LogSubcommand::Search {
@@ -131,7 +131,7 @@ fn test_log_search_command_structure() {
 #[test]
 fn test_log_search_command_with_jira_id_only() {
     // 测试 Search 命令只带 JIRA ID
-    let cli = TestLogCli::try_parse_from(&["test-log", "search", "PROJ-789"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "search", "PROJ-789"]).unwrap();
 
     match cli.command {
         LogSubcommand::Search {
@@ -148,7 +148,7 @@ fn test_log_search_command_with_jira_id_only() {
 #[test]
 fn test_log_search_command_without_parameters() {
     // 测试 Search 命令不带任何参数
-    let cli = TestLogCli::try_parse_from(&["test-log", "search"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "search"]).unwrap();
 
     match cli.command {
         LogSubcommand::Search {
@@ -167,22 +167,22 @@ fn test_log_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // Download
-    let cli = TestLogCli::try_parse_from(&["test-log", "download"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "download"]).unwrap();
     assert!(matches!(cli.command, LogSubcommand::Download { .. }));
 
     // Find
-    let cli = TestLogCli::try_parse_from(&["test-log", "find"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "find"]).unwrap();
     assert!(matches!(cli.command, LogSubcommand::Find { .. }));
 
     // Search
-    let cli = TestLogCli::try_parse_from(&["test-log", "search"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "search"]).unwrap();
     assert!(matches!(cli.command, LogSubcommand::Search { .. }));
 }
 
 #[test]
 fn test_log_command_error_handling_invalid_subcommand() {
     // 测试无效子命令的错误处理
-    let result = TestLogCli::try_parse_from(&["test-log", "invalid"]);
+    let result = TestLogCli::try_parse_from(["test-log", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
@@ -190,21 +190,21 @@ fn test_log_command_error_handling_invalid_subcommand() {
 fn test_log_jira_id_parameter_optional() {
     // 测试 JIRA ID 参数在所有命令中都是可选的
     // Download
-    let cli = TestLogCli::try_parse_from(&["test-log", "download"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "download"]).unwrap();
     match cli.command {
         LogSubcommand::Download { jira_id } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
     // Find
-    let cli = TestLogCli::try_parse_from(&["test-log", "find"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "find"]).unwrap();
     match cli.command {
         LogSubcommand::Find { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
     // Search
-    let cli = TestLogCli::try_parse_from(&["test-log", "search"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "search"]).unwrap();
     match cli.command {
         LogSubcommand::Search { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
@@ -215,7 +215,7 @@ fn test_log_jira_id_parameter_optional() {
 fn test_log_find_with_request_id_only() {
     // 测试 Find 命令只带 Request ID（不带 JIRA ID）
     // 注意：clap 按位置解析，所以第一个参数会被解析为 jira_id
-    let cli = TestLogCli::try_parse_from(&["test-log", "find", "req-12345"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "find", "req-12345"]).unwrap();
 
     match cli.command {
         LogSubcommand::Find {
@@ -234,7 +234,7 @@ fn test_log_find_with_request_id_only() {
 fn test_log_search_with_search_term_only() {
     // 测试 Search 命令只带搜索关键词（不带 JIRA ID）
     // 注意：clap 按位置解析，所以第一个参数会被解析为 jira_id
-    let cli = TestLogCli::try_parse_from(&["test-log", "search", "error"]).unwrap();
+    let cli = TestLogCli::try_parse_from(["test-log", "search", "error"]).unwrap();
 
     match cli.command {
         LogSubcommand::Search {

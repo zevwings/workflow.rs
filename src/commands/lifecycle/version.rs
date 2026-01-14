@@ -1,7 +1,7 @@
 //! 版本命令
 //! 显示 Workflow CLI 的版本信息
 
-use crate::log_success;
+use crate::success;
 use color_eyre::Result;
 
 /// 版本命令
@@ -14,7 +14,7 @@ impl VersionCommand {
     /// 注意：env! 宏在编译时展开，所以这个值在运行时总是可用的。
     pub fn show() -> Result<()> {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
-        log_success!("workflow v{}", VERSION);
+        success!("workflow v{}", VERSION);
         Ok(())
     }
 }

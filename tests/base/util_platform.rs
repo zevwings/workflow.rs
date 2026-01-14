@@ -152,7 +152,7 @@ fn test_detect_release_platform_architecture_consistency() {
 fn test_detect_release_platform_no_panic() {
     // 测试平台检测不会 panic
     // 即使在不支持的平台上，也应该返回错误而不是 panic
-    let result = std::panic::catch_unwind(|| detect_release_platform());
+    let result = std::panic::catch_unwind(detect_release_platform);
 
     // 不应该 panic
     assert!(result.is_ok(), "detect_release_platform should not panic");

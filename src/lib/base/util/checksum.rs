@@ -44,12 +44,12 @@ impl Checksum {
     ///
     /// ```rust,no_run
     /// use workflow::base::util::checksum::Checksum;
-    /// use workflow::log_message;
+    /// use workflow::info;
     /// use std::path::Path;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let hash = Checksum::calculate_file_sha256(Path::new("file.tar.gz"))?;
-    /// log_message!("SHA256: {}", hash);
+    /// info!("SHA256: {}", hash);
     /// # Ok(())
     /// # }
     /// ```

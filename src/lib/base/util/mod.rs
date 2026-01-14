@@ -18,9 +18,10 @@
 //!
 //! 注意：以下模块已迁移到独立的目录：
 //! - `lib/base/logger` - 日志相关功能（`LogLevel`、`Logger`、`Tracer`、`colors`）
-//! - `lib/base/indicator` - 进度指示器（`Spinner`、`Progress`）
-//! - `lib/base/dialog` - 交互式对话框（`InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`）
-//! - `lib/base/table` - 表格输出工具（`TableBuilder`、`TableStyle`）
+//! - `lib/base/interactive/output` - 进度指示器（`Progress`）
+//! - `lib/base/interactive` - 交互式功能（包括 `spinner`、`dialog`）
+//!   - `lib/base/interactive/dialog` - 交互式对话框（`InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`、`FormBuilder`）
+//! - `lib/base/interactive/output/table` - 表格输出工具（`TableBuilder`、`TableStyle`）
 //! - `lib/completion` - Completion 管理
 //! - `lib/rollback` - 回滚工具
 //! - `lib/uninstall` - 卸载工具
@@ -68,7 +69,4 @@ pub use file::{FileReader, FileWriter};
 // 重新导出 path
 pub use path::PathAccess;
 
-// 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
-pub use crate::base::logger::console::{
-    debug, error, info, separator, separator_with_text, success, warning,
-};
+// 注意：颜色格式化函数已移除，请使用 success!, error!, warning!, info!, debug!, br! 宏代替

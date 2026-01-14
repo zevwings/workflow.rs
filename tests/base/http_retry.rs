@@ -70,7 +70,7 @@ mod tests {
         assert_eq!(config.initial_delay, 1);
         assert_eq!(config.max_delay, 30);
         assert_eq!(config.backoff_multiplier, 2.0);
-        assert_eq!(config.interactive, true);
+        assert!(config.interactive);
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(config.initial_delay, 2);
         assert_eq!(config.max_delay, 60);
         assert_eq!(config.backoff_multiplier, 1.5);
-        assert_eq!(config.interactive, false);
+        assert!(!config.interactive);
     }
 
     // ==================== 基础重试逻辑测试 ====================
@@ -120,7 +120,7 @@ mod tests {
             HttpRetry::retry(create_always_success_operation(), &config, "test operation").unwrap();
 
         assert_eq!(result.retry_count, 0);
-        assert_eq!(result.succeeded_on_first_attempt, true);
+        assert!(result.succeeded_on_first_attempt);
         assert_eq!(result.result, "immediate success");
     }
 
@@ -140,7 +140,7 @@ mod tests {
             HttpRetry::retry(create_success_after_attempts(2), &config, "test operation").unwrap();
 
         assert_eq!(result.retry_count, 1); // 重试了1次
-        assert_eq!(result.succeeded_on_first_attempt, false);
+        assert!(!result.succeeded_on_first_attempt);
         assert_eq!(result.result, "success");
     }
 
@@ -412,7 +412,7 @@ mod tests {
         let bool_result =
             HttpRetry::retry(|| -> Result<bool> { Ok(true) }, &config, "bool test").unwrap();
 
-        assert_eq!(bool_result.result, true);
+        assert!(bool_result.result);
 
         // 测试自定义结构体
         #[derive(Debug, PartialEq)]

@@ -18,7 +18,7 @@ struct TestRepoCli {
 #[test]
 fn test_repo_setup_command_structure() {
     // 测试 Setup 命令结构
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "setup"]).unwrap();
+    let cli = TestRepoCli::try_parse_from(["test-repo", "setup"]).unwrap();
 
     match cli.command {
         RepoSubcommand::Setup => {
@@ -33,7 +33,7 @@ fn test_repo_setup_command_structure() {
 #[test]
 fn test_repo_show_command_structure() {
     // 测试 Show 命令结构
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "show"]).unwrap();
+    let cli = TestRepoCli::try_parse_from(["test-repo", "show"]).unwrap();
 
     match cli.command {
         RepoSubcommand::Show => {
@@ -50,25 +50,25 @@ fn test_repo_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // Setup
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "setup"]).unwrap();
+    let cli = TestRepoCli::try_parse_from(["test-repo", "setup"]).unwrap();
     assert!(matches!(cli.command, RepoSubcommand::Setup));
 
     // Show
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "show"]).unwrap();
+    let cli = TestRepoCli::try_parse_from(["test-repo", "show"]).unwrap();
     assert!(matches!(cli.command, RepoSubcommand::Show));
 }
 
 #[test]
 fn test_repo_command_error_handling_invalid_subcommand() {
     // 测试无效子命令的错误处理
-    let result = TestRepoCli::try_parse_from(&["test-repo", "invalid"]);
+    let result = TestRepoCli::try_parse_from(["test-repo", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
 #[test]
 fn test_repo_command_error_handling_missing_subcommand() {
     // 测试缺少子命令的错误处理
-    let result = TestRepoCli::try_parse_from(&["test-repo"]);
+    let result = TestRepoCli::try_parse_from(["test-repo"]);
     assert!(result.is_err(), "Should fail when subcommand is missing");
 }
 
@@ -78,7 +78,7 @@ fn test_repo_all_commands_no_extra_arguments() {
     let commands = ["setup", "show"];
 
     for cmd in commands.iter() {
-        let result = TestRepoCli::try_parse_from(&["test-repo", cmd, "extra-arg"]);
+        let result = TestRepoCli::try_parse_from(["test-repo", cmd, "extra-arg"]);
         assert!(
             result.is_err(),
             "{} command should not accept extra arguments",

@@ -4,20 +4,20 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::dialog::ConfirmDialog;
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
+use crate::br;
+use crate::debug;
 use crate::git::GitRepo;
+use crate::info;
 use crate::jira::helpers::extract_jira_ticket_id;
 use crate::jira::Jira;
-use crate::log_break;
-use crate::log_debug;
-use crate::log_info;
-use crate::log_success;
-use crate::log_warning;
 use crate::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_from_body};
 use crate::pr::helpers::{generate_pull_request_body, resolve_pull_request_id};
 use crate::pr::llm::RewordGenerator;
 use crate::pr::platform::create_provider_auto;
+use crate::spinner;
+use crate::success;
+use crate::warning;
 
 /// PR Reword 命令
 pub struct PullRequestRewordCommand;
@@ -53,34 +53,31 @@ impl PullRequestRewordCommand {
         let provider = create_provider_auto()?;
 
         // 获取当前 PR 标题和描述
-        let current_title = Spinner::with(format!("Fetching PR #{} information...", pr_id), || {
-            provider.get_pull_request_title(&pr_id)
-        })
-        .wrap_err("Failed to get PR title")?;
+        let current_title = spinner!("Fetching PR #{} information...", pr_id)
+            .with(|| provider.get_pull_request_title(&pr_id))
+            .wrap_err("Failed to get PR title")?;
 
-        let current_body = Spinner::with("Fetching PR description...", || {
-            provider.get_pull_request_body(&pr_id)
-        })
-        .wrap_err("Failed to get PR body")?;
+        let current_body = spinner("Fetching PR description...")
+            .with(|| provider.get_pull_request_body(&pr_id))
+            .wrap_err("Failed to get PR body")?;
 
-        log_info!("Current PR #{}:", pr_id);
-        log_info!("  Title:       {}", current_title);
+        info!("Current PR #{}:", pr_id);
+        info!("  Title:       {}", current_title);
         if let Some(ref body) = current_body {
-            log_info!("  Description: {}", body);
-            log_break!();
+            info!("  Description: {}", body);
+            br!();
         } else {
-            log_info!("  Description: (empty)");
-            log_break!();
+            info!("  Description: (empty)");
+            br!();
         }
 
         // 获取 PR diff
-        let pr_diff = Spinner::with("Fetching PR diff...", || {
-            provider.get_pull_request_diff(&pr_id)
-        })
-        .wrap_err("Failed to get PR diff")?;
+        let pr_diff = spinner("Fetching PR diff...")
+            .with(|| provider.get_pull_request_diff(&pr_id))
+            .wrap_err("Failed to get PR diff")?;
 
         if pr_diff.trim().is_empty() {
-            log_warning!("PR diff is empty. Cannot generate new title and description.");
+            warning!("PR diff is empty. Cannot generate new title and description.");
             color_eyre::eyre::bail!("PR diff is empty. Please ensure the PR has changes.");
         }
 
@@ -88,22 +85,21 @@ impl PullRequestRewordCommand {
         let diff_length = pr_diff.chars().count();
         let diff_lines: Vec<&str> = pr_diff.lines().collect();
         let diff_line_count = diff_lines.len();
-        log_debug!(
+        debug!(
             "PR diff: {} characters, {} lines",
-            diff_length,
-            diff_line_count
+            diff_length, diff_line_count
         );
 
         // 显示 diff 的前几行，帮助用户确认获取的 diff 是否正确
         if diff_line_count > 0 {
             let preview_lines: String =
                 diff_lines.iter().take(10).copied().collect::<Vec<_>>().join("\n");
-            log_debug!("PR diff preview (first 10 lines):");
-            log_debug!("{}", preview_lines);
+            debug!("PR diff preview (first 10 lines):");
+            debug!("{}", preview_lines);
             if diff_line_count > 10 {
-                log_debug!("... ({} more lines)", diff_line_count - 10);
+                debug!("... ({} more lines)", diff_line_count - 10);
             }
-            log_break!();
+            br!();
         }
 
         // 从当前 PR body 中提取信息
@@ -113,18 +109,18 @@ impl PullRequestRewordCommand {
         if let Some(ref types) = current_change_types {
             let selected_count = types.iter().filter(|&&t| t).count();
             if selected_count > 0 {
-                log_success!(
+                success!(
                     "Found {} selected change type(s) in current PR",
                     selected_count
                 );
-                log_debug!("Change types: {:?}", types);
+                debug!("Change types: {:?}", types);
             } else {
-                log_info!("No change types selected in current PR");
+                info!("No change types selected in current PR");
             }
         } else {
-            log_warning!("Could not parse change types from current PR body, will use default (none selected)");
+            warning!("Could not parse change types from current PR body, will use default (none selected)");
             if let Some(ref body) = current_body {
-                log_debug!(
+                debug!(
                     "Current PR body preview (first 500 chars): {}",
                     &body.chars().take(500).collect::<String>()
                 );
@@ -137,23 +133,22 @@ impl PullRequestRewordCommand {
             .or_else(|| extract_jira_ticket_id(&current_title));
 
         // 使用 LLM 生成新的标题和描述
-        let reword_result = Spinner::with("Generating title and description with LLM...", || {
-            RewordGenerator::reword_from_diff(&pr_diff, Some(&current_title))
-        })
-        .wrap_err("Failed to generate PR title and description")?;
+        let reword_result = spinner("Generating title and description with LLM...")
+            .with(|| RewordGenerator::reword_from_diff(&pr_diff, Some(&current_title)))
+            .wrap_err("Failed to generate PR title and description")?;
 
-        log_info!("Generated from PR diff:");
-        log_info!("  Title:       {}", reword_result.pr_title);
+        info!("Generated from PR diff:");
+        info!("  Title:       {}", reword_result.pr_title);
         if let Some(ref desc) = reword_result.description {
-            log_info!("  Description: {}", desc);
+            info!("  Description: {}", desc);
         } else {
-            log_info!("  Description: (empty)");
+            info!("  Description: (empty)");
         }
 
         // 预览模式：只显示结果，不更新
         if dry_run {
-            log_success!("Dry run mode: PR will not be updated.");
-            log_info!("Remove --dry-run flag to actually update the PR.");
+            success!("Dry run mode: PR will not be updated.");
+            info!("Remove --dry-run flag to actually update the PR.");
             return Ok(());
         }
 
@@ -168,13 +163,13 @@ impl PullRequestRewordCommand {
 
         // 显示对比
         if update_title {
-            log_info!("Title:");
-            log_info!("  Current:  {}", current_title);
-            log_info!("  New:      {}", reword_result.pr_title);
+            info!("Title:");
+            info!("  Current:  {}", current_title);
+            info!("  New:      {}", reword_result.pr_title);
         }
 
         if update_body {
-            log_info!("Description:");
+            info!("Description:");
             let current_preview = current_body.as_deref().unwrap_or("(empty)");
             // 生成新的完整 PR body（用于预览）
             let new_body_preview = Self::generate_new_pr_body(
@@ -183,14 +178,14 @@ impl PullRequestRewordCommand {
                 jira_ticket.as_deref(),
             )
             .unwrap_or_else(|e| {
-                log_warning!("Failed to generate PR body preview: {}", e);
+                warning!("Failed to generate PR body preview: {}", e);
                 reword_result.description.as_deref().unwrap_or("(empty)").to_string()
             });
-            log_info!("  Current:  {}", current_preview);
-            log_info!("  New:      {}", new_body_preview);
+            info!("  Current:  {}", current_preview);
+            info!("  New:      {}", new_body_preview);
         }
 
-        log_break!();
+        br!();
 
         // 确认更新
         let confirm_message = if update_title && update_body {
@@ -204,10 +199,10 @@ impl PullRequestRewordCommand {
             format!("Update PR #{} description?", pr_id)
         };
 
-        let confirmed = ConfirmDialog::new(&confirm_message).with_default(true).prompt()?;
+        let confirmed = crate::confirm!(confirm_message).default(true).prompt()?;
 
         if !confirmed {
-            log_info!("Update cancelled.");
+            info!("Update cancelled.");
             return Ok(());
         }
 
@@ -231,25 +226,24 @@ impl PullRequestRewordCommand {
 
         let new_body = new_body_string.as_deref();
 
-        Spinner::with("Updating PR...", || {
-            provider.update_pull_request(&pr_id, new_title, new_body)
-        })
-        .wrap_err("Failed to update PR")?;
+        spinner("Updating PR...")
+            .with(|| provider.update_pull_request(&pr_id, new_title, new_body))
+            .wrap_err("Failed to update PR")?;
 
-        log_break!();
-        log_success!("PR #{} updated successfully!", pr_id);
+        br!();
+        success!("PR #{} updated successfully!", pr_id);
         if update_title {
-            log_success!("  Title:       {}", reword_result.pr_title);
+            success!("  Title:       {}", reword_result.pr_title);
         }
         if update_body {
             if let Some(ref desc) = reword_result.description {
-                log_success!("  Description: {}", desc);
+                success!("  Description: {}", desc);
             }
         }
 
         // 显示 PR URL
         let pr_url = provider.get_pull_request_url(&pr_id)?;
-        log_info!("  URL:         {}", pr_url);
+        info!("  URL:         {}", pr_url);
 
         Ok(())
     }
@@ -266,10 +260,10 @@ impl PullRequestRewordCommand {
 
         // 使用当前 change_types，如果没有则默认都不选中
         let selected_types: Vec<bool> = if let Some(types) = current_change_types {
-            log_debug!("Using parsed change_types: {:?}", types);
+            debug!("Using parsed change_types: {:?}", types);
             types.to_vec()
         } else {
-            log_debug!("No change_types found, using default (all false)");
+            debug!("No change_types found, using default (all false)");
             vec![false; TYPES_OF_CHANGES.len()]
         };
 
