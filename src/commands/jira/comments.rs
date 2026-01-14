@@ -1,5 +1,5 @@
 use crate::jira::Jira;
-use crate::{log_break, log_debug, log_message};
+use crate::{br, debug, info};
 use chrono::{DateTime, FixedOffset};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
@@ -25,7 +25,7 @@ impl CommentsCommand {
         // 获取 JIRA ID（从参数或交互式输入）
         let jira_id = get_jira_id(jira_id, None)?;
 
-        log_debug!("Getting comments for {}...", jira_id);
+        debug!("Getting comments for {}...", jira_id);
 
         // 获取 ticket 信息
         let issue = Jira::get_ticket_info(&jira_id)
@@ -72,8 +72,8 @@ impl CommentsCommand {
         since: Option<&str>,
     ) -> Result<()> {
         let Some(comments_data) = comments else {
-            log_break!();
-            log_message!("Comments: None");
+            br!();
+            info!("Comments: None");
             return Ok(());
         };
 
@@ -124,39 +124,39 @@ impl CommentsCommand {
             filtered_comments.into_iter().skip(start).take(end - start).collect::<Vec<_>>();
 
         if paginated_comments.is_empty() {
-            log_break!();
-            log_message!("Comments: None");
+            br!();
+            info!("Comments: None");
             return Ok(());
         }
 
-        log_break!();
-        log_break!('=', 40, "Comments");
-        log_message!(
+        br!();
+        br!('=', 40, "Comments");
+        info!(
             "Showing {}/{} comment(s):",
             paginated_comments.len(),
             comments_data.comments.len()
         );
 
         for (idx, comment) in paginated_comments.iter().enumerate() {
-            log_break!();
-            log_message!("Comment #{}:", idx + 1 + start);
+            br!();
+            info!("Comment #{}:", idx + 1 + start);
             if let Some(author) = &comment.author {
-                log_message!(
+                info!(
                     "  Author: {} ({})",
                     author.display_name,
                     author.email_address.as_deref().unwrap_or("N/A")
                 );
             }
-            log_message!("  Created: {}", format_date(&comment.created)?);
+            info!("  Created: {}", format_date(&comment.created)?);
             if let Some(updated) = &comment.updated {
                 if updated != &comment.created {
-                    log_message!("  Updated: {}", format_date(updated)?);
+                    info!("  Updated: {}", format_date(updated)?);
                 }
             }
-            log_message!("  Content:");
+            info!("  Content:");
             // 每行添加缩进
             for line in comment.body.lines() {
-                log_message!("    {}", line);
+                info!("    {}", line);
             }
         }
 
@@ -172,7 +172,7 @@ impl CommentsCommand {
             output.insert("comments".to_string(), serde_json::json!([]));
         }
 
-        log_message!("{}", serde_json::to_string_pretty(&output)?);
+        info!("{}", serde_json::to_string_pretty(&output)?);
         Ok(())
     }
 
@@ -185,7 +185,7 @@ impl CommentsCommand {
             output.insert("comments".to_string(), serde_json::json!([]));
         }
 
-        log_message!("{}", serde_saphyr::to_string(&output)?);
+        info!("{}", serde_saphyr::to_string(&output)?);
         Ok(())
     }
 
@@ -199,7 +199,7 @@ impl CommentsCommand {
         since: Option<&str>,
     ) -> Result<()> {
         let Some(comments_data) = comments else {
-            log_message!("# Comments\n\nNo comments.\n");
+            info!("# Comments\n\nNo comments.\n");
             return Ok(());
         };
 
@@ -245,19 +245,19 @@ impl CommentsCommand {
         let paginated_comments =
             filtered_comments.into_iter().skip(start).take(end - start).collect::<Vec<_>>();
 
-        log_message!("# Comments\n");
+        info!("# Comments\n");
 
         for (idx, comment) in paginated_comments.iter().enumerate() {
-            log_message!("## Comment #{}", idx + 1 + start);
+            info!("## Comment #{}", idx + 1 + start);
             if let Some(author) = &comment.author {
-                log_message!(
+                info!(
                     "**Author:** {} ({})\n",
                     author.display_name,
                     author.email_address.as_deref().unwrap_or("N/A")
                 );
             }
-            log_message!("**Created:** {}\n", format_date(&comment.created)?);
-            log_message!("{}\n", comment.body);
+            info!("**Created:** {}\n", format_date(&comment.created)?);
+            info!("{}\n", comment.body);
         }
 
         Ok(())

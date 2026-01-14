@@ -12,8 +12,8 @@
 
 use clap::Parser;
 use color_eyre::Result;
+use workflow::br;
 use workflow::commands::lifecycle::install::InstallCommand;
-use workflow::log_break;
 
 /// CLI main structure
 #[derive(Parser)]
@@ -58,7 +58,7 @@ fn main() -> Result<()> {
 
     if install_completions {
         if install_binaries {
-            log_break!(); // 添加空行分隔
+            br!(); // 添加空行分隔
         }
         InstallCommand::install_completions()?;
     }

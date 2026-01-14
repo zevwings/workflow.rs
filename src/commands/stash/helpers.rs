@@ -2,7 +2,6 @@
 //!
 //! Helper functions for stash commands, including interactive selection.
 
-use crate::base::dialog::SelectDialog;
 use crate::git::{GitStash, StashEntry};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -31,8 +30,8 @@ pub fn select_stash_interactively() -> Result<String> {
         })
         .collect();
 
-    let selected = SelectDialog::new("Select a stash entry", options)
-        .with_default(0)
+    let selected = crate::select!("Select a stash entry", options)
+        .default(0)
         .prompt()
         .wrap_err("Failed to select stash entry")?;
 

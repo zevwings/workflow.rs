@@ -8,16 +8,15 @@
 //! 3. Format using template: {type}/{jira-ticket}-{branch-name}
 //! 4. Apply repository prefix if configured
 
-use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::base::format::MessageFormatter;
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::pr::llm::CreateGenerator;
-use crate::{log_info, log_success, log_warning};
+use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Branch create command
@@ -83,9 +82,9 @@ impl CreateCommand {
                 if !exists_local && !exists_remote {
                     color_eyre::eyre::bail!("[DRY RUN] Base branch '{}' does not exist", base);
                 }
-                log_info!("[DRY RUN] Would switch to base branch: {}", base);
+                info!("[DRY RUN] Would switch to base branch: {}", base);
             }
-            log_info!("[DRY RUN] Would create branch: {}", final_branch_name);
+            info!("[DRY RUN] Would create branch: {}", final_branch_name);
             return Ok(());
         }
 
@@ -97,10 +96,10 @@ impl CreateCommand {
             Self::pull_current_branch()?;
         }
 
-        log_success!("Creating branch: {}", final_branch_name);
+        success!("Creating branch: {}", final_branch_name);
         GitBranch::checkout_branch(&final_branch_name)?;
 
-        log_success!("Branch '{}' created successfully!", final_branch_name);
+        success!("Branch '{}' created successfully!", final_branch_name);
         Ok(())
     }
 
@@ -124,11 +123,10 @@ impl CreateCommand {
             }
         } else {
             // Interactive prompt (optional)
-            let input = InputDialog::new("Jira ticket (optional)")
-                .allow_empty(true)
+            let input_value = crate::input!("Jira ticket (optional)")
                 .prompt()
                 .wrap_err("Failed to get Jira ticket")?;
-            let trimmed = input.trim().to_string();
+            let trimmed = input_value.trim().to_string();
             if trimmed.is_empty() {
                 None
             } else {
@@ -147,8 +145,8 @@ impl CreateCommand {
     /// Resolve branch name (interactive, required if no ticket_id)
     fn resolve_branch_name() -> Result<String> {
         // Interactive prompt (required)
-        let name = InputDialog::new("Branch name (required)")
-            .with_validator(|input: &str| {
+        let name = crate::input!("Branch name (required)")
+            .validator(|input: &str| {
                 if input.trim().is_empty() {
                     Err("Branch name is required and cannot be empty".to_string())
                 } else {
@@ -165,10 +163,11 @@ impl CreateCommand {
     /// Gets JIRA ticket info and uses LLM to generate a branch name slug.
     fn generate_branch_name_from_jira(ticket_id: &str) -> Result<String> {
         // Get JIRA ticket info
-        let issue = Spinner::with(
-            MessageFormatter::operation("Getting ticket info for", ticket_id),
-            || Jira::get_ticket_info(ticket_id),
-        )
+        let issue = spinner(MessageFormatter::operation(
+            "Getting ticket info for",
+            ticket_id,
+        ))
+        .with(|| Jira::get_ticket_info(ticket_id))
         .wrap_err_with(|| MessageFormatter::error("get ticket info for", ticket_id, ""))?;
 
         // Use LLM to generate branch name
@@ -177,12 +176,12 @@ impl CreateCommand {
 
         match CreateGenerator::generate(&issue.fields.summary, exists_branches, git_diff) {
             Ok(content) => {
-                log_success!("Generated branch name using LLM: {}", content.branch_name);
+                success!("Generated branch name using LLM: {}", content.branch_name);
                 // Return just the slug part (without prefix)
                 Ok(BranchNaming::sanitize(&content.branch_name))
             }
             Err(e) => {
-                log_warning!(
+                warning!(
                     "Failed to generate branch name using LLM: {}, using summary slug",
                     e
                 );
@@ -201,7 +200,7 @@ impl CreateCommand {
 
         // If already on target branch, just pull latest changes
         if current_branch == from_branch {
-            log_info!("Already on branch '{}'", from_branch);
+            info!("Already on branch '{}'", from_branch);
             // Check if remote branch exists and pull
             if GitBranch::has_remote_branch(from_branch)? {
                 Self::pull_with_stash(
@@ -223,7 +222,7 @@ impl CreateCommand {
         let has_uncommitted = GitCommit::has_commit()
             .wrap_err("Failed to check uncommitted changes before switching branch")?;
         let has_stashed = if has_uncommitted {
-            log_info!("Stashing uncommitted changes before switching branch...");
+            info!("Stashing uncommitted changes before switching branch...");
             GitStash::stash_push(Some(&format!(
                 "Auto-stash before switching to {}",
                 from_branch
@@ -234,7 +233,7 @@ impl CreateCommand {
         };
 
         // Switch to base branch
-        log_info!("Switching to branch '{}'...", from_branch);
+        info!("Switching to branch '{}'...", from_branch);
         if let Err(e) = GitBranch::checkout_branch(from_branch)
             .wrap_err_with(|| format!("Failed to checkout branch: {}", from_branch))
         {
@@ -255,7 +254,7 @@ impl CreateCommand {
 
         // Restore stash if we stashed changes
         if has_stashed {
-            log_info!("Restoring stashed changes...");
+            info!("Restoring stashed changes...");
             handle_stash_pop_result(GitStash::stash_pop(None));
         }
 
@@ -274,19 +273,18 @@ impl CreateCommand {
             .wrap_err("Failed to check if remote branch exists")?;
 
         if !has_remote {
-            log_info!("No remote branch for '{}', skipping pull", current_branch);
+            info!("No remote branch for '{}', skipping pull", current_branch);
             return Ok(());
         }
 
         // Ask user if they want to pull latest changes
-        let should_pull =
-            ConfirmDialog::new(format!("Pull latest changes from '{}'?", current_branch))
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to confirm pull")?;
+        let should_pull = crate::confirm!("Pull latest changes from '{}'?", current_branch)
+            .default(true)
+            .prompt()
+            .wrap_err("Failed to confirm pull")?;
 
         if !should_pull {
-            log_info!("Skipping pull, using current branch state");
+            info!("Skipping pull, using current branch state");
             return Ok(());
         }
 
@@ -313,7 +311,7 @@ impl CreateCommand {
         let has_uncommitted = GitCommit::has_commit()
             .wrap_err("Failed to check uncommitted changes before pulling")?;
         let has_stashed = if has_uncommitted {
-            log_info!("Stashing uncommitted changes before pulling latest changes...");
+            info!("Stashing uncommitted changes before pulling latest changes...");
             GitStash::stash_push(Some(stash_message))?;
             true
         } else {
@@ -321,7 +319,7 @@ impl CreateCommand {
         };
 
         // Pull latest changes
-        log_info!("Pulling latest changes from '{}'...", branch_name);
+        info!("Pulling latest changes from '{}'...", branch_name);
         if let Err(e) = GitBranch::pull(branch_name)
             .wrap_err_with(|| format!("Failed to pull latest changes from {}", branch_name))
         {
@@ -334,7 +332,7 @@ impl CreateCommand {
 
         // Restore stash if we stashed changes
         if has_stashed {
-            log_info!("Restoring stashed changes...");
+            info!("Restoring stashed changes...");
             handle_stash_pop_result(GitStash::stash_pop(None));
         }
 

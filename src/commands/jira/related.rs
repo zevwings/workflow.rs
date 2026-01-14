@@ -1,6 +1,6 @@
 use crate::git::GitBranch;
 use crate::jira::history::JiraWorkHistory;
-use crate::{log_break, log_message};
+use crate::{br, info};
 use color_eyre::Result;
 use serde_json;
 use std::collections::HashMap;
@@ -33,31 +33,31 @@ impl RelatedCommand {
 
     /// 表格格式输出
     fn output_table(jira_id: &str) -> Result<()> {
-        log_break!();
-        log_break!('=', 40, "Related Information");
-        log_message!("Jira Ticket: {}", jira_id);
-        log_break!();
+        br!();
+        br!('=', 40, "Related Information");
+        info!("Jira Ticket: {}", jira_id);
+        br!();
 
         // 1. 查找关联的 PR
         let pr_entries = JiraWorkHistory::find_prs_by_jira_ticket(jira_id)?;
         if !pr_entries.is_empty() {
-            log_message!("Related Pull Requests:");
+            info!("Related Pull Requests:");
             for entry in &pr_entries {
                 if let Some(pr_url) = &entry.pull_request_url {
-                    log_message!("  - {}", pr_url);
+                    info!("  - {}", pr_url);
                     if let Some(branch) = &entry.branch {
-                        log_message!("    Branch: {}", branch);
+                        info!("    Branch: {}", branch);
                     }
                     if let Some(created) = &entry.created_at {
-                        log_message!("    Created: {}", created);
+                        info!("    Created: {}", created);
                     }
                     if let Some(merged) = &entry.merged_at {
-                        log_message!("    Merged: {}", merged);
+                        info!("    Merged: {}", merged);
                     }
                 }
             }
         } else {
-            log_message!("Related Pull Requests: None");
+            info!("Related Pull Requests: None");
         }
 
         // 2. 查找关联的分支（从工作历史记录）
@@ -75,15 +75,15 @@ impl RelatedCommand {
         }
 
         if !all_branches.is_empty() {
-            log_break!();
-            log_message!("Related Branches:");
+            br!();
+            info!("Related Branches:");
             for branch in &all_branches {
                 // 检查分支是否存在
                 let (local_exists, remote_exists) = match GitBranch::is_branch_exists(branch) {
                     Ok(result) => result,
                     Err(_) => {
                         // 如果不在 Git 仓库中，跳过状态检查
-                        log_message!("  - {}", branch);
+                        info!("  - {}", branch);
                         continue;
                     }
                 };
@@ -93,11 +93,11 @@ impl RelatedCommand {
                     (false, true) => "(remote only)",
                     (false, false) => "(not found)",
                 };
-                log_message!("  - {} {}", branch, status);
+                info!("  - {} {}", branch, status);
             }
         } else {
-            log_break!();
-            log_message!("Related Branches: None");
+            br!();
+            info!("Related Branches: None");
         }
 
         Ok(())
@@ -140,7 +140,7 @@ impl RelatedCommand {
         }
         output.insert("branches".to_string(), serde_json::json!(all_branches));
 
-        log_message!("{}", serde_json::to_string_pretty(&output)?);
+        info!("{}", serde_json::to_string_pretty(&output)?);
         Ok(())
     }
 
@@ -152,27 +152,27 @@ impl RelatedCommand {
 
     /// Markdown 格式输出
     fn output_markdown(jira_id: &str) -> Result<()> {
-        log_message!("# Related Information for {}\n", jira_id);
+        info!("# Related Information for {}\n", jira_id);
 
         let pr_entries = JiraWorkHistory::find_prs_by_jira_ticket(jira_id)?;
         if !pr_entries.is_empty() {
-            log_message!("## Related Pull Requests\n");
+            info!("## Related Pull Requests\n");
             for entry in &pr_entries {
                 if let Some(pr_url) = &entry.pull_request_url {
-                    log_message!("- [{}]({})", pr_url, pr_url);
+                    info!("- [{}]({})", pr_url, pr_url);
                     if let Some(branch) = &entry.branch {
-                        log_message!("  - Branch: `{}`", branch);
+                        info!("  - Branch: `{}`", branch);
                     }
                     if let Some(created) = &entry.created_at {
-                        log_message!("  - Created: {}", created);
+                        info!("  - Created: {}", created);
                     }
                     if let Some(merged) = &entry.merged_at {
-                        log_message!("  - Merged: {}", merged);
+                        info!("  - Merged: {}", merged);
                     }
                 }
             }
         } else {
-            log_message!("## Related Pull Requests\n\nNone\n");
+            info!("## Related Pull Requests\n\nNone\n");
         }
 
         let branches_from_history = JiraWorkHistory::find_branches_by_jira_ticket(jira_id)?;
@@ -185,12 +185,12 @@ impl RelatedCommand {
         }
 
         if !all_branches.is_empty() {
-            log_message!("\n## Related Branches\n");
+            info!("\n## Related Branches\n");
             for branch in &all_branches {
                 let (local_exists, remote_exists) = match GitBranch::is_branch_exists(branch) {
                     Ok(result) => result,
                     Err(_) => {
-                        log_message!("- `{}`", branch);
+                        info!("- `{}`", branch);
                         continue;
                     }
                 };
@@ -200,10 +200,10 @@ impl RelatedCommand {
                     (false, true) => "remote only",
                     (false, false) => "not found",
                 };
-                log_message!("- `{}` ({})", branch, status);
+                info!("- `{}` ({})", branch, status);
             }
         } else {
-            log_message!("\n## Related Branches\n\nNone\n");
+            info!("\n## Related Branches\n\nNone\n");
         }
 
         Ok(())

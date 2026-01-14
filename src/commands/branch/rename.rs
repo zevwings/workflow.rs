@@ -4,11 +4,10 @@
 //! Provides interactive workflow following the implementation document.
 
 use crate::base::constants::validation::branch;
-use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::check;
 use crate::git::GitBranch;
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::process::Command;
 
@@ -26,8 +25,8 @@ impl BranchRenameCommand {
         // 1. Run checks
         check::CheckCommand::run_all()?;
 
-        log_break!();
-        log_message!("{}", crate::base::constants::messages::log::BRANCH_RENAME);
+        br!();
+        info!("{}", crate::base::constants::messages::log::BRANCH_RENAME);
 
         // Select branch to rename (fully interactive)
         let branch_to_rename = Self::select_branch_to_rename()?;
@@ -37,7 +36,7 @@ impl BranchRenameCommand {
 
         // Check if new name is same as old name
         if branch_to_rename == new_branch_name {
-            log_info!("New branch name is the same as old branch name, no rename needed");
+            info!("New branch name is the same as old branch name, no rename needed");
             return Ok(());
         }
 
@@ -47,8 +46,8 @@ impl BranchRenameCommand {
         // Execute rename (fully interactive remote branch handling)
         Self::execute_rename(&branch_to_rename, &new_branch_name)?;
 
-        log_break!();
-        log_success!("Branch rename completed!");
+        br!();
+        success!("Branch rename completed!");
 
         Ok(())
     }
@@ -59,11 +58,10 @@ impl BranchRenameCommand {
         let current_branch =
             GitBranch::current_branch().wrap_err("Failed to get current branch")?;
 
-        let rename_current =
-            ConfirmDialog::new(format!("Rename current branch '{}'?", current_branch))
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to get user confirmation")?;
+        let rename_current = crate::confirm!("Rename current branch '{}'?", current_branch)
+            .default(true)
+            .prompt()
+            .wrap_err("Failed to get user confirmation")?;
 
         if rename_current {
             Ok(current_branch)
@@ -87,13 +85,13 @@ impl BranchRenameCommand {
             );
 
             let new_name =
-                InputDialog::new(&prompt).prompt().wrap_err("Failed to get new branch name")?;
+                crate::input!(prompt).prompt().wrap_err("Failed to get new branch name")?;
 
             // Validate new branch name
             // 1. Validate branch name format
             if let Err(e) = Self::validate_branch_name(&new_name) {
-                log_warning!("{}", e);
-                log_info!("Please enter a valid branch name");
+                warning!("{}", e);
+                info!("Please enter a valid branch name");
                 continue;
             }
 
@@ -102,9 +100,9 @@ impl BranchRenameCommand {
                 GitBranch::is_branch_exists(&new_name).wrap_err("Failed to check branch")?;
 
             if exists_local {
-                log_warning!("⚠️  Error: Branch '{}' already exists locally", new_name);
-                log_info!("Git does not allow renaming to an existing branch name.");
-                log_info!("Please enter a different branch name.");
+                warning!("⚠️  Error: Branch '{}' already exists locally", new_name);
+                info!("Git does not allow renaming to an existing branch name.");
+                info!("Please enter a different branch name.");
                 continue; // Re-enter
             }
 
@@ -120,25 +118,24 @@ impl BranchRenameCommand {
         let is_default = default_branch.as_deref() == Some(old_branch_name);
 
         if is_default {
-            log_warning!(
+            warning!(
                 "⚠️  Warning: You are renaming the default branch '{}'",
                 old_branch_name
             );
-            log_message!("");
-            log_message!("Renaming the default branch may affect:");
-            log_message!("  - Repository default branch settings");
-            log_message!("  - CI/CD configurations");
-            log_message!("  - Other tools that depend on the default branch");
-            log_message!("");
-            if !ConfirmDialog::new("Confirm to continue renaming the default branch?")
-                .with_default(false)
-                .with_cancel_message("Operation cancelled")
+            info!("");
+            info!("Renaming the default branch may affect:");
+            info!("  - Repository default branch settings");
+            info!("  - CI/CD configurations");
+            info!("  - Other tools that depend on the default branch");
+            info!("");
+            if !crate::confirm!("Confirm to continue renaming the default branch?")
+                .default(false)
                 .prompt()
                 .wrap_err("Failed to get confirmation")?
             {
                 return Ok(());
             }
-            log_break!();
+            br!();
         }
 
         // Display preview information
@@ -151,18 +148,18 @@ impl BranchRenameCommand {
         // Check remote tracking
         let has_remote_tracking = Self::check_remote_tracking(old_branch_name)?;
 
-        log_break!();
-        log_break!('━', 80, "Branch Rename Preview");
-        log_message!("");
-        log_message!("  Old branch name:  {}", old_branch_name);
-        log_message!("  New branch name:  {}", new_branch_name);
-        log_message!(
+        br!();
+        br!('━', 80, "Branch Rename Preview");
+        info!("");
+        info!("  Old branch name:  {}", old_branch_name);
+        info!("  New branch name:  {}", new_branch_name);
+        info!(
             "  Is current branch:  {}",
             if is_current { "Yes ✓" } else { "No" }
         );
-        log_message!("");
-        log_message!("  Remote branch status:");
-        log_message!(
+        info!("");
+        info!("  Remote branch status:");
+        info!(
             "    - Local branch:  {}",
             if exists_local {
                 "Exists ✓"
@@ -170,7 +167,7 @@ impl BranchRenameCommand {
                 "Not exists"
             }
         );
-        log_message!(
+        info!(
             "    - Remote branch:  {}",
             if exists_remote {
                 format!("Exists ✓ (origin/{})", old_branch_name)
@@ -178,7 +175,7 @@ impl BranchRenameCommand {
                 "Not exists".to_string()
             }
         );
-        log_message!(
+        info!(
             "    - Remote tracking:  {}",
             if has_remote_tracking {
                 "Set ✓"
@@ -186,13 +183,12 @@ impl BranchRenameCommand {
                 "Not set"
             }
         );
-        log_message!("");
-        log_break!('━', 80);
+        info!("");
+        br!('━', 80);
 
         // Final confirmation
-        ConfirmDialog::new("Confirm to execute branch rename?")
-            .with_default(true)
-            .with_cancel_message("Operation cancelled")
+        crate::confirm!("Confirm to execute branch rename?")
+            .default(true)
             .prompt()
             .wrap_err("Failed to get confirmation")?;
 
@@ -209,7 +205,7 @@ impl BranchRenameCommand {
             GitBranch::rename(Some(old_branch_name), new_branch_name)
                 .wrap_err("Failed to rename branch")?;
         }
-        log_success!(
+        success!(
             "✓ Renamed local branch: {} -> {}",
             old_branch_name,
             new_branch_name
@@ -221,100 +217,94 @@ impl BranchRenameCommand {
 
         if exists_remote {
             // Display warning information
-            log_break!();
-            log_warning!(
+            br!();
+            warning!(
                 "⚠️  Important: Remote branch 'origin/{}' exists",
                 old_branch_name
             );
-            log_message!("");
-            log_message!("Renaming remote branch will affect:");
-            log_message!("  - Other collaborators need to update local branch references");
-            log_message!("  - Existing PRs may need to be updated");
-            log_message!("  - CI/CD configurations may need to be updated");
-            log_message!("");
-            log_message!("Please ensure team members are notified.");
-            log_break!();
+            info!("");
+            info!("Renaming remote branch will affect:");
+            info!("  - Other collaborators need to update local branch references");
+            info!("  - Existing PRs may need to be updated");
+            info!("  - CI/CD configurations may need to be updated");
+            info!("");
+            info!("Please ensure team members are notified.");
+            br!();
 
             // Ask if update remote branch (fully interactive)
-            let should_rename_remote = ConfirmDialog::new("Also rename remote branch?")
-                .with_default(false)
-                .with_cancel_message("Operation cancelled")
+            let should_rename_remote = crate::confirm!("Also rename remote branch?")
+                .default(false)
                 .prompt()
                 .wrap_err("Failed to get user confirmation")?;
 
             if should_rename_remote {
                 // Second confirmation
-                log_break!();
-                log_warning!("⚠️  Final confirmation: This will perform the following operations:");
-                log_message!("");
-                log_message!("  1. Push new branch '{}' to remote", new_branch_name);
-                log_message!("  2. Delete remote branch 'origin/{}'", old_branch_name);
-                log_message!("  3. Update local branch remote tracking settings");
-                log_message!("");
-                log_message!("This operation cannot be undone. Continue?");
-                log_break!();
+                br!();
+                warning!("⚠️  Final confirmation: This will perform the following operations:");
+                info!("");
+                info!("  1. Push new branch '{}' to remote", new_branch_name);
+                info!("  2. Delete remote branch 'origin/{}'", old_branch_name);
+                info!("  3. Update local branch remote tracking settings");
+                info!("");
+                info!("This operation cannot be undone. Continue?");
+                br!();
 
-                if ConfirmDialog::new("Confirm to continue?")
-                    .with_default(false)
-                    .with_cancel_message("Operation cancelled")
+                if crate::confirm!("Confirm to continue?")
+                    .default(false)
                     .prompt()
                     .wrap_err("Failed to get final confirmation")?
                 {
                     GitBranch::rename_remote(old_branch_name, new_branch_name)
                         .wrap_err("Failed to rename remote branch")?;
-                    log_success!(
+                    success!(
                         "✓ Renamed remote branch: origin/{} -> origin/{}",
                         old_branch_name,
                         new_branch_name
                     );
                 } else {
-                    log_info!("ℹ️  Remote branch not renamed");
-                    log_info!("To manually update remote branch, execute:");
-                    log_info!("  git push origin -u {}", new_branch_name);
-                    log_info!("  git push origin --delete {}", old_branch_name);
+                    info!("ℹ️  Remote branch not renamed");
+                    info!("To manually update remote branch, execute:");
+                    info!("  git push origin -u {}", new_branch_name);
+                    info!("  git push origin --delete {}", old_branch_name);
                 }
             } else {
-                log_info!("ℹ️  Remote branch not renamed");
-                log_info!("To manually update remote branch, execute:");
-                log_info!("  git push origin -u {}", new_branch_name);
-                log_info!("  git push origin --delete {}", old_branch_name);
+                info!("ℹ️  Remote branch not renamed");
+                info!("To manually update remote branch, execute:");
+                info!("  git push origin -u {}", new_branch_name);
+                info!("  git push origin --delete {}", old_branch_name);
             }
         }
 
         // Completion message
-        log_break!();
-        log_break!('━', 80, "Branch Rename Completed");
-        log_message!("");
-        log_success!(
+        br!();
+        br!('━', 80, "Branch Rename Completed");
+        info!("");
+        success!(
             "  ✓ Local branch renamed: {} -> {}",
             old_branch_name,
             new_branch_name
         );
         if exists_remote {
-            log_success!(
+            success!(
                 "  ✓ Remote branch renamed: origin/{} -> origin/{}",
                 old_branch_name,
                 new_branch_name
             );
         }
-        log_message!("");
-        log_info!("  Note:");
-        log_info!(
-            "    - If other collaborators have checked out this branch, they need to execute:"
-        );
-        log_info!("      git fetch origin");
-        log_info!(
+        info!("");
+        info!("  Note:");
+        info!("    - If other collaborators have checked out this branch, they need to execute:");
+        info!("      git fetch origin");
+        info!(
             "      git branch -m {} {}",
-            old_branch_name,
-            new_branch_name
+            old_branch_name, new_branch_name
         );
-        log_info!(
+        info!(
             "      git branch -u origin/{} {}",
-            new_branch_name,
-            new_branch_name
+            new_branch_name, new_branch_name
         );
-        log_message!("");
-        log_break!('━', 80);
+        info!("");
+        br!('━', 80);
 
         Ok(())
     }

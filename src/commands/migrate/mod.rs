@@ -20,7 +20,7 @@
 //!
 //! 详细说明请参考 `README.md`。
 
-use crate::{log_info, log_success};
+use crate::{info, success};
 use color_eyre::Result;
 
 pub mod history;
@@ -34,18 +34,18 @@ impl MigrateCommand {
         // 自动检测所有待迁移的版本
         let pending = migrations::detect_pending_migrations()?;
         if pending.is_empty() {
-            log_success!("No migrations needed. Configuration is up to date.");
+            success!("No migrations needed. Configuration is up to date.");
             return Ok(());
         }
 
         if dry_run {
-            log_info!("Migration preview (dry-run mode):");
-            log_info!("Pending migrations: {}", pending.join(", "));
-            log_info!("");
+            info!("Migration preview (dry-run mode):");
+            info!("Pending migrations: {}", pending.join(", "));
+            info!("");
         } else {
-            log_info!("Starting migration...");
-            log_info!("Pending migrations: {}", pending.join(", "));
-            log_info!("");
+            info!("Starting migration...");
+            info!("Pending migrations: {}", pending.join(", "));
+            info!("");
         }
 
         // 执行所有待迁移的版本
@@ -54,7 +54,7 @@ impl MigrateCommand {
         }
 
         if !dry_run {
-            log_success!("Migration completed successfully!");
+            success!("Migration completed successfully!");
         }
 
         Ok(())

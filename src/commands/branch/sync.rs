@@ -4,7 +4,7 @@
 
 use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
-use crate::{log_info, log_success};
+use crate::{info, success};
 use color_eyre::Result;
 
 /// 分支同步命令（无 PR 逻辑）
@@ -34,7 +34,7 @@ impl BranchSyncCommand {
     /// * `squash` - 是否使用 squash 合并
     pub fn sync(source_branch: String, rebase: bool, ff_only: bool, squash: bool) -> Result<()> {
         // 运行检查
-        log_info!("Running pre-flight checks...");
+        info!("Running pre-flight checks...");
         check::CheckCommand::run_all()?;
 
         let options = BranchSyncOptions {
@@ -49,7 +49,7 @@ impl BranchSyncCommand {
 
         BranchSync::sync(options, Some(callbacks))?;
 
-        log_success!("Branch sync completed successfully!");
+        success!("Branch sync completed successfully!");
         Ok(())
     }
 }

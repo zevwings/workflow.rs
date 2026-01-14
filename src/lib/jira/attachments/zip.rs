@@ -1,7 +1,7 @@
 //! ZIP 处理相关功能
 
 use crate::base::util::directory::DirectoryWalker;
-use crate::Logger;
+use crate::warning;
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
@@ -95,10 +95,11 @@ impl ZipProcessor {
         let actual_size = std::fs::metadata(&merged_zip)?.len();
 
         if actual_size != expected_size {
-            Logger::print_warning(format!(
+            warning!(
                 "Merged file size mismatch (expected: {}, actual: {})",
-                expected_size, actual_size
-            ));
+                expected_size,
+                actual_size
+            );
         }
 
         Ok(merged_zip)

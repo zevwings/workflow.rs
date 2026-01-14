@@ -2,7 +2,7 @@ use crate::commands::pr::helpers;
 use crate::git::GitBranch;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
-use crate::{log_break, log_info, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 关闭命令
@@ -16,8 +16,8 @@ impl PullRequestCloseCommand {
         // 1. 获取 PR ID
         let pull_request_id = resolve_pull_request_id(pull_request_id)?;
 
-        log_break!();
-        log_success!("Closing PR: #{}", pull_request_id);
+        br!();
+        success!("Closing PR: #{}", pull_request_id);
 
         // 2. 获取当前分支名和 PR 对应的分支名
         let current_branch = GitBranch::current_branch()?;
@@ -42,11 +42,11 @@ impl PullRequestCloseCommand {
             // 如果关闭失败，检查是否是"已关闭"错误（竞态条件）
             if let Err(e) = Self::close_pull_request(&pull_request_id) {
                 if helpers::is_pr_already_closed_error(&e) {
-                    log_warning!(
+                    warning!(
                         "PR #{} has already been closed (detected from close error)",
                         pull_request_id
                     );
-                    log_info!("Skipping close step, continuing with cleanup...");
+                    info!("Skipping close step, continuing with cleanup...");
                 } else {
                     // 其他错误，返回错误
                     return Err(e);
@@ -70,7 +70,7 @@ impl PullRequestCloseCommand {
 
         // 如果状态是 closed 或 merged，说明已经关闭
         if status.state == "closed" || status.state == "merged" {
-            log_warning!(
+            warning!(
                 "PR #{} is already closed (state: {})",
                 pull_request_id,
                 status.state
@@ -85,7 +85,7 @@ impl PullRequestCloseCommand {
     fn close_pull_request(pull_request_id: &str) -> Result<()> {
         let provider = create_provider_auto()?;
         provider.close_pull_request(pull_request_id).wrap_err("Failed to close PR")?;
-        log_success!("PR closed successfully");
+        success!("PR closed successfully");
         Ok(())
     }
 
@@ -96,20 +96,20 @@ impl PullRequestCloseCommand {
             .wrap_err("Failed to check if remote branch exists")?;
 
         if !exists_remote {
-            log_info!(
+            info!(
                 "Remote branch '{}' does not exist, skipping deletion",
                 branch_name
             );
             return Ok(());
         }
 
-        log_info!("Deleting remote branch: {}", branch_name);
-        log_info!("Note: This will permanently delete the remote branch");
+        info!("Deleting remote branch: {}", branch_name);
+        info!("Note: This will permanently delete the remote branch");
 
         // 尝试删除远程分支
         match GitBranch::delete_remote(branch_name) {
             Ok(()) => {
-                log_success!("Remote branch deleted: {}", branch_name);
+                success!("Remote branch deleted: {}", branch_name);
             }
             Err(e) => {
                 // 如果分支已经被 API 删除，忽略错误
@@ -118,14 +118,14 @@ impl PullRequestCloseCommand {
                     || error_msg.contains("not found")
                     || error_msg.contains("does not exist")
                 {
-                    log_info!(
+                    info!(
                         "Remote branch '{}' may have already been deleted",
                         branch_name
                     );
                 } else {
                     // 其他错误，记录警告但继续执行
-                    log_warning!("Failed to delete remote branch: {}", e);
-                    log_warning!("You may need to delete it manually");
+                    warning!("Failed to delete remote branch: {}", e);
+                    warning!("You may need to delete it manually");
                 }
             }
         }
@@ -163,18 +163,16 @@ impl PullRequestCloseCommand {
 
         if current_branch == pr_branch {
             // 情况二：在要删除的分支上，需要切换到默认分支
-            log_info!(
+            info!(
                 "Currently on PR branch '{}', switching to default branch '{}' before deletion",
-                pr_branch,
-                default_branch
+                pr_branch, default_branch
             );
             helpers::cleanup_branch(current_branch, default_branch, "PR close")
         } else {
             // 情况一：不在要删除的分支上，只删除 PR 分支，不切换当前分支
-            log_info!(
+            info!(
                 "Currently on '{}', will delete PR branch '{}' without switching",
-                current_branch,
-                pr_branch
+                current_branch, pr_branch
             );
             Self::delete_pr_branch_only(pr_branch)
         }
@@ -189,25 +187,25 @@ impl PullRequestCloseCommand {
 
         // 2. 删除本地分支（如果存在）
         if GitBranch::has_local_branch(pr_branch)? {
-            log_info!("Deleting local PR branch: {}", pr_branch);
+            info!("Deleting local PR branch: {}", pr_branch);
             GitBranch::delete(pr_branch, false)
                 .or_else(|_| {
-                    log_info!("Branch may not be fully merged, trying force delete...");
+                    info!("Branch may not be fully merged, trying force delete...");
                     GitBranch::delete(pr_branch, true)
                 })
                 .wrap_err("Failed to delete local PR branch")?;
-            log_success!("Local PR branch deleted: {}", pr_branch);
+            success!("Local PR branch deleted: {}", pr_branch);
         } else {
-            log_info!("Local PR branch already deleted: {}", pr_branch);
+            info!("Local PR branch already deleted: {}", pr_branch);
         }
 
         // 3. 清理远程分支引用
         if let Err(e) = GitRepo::prune_remote() {
-            log_info!("Warning: Failed to prune remote references: {}", e);
-            log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
+            info!("Warning: Failed to prune remote references: {}", e);
+            info!("This is a non-critical cleanup operation. Local cleanup is complete.");
         }
 
-        log_success!("PR branch '{}' cleanup completed", pr_branch);
+        success!("PR branch '{}' cleanup completed", pr_branch);
         Ok(())
     }
 }

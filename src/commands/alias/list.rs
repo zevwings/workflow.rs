@@ -3,18 +3,25 @@
 //! 显示所有已定义的别名，使用表格格式。
 
 use crate::base::alias::AliasManager;
-use crate::base::table::{TableBuilder, TableStyle};
-use crate::{log_break, log_info, log_message, log_success};
+use crate::base::interactive::{TableBuilder, TableStyle, Tabled};
+use crate::{br, info, success};
 use color_eyre::Result;
-use tabled::Tabled;
 
 /// 别名表格行
-#[derive(Tabled, Clone)]
+#[derive(Clone)]
 struct AliasRow {
-    #[tabled(rename = "Alias Name")]
     alias_name: String,
-    #[tabled(rename = "Command")]
     command: String,
+}
+
+impl Tabled for AliasRow {
+    fn headers() -> Vec<String> {
+        vec!["Alias Name".to_string(), "Command".to_string()]
+    }
+
+    fn row(&self) -> Vec<String> {
+        vec![self.alias_name.clone(), self.command.clone()]
+    }
 }
 
 /// 别名列表命令
@@ -25,14 +32,14 @@ impl AliasListCommand {
     ///
     /// 使用表格格式显示所有已定义的别名。
     pub fn list() -> Result<()> {
-        log_break!();
-        log_message!("Alias List");
+        br!();
+        info!("Alias List");
 
         let aliases = AliasManager::list()?;
 
         if aliases.is_empty() {
-            log_info!("No aliases defined");
-            log_message!("Run 'workflow alias add' to add an alias.");
+            info!("No aliases defined");
+            info!("Run 'workflow alias add' to add an alias.");
             return Ok(());
         }
 
@@ -46,13 +53,13 @@ impl AliasListCommand {
             .collect();
 
         // 显示表格
-        let table = TableBuilder::new(rows)
+        let table = TableBuilder::from_tabled(rows)
             .with_title("Defined Aliases")
             .with_style(TableStyle::Modern)
             .render();
 
-        log_message!("{}", table);
-        log_success!("Found {} alias/aliases", aliases.len());
+        info!("{}", table);
+        success!("Found {} alias/aliases", aliases.len());
 
         Ok(())
     }

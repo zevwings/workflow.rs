@@ -1,6 +1,6 @@
-use crate::log_success;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
+use crate::success;
 use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 评论命令
@@ -20,7 +20,7 @@ impl PullRequestCommentCommand {
         // 获取 PR ID（从参数或当前分支）
         let pr_id = resolve_pull_request_id(pull_request_id)?;
 
-        log_success!("Adding comment to PR: #{}", pr_id);
+        success!("Adding comment to PR: #{}", pr_id);
 
         // 创建平台提供者并添加评论
         let provider = create_provider_auto()?;
@@ -28,7 +28,7 @@ impl PullRequestCommentCommand {
             .add_comment(&pr_id, &comment_message)
             .wrap_err(format!("Failed to add comment to PR #{}", pr_id))?;
 
-        log_success!("Comment added to PR #{} successfully!", pr_id);
+        success!("Comment added to PR #{} successfully!", pr_id);
 
         Ok(())
     }

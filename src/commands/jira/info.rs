@@ -1,9 +1,9 @@
 use crate::base::format::DisplayFormatter;
-use crate::base::indicator::Spinner;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
-use crate::{log_break, log_message};
+use crate::spinner;
+use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
 use serde_saphyr;
@@ -28,7 +28,7 @@ impl InfoCommand {
                 .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))?
         } else {
             // 正常/详细模式：显示 Spinner
-            Spinner::with(format!("Getting ticket info for {}...", jira_id), || {
+            spinner!("Getting ticket info for {}...", jira_id).with(|| {
                 Jira::get_ticket_info(&jira_id)
                     .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))
             })?
@@ -51,27 +51,27 @@ impl InfoCommand {
     /// 表格格式输出
     fn output_table(issue: &crate::jira::JiraIssue) -> Result<()> {
         // 显示基本信息
-        log_break!('=', 40, "Ticket Information");
-        log_message!("Key: {}", issue.key);
-        log_message!("ID: {}", issue.id);
-        log_message!("Summary: {}", issue.fields.summary);
-        log_message!("Status: {}", issue.fields.status.name);
+        br!('=', 40, "Ticket Information");
+        info!("Key: {}", issue.key);
+        info!("ID: {}", issue.id);
+        info!("Summary: {}", issue.fields.summary);
+        info!("Status: {}", issue.fields.status.name);
 
         // 显示更多字段
         if let Some(priority) = &issue.fields.priority {
-            log_message!("Priority: {}", priority.name);
+            info!("Priority: {}", priority.name);
         }
 
         if let Some(created) = &issue.fields.created {
-            log_message!("Created: {}", format_date(created)?);
+            info!("Created: {}", format_date(created)?);
         }
 
         if let Some(updated) = &issue.fields.updated {
-            log_message!("Updated: {}", format_date(updated)?);
+            info!("Updated: {}", format_date(updated)?);
         }
 
         if let Some(reporter) = &issue.fields.reporter {
-            log_message!(
+            info!(
                 "Reporter: {} ({})",
                 reporter.display_name,
                 reporter.email_address.as_deref().unwrap_or("N/A")
@@ -79,18 +79,18 @@ impl InfoCommand {
         }
 
         if let Some(assignee) = &issue.fields.assignee {
-            log_message!(
+            info!(
                 "Assignee: {} ({})",
                 assignee.display_name,
                 assignee.email_address.as_deref().unwrap_or("Unassigned")
             );
         } else {
-            log_message!("Assignee: Unassigned");
+            info!("Assignee: Unassigned");
         }
 
         if let Some(labels) = &issue.fields.labels {
             if !labels.is_empty() {
-                log_message!("Labels: {}", labels.join(", "));
+                info!("Labels: {}", labels.join(", "));
             }
         }
 
@@ -98,7 +98,7 @@ impl InfoCommand {
             if !components.is_empty() {
                 let component_names: Vec<String> =
                     components.iter().map(|c| c.name.clone()).collect();
-                log_message!("Components: {}", component_names.join(", "));
+                info!("Components: {}", component_names.join(", "));
             }
         }
 
@@ -106,29 +106,29 @@ impl InfoCommand {
             if !fix_versions.is_empty() {
                 let version_names: Vec<String> =
                     fix_versions.iter().map(|v| v.name.clone()).collect();
-                log_message!("Fix Versions: {}", version_names.join(", "));
+                info!("Fix Versions: {}", version_names.join(", "));
             }
         }
 
         if let Some(time_tracking) = &issue.fields.time_tracking {
-            log_break!();
-            log_message!("Time Tracking:");
+            br!();
+            info!("Time Tracking:");
             if let Some(original) = &time_tracking.original_estimate {
-                log_message!("  Original Estimate: {}", original);
+                info!("  Original Estimate: {}", original);
             }
             if let Some(remaining) = &time_tracking.remaining_estimate {
-                log_message!("  Remaining Estimate: {}", remaining);
+                info!("  Remaining Estimate: {}", remaining);
             }
             if let Some(spent) = &time_tracking.time_spent {
-                log_message!("  Time Spent: {}", spent);
+                info!("  Time Spent: {}", spent);
             }
         }
 
         // 显示关联的 Issues
         if let Some(issuelinks) = &issue.fields.issuelinks {
             if !issuelinks.is_empty() {
-                log_break!();
-                log_message!("Linked Issues:");
+                br!();
+                info!("Linked Issues:");
                 for link in issuelinks {
                     if let Some(inward) = &link.inward_issue {
                         let link_type = link
@@ -137,7 +137,7 @@ impl InfoCommand {
                             .and_then(|lt| lt.inward.as_ref())
                             .map(|s| s.as_str())
                             .unwrap_or("linked");
-                        log_message!("  {} {} ({})", link_type, inward.key, inward.id);
+                        info!("  {} {} ({})", link_type, inward.key, inward.id);
                     }
                     if let Some(outward) = &link.outward_issue {
                         let link_type = link
@@ -146,7 +146,7 @@ impl InfoCommand {
                             .and_then(|lt| lt.outward.as_ref())
                             .map(|s| s.as_str())
                             .unwrap_or("linked");
-                        log_message!("  {} {} ({})", link_type, outward.key, outward.id);
+                        info!("  {} {} ({})", link_type, outward.key, outward.id);
                     }
                 }
             }
@@ -155,17 +155,17 @@ impl InfoCommand {
         // 显示子任务
         if let Some(subtasks) = &issue.fields.subtasks {
             if !subtasks.is_empty() {
-                log_break!();
-                log_message!("Subtasks:");
+                br!();
+                info!("Subtasks:");
                 for subtask in subtasks {
                     if let Some(fields) = &subtask.fields {
                         if let Some(summary) = &fields.summary {
-                            log_message!("  {}: {} ({})", subtask.key, summary, subtask.id);
+                            info!("  {}: {} ({})", subtask.key, summary, subtask.id);
                         } else {
-                            log_message!("  {} ({})", subtask.key, subtask.id);
+                            info!("  {} ({})", subtask.key, subtask.id);
                         }
                     } else {
-                        log_message!("  {} ({})", subtask.key, subtask.id);
+                        info!("  {} ({})", subtask.key, subtask.id);
                     }
                 }
             }
@@ -174,16 +174,16 @@ impl InfoCommand {
         // 显示描述
         if let Some(description) = &issue.fields.description {
             if !description.trim().is_empty() {
-                log_break!();
-                log_message!("Description:");
-                log_message!("{}", description);
+                br!();
+                info!("Description:");
+                info!("{}", description);
             }
         }
 
         // 显示附件列表
         if let Some(attachments) = &issue.fields.attachment {
             if !attachments.is_empty() {
-                log_break!();
+                br!();
                 let rows: Vec<AttachmentRow> = attachments
                     .iter()
                     .enumerate()
@@ -206,44 +206,44 @@ impl InfoCommand {
                     })
                     .collect();
 
-                log_message!(
+                info!(
                     "{}",
-                    TableBuilder::new(rows)
+                    TableBuilder::from_tabled(rows)
                         .with_title(format!("Attachments ({})", attachments.len()))
                         .with_style(TableStyle::Modern)
                         .render()
                 );
             } else {
-                log_break!();
-                log_message!("Attachments: None");
+                br!();
+                info!("Attachments: None");
             }
         } else {
-            log_break!();
-            log_message!("Attachments: None");
+            br!();
+            info!("Attachments: None");
         }
 
         // 显示评论数量
         if let Some(comments) = &issue.fields.comment {
             let comment_count = comments.comments.len();
             if comment_count > 0 {
-                log_break!();
-                log_message!("Comments: {} comment(s)", comment_count);
+                br!();
+                info!("Comments: {} comment(s)", comment_count);
             } else {
-                log_break!();
-                log_message!("Comments: None");
+                br!();
+                info!("Comments: None");
             }
         } else {
-            log_break!();
-            log_message!("Comments: None");
+            br!();
+            info!("Comments: None");
         }
 
         // 显示 Jira URL
-        let settings = crate::base::settings::settings::Settings::get();
+        let settings = crate::base::settings::Settings::get();
         let jira_service_address = settings.jira.service_address.clone().unwrap_or_default();
         if !jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);
-            log_break!();
-            log_message!("URL: {}", jira_url);
+            br!();
+            info!("URL: {}", jira_url);
         }
 
         Ok(())
@@ -254,7 +254,7 @@ impl InfoCommand {
         let mut output: HashMap<String, serde_json::Value> = HashMap::new();
         output.insert("issue".to_string(), serde_json::to_value(issue)?);
 
-        log_message!("{}", serde_json::to_string_pretty(&output)?);
+        info!("{}", serde_json::to_string_pretty(&output)?);
         Ok(())
     }
 
@@ -263,31 +263,31 @@ impl InfoCommand {
         let mut output: HashMap<String, serde_json::Value> = HashMap::new();
         output.insert("issue".to_string(), serde_json::to_value(issue)?);
 
-        log_message!("{}", serde_saphyr::to_string(&output)?);
+        info!("{}", serde_saphyr::to_string(&output)?);
         Ok(())
     }
 
     /// Markdown 格式输出
     fn output_markdown(issue: &crate::jira::JiraIssue) -> Result<()> {
-        log_message!("# {}\n", issue.key);
-        log_message!("**ID:** {}\n", issue.id);
-        log_message!("**Summary:** {}\n", issue.fields.summary);
-        log_message!("**Status:** {}\n", issue.fields.status.name);
+        info!("# {}\n", issue.key);
+        info!("**ID:** {}\n", issue.id);
+        info!("**Summary:** {}\n", issue.fields.summary);
+        info!("**Status:** {}\n", issue.fields.status.name);
 
         if let Some(priority) = &issue.fields.priority {
-            log_message!("**Priority:** {}\n", priority.name);
+            info!("**Priority:** {}\n", priority.name);
         }
 
         if let Some(created) = &issue.fields.created {
-            log_message!("**Created:** {}\n", format_date(created)?);
+            info!("**Created:** {}\n", format_date(created)?);
         }
 
         if let Some(updated) = &issue.fields.updated {
-            log_message!("**Updated:** {}\n", format_date(updated)?);
+            info!("**Updated:** {}\n", format_date(updated)?);
         }
 
         if let Some(reporter) = &issue.fields.reporter {
-            log_message!(
+            info!(
                 "**Reporter:** {} ({})\n",
                 reporter.display_name,
                 reporter.email_address.as_deref().unwrap_or("N/A")
@@ -295,18 +295,18 @@ impl InfoCommand {
         }
 
         if let Some(assignee) = &issue.fields.assignee {
-            log_message!(
+            info!(
                 "**Assignee:** {} ({})\n",
                 assignee.display_name,
                 assignee.email_address.as_deref().unwrap_or("Unassigned")
             );
         } else {
-            log_message!("**Assignee:** Unassigned\n");
+            info!("**Assignee:** Unassigned\n");
         }
 
         if let Some(labels) = &issue.fields.labels {
             if !labels.is_empty() {
-                log_message!("**Labels:** {}\n", labels.join(", "));
+                info!("**Labels:** {}\n", labels.join(", "));
             }
         }
 
@@ -314,7 +314,7 @@ impl InfoCommand {
             if !components.is_empty() {
                 let component_names: Vec<String> =
                     components.iter().map(|c| c.name.clone()).collect();
-                log_message!("**Components:** {}\n", component_names.join(", "));
+                info!("**Components:** {}\n", component_names.join(", "));
             }
         }
 
@@ -322,27 +322,27 @@ impl InfoCommand {
             if !fix_versions.is_empty() {
                 let version_names: Vec<String> =
                     fix_versions.iter().map(|v| v.name.clone()).collect();
-                log_message!("**Fix Versions:** {}\n", version_names.join(", "));
+                info!("**Fix Versions:** {}\n", version_names.join(", "));
             }
         }
 
         if let Some(time_tracking) = &issue.fields.time_tracking {
-            log_message!("\n## Time Tracking\n");
+            info!("\n## Time Tracking\n");
             if let Some(original) = &time_tracking.original_estimate {
-                log_message!("- **Original Estimate:** {}\n", original);
+                info!("- **Original Estimate:** {}\n", original);
             }
             if let Some(remaining) = &time_tracking.remaining_estimate {
-                log_message!("- **Remaining Estimate:** {}\n", remaining);
+                info!("- **Remaining Estimate:** {}\n", remaining);
             }
             if let Some(spent) = &time_tracking.time_spent {
-                log_message!("- **Time Spent:** {}\n", spent);
+                info!("- **Time Spent:** {}\n", spent);
             }
         }
 
         // 显示关联的 Issues
         if let Some(issuelinks) = &issue.fields.issuelinks {
             if !issuelinks.is_empty() {
-                log_message!("\n## Linked Issues\n");
+                info!("\n## Linked Issues\n");
                 for link in issuelinks {
                     if let Some(inward) = &link.inward_issue {
                         let link_type = link
@@ -351,7 +351,7 @@ impl InfoCommand {
                             .and_then(|lt| lt.inward.as_ref())
                             .map(|s| s.as_str())
                             .unwrap_or("linked");
-                        log_message!("- **{}:** {} ({})\n", link_type, inward.key, inward.id);
+                        info!("- **{}:** {} ({})\n", link_type, inward.key, inward.id);
                     }
                     if let Some(outward) = &link.outward_issue {
                         let link_type = link
@@ -360,7 +360,7 @@ impl InfoCommand {
                             .and_then(|lt| lt.outward.as_ref())
                             .map(|s| s.as_str())
                             .unwrap_or("linked");
-                        log_message!("- **{}:** {} ({})\n", link_type, outward.key, outward.id);
+                        info!("- **{}:** {} ({})\n", link_type, outward.key, outward.id);
                     }
                 }
             }
@@ -369,16 +369,16 @@ impl InfoCommand {
         // 显示子任务
         if let Some(subtasks) = &issue.fields.subtasks {
             if !subtasks.is_empty() {
-                log_message!("\n## Subtasks\n");
+                info!("\n## Subtasks\n");
                 for subtask in subtasks {
                     if let Some(fields) = &subtask.fields {
                         if let Some(summary) = &fields.summary {
-                            log_message!("- **{}:** {} ({})\n", subtask.key, summary, subtask.id);
+                            info!("- **{}:** {} ({})\n", subtask.key, summary, subtask.id);
                         } else {
-                            log_message!("- **{}:** ({})\n", subtask.key, subtask.id);
+                            info!("- **{}:** ({})\n", subtask.key, subtask.id);
                         }
                     } else {
-                        log_message!("- **{}:** ({})\n", subtask.key, subtask.id);
+                        info!("- **{}:** ({})\n", subtask.key, subtask.id);
                     }
                 }
             }
@@ -387,21 +387,21 @@ impl InfoCommand {
         // 显示描述
         if let Some(description) = &issue.fields.description {
             if !description.trim().is_empty() {
-                log_message!("\n## Description\n\n{}\n", description);
+                info!("\n## Description\n\n{}\n", description);
             }
         }
 
         // 显示附件列表
         if let Some(attachments) = &issue.fields.attachment {
             if !attachments.is_empty() {
-                log_message!("\n## Attachments ({})\n\n", attachments.len());
+                info!("\n## Attachments ({})\n\n", attachments.len());
                 for attachment in attachments {
                     let size_str = if let Some(size) = attachment.size {
                         DisplayFormatter::size(size)
                     } else {
                         "Unknown".to_string()
                     };
-                    log_message!(
+                    info!(
                         "- **{}** ({}, {})\n",
                         attachment.filename,
                         size_str,
@@ -409,30 +409,30 @@ impl InfoCommand {
                     );
                 }
             } else {
-                log_message!("\n## Attachments\n\nNone\n");
+                info!("\n## Attachments\n\nNone\n");
             }
         } else {
-            log_message!("\n## Attachments\n\nNone\n");
+            info!("\n## Attachments\n\nNone\n");
         }
 
         // 显示评论数量
         if let Some(comments) = &issue.fields.comment {
             let comment_count = comments.comments.len();
             if comment_count > 0 {
-                log_message!("\n## Comments\n\n{} comment(s)\n", comment_count);
+                info!("\n## Comments\n\n{} comment(s)\n", comment_count);
             } else {
-                log_message!("\n## Comments\n\nNone\n");
+                info!("\n## Comments\n\nNone\n");
             }
         } else {
-            log_message!("\n## Comments\n\nNone\n");
+            info!("\n## Comments\n\nNone\n");
         }
 
         // 显示 Jira URL
-        let settings = crate::base::settings::settings::Settings::get();
+        let settings = crate::base::settings::Settings::get();
         let jira_service_address = settings.jira.service_address.clone().unwrap_or_default();
         if !jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);
-            log_message!("\n## URL\n\n{}\n", jira_url);
+            info!("\n## URL\n\n{}\n", jira_url);
         }
 
         Ok(())

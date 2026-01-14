@@ -1,6 +1,6 @@
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::pr::platform::create_provider_auto;
-use crate::{log_break, log_message};
+use crate::{br, info};
 use color_eyre::Result;
 
 /// PR 列表命令
@@ -11,7 +11,7 @@ pub struct PullRequestListCommand;
 impl PullRequestListCommand {
     /// 列出 PR
     pub fn list(state: Option<String>, limit: Option<usize>) -> Result<()> {
-        log_break!('=', 40, "PR List");
+        br!('=', 40, "PR List");
         let provider = create_provider_auto()?;
 
         // 默认只获取 open 状态的 PR
@@ -21,14 +21,14 @@ impl PullRequestListCommand {
         let rows = provider.get_pull_requests(Some(state), limit)?;
 
         if rows.is_empty() {
-            log_message!("No PRs found.");
+            info!("No PRs found.");
             return Ok(());
         }
 
         // 使用表格显示
-        log_message!(
+        info!(
             "{}",
-            TableBuilder::new(rows)
+            TableBuilder::from_tabled(rows)
                 .with_title("Pull Requests")
                 .with_style(TableStyle::Modern)
                 .render()

@@ -2,7 +2,6 @@
 //!
 //! Provides reusable helper functions for branch-related operations.
 
-use crate::base::dialog::SelectDialog;
 use crate::git::GitBranch;
 use crate::repo::config::RepoConfig;
 use color_eyre::{eyre::WrapErr, Result};
@@ -241,16 +240,16 @@ pub fn select_branch(options: BranchSelectionOptions) -> Result<String> {
         "Select branch (type to search)".to_string()
     };
 
-    // Create dialog (fuzzy matching is enabled by default)
-    let mut dialog = SelectDialog::new(&prompt, branch_options);
+    // Create dialog (注意：当前新 API 暂不支持模糊匹配，后续会实现)
+    let mut builder = crate::select!(prompt, branch_options);
 
     // Set default index if provided
     if let Some(default_idx) = options.default_index {
-        dialog = dialog.with_default(default_idx);
+        builder = builder.default(default_idx);
     }
 
     // Prompt user
-    let selected = dialog.prompt().wrap_err("Failed to select branch")?;
+    let selected = builder.prompt().wrap_err("Failed to select branch")?;
 
     // Extract branch name (remove [current] marker if present)
     let branch_name = selected.strip_suffix(" [current]").unwrap_or(&selected).to_string();

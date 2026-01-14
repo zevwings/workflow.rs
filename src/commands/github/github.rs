@@ -1,19 +1,18 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::base::dialog::{ConfirmDialog, SelectDialog};
-use crate::base::indicator::Spinner;
+use crate::base::interactive::spinner;
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
-use crate::base::settings::table::GitHubAccountListRow;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::settings::GitHubAccountListRow;
+use crate::base::settings::Settings;
 use crate::base::util::mask_sensitive_value;
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{br, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 /// GitHub 账号管理命令
@@ -25,17 +24,17 @@ impl GitHubCommand {
         let settings = Settings::load();
 
         // 创建 spinner 显示验证进度
-        let spinner = Spinner::new("Verifying GitHub accounts...");
+        let spinner = spinner("Verifying GitHub accounts...").start();
 
         // 使用 verify_github() 获取验证结果
         let verification_result = settings.verify_github()?;
 
         // 完成 spinner
-        spinner.finish();
+        spinner.stop();
 
         if !verification_result.configured || verification_result.accounts.is_empty() {
-            log_warning!("No GitHub accounts configured.");
-            log_message!("Run 'workflow github add' to add an account.");
+            warning!("No GitHub accounts configured.");
+            info!("Run 'workflow github add' to add an account.");
             return Ok(());
         }
 
@@ -58,36 +57,33 @@ impl GitHubCommand {
             .collect();
 
         // 使用表格显示
-        log_message!(
-            "{}",
-            TableBuilder::new(rows)
-                .with_title("GitHub Accounts")
-                .with_style(TableStyle::Modern)
-                .render()
-        );
+        TableBuilder::from_tabled(rows)
+            .with_title("GitHub Accounts")
+            .with_style(TableStyle::Modern)
+            .print()?;
 
         // 显示验证状态
-        log_break!();
-        log_info!("Verification Status:");
+        br!();
+        info!("Verification Status:");
         for account in &verification_result.accounts {
             if account.verification_status == "Success" {
-                log_success!("  {}: {}", account.name, account.verification_status);
+                success!("  {}: {}", account.name, account.verification_status);
             } else {
-                log_warning!("  {}: {}", account.name, account.verification_status);
+                warning!("  {}: {}", account.name, account.verification_status);
                 if let Some(ref error) = account.verification_error {
-                    log_message!("    Error: {}", error);
+                    info!("    Error: {}", error);
                 }
             }
         }
 
         // 显示总结
         let summary = &verification_result.summary;
-        log_break!();
-        log_info!("Total accounts: {}", summary.total_count);
+        br!();
+        info!("Total accounts: {}", summary.total_count);
         if summary.success_count == summary.total_count {
-            log_success!("All accounts verified successfully!");
+            success!("All accounts verified successfully!");
         } else {
-            log_warning!(
+            warning!(
                 "Verification: {}/{} account(s) verified successfully",
                 summary.success_count,
                 summary.total_count
@@ -99,19 +95,19 @@ impl GitHubCommand {
 
     /// 显示当前激活的 GitHub 账号
     pub fn current() -> Result<()> {
-        log_break!('=', 40, "Current GitHub Account");
-        log_break!();
+        br!('=', 40, "Current GitHub Account");
+        br!();
 
         let settings = Settings::load();
         let github = &settings.github;
 
         if let Some(account) = github.get_current_account() {
-            log_success!("Current account: {}", account.name);
-            log_message!("  Email: {}", account.email);
-            log_message!("  API Token: {}", mask_sensitive_value(&account.api_token));
+            success!("Current account: {}", account.name);
+            info!("  Email: {}", account.email);
+            info!("  API Token: {}", mask_sensitive_value(&account.api_token));
         } else {
-            log_warning!("No GitHub account is currently active.");
-            log_message!("Run 'workflow github add' to add an account.");
+            warning!("No GitHub account is currently active.");
+            info!("Run 'workflow github add' to add an account.");
         }
 
         Ok(())
@@ -119,8 +115,8 @@ impl GitHubCommand {
 
     /// 添加新的 GitHub 账号
     pub fn add() -> Result<()> {
-        log_break!('=', 40, "Add GitHub Account");
-        log_break!();
+        br!('=', 40, "Add GitHub Account");
+        br!();
 
         let account = collect_github_account()?;
 
@@ -149,21 +145,19 @@ impl GitHubCommand {
         // 如果这是第一个账号，自动设置为当前账号
         if is_first_account {
             let result = GitConfig::set_global_user(&account_email, &account_name)?;
-            log_info!("Git global config updated:");
-            log_message!("  user.email: {}", result.email);
-            log_message!("  user.name: {}", result.name);
-            log_success!("Account '{}' added and set as current.", account_name);
+            info!("Git global config updated:");
+            info!("  user.email: {}", result.email);
+            info!("  user.name: {}", result.name);
+            success!("Account '{}' added and set as current.", account_name);
         } else {
-            log_success!("Account '{}' added.", account_name);
-            log_break!();
+            success!("Account '{}' added.", account_name);
+            br!();
 
             // 询问是否要将新账号设为当前账号
-            let should_set_current = ConfirmDialog::new(format!(
-                "Set '{}' as the current GitHub account?",
-                account_name
-            ))
-            .with_default(false)
-            .prompt()?;
+            let should_set_current =
+                crate::confirm!("Set '{}' as the current GitHub account?", account_name)
+                    .default(false)
+                    .prompt()?;
 
             if should_set_current {
                 let config_path = Paths::workflow_config()?;
@@ -172,12 +166,12 @@ impl GitHubCommand {
                     settings.github.current = Some(account_name.clone());
                 })?;
                 let result = GitConfig::set_global_user(&account_email, &account_name)?;
-                log_info!("Git global config updated:");
-                log_message!("  user.email: {}", result.email);
-                log_message!("  user.name: {}", result.name);
-                log_success!("Account '{}' is now set as current.", account_name);
+                info!("Git global config updated:");
+                info!("  user.email: {}", result.email);
+                info!("  user.name: {}", result.name);
+                success!("Account '{}' is now set as current.", account_name);
             } else {
-                log_message!("Current account remains unchanged.");
+                info!("Current account remains unchanged.");
             }
         }
 
@@ -186,13 +180,13 @@ impl GitHubCommand {
 
     /// 删除 GitHub 账号
     pub fn remove() -> Result<()> {
-        log_break!('=', 40, "Remove GitHub Account");
-        log_break!();
+        br!('=', 40, "Remove GitHub Account");
+        br!();
 
         let settings = Settings::load();
 
         if settings.github.accounts.is_empty() {
-            log_warning!("No GitHub accounts configured.");
+            warning!("No GitHub accounts configured.");
             return Ok(());
         }
 
@@ -209,8 +203,8 @@ impl GitHubCommand {
 
         let account_names_vec: Vec<String> = account_names.to_vec();
         let selected_account =
-            SelectDialog::new("Select account to remove", account_names_vec.clone())
-                .with_default(default_index)
+            crate::select!("Select account to remove", account_names_vec.clone())
+                .default(default_index)
                 .prompt()
                 .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
@@ -221,14 +215,14 @@ impl GitHubCommand {
         let account_name = account_names[selection].clone();
 
         // 确认删除
-        if !ConfirmDialog::new(format!(
+        if !crate::confirm!(
             "Are you sure you want to remove account '{}'?",
             account_name
-        ))
-        .with_default(false)
+        )
+        .default(false)
         .prompt()?
         {
-            log_message!("Operation cancelled.");
+            info!("Operation cancelled.");
             return Ok(());
         }
 
@@ -287,34 +281,34 @@ impl GitHubCommand {
                             &current_account.email,
                             &current_account.name,
                         )?;
-                        log_info!("Git global config updated:");
-                        log_message!("  user.email: {}", result.email);
-                        log_message!("  user.name: {}", result.name);
+                        info!("Git global config updated:");
+                        info!("  user.email: {}", result.email);
+                        info!("  user.name: {}", result.name);
                     }
                 }
             }
         }
 
-        log_success!("Account '{}' removed.", account_name);
+        success!("Account '{}' removed.", account_name);
 
         Ok(())
     }
 
     /// 切换当前 GitHub 账号
     pub fn switch() -> Result<()> {
-        log_break!('=', 40, "Switch GitHub Account");
-        log_break!();
+        br!('=', 40, "Switch GitHub Account");
+        br!();
 
         let settings = Settings::load();
 
         if settings.github.accounts.is_empty() {
-            log_warning!("No GitHub accounts configured.");
-            log_message!("Run 'workflow github add' to add an account.");
+            warning!("No GitHub accounts configured.");
+            info!("Run 'workflow github add' to add an account.");
             return Ok(());
         }
 
         if settings.github.accounts.len() == 1 {
-            log_warning!("Only one account configured. No need to switch.");
+            warning!("Only one account configured. No need to switch.");
             return Ok(());
         }
 
@@ -331,8 +325,8 @@ impl GitHubCommand {
 
         let account_names_vec: Vec<String> = account_names.to_vec();
         let selected_account =
-            SelectDialog::new("Select account to switch to", account_names_vec.clone())
-                .with_default(default_index)
+            crate::select!("Select account to switch to", account_names_vec.clone())
+                .default(default_index)
                 .prompt()
                 .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
@@ -351,24 +345,24 @@ impl GitHubCommand {
         })?;
 
         let result = GitConfig::set_global_user(&account.email, &account.name)?;
-        log_info!("Git global config updated:");
-        log_message!("  user.email: {}", result.email);
-        log_message!("  user.name: {}", result.name);
-        log_success!("Switched to account '{}'.", account_name);
+        info!("Git global config updated:");
+        info!("  user.email: {}", result.email);
+        info!("  user.name: {}", result.name);
+        success!("Switched to account '{}'.", account_name);
 
         Ok(())
     }
 
     /// 更新 GitHub 账号信息
     pub fn update() -> Result<()> {
-        log_break!('=', 40, "Update GitHub Account");
-        log_break!();
+        br!('=', 40, "Update GitHub Account");
+        br!();
 
         let settings = Settings::load();
 
         if settings.github.accounts.is_empty() {
-            log_warning!("No GitHub accounts configured.");
-            log_message!("Run 'workflow github add' to add an account.");
+            warning!("No GitHub accounts configured.");
+            info!("Run 'workflow github add' to add an account.");
             return Ok(());
         }
 
@@ -385,8 +379,8 @@ impl GitHubCommand {
 
         let account_names_vec: Vec<String> = account_names.to_vec();
         let selected_account =
-            SelectDialog::new("Select account to update", account_names_vec.clone())
-                .with_default(default_index)
+            crate::select!("Select account to update", account_names_vec.clone())
+                .default(default_index)
                 .prompt()
                 .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
@@ -395,14 +389,14 @@ impl GitHubCommand {
             .unwrap_or(default_index);
 
         let old_account = &settings.github.accounts[selection];
-        log_info!("Current account information:");
-        log_message!("  Name: {}", old_account.name);
-        log_message!("  Email: {}", old_account.email);
-        log_message!(
+        info!("Current account information:");
+        info!("  Name: {}", old_account.name);
+        info!("  Email: {}", old_account.email);
+        info!(
             "  API Token: {}",
             mask_sensitive_value(&old_account.api_token)
         );
-        log_break!();
+        br!();
 
         // 收集新的账号信息（使用现有值作为默认值）
         let new_account = collect_github_account_with_defaults(old_account)?;
@@ -456,12 +450,12 @@ impl GitHubCommand {
         // 更新 git config（在更新 accounts 之后）
         if should_update_git_config {
             let result = GitConfig::set_global_user(&new_account_email, &new_account_name)?;
-            log_info!("Git global config updated:");
-            log_message!("  user.email: {}", result.email);
-            log_message!("  user.name: {}", result.name);
+            info!("Git global config updated:");
+            info!("  user.email: {}", result.email);
+            info!("  user.name: {}", result.name);
         }
 
-        log_success!("Account '{}' updated.", new_account_name);
+        success!("Account '{}' updated.", new_account_name);
 
         Ok(())
     }

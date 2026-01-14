@@ -9,12 +9,11 @@
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::constants::errors::input_reading;
-use crate::base::dialog::InputDialog;
 use crate::base::format::DisplayFormatter;
-use crate::base::table::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle};
 use crate::jira::attachments::AttachmentCleaner;
 use crate::jira::table::FileRow;
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{br, info, success};
 
 /// 清理日志命令
 pub struct CleanCommand;
@@ -44,8 +43,7 @@ impl CleanCommand {
             trimmed.to_string()
         } else {
             // 交互式输入：允许用户输入 JIRA ID，留空表示清理全部
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
-                .allow_empty(true)
+            crate::input!("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
                 .prompt()
                 .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
                 .trim()
@@ -55,18 +53,18 @@ impl CleanCommand {
         // 根据 jira_id 是否为空显示不同的日志消息
         if jira_id.is_empty() {
             if list_only {
-                log_info!("Listing contents of base directory...");
+                info!("Listing contents of base directory...");
             } else if dry_run {
-                log_info!("[DRY RUN] Previewing clean operation for base directory...");
+                info!("[DRY RUN] Previewing clean operation for base directory...");
             } else {
-                log_info!("Cleaning base directory...");
+                info!("Cleaning base directory...");
             }
         } else if list_only {
-            log_info!("Listing contents for {}...", jira_id);
+            info!("Listing contents for {}...", jira_id);
         } else if dry_run {
-            log_info!("[DRY RUN] Previewing clean operation for {}...", jira_id);
+            info!("[DRY RUN] Previewing clean operation for {}...", jira_id);
         } else {
-            log_info!("Cleaning logs for {}...", jira_id);
+            info!("Cleaning logs for {}...", jira_id);
         }
 
         // 创建清理器并执行清理
@@ -79,15 +77,15 @@ impl CleanCommand {
         if let Some(ref dir_info) = result.dir_info {
             // 根据 dir_name 判断显示格式
             if let Some(ref jira_id) = dir_info.jira_id {
-                log_info!("JIRA ID: {}", jira_id);
+                info!("JIRA ID: {}", jira_id);
             } else {
-                log_info!("{}: {:?}", dir_info.dir_name, dir_info.dir);
+                info!("{}: {:?}", dir_info.dir_name, dir_info.dir);
             }
-            log_info!("Directory: {:?}", dir_info.dir);
-            log_info!("Total size: {}", DisplayFormatter::size(dir_info.size));
-            log_info!("Total files: {}", dir_info.file_count);
-            log_break!();
-            log_info!("Contents:");
+            info!("Directory: {:?}", dir_info.dir);
+            info!("Total size: {}", DisplayFormatter::size(dir_info.size));
+            info!("Total files: {}", dir_info.file_count);
+            br!();
+            info!("Contents:");
 
             if dir_info.is_base_dir {
                 // 按 ticket 分组显示
@@ -111,14 +109,14 @@ impl CleanCommand {
                         // 显示之前的表格
                         if !rows.is_empty() {
                             if let Some(ref ticket) = current_ticket {
-                                log_message!(
+                                info!(
                                     "{}",
-                                    TableBuilder::new(rows.clone())
+                                    TableBuilder::from_tabled(rows.clone())
                                         .with_title(format!("Files: {}", ticket))
                                         .with_style(TableStyle::Modern)
                                         .render()
                                 );
-                                log_break!();
+                                br!();
                             }
                             rows.clear();
                         }
@@ -135,41 +133,41 @@ impl CleanCommand {
                 // 显示最后一个表格
                 if !rows.is_empty() {
                     if let Some(ref ticket) = current_ticket {
-                        log_message!(
+                        info!(
                             "{}",
-                            TableBuilder::new(rows)
+                            TableBuilder::from_tabled(rows)
                                 .with_title(format!("Files: {}", ticket))
                                 .with_style(TableStyle::Modern)
                                 .render()
                         );
-                        log_break!();
+                        br!();
                     }
                 }
             } else {
                 // 单个 ticket 目录，直接列出内容
                 for entry in &dir_info.contents {
                     if let Some(ref size) = entry.size {
-                        log_info!("  {} {} ({})", entry.entry_type, entry.name, size);
+                        info!("  {} {} ({})", entry.entry_type, entry.name, size);
                     } else {
-                        log_info!("  {} {}", entry.entry_type, entry.name);
+                        info!("  {} {}", entry.entry_type, entry.name);
                     }
                 }
             }
         }
 
         if result.deleted {
-            log_break!();
-            log_success!("Clean completed successfully!");
+            br!();
+            success!("Clean completed successfully!");
         } else if result.cancelled {
-            log_info!("Clean operation was cancelled.");
+            info!("Clean operation was cancelled.");
         } else if !result.dir_exists {
-            log_info!("Directory does not exist.");
+            info!("Directory does not exist.");
         } else if result.dry_run {
-            log_info!("[DRY RUN] Preview completed.");
+            info!("[DRY RUN] Preview completed.");
         } else if result.list_only {
             // list_only 模式，信息已在上面的 dir_info 显示中输出
         } else {
-            log_info!("Clean operation was cancelled or directory does not exist.");
+            info!("Clean operation was cancelled or directory does not exist.");
         }
 
         Ok(())

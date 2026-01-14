@@ -12,7 +12,6 @@ use serde_with::skip_serializing_none;
 use super::api::project::JiraProjectApi;
 use super::config::{ConfigManager, JiraConfig};
 use super::helpers::extract_jira_project;
-use crate::base::dialog::SelectDialog;
 use crate::base::settings::paths::Paths;
 use crate::{trace_debug, trace_info};
 
@@ -120,12 +119,12 @@ impl JiraStatus {
 
         let statuses_vec: Vec<String> = statuses.to_vec();
         let created_pull_request_status =
-            SelectDialog::new("Select status for PR created", statuses_vec.clone())
+            crate::select!("Select status for PR created", statuses_vec.clone())
                 .prompt()
                 .wrap_err("Failed to select status")?;
 
         let merged_pull_request_status =
-            SelectDialog::new("Select status for PR merged", statuses_vec)
+            crate::select!("Select status for PR merged", statuses_vec)
                 .prompt()
                 .wrap_err("Failed to select status")?;
 
