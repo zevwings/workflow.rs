@@ -85,6 +85,33 @@ impl RequestConfig {
         self
     }
 
+    /// 设置查询参数
+    ///
+    /// # 参数
+    ///
+    /// * `query` - 查询参数，必须实现 `Serialize` trait
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self`，支持链式调用。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::http::RequestConfig;
+    ///
+    /// let query = serde_json::json!({"page": "1"});
+    /// let config = RequestConfig::new().query(&query);
+    /// ```
+    pub fn query<T: Serialize>(mut self, query: &T) -> Self {
+        self.query = serde_json::to_value(query)
+            .map_err(|e| {
+                tracing::warn!("Failed to serialize query parameters: {}", e);
+            })
+            .ok();
+        self
+    }
+
     /// 设置认证信息
     ///
     /// # 参数

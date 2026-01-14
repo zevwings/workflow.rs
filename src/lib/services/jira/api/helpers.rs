@@ -101,7 +101,7 @@ pub fn build_jira_url(path: &str) -> Result<String> {
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let auth = jira_auth_config()?;
-/// let config = RequestConfig::new().auth(auth);
+/// let config = RequestConfig::new().auth(auth.clone());
 /// # Ok(())
 /// # }
 /// ```

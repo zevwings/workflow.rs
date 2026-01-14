@@ -33,8 +33,11 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 /// use workflow::core::logger;
 /// use workflow::infra::adapters::config::SettingsAdapter;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let config = SettingsAdapter::new();
 /// logger::init(Some("pr-create"), &config)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn init(command_name: Option<&str>, config: &dyn ConfigProvider) -> Result<()> {
     let log_level = config.log_level().unwrap_or(LogLevel::None);

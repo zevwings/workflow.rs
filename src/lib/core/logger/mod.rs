@@ -18,8 +18,11 @@
 //! use workflow::core::logger;
 //! use workflow::infra::adapters::config::SettingsAdapter;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let config = SettingsAdapter::new();
 //! logger::init(Some("pr-create"), &config)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### 记录日志
@@ -28,6 +31,7 @@
 //! use workflow::{log_debug, log_info, log_warn, log_error};
 //!
 //! log_info!("Operation completed");
+//! let error = "some error";
 //! log_error!("Operation failed: {}", error);
 //! ```
 

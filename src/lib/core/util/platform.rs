@@ -30,7 +30,7 @@ impl Platform {
     /// # 示例
     ///
     /// ```rust
-    /// use workflow::util::Platform;
+    /// use workflow::util::platform::Platform;
     ///
     /// let platform = Platform::new("macos", "aarch64");
     /// ```
@@ -52,7 +52,7 @@ impl Platform {
     /// # 示例
     ///
     /// ```rust
-    /// use workflow::util::Platform;
+    /// use workflow::util::platform::Platform;
     ///
     /// let platform = Platform::detect();
     /// println!("Current platform: {} {}", platform.os(), platform.arch());
@@ -166,7 +166,7 @@ impl Platform {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::util::Platform;
+    /// use workflow::util::platform::Platform;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let platform = Platform::detect();
@@ -219,7 +219,7 @@ impl Platform {
 /// # 示例
 ///
 /// ```rust,no_run
-/// use workflow::util::detect_release_platform;
+/// use workflow::util::platform::detect_release_platform;
 /// use workflow::info;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {

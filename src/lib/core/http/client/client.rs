@@ -121,8 +121,9 @@ impl HttpClient {
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
+    /// let query = serde_json::json!({"page": "1"});
     /// let config = RequestConfig::new()
-    ///     .query(&[("page", "1")])
+    ///     .query(&query)
     ///     .retry(HttpRetryConfig::new());
     /// let response = client.get("https://api.example.com", config)?;
     /// # Ok(())
@@ -220,8 +221,9 @@ impl HttpClient {
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
+    /// let query = serde_json::json!({"page": "1"});
     /// let config = RequestConfig::new()
-    ///     .query(&[("page", "1")]);
+    ///     .query(&query);
     /// let mut response = client.stream(HttpMethod::Get, "https://example.com/api", config)?;
     /// let mut buffer = vec![0u8; 8192];
     /// response.read(&mut buffer)?;
