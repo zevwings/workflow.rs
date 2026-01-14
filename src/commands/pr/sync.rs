@@ -1,8 +1,10 @@
-use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
-use crate::git::GitBranch;
-use crate::pr::create_provider_auto;
-use crate::pr::helpers::get_current_branch_pr_id;
+use crate::domain::branch::sync::{
+    BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult,
+};
+use crate::domain::pr::create_provider_auto;
+use crate::domain::pr::helpers::get_current_branch_pr_id;
+use crate::services::git::GitBranch;
 use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

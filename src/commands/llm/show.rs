@@ -1,9 +1,9 @@
 //! LLM 配置查看命令
 //! 显示当前的 LLM 配置信息
 
-use crate::prompt::{TableBuilder, TableStyle};
-use crate::settings::LLMConfigRow;
-use crate::settings::{LLMSettings, Settings};
+use crate::config::settings::LLMConfigRow;
+use crate::config::settings::{LLMSettings, Settings};
+use crate::core::prompt::{TableBuilder, TableStyle};
 use crate::{br, info, success, warning};
 use color_eyre::Result;
 

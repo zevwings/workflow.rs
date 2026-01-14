@@ -1,8 +1,8 @@
-use crate::jira::table::AttachmentRow;
-use crate::jira::Jira;
-use crate::prompt::{TableBuilder, TableStyle};
+use crate::core::prompt::{TableBuilder, TableStyle};
+use crate::core::util::format::SizeDisplay;
+use crate::services::jira::table::AttachmentRow;
+use crate::services::jira::Jira;
 use crate::spinner;
-use crate::util::format::DisplayFormatter;
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
@@ -10,7 +10,7 @@ use serde_saphyr;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
-use crate::cli::JiraQueryArgs;
+use crate::domain::cli::JiraQueryArgs;
 
 /// 显示 ticket 信息命令
 pub struct InfoCommand;
@@ -189,7 +189,7 @@ impl InfoCommand {
                     .enumerate()
                     .map(|(idx, attachment)| {
                         let size_str = if let Some(size) = attachment.size {
-                            DisplayFormatter::size(size)
+                            size.to_size_string()
                         } else {
                             "Unknown".to_string()
                         };
@@ -397,7 +397,7 @@ impl InfoCommand {
                 info!("\n## Attachments ({})\n\n", attachments.len());
                 for attachment in attachments {
                     let size_str = if let Some(size) = attachment.size {
-                        DisplayFormatter::size(size)
+                        size.to_size_string()
                     } else {
                         "Unknown".to_string()
                     };

@@ -2,7 +2,7 @@
 //!
 //! 提供 Commit 命令之间共享的公共功能，避免代码重复。
 
-use crate::git::{GitBranch, GitCommit};
+use crate::services::git::{GitBranch, GitCommit};
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 

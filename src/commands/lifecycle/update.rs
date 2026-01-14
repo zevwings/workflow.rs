@@ -1,7 +1,7 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
-use crate::util::directory::DirectoryWalker;
+use crate::core::util::directory::DirectoryWalker;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -12,17 +12,20 @@ use std::time::{Duration, UNIX_EPOCH};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use reqwest::header::HeaderMap;
 use serde::Deserialize;
-use serde_json::Value;
 
-use crate::http::client::HttpClient;
-use crate::http::{response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
-use crate::prompt::{spinner, Progress};
-use crate::rollback::RollbackManager;
-use crate::settings::paths::Paths;
-use crate::settings::Settings;
-use crate::shell::Detect;
-use crate::util::format::DisplayFormatter;
-use crate::util::{detect_release_platform, Checksum, Unzip};
+use crate::config::settings::paths::Paths;
+use crate::config::settings::Settings;
+use crate::core::http::HttpClient;
+use crate::core::http::{
+    response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
+};
+use crate::core::prompt::{spinner, Progress};
+use crate::core::shell::detect::Detect;
+use crate::core::util::checksum::Checksum;
+use crate::core::util::format::SizeDisplay;
+use crate::core::util::platform::detect_release_platform;
+use crate::core::util::unzip::Unzip;
+use crate::domain::rollback::RollbackManager;
 use crate::{br, debug, error, get_completion_files_for_shell, info, success, warning};
 
 #[cfg(unix)]
@@ -274,7 +277,7 @@ impl UpdateCommand {
                             }
 
                             let client = HttpClient::global()?;
-                            let config = RequestConfig::<Value, Value>::new().headers(&headers);
+                            let config = RequestConfig::new().headers(&headers);
                             client
                                 .get(&url, config)
                                 .wrap_err("Failed to fetch latest release from GitHub")
@@ -346,7 +349,7 @@ impl UpdateCommand {
                 // 使用 get_stream 方法流式下载二进制文件
                 let http_client = HttpClient::global()?;
                 let mut response = http_client
-                    .stream(HttpMethod::Get, url, RequestConfig::<Value, Value>::new())
+                    .stream(HttpMethod::Get, url, RequestConfig::new())
                     .wrap_err("Failed to send HTTP request")?;
 
                 if !response.status().is_success() {
@@ -362,7 +365,7 @@ impl UpdateCommand {
 
                 // 创建进度条
                 let progress = if let Some(size) = total_size {
-                    info!("File size: {}", DisplayFormatter::size(size));
+                    info!("File size: {}", size.to_size_string());
                     Progress::new_download(size, "Downloading update package...")
                 } else {
                     Progress::new_unknown("Downloading update package...")
@@ -389,7 +392,7 @@ impl UpdateCommand {
                     progress.set_position(downloaded_bytes);
                 }
 
-                progress.finish_with_message(crate::constants::messages::user::DOWNLOAD_COMPLETE);
+                progress.finish_with_message(crate::constants::messages::USER_DOWNLOAD_COMPLETE);
                 Ok(())
             },
             &retry_config,
@@ -835,7 +838,7 @@ impl UpdateCommand {
             // 尝试下载校验和文件，如果不存在（404）则跳过验证
             match HttpRetry::retry(
                 || {
-                    let config = RequestConfig::<Value, Value>::new();
+                    let config = RequestConfig::new();
                     let response = http_client.get(&checksum_url, config)?;
                     // 使用 ensure_success_with 统一处理 404 错误
                     let response = response.ensure_success_with(|r| {

@@ -3,11 +3,11 @@
 //! 将 `github::GitHub` 适配为 `PlatformProvider` trait，实现依赖倒置。
 //! 使 PR 模块可以通过适配器使用 GitHub API，而不直接依赖 GitHub 实现。
 
-use crate::git::GitRepo;
-use crate::github::GitHub;
-use crate::jira::history::JiraWorkHistory;
-use crate::pr::platform::{PlatformProvider, PullRequestStatus};
-use crate::pr::PullRequestRow;
+use crate::domain::pr::platform::{PlatformProvider, PullRequestStatus};
+use crate::domain::pr::PullRequestRow;
+use crate::services::git::GitRepo;
+use crate::services::github::GitHub;
+use crate::services::jira::history::JiraWorkHistory;
 use color_eyre::Result;
 
 /// GitHub 平台适配器

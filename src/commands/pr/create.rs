@@ -1,23 +1,23 @@
 use color_eyre::{eyre::WrapErr, Result};
 use std::io::{self, IsTerminal};
 
-use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     copy_and_open_pull_request, create_branch_from_default, create_or_get_pull_request,
     ensure_jira_status, handle_stash_pop_result, resolve_description, resolve_title,
     select_change_types, update_jira_ticket,
 };
-use crate::git::{GitBranch, GitCommit, GitStash};
-use crate::jira::helpers::validate_jira_ticket_format;
-use crate::jira::Jira;
-use crate::llm::CreateGenerator;
-use crate::pr::helpers::{generate_commit_title, generate_pull_request_body};
-use crate::pr::{
+use crate::core::prompt::spinner;
+use crate::domain::branch::{BranchNaming, BranchType};
+use crate::domain::pr::helpers::{generate_commit_title, generate_pull_request_body};
+use crate::domain::pr::{
     map_branch_type_to_change_type_index, map_branch_type_to_change_types, TYPES_OF_CHANGES,
 };
-use crate::prompt::spinner;
-use crate::repo::RepoConfig;
+use crate::domain::repo::RepoConfig;
+use crate::services::git::{GitBranch, GitCommit, GitStash};
+use crate::services::jira::helpers::validate_jira_ticket_format;
+use crate::services::jira::Jira;
+use crate::services::llm::CreateGenerator;
 use crate::{br, info, spinner, success, warning};
 
 /// PR 创建命令

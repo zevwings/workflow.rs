@@ -1,7 +1,7 @@
 use crate::commands::pr::helpers;
-use crate::git::GitBranch;
-use crate::pr::create_provider_auto;
-use crate::pr::helpers::resolve_pull_request_id;
+use crate::domain::pr::create_provider_auto;
+use crate::domain::pr::helpers::resolve_pull_request_id;
+use crate::services::git::GitBranch;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -180,7 +180,7 @@ impl PullRequestCloseCommand {
 
     /// 仅删除指定的 PR 分支（不切换当前分支）
     fn delete_pr_branch_only(pr_branch: &str) -> Result<()> {
-        use crate::git::GitRepo;
+        use crate::services::git::GitRepo;
 
         // 1. 更新远程分支信息
         GitRepo::fetch()?;

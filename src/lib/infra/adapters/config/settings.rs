@@ -1,15 +1,15 @@
 //! Settings 适配器
 //!
 //! 将 Settings 适配为配置提供者，实现配置读取的适配器模式。
-//! 实现 `logger::LogConfigProvider`、`llm::LLMConfigProvider` 和 `jira::JiraConfigProvider` trait，
+//! 实现 `logger::ConfigProvider`、`llm::LLMConfigProvider` 和 `jira::JiraConfigProvider` trait，
 //! 使 logger、llm 和 jira 可以通过适配器使用配置。
 
-use crate::jira::JiraConfigProvider;
-use crate::llm::client::LLMConfigProvider;
-use crate::logger::LogConfigProvider;
-use crate::settings::default_download_base_dir;
-use crate::settings::paths::Paths;
-use crate::settings::{LLMSettings, Settings};
+use crate::config::settings::default_download_base_dir;
+use crate::config::settings::paths::Paths;
+use crate::config::settings::{LLMSettings, Settings};
+use crate::core::logger::ConfigProvider;
+use crate::services::jira::JiraConfigProvider;
+use crate::services::llm::client::LLMConfigProvider;
 use crate::LogLevel;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::PathBuf;
@@ -49,20 +49,20 @@ impl Default for SettingsAdapter {
     }
 }
 
-impl LogConfigProvider for SettingsAdapter {
-    fn get_log_level(&self) -> Option<LogLevel> {
+impl ConfigProvider for SettingsAdapter {
+    fn log_level(&self) -> Option<LogLevel> {
         self.settings.log.level.as_deref().and_then(|s| s.parse::<LogLevel>().ok())
     }
 
-    fn get_log_format(&self) -> Option<String> {
+    fn log_format(&self) -> Option<String> {
         self.settings.log.format.clone()
     }
 
-    fn get_enable_console(&self) -> bool {
+    fn enable_console(&self) -> bool {
         self.settings.log.enable_trace_console.unwrap_or(false)
     }
 
-    fn get_logs_dir(&self) -> Result<PathBuf> {
+    fn logs_dir(&self) -> Result<PathBuf> {
         Paths::logs_dir()
     }
 }

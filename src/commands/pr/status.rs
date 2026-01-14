@@ -1,4 +1,4 @@
-use crate::pr::create_provider_auto;
+use crate::domain::pr::create_provider_auto;
 use crate::{br, info};
 use color_eyre::Result;
 

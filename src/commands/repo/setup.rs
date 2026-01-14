@@ -3,13 +3,13 @@
 //! Interactively initialize repository-level configuration.
 //! Similar to CheckCommand, provides a static method for other commands to call.
 
-use crate::git::GitRepo;
-use crate::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
-use crate::prompt::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField};
-use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
-use crate::settings::paths::Paths;
-use crate::settings::{GitHubAccount, Settings};
-use crate::util::file::FileWriter;
+use crate::config::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
+use crate::config::settings::paths::Paths;
+use crate::config::settings::{GitHubAccount, Settings};
+use crate::core::prompt::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField};
+use crate::core::util::file::FileWriter;
+use crate::domain::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
+use crate::services::git::GitRepo;
 use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;

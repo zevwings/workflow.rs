@@ -7,53 +7,54 @@
 //! - **核心业务逻辑层** (`lib/`): 所有业务逻辑实现
 
 // 核心库模块声明
-#[path = "lib/alias/mod.rs"]
-pub mod alias;
-#[path = "lib/branch/mod.rs"]
-pub mod branch;
-#[path = "lib/cli/mod.rs"]
-pub mod cli;
-#[path = "lib/commit/mod.rs"]
-pub mod commit;
-#[path = "lib/completion/mod.rs"]
-pub mod completion;
-#[path = "lib/constants/mod.rs"]
-pub mod constants;
-#[path = "lib/git/mod.rs"]
-pub mod git;
-#[path = "lib/github/mod.rs"]
-pub mod github;
-#[path = "lib/http/mod.rs"]
-pub mod http;
+// 核心基础层 (core/)
+#[path = "lib/core/mod.rs"]
+#[allow(clippy::module_inception)]
+pub mod core;
+// 重新导出 core 层的模块
+pub use core::constants;
+pub use core::http;
+pub use core::logger;
+pub use core::prompt;
+pub use core::shell;
+pub use core::util;
+
+// 服务层 (services/)
+#[path = "lib/services/mod.rs"]
+#[allow(clippy::module_inception)]
+pub mod services;
+// 重新导出 services 层的模块
+pub use services::git;
+pub use services::github;
+pub use services::jira;
+pub use services::llm;
+
+// 配置层 (config/)
+#[path = "lib/config/mod.rs"]
+#[allow(clippy::module_inception)]
+pub mod config;
+// 重新导出 config 层的模块
+pub use config::mcp;
+pub use config::settings;
+pub use config::template;
+
+// 业务领域层 (domain/)
+#[path = "lib/domain/mod.rs"]
+#[allow(clippy::module_inception)]
+pub mod domain;
+// 重新导出 domain 层的模块
+pub use domain::alias;
+pub use domain::branch;
+pub use domain::cli;
+pub use domain::commit;
+pub use domain::completion;
+pub use domain::pr;
+pub use domain::repo;
+pub use domain::rollback;
+
+// 适配器层 (infra/)
 #[path = "lib/infra/mod.rs"]
 pub mod infra;
-#[path = "lib/jira/mod.rs"]
-pub mod jira;
-#[path = "lib/llm/mod.rs"]
-pub mod llm;
-#[path = "lib/logger/mod.rs"]
-pub mod logger;
-#[path = "lib/mcp/mod.rs"]
-pub mod mcp;
-#[path = "lib/pr/mod.rs"]
-pub mod pr;
-#[path = "lib/prompt/mod.rs"]
-pub mod prompt;
-// Note: prompt module has been moved to llm::prompt
-#[path = "lib/proxy/mod.rs"]
-pub mod proxy;
-#[path = "lib/repo/mod.rs"]
-pub mod repo;
-#[path = "lib/rollback/mod.rs"]
-pub mod rollback;
-#[path = "lib/settings/mod.rs"]
-pub mod settings;
-#[path = "lib/shell/mod.rs"]
-pub mod shell;
-#[path = "lib/template/mod.rs"]
-pub mod template;
-#[path = "lib/util/mod.rs"]
-pub mod util;
 
 // 命令模块声明
 #[path = "commands/mod.rs"]
@@ -64,7 +65,7 @@ pub mod commands;
 pub use alias::{AliasManager, CommandsConfig};
 pub use constants::*;
 pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};
-pub use logger::{LogLevel, Logger};
+pub use logger::LogLevel;
 // 语言相关的函数从 llm::client 导出
 // (prompt 模块已改为内部模块，不再对外暴露)
 pub use llm::{
@@ -72,10 +73,19 @@ pub use llm::{
     get_supported_language_display_names, SupportedLanguage, SUPPORTED_LANGUAGES,
 };
 pub use settings::{LLMSettings, Paths, Settings};
-pub use shell::{Detect, Reload, ShellConfigManager};
+pub use shell::detect::Detect;
+pub use shell::env::{load_env_vars, remove_env_vars, save_env_vars};
+pub use shell::paths::{config_file, get_config_path};
+pub use shell::reload::Reload;
+pub use shell::source::{add_source_for_shell, has_source_for_shell, remove_source_for_shell};
+pub use util::browser::Browser;
+pub use util::checksum::Checksum;
+pub use util::clipboard::Clipboard;
 pub use util::concurrent::{ConcurrentExecutor, TaskResult};
-pub use util::format::{DisplayFormatter, MessageFormatter};
-pub use util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
+pub use util::format::{
+    error, key_value, list_item, operation, progress, PathDisplay, Sensitive, SizeDisplay,
+};
+pub use util::unzip::Unzip;
 // 从 llm 重新导出语言增强 API
 pub use llm::get_language_requirement;
 
@@ -105,10 +115,6 @@ pub use pr::{
 pub use llm::{
     CreateGenerator, FileSummaryGenerator, PullRequestContent, PullRequestSummary, RewordGenerator,
     SummaryGenerator,
-};
-pub use proxy::{
-    ProxyConfigGenerator, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager,
-    ProxyType, SystemProxyReader,
 };
 pub use rollback::{BackupInfo, RollbackManager};
 pub use template::{

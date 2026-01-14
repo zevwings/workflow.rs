@@ -25,7 +25,7 @@ fn sample_history_entry() -> WorkHistoryEntry {
 #[fixture]
 fn unique_repo() -> String {
     use workflow::util::date::get_unix_timestamp_nanos;
-    let timestamp = get_unix_timestamp_nanos();
+    let timestamp = get_unix_timestamp_nanos().unwrap();
     format!("github.com/test/repo-{}", timestamp)
 }
 

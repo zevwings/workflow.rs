@@ -2,14 +2,15 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::jira::status::JiraStatus;
-use crate::jira::Jira;
-use crate::jira::JiraWorkHistory;
-use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
-use crate::pr::{create_provider_auto, TYPES_OF_CHANGES};
-use crate::prompt::spinner;
-use crate::util::{Browser, Clipboard};
+use crate::core::prompt::spinner;
+use crate::core::util::browser::Browser;
+use crate::core::util::clipboard::Clipboard;
+use crate::domain::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
+use crate::domain::pr::{create_provider_auto, TYPES_OF_CHANGES};
+use crate::services::git::{GitBranch, GitCommit, GitRepo, GitStash};
+use crate::services::jira::status::JiraStatus;
+use crate::services::jira::Jira;
+use crate::services::jira::JiraWorkHistory;
 use crate::{br, info, success, warning};
 use color_eyre::{
     eyre::{Report, WrapErr},

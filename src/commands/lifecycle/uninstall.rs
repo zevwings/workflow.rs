@@ -10,9 +10,9 @@ use duct::cmd;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 use crate::settings::paths::Paths;
-use crate::shell::{Detect, Reload};
-use crate::util::Clipboard;
-use crate::{br, debug, info, success, warning, Completion, ProxyManager};
+use crate::shell::detect::Detect;
+use crate::shell::reload::Reload;
+use crate::{br, debug, info, success, warning, Completion};
 
 /// 卸载命令
 pub struct UninstallCommand;
@@ -280,11 +280,6 @@ impl UninstallCommand {
             info!("Configuration will be kept (not removed).");
         }
 
-        // 关闭代理（从 shell 环境变量中移除）
-        br!();
-        info!("Removing proxy settings from shell configuration...");
-        Self::remove_proxy_settings()?;
-
         br!();
         success!("  Uninstall completed successfully!");
         if remove_config {
@@ -316,28 +311,6 @@ impl UninstallCommand {
             {
                 info!("  . $PROFILE  # for PowerShell");
             }
-        }
-
-        Ok(())
-    }
-
-    /// 从 shell 环境变量中移除代理设置
-    fn remove_proxy_settings() -> Result<()> {
-        let result = ProxyManager::disable().wrap_err("Failed to remove proxy settings")?;
-
-        if !result.found_proxy {
-            info!("No proxy settings found in shell configuration.");
-            return Ok(());
-        }
-
-        if let Some(ref shell_config_path) = result.shell_config_path {
-            success!("  Proxy settings removed from {:?}", shell_config_path);
-        }
-
-        if let Some(ref unset_cmd) = result.unset_command {
-            info!("Proxy unset command: {}", unset_cmd);
-            // 复制到剪贴板（静默处理，失败不影响卸载流程）
-            let _ = Clipboard::copy(unset_cmd);
         }
 
         Ok(())

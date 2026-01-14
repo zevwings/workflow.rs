@@ -1,15 +1,14 @@
-use crate::constants::{errors::http_client, git::check_errors, messages::log};
-use crate::git::{GitCommit, GitRepo};
-use crate::http::client::HttpClient;
-use crate::http::{HttpMethod, RequestConfig};
-use crate::prompt::{spinner, TableBuilder, TableStyle};
-use crate::settings::paths::Paths;
-use crate::settings::Settings;
-use crate::settings::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
+use crate::config::settings::paths::Paths;
+use crate::config::settings::Settings;
+use crate::config::settings::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
+use crate::core::constants::{errors, messages};
+use crate::core::http::HttpClient;
+use crate::core::http::{HttpMethod, RequestConfig};
+use crate::core::prompt::{spinner, TableBuilder, TableStyle};
+use crate::services::git::{GitCommit, GitRepo};
 use crate::{br, error, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use duct::cmd;
-use serde_json::Value;
 use std::time::Duration;
 
 /// 环境检查结果
@@ -281,7 +280,10 @@ impl CheckCommand {
         info!("[1/2] Checking Git repository status...");
         if !GitRepo::is_git_repo() {
             error!("Not in a Git repository");
-            return Err(color_eyre::eyre::eyre!("{}", check_errors::NOT_GIT_REPO));
+            return Err(color_eyre::eyre::eyre!(
+                "{}",
+                errors::check::CHECK_NOT_GIT_REPO
+            ));
         }
 
         let git_output = GitCommit::status().wrap_err("Failed to check git status")?;
@@ -303,8 +305,9 @@ impl CheckCommand {
     /// 检查网络连接（GitHub）
     fn check_network() -> Result<NetworkCheck> {
         info!("[2/2] Checking network connection to GitHub...");
-        let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
-        let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
+        let client =
+            HttpClient::global().wrap_err(errors::client::HTTP_CLIENT_CREATE_CLIENT_FAILED)?;
+        let config = RequestConfig::new().timeout(Duration::from_secs(10));
         match client.stream(HttpMethod::Get, crate::git::github::BASE, config) {
             Ok(response) => {
                 if response.status().is_success() {
@@ -418,7 +421,7 @@ impl CheckCommand {
         if !test_output.status.success() {
             let stderr = String::from_utf8_lossy(&test_output.stderr);
             let stdout = String::from_utf8_lossy(&test_output.stdout);
-            error!("{}", log::TESTS_FAILED);
+            error!("{}", messages::LOG_TESTS_FAILED);
             if !stderr.is_empty() {
                 error!("{}", stderr);
             }
@@ -426,7 +429,7 @@ impl CheckCommand {
                 error!("{}", stdout);
             }
             error!("Please fix the failing tests before merging");
-            color_eyre::eyre::bail!("{}", log::TESTS_FAILED);
+            color_eyre::eyre::bail!("{}", messages::LOG_TESTS_FAILED);
         }
 
         // 输出测试结果（成功时）

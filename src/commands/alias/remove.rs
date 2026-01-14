@@ -2,7 +2,7 @@
 //!
 //! 支持直接删除和交互式多选删除别名。
 
-use crate::alias::AliasManager;
+use crate::domain::alias::AliasManager;
 use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

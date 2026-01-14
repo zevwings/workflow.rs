@@ -1,4 +1,4 @@
-use crate::jira::Jira;
+use crate::services::jira::Jira;
 use crate::{br, debug, info};
 use chrono::{DateTime, FixedOffset};
 use color_eyre::{eyre::WrapErr, Result};
@@ -7,7 +7,7 @@ use serde_saphyr;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
-use crate::cli::OutputFormatArgs;
+use crate::domain::cli::OutputFormatArgs;
 
 /// 显示评论命令
 pub struct CommentsCommand;

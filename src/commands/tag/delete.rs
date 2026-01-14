@@ -2,7 +2,7 @@
 //!
 //! Delete one or more Git tags (local and/or remote).
 
-use crate::git::GitTag;
+use crate::services::git::GitTag;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;

@@ -1,10 +1,10 @@
 use crate::commands::check;
 use crate::commands::pr::helpers;
-use crate::git::{GitBranch, GitRepo};
-use crate::jira::status::JiraStatus;
-use crate::jira::{extract_jira_ticket_id, Jira, JiraWorkHistory};
-use crate::pr::create_provider_auto;
-use crate::pr::helpers::resolve_pull_request_id;
+use crate::domain::pr::create_provider_auto;
+use crate::domain::pr::helpers::resolve_pull_request_id;
+use crate::services::git::{GitBranch, GitRepo};
+use crate::services::jira::status::JiraStatus;
+use crate::services::jira::{extract_jira_ticket_id, Jira, JiraWorkHistory};
 use crate::{br, info, success, warning};
 use color_eyre::Result;
 

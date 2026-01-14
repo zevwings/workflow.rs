@@ -1,12 +1,12 @@
-use crate::git::GitBranch;
-use crate::jira::history::JiraWorkHistory;
+use crate::services::git::GitBranch;
+use crate::services::jira::history::JiraWorkHistory;
 use crate::{br, info};
 use color_eyre::Result;
 use serde_json;
 use std::collections::HashMap;
 
 use super::helpers::{get_jira_id, OutputFormat};
-use crate::cli::JiraQueryArgs;
+use crate::domain::cli::JiraQueryArgs;
 
 /// 显示关联信息命令
 pub struct RelatedCommand;

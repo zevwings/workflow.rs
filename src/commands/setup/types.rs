@@ -1,6 +1,6 @@
 //! 配置收集相关的类型定义
 
-use crate::settings::settings::GitHubAccount;
+use crate::config::settings::settings::GitHubAccount;
 
 /// 收集的配置数据
 #[derive(Debug, Clone)]

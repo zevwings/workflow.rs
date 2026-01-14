@@ -1,8 +1,8 @@
-use crate::constants::messages::log;
-use crate::jira::config::ConfigManager;
+use crate::config::settings::paths::Paths;
+use crate::config::settings::Settings;
+use crate::core::constants::messages;
 use crate::select;
-use crate::settings::paths::Paths;
-use crate::settings::Settings;
+use crate::services::jira::config::ConfigManager;
 use crate::LogLevel;
 use crate::{br, info, success};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
@@ -13,14 +13,15 @@ pub struct LogCommand;
 impl LogCommand {
     /// 设置日志级别（交互式选择）
     pub fn set() -> Result<()> {
-        // 获取当前日志级别
-        let current_level = LogLevel::current();
+        // 从配置获取当前日志级别
+        let settings = Settings::get();
+        let current_level_str =
+            settings.log.level.as_deref().unwrap_or_else(|| LogLevel::default().as_str());
 
         // 定义日志级别选项
         let log_levels = ["off", "error", "warn", "info", "debug"];
 
         // 找到当前级别的索引
-        let current_level_str = current_level.as_str();
         let current_idx =
             log_levels.iter().position(|&level| level == current_level_str).unwrap_or(2); // 默认为 info
 
@@ -34,10 +35,7 @@ impl LogCommand {
         .default(current_idx)
         .prompt()
         .wrap_err("Failed to select log level")?;
-        let selected_level = selected_level_str.parse::<LogLevel>().map_err(|e| eyre!("{}", e))?;
-
-        // 设置日志级别（内存中）
-        LogLevel::set_level(selected_level);
+        let _selected_level = selected_level_str.parse::<LogLevel>().map_err(|e| eyre!("{}", e))?;
 
         // 保存到配置文件
         Self::save_log_level_to_config(selected_level_str)?;
@@ -45,13 +43,17 @@ impl LogCommand {
         // 显示结果
         br!();
         success!("Log level set to: {}", selected_level_str);
-        info!("  Current log level: {}", selected_level.as_str());
+        info!("  Current log level: {}", selected_level_str);
         if let Ok(config_path) = crate::Paths::workflow_config() {
-            info!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
+            info!(
+                "  {} {}",
+                messages::LOG_CONFIG_SAVED_PREFIX,
+                config_path.display()
+            );
         } else {
             info!(
                 "  {} ~/.workflow/config/workflow.toml",
-                log::CONFIG_SAVED_PREFIX
+                messages::LOG_CONFIG_SAVED_PREFIX
             );
         }
 
@@ -60,11 +62,13 @@ impl LogCommand {
 
     /// 检查当前日志级别
     pub fn check() -> Result<()> {
-        let current_level = LogLevel::current();
-        let default_level = LogLevel::default_level();
-        let config_level = Settings::get().log.level.as_ref();
+        let settings = Settings::get();
+        let default_level = LogLevel::default();
+        let config_level = settings.log.level.as_ref();
+        let current_level_str =
+            config_level.map(|s| s.as_str()).unwrap_or_else(|| default_level.as_str());
 
-        success!("Current log level: {}", current_level.as_str());
+        success!("Current log level: {}", current_level_str);
         info!(
             "Default log level: {} (based on build mode)",
             default_level.as_str()
@@ -79,7 +83,7 @@ impl LogCommand {
             info!("Config file level: not set (using default)");
         }
 
-        if current_level == default_level && config_level.is_none() {
+        if config_level.is_none() {
             info!("Log level is at default (not manually set)");
         } else {
             info!("Log level has been manually set");
@@ -154,11 +158,15 @@ impl LogCommand {
             success!("Trace console output enabled");
             info!("  Tracing logs will be output to both file and console (stderr)");
             if let Ok(config_path) = crate::Paths::workflow_config() {
-                info!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
+                info!(
+                    "  {} {}",
+                    messages::LOG_CONFIG_SAVED_PREFIX,
+                    config_path.display()
+                );
             } else {
                 info!(
                     "  {} ~/.workflow/config/workflow.toml",
-                    log::CONFIG_SAVED_PREFIX
+                    messages::LOG_CONFIG_SAVED_PREFIX
                 );
             }
         } else {

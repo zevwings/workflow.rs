@@ -2,7 +2,7 @@
 //!
 //! Helper functions for stash commands, including interactive selection.
 
-use crate::git::{GitStash, StashEntry};
+use crate::services::git::{GitStash, StashEntry};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 交互式选择 stash 条目

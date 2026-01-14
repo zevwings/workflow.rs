@@ -3,12 +3,12 @@
 use crate::commands::setup::log as log_config;
 use crate::commands::setup::types::CollectedConfig;
 use crate::commands::setup::{github, jira, llm};
-use crate::constants::messages::log;
-use crate::jira::config::ConfigManager;
-use crate::settings::paths::Paths;
-use crate::settings::{
+use crate::config::settings::paths::Paths;
+use crate::config::settings::{
     GitHubSettings, JiraSettings, LLMProviderSettings, LLMSettings, LogSettings, Settings,
 };
+use crate::core::constants::messages;
+use crate::services::jira::config::ConfigManager;
 use crate::{br, info, success, warning};
 use color_eyre::Result;
 use std::collections::HashMap;
@@ -31,11 +31,15 @@ impl SetupCommand {
         info!("Saving configuration...");
         Self::save_config(&config)?;
         if let Ok(config_path) = Paths::workflow_config() {
-            success!("{} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
+            success!(
+                "{} {}",
+                messages::LOG_CONFIG_SAVED_PREFIX,
+                config_path.display()
+            );
         } else {
             success!(
                 "{} ~/.workflow/config/workflow.toml",
-                log::CONFIG_SAVED_PREFIX
+                messages::LOG_CONFIG_SAVED_PREFIX
             );
         }
 

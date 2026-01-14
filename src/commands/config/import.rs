@@ -13,10 +13,10 @@ use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 // 项目内部导入
 use crate::commands::config::helpers::{extract_section, parse_config};
 use crate::commands::config::validate::ConfigValidateCommand;
-use crate::settings::paths::Paths;
-use crate::settings::Settings;
-use crate::util::date::get_unix_timestamp;
-use crate::util::file::{FileReader, FileWriter};
+use crate::config::settings::paths::Paths;
+use crate::config::settings::Settings;
+use crate::core::util::date::DateFormatter;
+use crate::core::util::file::{FileReader, FileWriter};
 use crate::{error, info, success, warning};
 
 /// 导入事务结构
@@ -91,7 +91,7 @@ impl ImportTransaction {
             ));
         }
 
-        let timestamp = get_unix_timestamp();
+        let timestamp = DateFormatter::new().unix_timestamp()?;
         let backup_filename = format!("config.backup.{}.toml", timestamp);
         let backup_path = config_path
             .parent()

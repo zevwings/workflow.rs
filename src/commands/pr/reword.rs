@@ -5,16 +5,16 @@
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::br;
+use crate::core::prompt::spinner;
 use crate::debug;
-use crate::git::GitRepo;
+use crate::domain::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_from_body};
+use crate::domain::pr::helpers::{generate_pull_request_body, resolve_pull_request_id};
+use crate::domain::pr::platform::create_provider_auto;
 use crate::info;
-use crate::jira::helpers::extract_jira_ticket_id;
-use crate::jira::Jira;
-use crate::llm::RewordGenerator;
-use crate::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_from_body};
-use crate::pr::helpers::{generate_pull_request_body, resolve_pull_request_id};
-use crate::pr::platform::create_provider_auto;
-use crate::prompt::spinner;
+use crate::services::git::GitRepo;
+use crate::services::jira::helpers::extract_jira_ticket_id;
+use crate::services::jira::Jira;
+use crate::services::llm::RewordGenerator;
 use crate::spinner;
 use crate::success;
 use crate::warning;
@@ -256,7 +256,7 @@ impl PullRequestRewordCommand {
         current_change_types: Option<&[bool]>,
         jira_ticket: Option<&str>,
     ) -> Result<String> {
-        use crate::pr::platform::TYPES_OF_CHANGES;
+        use crate::domain::pr::platform::TYPES_OF_CHANGES;
 
         // 使用当前 change_types，如果没有则默认都不选中
         let selected_types: Vec<bool> = if let Some(types) = current_change_types {

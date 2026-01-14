@@ -70,7 +70,6 @@ mod tests {
         assert_eq!(config.initial_delay, 1);
         assert_eq!(config.max_delay, 30);
         assert_eq!(config.backoff_multiplier, 2.0);
-        assert!(config.interactive);
     }
 
     #[test]
@@ -83,7 +82,6 @@ mod tests {
         assert_eq!(config.initial_delay, default_config.initial_delay);
         assert_eq!(config.max_delay, default_config.max_delay);
         assert_eq!(config.backoff_multiplier, default_config.backoff_multiplier);
-        assert_eq!(config.interactive, default_config.interactive);
     }
 
     #[test]
@@ -93,14 +91,12 @@ mod tests {
             initial_delay: 2,
             max_delay: 60,
             backoff_multiplier: 1.5,
-            interactive: false,
         };
 
         assert_eq!(config.max_retries, 5);
         assert_eq!(config.initial_delay, 2);
         assert_eq!(config.max_delay, 60);
         assert_eq!(config.backoff_multiplier, 1.5);
-        assert!(!config.interactive);
     }
 
     // ==================== 基础重试逻辑测试 ====================
@@ -113,7 +109,6 @@ mod tests {
             initial_delay: 1,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false, // 非交互模式，避免用户输入
         };
 
         let result =
@@ -132,7 +127,6 @@ mod tests {
             initial_delay: 0, // 设为0以加快测试
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 第2次尝试成功（第1次失败，第2次成功）
@@ -152,7 +146,6 @@ mod tests {
             initial_delay: 0,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         let result = HttpRetry::retry(create_always_fail_operation(), &config, "test operation");
@@ -173,7 +166,6 @@ mod tests {
             initial_delay: 1, // 1秒初始延迟
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         let start_time = Instant::now();
@@ -208,7 +200,6 @@ mod tests {
             initial_delay,
             max_delay,
             backoff_multiplier: multiplier,
-            interactive: false,
         };
 
         let start_time = Instant::now();
@@ -243,7 +234,6 @@ mod tests {
             initial_delay: 0,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 测试立即成功的情况
@@ -278,7 +268,6 @@ mod tests {
             initial_delay: 0,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         let operation_name = "custom operation name";
@@ -300,7 +289,6 @@ mod tests {
             initial_delay: 1,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 成功操作应该立即返回
@@ -333,7 +321,6 @@ mod tests {
             initial_delay: 0, // 无延迟以加快测试
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 第5次尝试成功
@@ -357,7 +344,6 @@ mod tests {
             initial_delay: 0, // 零延迟
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         let start_time = Instant::now();
@@ -377,7 +363,6 @@ mod tests {
             initial_delay: 1,
             max_delay: 2,             // 很小的最大延迟
             backoff_multiplier: 10.0, // 很大的倍数
-            interactive: false,
         };
 
         let start_time = Instant::now();
@@ -399,7 +384,6 @@ mod tests {
             initial_delay: 0,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 测试整数返回类型
@@ -449,7 +433,6 @@ mod tests {
             initial_delay: 0,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 测试字符串错误（转换为color_eyre::Result）
@@ -501,7 +484,6 @@ mod tests {
             initial_delay: 0,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 快速连续调用多次
@@ -527,7 +509,6 @@ mod tests {
             initial_delay: 0,
             max_delay: 30,
             backoff_multiplier: 2.0,
-            interactive: false,
         };
 
         // 多次运行相同的测试，验证行为一致

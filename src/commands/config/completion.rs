@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use clap_complete::shells::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::settings::paths::Paths;
-use crate::shell::Detect;
+use crate::config::settings::paths::Paths;
+use crate::core::shell::detect::Detect;
+use crate::core::shell::paths::config_file;
 use crate::{br, debug, info, success, warning, Completion};
 
 /// Shell 配置状态
@@ -51,7 +52,7 @@ impl CompletionCommand {
         for shell in &all_shells {
             let installed = installed_shells.contains(shell);
             let (configured, config_path) = Completion::is_shell_configured(shell)
-                .unwrap_or_else(|_| (false, Paths::config_file(shell).unwrap_or_default()));
+                .unwrap_or_else(|_| (false, config_file(shell).unwrap_or_default()));
 
             statuses.push(ShellStatus {
                 shell: *shell,
@@ -287,7 +288,7 @@ impl CompletionCommand {
             Some(completion_dir.to_string_lossy().to_string()),
         )?;
 
-        // 3. 应用到对应的 shell 配置文件（使用 ShellConfigManager）
+        // 3. 应用到对应的 shell 配置文件
         debug!("Configuring shell configuration file...");
         let config_result = Completion::configure_shell_config(&shell)?;
 

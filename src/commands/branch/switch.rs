@@ -9,7 +9,7 @@
 
 use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::pr::helpers::handle_stash_pop_result;
-use crate::git::{GitBranch, GitCommit, GitStash};
+use crate::services::git::{GitBranch, GitCommit, GitStash};
 use crate::{confirm, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 

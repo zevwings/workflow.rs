@@ -8,14 +8,14 @@
 //! 3. Format using template: {type}/{jira-ticket}-{branch-name}
 //! 4. Apply repository prefix if configured
 
-use crate::branch::{BranchNaming, BranchType};
 use crate::commands::pr::helpers::handle_stash_pop_result;
-use crate::git::{GitBranch, GitCommit, GitStash};
-use crate::jira::helpers::validate_jira_ticket_format;
-use crate::jira::Jira;
-use crate::llm::CreateGenerator;
-use crate::prompt::spinner;
-use crate::util::format::MessageFormatter;
+use crate::core::prompt::spinner;
+use crate::core::util::format::{error, operation};
+use crate::domain::branch::{BranchNaming, BranchType};
+use crate::services::git::{GitBranch, GitCommit, GitStash};
+use crate::services::jira::helpers::validate_jira_ticket_format;
+use crate::services::jira::Jira;
+use crate::services::llm::CreateGenerator;
 use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -163,12 +163,9 @@ impl CreateCommand {
     /// Gets JIRA ticket info and uses LLM to generate a branch name slug.
     fn generate_branch_name_from_jira(ticket_id: &str) -> Result<String> {
         // Get JIRA ticket info
-        let issue = spinner(MessageFormatter::operation(
-            "Getting ticket info for",
-            ticket_id,
-        ))
-        .with(|| Jira::get_ticket_info(ticket_id))
-        .wrap_err_with(|| MessageFormatter::error("get ticket info for", ticket_id, ""))?;
+        let issue = spinner(operation("Getting ticket info for", ticket_id))
+            .with(|| Jira::get_ticket_info(ticket_id))
+            .wrap_err_with(|| error("get ticket info for", ticket_id, ""))?;
 
         // Use LLM to generate branch name
         let exists_branches = GitBranch::get_all_branches(true).ok();

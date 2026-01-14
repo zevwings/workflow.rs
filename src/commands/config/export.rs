@@ -3,10 +3,10 @@
 
 use crate::commands::config::helpers::extract_section;
 use crate::commands::config::validate::ConfigValidateCommand;
-use crate::settings::paths::Paths;
-use crate::settings::Settings;
-use crate::util::directory::DirectoryWalker;
-use crate::util::file::FileWriter;
+use crate::config::settings::paths::Paths;
+use crate::config::settings::Settings;
+use crate::core::util::directory::DirectoryWalker;
+use crate::core::util::file::FileWriter;
 use crate::{error, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::path::PathBuf;

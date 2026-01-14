@@ -4,8 +4,8 @@
 
 use crate::commands::branch::helpers::sort_branches_with_priority;
 use crate::commands::check;
-use crate::git::GitBranch;
-use crate::repo::config::RepoConfig;
+use crate::domain::repo::config::RepoConfig;
+use crate::services::git::GitBranch;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

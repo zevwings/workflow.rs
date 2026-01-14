@@ -2,9 +2,9 @@
 //!
 //! Display current repository configuration.
 
-use crate::git::GitRepo;
-use crate::repo::config::RepoConfig;
-use crate::template::config::TemplateConfig;
+use crate::config::template::config::TemplateConfig;
+use crate::domain::repo::config::RepoConfig;
+use crate::services::git::GitRepo;
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 

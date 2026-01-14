@@ -2,4 +2,5 @@
 //!
 //! 包含集成测试文件。
 
+pub mod concurrent;
 pub mod workflow;

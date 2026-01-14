@@ -7,8 +7,8 @@ use crate::commands::check;
 use crate::commands::commit::helpers::{
     check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
 };
-use crate::commit::CommitAmend;
-use crate::git::GitCommit;
+use crate::domain::commit::CommitAmend;
+use crate::services::git::GitCommit;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

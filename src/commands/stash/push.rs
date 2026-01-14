@@ -2,7 +2,7 @@
 //!
 //! Save current working directory changes to stash.
 
-use crate::git::{GitCommit, GitStash};
+use crate::services::git::{GitCommit, GitStash};
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

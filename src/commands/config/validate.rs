@@ -12,10 +12,10 @@ use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 // 项目内部导入
 use crate::commands::config::helpers::parse_config;
-use crate::settings::paths::Paths;
-use crate::settings::Settings;
-use crate::util::date::get_unix_timestamp;
-use crate::util::file::{FileReader, FileWriter};
+use crate::config::settings::paths::Paths;
+use crate::config::settings::Settings;
+use crate::core::util::date::DateFormatter;
+use crate::core::util::file::{FileReader, FileWriter};
 use crate::{error, info, success, warning};
 
 /// 配置验证错误
@@ -396,7 +396,7 @@ impl ConfigValidateCommand {
 
     /// 创建备份
     fn create_backup(config_path: &Path) -> Result<PathBuf> {
-        let timestamp = get_unix_timestamp();
+        let timestamp = DateFormatter::new().unix_timestamp()?;
         let backup_filename = format!(
             "{}.backup.{}",
             config_path.file_name().and_then(|n| n.to_str()).unwrap_or("config"),

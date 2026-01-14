@@ -1,6 +1,6 @@
-use crate::git::{GitBranch, GitCommit, GitPreCommit};
-use crate::pr::create_provider_auto;
-use crate::pr::helpers::get_current_branch_pr_id;
+use crate::domain::pr::create_provider_auto;
+use crate::domain::pr::helpers::get_current_branch_pr_id;
+use crate::services::git::{GitBranch, GitCommit, GitPreCommit};
 use crate::spinner;
 use crate::{br, info, success, warning};
 use color_eyre::Result;

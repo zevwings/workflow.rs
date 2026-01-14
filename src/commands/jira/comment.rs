@@ -4,8 +4,8 @@
 //! - 输入评论文本
 //! - 可选择附加文件内容
 
-use crate::jira::helpers::validate_jira_ticket_format;
-use crate::jira::Jira;
+use crate::services::jira::helpers::validate_jira_ticket_format;
+use crate::services::jira::Jira;
 use crate::spinner;
 use crate::{info, success};
 use color_eyre::{eyre::WrapErr, Result};

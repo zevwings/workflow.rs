@@ -3,7 +3,7 @@
 //! Apply a stash entry without removing it.
 
 use crate::commands::stash::helpers::select_stash_interactively;
-use crate::git::GitStash;
+use crate::services::git::GitStash;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 

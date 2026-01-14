@@ -1,5 +1,5 @@
-use crate::pr::create_provider_auto;
-use crate::pr::helpers::resolve_pull_request_id;
+use crate::domain::pr::create_provider_auto;
+use crate::domain::pr::helpers::resolve_pull_request_id;
 use crate::success;
 use color_eyre::{eyre::WrapErr, Result};
 

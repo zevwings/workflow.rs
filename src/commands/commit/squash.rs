@@ -7,7 +7,7 @@ use crate::commands::check;
 use crate::commands::commit::helpers::{
     check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
 };
-use crate::commit::{CommitSquash, SquashOptions};
+use crate::domain::commit::{CommitSquash, SquashOptions};
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 

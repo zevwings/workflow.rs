@@ -3,8 +3,8 @@
 //! Clean local branches, keeping main/master, develop, current branch, and branches in ignore list.
 
 use crate::commands::check;
-use crate::git::{GitBranch, GitRepo, GitTag};
-use crate::repo::config::RepoConfig;
+use crate::domain::repo::config::RepoConfig;
+use crate::services::git::{GitBranch, GitRepo, GitTag};
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

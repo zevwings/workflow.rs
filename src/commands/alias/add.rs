@@ -2,8 +2,8 @@
 //!
 //! 支持直接添加和交互式添加别名。
 
-use crate::alias::{AliasManager, CommandsConfig};
-use crate::prompt::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
+use crate::core::prompt::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
+use crate::domain::alias::{AliasManager, CommandsConfig};
 use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::sync::Arc;

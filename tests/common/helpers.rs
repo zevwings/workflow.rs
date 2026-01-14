@@ -47,7 +47,7 @@ pub fn cleanup_test_env() {
 /// ```
 pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
     let temp_dir = std::env::temp_dir();
-    let timestamp = workflow::util::date::get_unix_timestamp_nanos();
+    let timestamp = workflow::util::date::get_unix_timestamp_nanos().unwrap_or(0);
     let random_suffix = random_string(8);
     let test_dir = temp_dir.join(format!(
         "workflow_test_{}_{}_{}",

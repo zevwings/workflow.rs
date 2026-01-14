@@ -4,7 +4,7 @@
 //! 所有功能都通过 `workflow` 命令及其子命令提供，包括 `pr`、`log`、`jira` 等子命令。
 
 use clap::Parser;
-use color_eyre::Result;
+use color_eyre::{eyre::Context, Result};
 
 use workflow::commands::alias::{AliasAddCommand, AliasListCommand, AliasRemoveCommand};
 use workflow::commands::branch::{
@@ -26,7 +26,6 @@ use workflow::commands::pr::{
     approve, close, comment, create as pr_create, list, merge, pick, rebase, reword, status,
     summarize, sync, update as pr_update,
 };
-use workflow::commands::proxy::proxy;
 use workflow::commands::repo::{clean as repo_clean, setup as repo_setup, show as repo_show};
 use workflow::commands::setup;
 use workflow::commands::stash::{apply, drop, list as stash_list, pop, push};
@@ -35,13 +34,11 @@ use workflow::commands::tag::TagDeleteCommand;
 use workflow::cli::{
     AliasSubcommand, BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand,
     ConfigSubcommand, GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand,
-    LogLevelSubcommand, LogSubcommand, PRCommands, ProxySubcommand, RepoSubcommand,
-    StashSubcommand, TagSubcommand,
+    LogLevelSubcommand, LogSubcommand, PRCommands, RepoSubcommand, StashSubcommand, TagSubcommand,
 };
 use workflow::*;
 
 use workflow::alias::AliasManager;
-use workflow::settings::Settings;
 
 /// 主函数
 ///
@@ -49,16 +46,6 @@ use workflow::settings::Settings;
 fn main() -> Result<()> {
     // 安装 color-eyre（最早调用）
     color_eyre::install()?;
-
-    // 初始化日志级别（从配置文件读取，用于 log_*! 宏）
-    {
-        let config_level = Settings::get()
-            .log
-            .level
-            .as_ref()
-            .and_then(|s| s.parse::<workflow::LogLevel>().ok());
-        workflow::LogLevel::init(config_level);
-    }
 
     // 别名展开：在解析前展开别名
     let args: Vec<String> = std::env::args().collect();
@@ -73,18 +60,10 @@ fn main() -> Result<()> {
     // 初始化日志（从配置文件读取，统一管理，传入命令名）
     // 创建 SettingsAdapter 作为配置提供者
     let config_adapter = workflow::infra::adapters::config::SettingsAdapter::new();
-    workflow::Logger::init_with_command(command_name.as_deref(), &config_adapter);
+    workflow::core::logger::init(command_name.as_deref(), &config_adapter)
+        .context("Failed to initialize logger")?;
 
     match cli.command {
-        // 代理管理命令
-        Some(Commands::Proxy {
-            subcommand,
-            temporary,
-        }) => match subcommand {
-            ProxySubcommand::On => proxy::ProxyCommand::on(temporary)?,
-            ProxySubcommand::Off => proxy::ProxyCommand::off()?,
-            ProxySubcommand::Check => proxy::ProxyCommand::check()?,
-        },
         // 环境检查
         Some(Commands::Check) => {
             check::CheckCommand::run_all()?;
@@ -471,7 +450,6 @@ fn main() -> Result<()> {
             info!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
             info!("  workflow log        - Manage log level (set/check)");
             info!("  workflow migrate    - Migrate configuration to new format");
-            info!("  workflow proxy      - Manage proxy settings (on/off/check)");
             info!("  workflow setup      - Initialize or update configuration");
             info!("  workflow uninstall  - Uninstall Workflow CLI configuration");
             info!("  workflow version    - Show Workflow CLI version");

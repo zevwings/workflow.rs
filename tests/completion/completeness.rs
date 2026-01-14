@@ -13,7 +13,6 @@ use workflow::completion::helpers::get_completion_filename;
 
 /// 所有顶级命令列表（从 Commands 枚举中提取）
 const TOP_LEVEL_COMMANDS: &[&str] = &[
-    "proxy",
     "check",
     "setup",
     "config",
@@ -81,9 +80,6 @@ const COMMIT_SUBCOMMANDS: &[&str] = &["amend", "reword", "squash"];
 
 // Branch ignore 子命令列表（目前未在测试中使用，保留以备将来扩展）
 // const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
-
-/// Proxy 子命令列表
-const PROXY_SUBCOMMANDS: &[&str] = &["on", "off", "check"];
 
 /// Log 子命令列表
 const LOG_LEVEL_SUBCOMMANDS: &[&str] = &["set", "check", "trace-console"];
@@ -417,15 +413,6 @@ fn test_all_subcommands_completeness() {
         commit_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(commit_subcommands.len(), COMMIT_SUBCOMMANDS.len());
 
-    // 验证 Proxy 子命令
-    let proxy_cmd = cmd
-        .get_subcommands()
-        .find(|sc| sc.get_name() == "proxy")
-        .expect("proxy command should exist");
-    let proxy_subcommands: Vec<String> =
-        proxy_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-    assert_eq!(proxy_subcommands.len(), PROXY_SUBCOMMANDS.len());
-
     // 验证 Log 子命令
     let log_cmd = cmd
         .get_subcommands()
@@ -640,7 +627,6 @@ fn test_all_commands_with_subcommands() {
         ("github", GITHUB_SUBCOMMANDS),
         ("llm", LLM_SUBCOMMANDS),
         ("branch", BRANCH_SUBCOMMANDS),
-        ("proxy", PROXY_SUBCOMMANDS),
         ("log", LOG_LEVEL_SUBCOMMANDS),
         ("completion", COMPLETION_SUBCOMMANDS),
         ("stash", STASH_SUBCOMMANDS),

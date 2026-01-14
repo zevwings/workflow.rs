@@ -3,9 +3,9 @@
 //! 提供可复用的交互式选择函数，用于配置设置。
 //! 同时提供配置解析和提取的共享函数，减少代码冗余。
 
-use crate::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
+use crate::config::settings::Settings;
 use crate::select;
-use crate::settings::Settings;
+use crate::services::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use color_eyre::{
     eyre::{eyre, ContextCompat, WrapErr},
     Result,

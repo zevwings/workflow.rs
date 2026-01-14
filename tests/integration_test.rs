@@ -14,7 +14,6 @@ mod http;
 mod integration;
 mod jira;
 mod pr;
-mod proxy;
 mod rollback;
 mod template;
 

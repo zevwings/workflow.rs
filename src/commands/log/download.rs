@@ -1,7 +1,7 @@
-use crate::constants::errors::input_reading;
-use crate::jira::logs::{JiraLogs, ProgressCallback};
-use crate::jira::Jira;
-use crate::prompt::Progress;
+use crate::core::constants::errors;
+use crate::core::prompt::Progress;
+use crate::services::jira::logs::{JiraLogs, ProgressCallback};
+use crate::services::jira::Jira;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;
@@ -19,7 +19,7 @@ impl DownloadCommand {
         } else {
             crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
+                .wrap_err(errors::client::INPUT_READ_JIRA_TICKET_ID_FAILED)?
         };
 
         // 先获取附件列表并过滤日志附件以确定总数

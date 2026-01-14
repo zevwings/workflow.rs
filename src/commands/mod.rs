@@ -17,7 +17,6 @@
 //! - `config/` - 配置管理命令（setup, show, log, completion）
 //! - `github/` - GitHub 账号管理命令（list, add, remove, switch, update, current）
 //! - `check/` - 环境检查命令（git_status, network）
-//! - `proxy/` - 代理管理命令（on, off, check）
 //!
 //! ### 业务功能
 //! - `pr/` - PR 相关命令（create, merge, close, status, list, update, sync）
@@ -33,7 +32,6 @@ pub mod check;
 pub mod config;
 pub mod github;
 pub mod llm;
-pub mod proxy;
 pub mod setup;
 
 // 业务功能

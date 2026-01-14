@@ -2,8 +2,8 @@
 //!
 //! 显示所有已定义的别名，使用表格格式。
 
-use crate::alias::AliasManager;
-use crate::prompt::{TableBuilder, TableStyle, Tabled};
+use crate::core::prompt::{TableBuilder, TableStyle, Tabled};
+use crate::domain::alias::AliasManager;
 use crate::{br, info, success};
 use color_eyre::Result;
 

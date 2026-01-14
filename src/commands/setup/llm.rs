@@ -1,9 +1,9 @@
 //! LLM 配置处理模块
 
 use crate::commands::setup::types::{CollectedConfig, LLMConfig};
-use crate::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
-use crate::prompt::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
-use crate::settings::LLMSettings;
+use crate::config::settings::LLMSettings;
+use crate::core::prompt::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
+use crate::services::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 use std::sync::Arc;

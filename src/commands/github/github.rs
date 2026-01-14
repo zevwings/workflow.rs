@@ -4,14 +4,14 @@
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
-use crate::git::GitConfig;
-use crate::jira::config::ConfigManager;
-use crate::prompt::spinner;
-use crate::prompt::{TableBuilder, TableStyle};
-use crate::settings::paths::Paths;
-use crate::settings::GitHubAccountListRow;
-use crate::settings::Settings;
-use crate::util::mask_sensitive_value;
+use crate::config::settings::paths::Paths;
+use crate::config::settings::GitHubAccountListRow;
+use crate::config::settings::Settings;
+use crate::core::prompt::spinner;
+use crate::core::prompt::{TableBuilder, TableStyle};
+use crate::core::util::format::Sensitive;
+use crate::services::git::GitConfig;
+use crate::services::jira::config::ConfigManager;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
@@ -104,7 +104,7 @@ impl GitHubCommand {
         if let Some(account) = github.get_current_account() {
             success!("Current account: {}", account.name);
             info!("  Email: {}", account.email);
-            info!("  API Token: {}", mask_sensitive_value(&account.api_token));
+            info!("  API Token: {}", account.api_token.mask());
         } else {
             warning!("No GitHub account is currently active.");
             info!("Run 'workflow github add' to add an account.");
@@ -392,10 +392,7 @@ impl GitHubCommand {
         info!("Current account information:");
         info!("  Name: {}", old_account.name);
         info!("  Email: {}", old_account.email);
-        info!(
-            "  API Token: {}",
-            mask_sensitive_value(&old_account.api_token)
-        );
+        info!("  API Token: {}", old_account.api_token.mask());
         br!();
 
         // 收集新的账号信息（使用现有值作为默认值）

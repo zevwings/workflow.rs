@@ -2,8 +2,8 @@
 
 use crate::commands::github::helpers::collect_github_account;
 use crate::commands::setup::types::CollectedConfig;
-use crate::git::GitConfig;
-use crate::settings::GitHubAccount;
+use crate::config::settings::GitHubAccount;
+use crate::services::git::GitConfig;
 use crate::{br, info};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 

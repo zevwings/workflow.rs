@@ -1,5 +1,5 @@
-use crate::pr::platform::create_provider_auto;
-use crate::prompt::{TableBuilder, TableStyle};
+use crate::core::prompt::{TableBuilder, TableStyle};
+use crate::domain::pr::platform::create_provider_auto;
 use crate::{br, info};
 use color_eyre::Result;
 

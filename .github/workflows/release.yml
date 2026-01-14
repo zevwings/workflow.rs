@@ -210,10 +210,16 @@ jobs:
         id: generate_version
         run: |
           # 使用 Python dev 工具
-          python3 scripts/dev/py/dev.py version generate \
-            --master ${{ steps.detect_mode.outputs.is_master_branch == 'true' }} \
-            --update \
-            --ci
+          if [ "${{ steps.detect_mode.outputs.is_master_branch }}" == "true" ]; then
+            python3 scripts/dev/py/dev.py version generate \
+              --master \
+              --update \
+              --ci
+          else
+            python3 scripts/dev/py/dev.py version generate \
+              --update \
+              --ci
+          fi
 
       - name: 🔧 Setup Rust toolchain
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'

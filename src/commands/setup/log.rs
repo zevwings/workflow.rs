@@ -1,8 +1,10 @@
 //! Log 配置处理模块
 
 use crate::commands::setup::types::{CollectedConfig, LogConfig};
-use crate::prompt::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField, SelectFormField};
-use crate::settings::{default_download_base_dir, LogSettings};
+use crate::config::settings::{default_download_base_dir, LogSettings};
+use crate::core::prompt::{
+    ConfirmFormField, FormBuilder, GroupConfig, InputFormField, SelectFormField,
+};
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 

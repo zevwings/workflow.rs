@@ -1,4 +1,4 @@
-use crate::jira::JiraIssueApi;
+use crate::services::jira::JiraIssueApi;
 use crate::{br, debug, info};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
@@ -6,7 +6,7 @@ use serde_saphyr;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
-use crate::cli::JiraQueryArgs;
+use crate::domain::cli::JiraQueryArgs;
 
 /// 显示变更历史命令
 pub struct ChangelogCommand;

@@ -8,11 +8,11 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::constants::errors::input_reading;
-use crate::jira::attachments::AttachmentCleaner;
-use crate::jira::table::FileRow;
-use crate::prompt::{TableBuilder, TableStyle};
-use crate::util::format::DisplayFormatter;
+use crate::core::constants::errors;
+use crate::core::prompt::{TableBuilder, TableStyle};
+use crate::core::util::format::SizeDisplay;
+use crate::services::jira::attachments::AttachmentCleaner;
+use crate::services::jira::table::FileRow;
 use crate::{br, info, success};
 
 /// 清理日志命令
@@ -45,7 +45,7 @@ impl CleanCommand {
             // 交互式输入：允许用户输入 JIRA ID，留空表示清理全部
             crate::input!("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
                 .prompt()
-                .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
+                .wrap_err(errors::client::INPUT_READ_JIRA_TICKET_ID_FAILED)?
                 .trim()
                 .to_string()
         };
@@ -82,7 +82,7 @@ impl CleanCommand {
                 info!("{}: {:?}", dir_info.dir_name, dir_info.dir);
             }
             info!("Directory: {:?}", dir_info.dir);
-            info!("Total size: {}", DisplayFormatter::size(dir_info.size));
+            info!("Total size: {}", dir_info.size.to_size_string());
             info!("Total files: {}", dir_info.file_count);
             br!();
             info!("Contents:");

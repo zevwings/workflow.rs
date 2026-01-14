@@ -1,7 +1,7 @@
-use crate::constants::errors::input_reading;
-use crate::jira::logs::JiraLogs;
-use crate::jira::logs::SearchResultRow;
-use crate::prompt::{TableBuilder, TableStyle};
+use crate::core::constants::errors;
+use crate::core::prompt::{TableBuilder, TableStyle};
+use crate::services::jira::logs::JiraLogs;
+use crate::services::jira::logs::SearchResultRow;
 use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -17,7 +17,7 @@ impl SearchCommand {
         } else {
             crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
+                .wrap_err(errors::client::INPUT_READ_JIRA_TICKET_ID_FAILED)?
         };
 
         // 2. 创建 JiraLogs 实例并确保日志文件存在

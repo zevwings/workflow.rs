@@ -2,8 +2,8 @@
 //!
 //! Provides reusable helper functions for branch-related operations.
 
-use crate::git::GitBranch;
-use crate::repo::config::RepoConfig;
+use crate::domain::repo::config::RepoConfig;
+use crate::services::git::GitBranch;
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Sort branches with priority

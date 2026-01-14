@@ -1,6 +1,6 @@
-use crate::constants::errors::input_reading;
-use crate::jira::logs::JiraLogs;
-use crate::util::Clipboard;
+use crate::core::constants::errors;
+use crate::core::util::clipboard::Clipboard;
+use crate::services::jira::logs::JiraLogs;
 use crate::{debug, error, success};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -16,7 +16,7 @@ impl FindCommand {
         } else {
             crate::input!("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
+                .wrap_err(errors::client::INPUT_READ_JIRA_TICKET_ID_FAILED)?
         };
 
         // 2. 创建 JiraLogs 实例

@@ -2,7 +2,7 @@
 //!
 //! Delete one or more stash entries.
 
-use crate::git::GitStash;
+use crate::services::git::GitStash;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 

@@ -2,8 +2,8 @@
 //!
 //! List all stash entries in a table format.
 
-use crate::git::GitStash;
-use crate::prompt::{TableBuilder, TableStyle, Tabled};
+use crate::core::prompt::{TableBuilder, TableStyle, Tabled};
+use crate::services::git::GitStash;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
 

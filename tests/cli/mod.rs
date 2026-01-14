@@ -13,6 +13,5 @@ pub mod llm;
 pub mod log;
 pub mod migrate;
 pub mod pr;
-pub mod proxy;
 pub mod repo;
 pub mod stash;

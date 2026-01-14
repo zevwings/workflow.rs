@@ -1,0 +1,150 @@
+//! Main commands enumeration
+//!
+//! Defines all top-level commands for Workflow CLI.
+
+use clap::Subcommand;
+
+use super::{
+    AliasSubcommand, BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
+    DryRunArgs, GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
+    RepoSubcommand, StashSubcommand, TagSubcommand,
+};
+
+/// 主命令枚举
+///
+/// 定义了 Workflow CLI 支持的所有顶级命令。
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Run environment checks
+    ///
+    /// Check Git repository status and network connectivity (GitHub).
+    Check,
+    /// Initialize or update configuration
+    ///
+    /// Interactively set up various configuration items required by Workflow CLI (e.g., Jira, GitHub, etc.).
+    Setup,
+    /// Manage configuration
+    ///
+    /// View, validate, export, and import configuration files.
+    Config {
+        #[command(subcommand)]
+        subcommand: Option<ConfigSubcommand>,
+    },
+    /// Uninstall Workflow CLI configuration
+    ///
+    /// Remove all related files: binaries, completion scripts, configuration files, etc.
+    Uninstall,
+    /// Show Workflow CLI version
+    ///
+    /// Display the current installed version of Workflow CLI.
+    Version,
+    /// Update Workflow CLI
+    ///
+    /// Rebuild release version and update all binaries and shell completion scripts.
+    Update {
+        /// Specify the version number to update to (e.g., 1.1.2)
+        ///
+        /// If not specified, will update to the latest version.
+        #[arg(long, short = 'v')]
+        version: Option<String>,
+    },
+    /// Manage log level (set/check)
+    ///
+    /// Set or view current log output level (none, error, warn, info, debug).
+    #[command(name = "log")]
+    Log {
+        #[command(subcommand)]
+        subcommand: LogLevelSubcommand,
+    },
+    /// Manage GitHub accounts
+    ///
+    /// Manage configurations for multiple GitHub accounts (add, remove, switch, update, etc.).
+    #[command(name = "github")]
+    GitHub {
+        #[command(subcommand)]
+        subcommand: GitHubSubcommand,
+    },
+    /// Manage LLM configuration
+    ///
+    /// Configure LLM provider, API keys, models, and output language settings.
+    #[command(name = "llm")]
+    Llm {
+        #[command(subcommand)]
+        subcommand: LLMSubcommand,
+    },
+    /// Manage shell completion
+    ///
+    /// Generate and manage shell completion scripts.
+    Completion {
+        #[command(subcommand)]
+        subcommand: CompletionSubcommand,
+    },
+    /// Manage Git branches
+    ///
+    /// Create, switch, rename, sync, delete branches and manage branch ignore list.
+    Branch {
+        #[command(subcommand)]
+        subcommand: BranchSubcommand,
+    },
+    /// Manage Git commits
+    ///
+    /// Amend the last commit, including message and files.
+    Commit {
+        #[command(subcommand)]
+        subcommand: CommitSubcommand,
+    },
+    /// Migrate configuration to new format
+    ///
+    /// Execute versioned migrations to update configuration files.
+    /// Automatically detects and migrates all pending versions.
+    /// Old configuration files will be removed after successful migration.
+    Migrate {
+        #[command(flatten)]
+        dry_run: DryRunArgs,
+        /// Keep old configuration files after migration (do not remove)
+        #[arg(long)]
+        keep_old: bool,
+    },
+    /// Pull Request operations
+    ///
+    /// Create, merge, close, and manage Pull Requests.
+    Pr {
+        #[command(subcommand)]
+        subcommand: PRCommands,
+    },
+    /// Jira operations (info, attachments, clean, log)
+    ///
+    /// View and manage Jira ticket information, download attachments, clean local data, and manage log files.
+    Jira {
+        #[command(subcommand)]
+        subcommand: JiraSubcommand,
+    },
+    /// Git stash management
+    ///
+    /// List, apply, drop, and pop Git stash entries.
+    Stash {
+        #[command(subcommand)]
+        subcommand: StashSubcommand,
+    },
+    /// Manage repository-level configuration
+    ///
+    /// Initialize and manage repository-level configuration including branch prefix, commit template settings, and cleanup operations.
+    Repo {
+        #[command(subcommand)]
+        subcommand: RepoSubcommand,
+    },
+    /// Manage command aliases
+    ///
+    /// Create, list, and remove command aliases to simplify common commands.
+    Alias {
+        #[command(subcommand)]
+        subcommand: AliasSubcommand,
+    },
+    /// Manage Git tags
+    ///
+    /// Delete local and remote tags.
+    Tag {
+        #[command(subcommand)]
+        subcommand: TagSubcommand,
+    },
+}

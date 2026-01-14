@@ -2,7 +2,7 @@
 //!
 //! 提供 Jira 命令之间共享的公共功能，避免代码重复。
 
-use crate::constants::errors::input_reading;
+use crate::core::constants::errors;
 use chrono::{DateTime, FixedOffset};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -56,7 +56,7 @@ pub fn get_jira_id(jira_id: Option<String>, prompt_message: Option<&str>) -> Res
         let message = prompt_message.unwrap_or("Enter Jira ticket ID (e.g., PROJ-123)");
         crate::input!(message)
             .prompt()
-            .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)
+            .wrap_err(errors::client::INPUT_READ_JIRA_TICKET_ID_FAILED)
     }
 }
 

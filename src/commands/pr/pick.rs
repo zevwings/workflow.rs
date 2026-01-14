@@ -1,23 +1,23 @@
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     copy_and_open_pull_request, create_branch_from_default, create_or_get_pull_request,
     detect_base_branch, ensure_jira_status, handle_stash_pop_result, resolve_description,
     resolve_title, select_change_types, update_jira_ticket,
 };
-use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
-use crate::jira::helpers::validate_jira_ticket_format;
-use crate::jira::Jira;
-use crate::llm::CreateGenerator;
-use crate::pr::body_parser::{extract_info_from_source_pr, ExtractedPrInfo, SourcePrInfo};
-use crate::pr::create_provider_auto;
-use crate::pr::helpers::{
+use crate::core::prompt::spinner;
+use crate::domain::branch::{BranchNaming, BranchType};
+use crate::domain::pr::body_parser::{extract_info_from_source_pr, ExtractedPrInfo, SourcePrInfo};
+use crate::domain::pr::create_provider_auto;
+use crate::domain::pr::helpers::{
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id,
 };
-use crate::pr::TYPES_OF_CHANGES;
-use crate::prompt::spinner;
+use crate::domain::pr::TYPES_OF_CHANGES;
+use crate::services::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
+use crate::services::jira::helpers::validate_jira_ticket_format;
+use crate::services::jira::Jira;
+use crate::services::llm::CreateGenerator;
 use crate::{br, error, info, success, warning};
 
 /// PR Pick 命令

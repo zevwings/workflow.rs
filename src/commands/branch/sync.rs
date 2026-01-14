@@ -2,8 +2,10 @@
 //!
 //! Provides CLI interface for branch synchronization without PR-specific logic.
 
-use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
+use crate::domain::branch::sync::{
+    BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult,
+};
 use crate::{info, success};
 use color_eyre::Result;
 
