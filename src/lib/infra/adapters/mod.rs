@@ -4,6 +4,8 @@
 //! 实现适配器模式，实现模块间的解耦。
 
 pub mod config;
+pub mod github;
 
 // 重新导出适配器
 pub use config::*;
+pub use github::GitHubAdapter;

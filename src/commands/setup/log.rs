@@ -1,9 +1,7 @@
 //! Log 配置处理模块
 
 use crate::commands::setup::types::{CollectedConfig, LogConfig};
-use crate::interactive::{
-    ConfirmFormField, FormBuilder, GroupConfig, InputFormField, SelectFormField,
-};
+use crate::prompt::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::settings::{default_download_base_dir, LogSettings};
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
@@ -135,7 +133,7 @@ fn build_log_form(existing: &CollectedConfig) -> FormBuilder {
 
 /// 解析 Log 配置结果
 fn parse_log_result(
-    form_result: crate::interactive::FormResult,
+    form_result: crate::prompt::FormResult,
     existing: &CollectedConfig,
 ) -> Result<LogConfig> {
     let default_folder_name = LogSettings::default_log_folder();

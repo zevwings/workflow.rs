@@ -16,7 +16,7 @@ use serde_json::Value;
 
 use crate::http::client::HttpClient;
 use crate::http::{response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
-use crate::interactive::{spinner, Progress};
+use crate::prompt::{spinner, Progress};
 use crate::rollback::RollbackManager;
 use crate::settings::paths::Paths;
 use crate::settings::Settings;

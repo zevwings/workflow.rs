@@ -1,8 +1,8 @@
 //! Jira 配置相关结构体
 
-use crate::interactive::Tabled;
 use crate::jira::api::user::JiraUserApi;
 use crate::mask_sensitive_value;
+use crate::prompt::Tabled;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 

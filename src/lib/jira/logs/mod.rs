@@ -1,12 +1,9 @@
 //! Jira 日志处理结构体
 //! 提供从 Jira 下载的日志文件的下载、搜索、查找和处理功能
 
-use color_eyre::{eyre::WrapErr, Result};
+use crate::jira::JiraConfigProvider;
+use color_eyre::Result;
 use std::path::PathBuf;
-
-use crate::settings::default_download_base_dir;
-use crate::settings::paths::Paths;
-use crate::settings::Settings;
 
 // 子模块
 mod constants;
@@ -32,9 +29,6 @@ pub use table::SearchResultRow;
 ///
 /// 提供从 Jira 下载的日志文件的下载、搜索、查找和处理功能
 pub struct JiraLogs {
-    /// 缓存的 Settings 实例
-    #[allow(dead_code)]
-    pub(crate) settings: Settings,
     /// 缓存的展开后的基础目录路径
     pub(crate) base_dir: PathBuf,
     /// 缓存的日志输出文件夹名称
@@ -44,21 +38,40 @@ pub struct JiraLogs {
 impl JiraLogs {
     /// 创建新的 JiraLogs 实例
     ///
-    /// 从 Settings 读取配置并初始化缓存，避免重复获取配置。
+    /// 从配置提供者读取配置并初始化缓存，避免重复获取配置。
+    /// 默认使用 `SettingsAdapter` 从配置文件读取。
     ///
     /// # 返回
     ///
     /// 如果成功返回 `Ok(JiraLogs)`，否则返回错误（通常是路径展开失败）。
     pub fn new() -> Result<Self> {
-        let settings = Settings::get().clone();
-        let base_dir_str =
-            settings.log.download_base_dir.clone().unwrap_or_else(default_download_base_dir);
-        let base_dir = Paths::expand(&base_dir_str)
-            .wrap_err_with(|| format!("Failed to expand path: {}", base_dir_str))?;
-        let output_folder_name = settings.log.get_output_folder_name();
+        Self::new_with_config(None)
+    }
+
+    /// 使用指定的配置提供者创建新的 JiraLogs 实例
+    ///
+    /// # 参数
+    ///
+    /// * `config` - 可选的配置提供者，如果为 `None`，使用默认配置适配器
+    ///
+    /// # 返回
+    ///
+    /// 如果成功返回 `Ok(JiraLogs)`，否则返回错误（通常是路径展开失败）。
+    pub fn new_with_config(config: Option<&dyn JiraConfigProvider>) -> Result<Self> {
+        let config_provider = if let Some(cfg) = config {
+            cfg
+        } else {
+            // 使用默认配置适配器
+            use crate::infra::adapters::config::SettingsAdapter;
+            let adapter = SettingsAdapter::new();
+            // 将适配器转换为静态引用（通过 Box::leak）
+            Box::leak(Box::new(adapter))
+        };
+
+        let base_dir = config_provider.get_download_base_dir()?;
+        let output_folder_name = config_provider.get_log_output_folder_name();
 
         Ok(Self {
-            settings,
             base_dir,
             output_folder_name,
         })

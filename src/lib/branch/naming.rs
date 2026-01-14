@@ -5,9 +5,9 @@
 //! - Titles/text
 //! - Templates (when template system is available)
 
-use crate::branch::llm::BranchLLM;
 use crate::git::GitBranch;
-use crate::pr::llm::CreateGenerator;
+use crate::llm::CreateGenerator;
+use crate::llm::TranslateLLM;
 use crate::repo::config::RepoConfig;
 use crate::template::{BranchTemplateVars, TemplateConfig, TemplateEngine};
 use crate::{info, success, warning};
@@ -347,7 +347,7 @@ impl BranchNaming {
         let text_to_sanitize = if has_non_ascii {
             // Use LLM to translate non-English input to English
             info!("Detected non-English input, translating to English...");
-            match BranchLLM::translate_to_english(input) {
+            match TranslateLLM::translate_to_english(input) {
                 Ok(translated) => {
                     success!("Translated to English: {}", translated);
                     translated

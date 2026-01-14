@@ -2,7 +2,7 @@
 //!
 //! 提供统一的 PR 列表表格行结构，用于表格格式显示。
 
-use crate::interactive::Tabled;
+use crate::prompt::Tabled;
 
 /// PR 列表表格行
 ///

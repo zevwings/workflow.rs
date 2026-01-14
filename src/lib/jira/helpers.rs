@@ -8,7 +8,7 @@
 //! 注意：日志处理相关的辅助函数已迁移到 `jira::logs::helpers` 模块。
 
 use crate::constants::errors::validation_errors;
-use crate::settings::Settings;
+use crate::jira::JiraConfigProvider;
 use color_eyre::Result;
 use regex::Regex;
 
@@ -110,21 +110,45 @@ pub fn sanitize_email_for_filename(email: &str) -> String {
 
 /// 获取认证信息
 ///
-/// 从配置文件中读取 Jira API 认证所需的 email 和 api_token。
+/// 从配置提供者读取 Jira API 认证所需的 email 和 api_token。
+/// 默认使用 `SettingsAdapter` 从配置文件读取。
 ///
 /// # 返回
 ///
 /// 返回 `(email, api_token)` 元组。
 pub fn get_auth() -> Result<(String, String)> {
-    let settings = Settings::get();
-    let email = settings.jira.email.clone().unwrap_or_default();
-    let api_token = settings.jira.api_token.clone().unwrap_or_default();
+    get_auth_with_config(None)
+}
+
+/// 使用指定的配置提供者获取认证信息
+///
+/// # 参数
+///
+/// * `config` - 可选的配置提供者，如果为 `None`，使用默认配置适配器
+///
+/// # 返回
+///
+/// 返回 `(email, api_token)` 元组。
+pub fn get_auth_with_config(config: Option<&dyn JiraConfigProvider>) -> Result<(String, String)> {
+    let config_provider = if let Some(cfg) = config {
+        cfg
+    } else {
+        // 使用默认配置适配器
+        use crate::infra::adapters::config::SettingsAdapter;
+        let adapter = SettingsAdapter::new();
+        // 将适配器转换为静态引用（通过 Box::leak）
+        Box::leak(Box::new(adapter))
+    };
+
+    let email = config_provider.get_jira_email().unwrap_or_default();
+    let api_token = config_provider.get_jira_api_token().unwrap_or_default();
     Ok((email, api_token))
 }
 
 /// 获取 Jira API 基础 URL
 ///
-/// 从配置文件中读取 Jira 服务地址，并构建 REST API 基础 URL。
+/// 从配置提供者读取 Jira 服务地址，并构建 REST API 基础 URL。
+/// 默认使用 `SettingsAdapter` 从配置文件读取。
 /// 格式：`{jira_service_address}/rest/api/2`
 ///
 /// # 返回
@@ -135,8 +159,34 @@ pub fn get_auth() -> Result<(String, String)> {
 ///
 /// 如果 `jira_service_address` 未设置或为空，返回错误。
 pub fn get_base_url() -> Result<String> {
-    let settings = Settings::get();
-    let base_url = settings.jira.service_address.clone().unwrap_or_default();
+    get_base_url_with_config(None)
+}
+
+/// 使用指定的配置提供者获取 Jira API 基础 URL
+///
+/// # 参数
+///
+/// * `config` - 可选的配置提供者，如果为 `None`，使用默认配置适配器
+///
+/// # 返回
+///
+/// 返回完整的 REST API 基础 URL。
+///
+/// # 错误
+///
+/// 如果 `jira_service_address` 未设置或为空，返回错误。
+pub fn get_base_url_with_config(config: Option<&dyn JiraConfigProvider>) -> Result<String> {
+    let config_provider = if let Some(cfg) = config {
+        cfg
+    } else {
+        // 使用默认配置适配器
+        use crate::infra::adapters::config::SettingsAdapter;
+        let adapter = SettingsAdapter::new();
+        // 将适配器转换为静态引用（通过 Box::leak）
+        Box::leak(Box::new(adapter))
+    };
+
+    let base_url = config_provider.get_jira_service_address().unwrap_or_default();
 
     if base_url.is_empty() {
         color_eyre::eyre::bail!(

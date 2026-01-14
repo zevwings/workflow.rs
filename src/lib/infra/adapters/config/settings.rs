@@ -1,14 +1,17 @@
 //! Settings 适配器
 //!
 //! 将 Settings 适配为配置提供者，实现配置读取的适配器模式。
-//! 实现 `logger::LogConfigProvider` 和 `llm::LLMConfigProvider` trait，使 logger 和 llm 可以通过适配器使用配置。
+//! 实现 `logger::LogConfigProvider`、`llm::LLMConfigProvider` 和 `jira::JiraConfigProvider` trait，
+//! 使 logger、llm 和 jira 可以通过适配器使用配置。
 
-use crate::llm::LLMConfigProvider;
+use crate::jira::JiraConfigProvider;
+use crate::llm::client::LLMConfigProvider;
 use crate::logger::LogConfigProvider;
+use crate::settings::default_download_base_dir;
 use crate::settings::paths::Paths;
 use crate::settings::{LLMSettings, Settings};
 use crate::LogLevel;
-use color_eyre::Result;
+use color_eyre::{eyre::WrapErr, Result};
 use std::path::PathBuf;
 
 /// Settings 适配器
@@ -87,5 +90,42 @@ impl LLMConfigProvider for SettingsAdapter {
         } else {
             self.settings.llm.language.clone()
         }
+    }
+}
+
+impl JiraConfigProvider for SettingsAdapter {
+    fn get_jira_email(&self) -> Option<String> {
+        self.settings.jira.email.clone()
+    }
+
+    fn get_jira_api_token(&self) -> Option<String> {
+        self.settings.jira.api_token.clone()
+    }
+
+    fn get_jira_service_address(&self) -> Option<String> {
+        self.settings.jira.service_address.clone()
+    }
+
+    fn get_download_base_dir(&self) -> Result<PathBuf> {
+        let base_dir_str = self
+            .settings
+            .log
+            .download_base_dir
+            .clone()
+            .unwrap_or_else(default_download_base_dir);
+        Paths::expand(&base_dir_str)
+            .wrap_err_with(|| format!("Failed to expand path: {}", base_dir_str))
+    }
+
+    fn get_log_output_folder_name(&self) -> String {
+        self.settings.log.get_output_folder_name()
+    }
+
+    fn get_jira_config_path(&self) -> Result<PathBuf> {
+        Paths::jira_config()
+    }
+
+    fn get_work_history_dir(&self) -> Result<PathBuf> {
+        Paths::work_history_dir()
     }
 }

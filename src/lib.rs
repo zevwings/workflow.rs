@@ -21,12 +21,12 @@ pub mod completion;
 pub mod constants;
 #[path = "lib/git/mod.rs"]
 pub mod git;
+#[path = "lib/github/mod.rs"]
+pub mod github;
 #[path = "lib/http/mod.rs"]
 pub mod http;
 #[path = "lib/infra/mod.rs"]
 pub mod infra;
-#[path = "lib/interactive/mod.rs"]
-pub mod interactive;
 #[path = "lib/jira/mod.rs"]
 pub mod jira;
 #[path = "lib/llm/mod.rs"]
@@ -39,6 +39,7 @@ pub mod mcp;
 pub mod pr;
 #[path = "lib/prompt/mod.rs"]
 pub mod prompt;
+// Note: prompt module has been moved to llm::prompt
 #[path = "lib/proxy/mod.rs"]
 pub mod proxy;
 #[path = "lib/repo/mod.rs"]
@@ -64,10 +65,11 @@ pub use alias::{AliasManager, CommandsConfig};
 pub use constants::*;
 pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};
 pub use logger::{LogLevel, Logger};
-pub use prompt::{
-    find_language, generate_summarize_pr_system_prompt, get_language_instruction,
-    get_supported_language_codes, get_supported_language_display_names, SupportedLanguage,
-    GENERATE_BRANCH_SYSTEM_PROMPT, SUPPORTED_LANGUAGES,
+// 语言相关的函数从 llm::client 导出
+// (prompt 模块已改为内部模块，不再对外暴露)
+pub use llm::{
+    find_language, get_language_instruction, get_supported_language_codes,
+    get_supported_language_display_names, SupportedLanguage, SUPPORTED_LANGUAGES,
 };
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};
@@ -86,6 +88,7 @@ pub use completion::{
 pub use git::{
     GitBranch, GitCommit, GitConfig, GitPreCommit, GitRepo, GitStash, MergeStrategy, RepoType,
 };
+pub use github::{GitHub, GitHubUser};
 pub use jira::{
     extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
     validate_jira_ticket_format, Jira, JiraApi, JiraAttachment, JiraClient, JiraComment,
@@ -96,9 +99,12 @@ pub use jira::{JiraLogs, LogEntry};
 pub use pr::{
     extract_pull_request_id_from_url, get_all_change_types, get_change_type_by_index,
     get_change_type_by_name, get_current_branch_pr_id, resolve_pull_request_id, ChangeType,
-    CreateGenerator, FileSummaryGenerator, GitHub, GitHubUser, PlatformProvider,
-    PullRequestContent, PullRequestSummary, RewordGenerator, SummaryGenerator, CHANGE_TYPES,
-    TYPES_OF_CHANGES,
+    PlatformProvider, CHANGE_TYPES, TYPES_OF_CHANGES,
+};
+// LLM-related PR types are now in llm module
+pub use llm::{
+    CreateGenerator, FileSummaryGenerator, PullRequestContent, PullRequestSummary, RewordGenerator,
+    SummaryGenerator,
 };
 pub use proxy::{
     ProxyConfigGenerator, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager,

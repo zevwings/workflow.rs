@@ -1,9 +1,9 @@
 //! LLM 配置设置命令
 //! 交互式设置 LLM 相关配置（provider, url, key, model, language）
 
-use crate::interactive::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::jira::config::ConfigManager;
 use crate::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
+use crate::prompt::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::settings::paths::Paths;
 use crate::settings::{LLMSettings, Settings};
 use crate::{br, info, success};

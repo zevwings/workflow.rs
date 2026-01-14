@@ -8,16 +8,16 @@ use crate::commands::pr::helpers::{
     resolve_title, select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
-use crate::interactive::spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
+use crate::llm::CreateGenerator;
 use crate::pr::body_parser::{extract_info_from_source_pr, ExtractedPrInfo, SourcePrInfo};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::{
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id,
 };
-use crate::pr::llm::CreateGenerator;
 use crate::pr::TYPES_OF_CHANGES;
+use crate::prompt::spinner;
 use crate::{br, error, info, success, warning};
 
 /// PR Pick 命令

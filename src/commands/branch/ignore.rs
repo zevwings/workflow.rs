@@ -4,7 +4,7 @@
 //! 配置保存在个人偏好配置（~/.workflow/config/repository.toml）中，不提交到 Git。
 
 use crate::git::BranchRow;
-use crate::interactive::{TableBuilder, TableStyle};
+use crate::prompt::{TableBuilder, TableStyle};
 use crate::repo::config::RepoConfig;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};

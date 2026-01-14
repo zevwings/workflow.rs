@@ -5,9 +5,9 @@ use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
 use crate::git::GitConfig;
-use crate::interactive::spinner;
-use crate::interactive::{TableBuilder, TableStyle};
 use crate::jira::config::ConfigManager;
+use crate::prompt::spinner;
+use crate::prompt::{TableBuilder, TableStyle};
 use crate::settings::paths::Paths;
 use crate::settings::GitHubAccountListRow;
 use crate::settings::Settings;

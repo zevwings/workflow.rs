@@ -1,6 +1,6 @@
-use crate::interactive::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
+use crate::prompt::Progress;
 use crate::spinner;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};

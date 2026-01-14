@@ -9,14 +9,14 @@ use crate::commands::pr::helpers::{
     select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCommit, GitStash};
-use crate::interactive::spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
+use crate::llm::CreateGenerator;
 use crate::pr::helpers::{generate_commit_title, generate_pull_request_body};
-use crate::pr::llm::CreateGenerator;
 use crate::pr::{
     map_branch_type_to_change_type_index, map_branch_type_to_change_types, TYPES_OF_CHANGES,
 };
+use crate::prompt::spinner;
 use crate::repo::RepoConfig;
 use crate::{br, info, spinner, success, warning};
 

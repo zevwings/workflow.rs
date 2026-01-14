@@ -4,8 +4,8 @@
 //! Similar to CheckCommand, provides a static method for other commands to call.
 
 use crate::git::GitRepo;
-use crate::interactive::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField};
 use crate::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
+use crate::prompt::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField};
 use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
 use crate::settings::paths::Paths;
 use crate::settings::{GitHubAccount, Settings};

@@ -8,13 +8,13 @@ use crate::br;
 use crate::debug;
 use crate::git::GitRepo;
 use crate::info;
-use crate::interactive::spinner;
 use crate::jira::helpers::extract_jira_ticket_id;
 use crate::jira::Jira;
+use crate::llm::RewordGenerator;
 use crate::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_from_body};
 use crate::pr::helpers::{generate_pull_request_body, resolve_pull_request_id};
-use crate::pr::llm::RewordGenerator;
 use crate::pr::platform::create_provider_auto;
+use crate::prompt::spinner;
 use crate::spinner;
 use crate::success;
 use crate::warning;
@@ -252,7 +252,7 @@ impl PullRequestRewordCommand {
     ///
     /// 使用模板系统生成包含标题、change_types 和描述的完整 PR body。
     fn generate_new_pr_body(
-        reword_result: &crate::pr::llm::PullRequestReword,
+        reword_result: &crate::llm::PullRequestReword,
         current_change_types: Option<&[bool]>,
         jira_ticket: Option<&str>,
     ) -> Result<String> {

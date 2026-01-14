@@ -7,6 +7,11 @@
 //! - 数据模型定义（Issue、User、Attachment 等）
 //! - 辅助工具函数（字符串处理、认证、URL 构建）
 //!
+//! ## 架构设计
+//!
+//! 本模块通过 `JiraConfigProvider` trait 实现依赖倒置，使 Jira 模块独立于具体的配置实现。
+//! 配置适配器在 `infra::adapters::config` 模块中实现，将 `Settings` 适配为配置提供者。
+//!
 //! ## 模块结构
 //!
 //! - `client` - JiraClient 包装器，提供向后兼容的 API
@@ -23,6 +28,7 @@ pub mod client;
 pub mod config;
 pub mod helpers;
 pub mod history;
+pub mod jira_config;
 pub mod logs;
 pub mod status;
 pub mod table;
@@ -39,6 +45,7 @@ pub use helpers::{
     extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
     validate_jira_ticket_format,
 };
+pub use jira_config::JiraConfigProvider;
 pub use logs::{JiraLogs, LogEntry};
 // 导出 types 模块的类型
 // 注意：types::JiraStatus 是数据模型（用于序列化），status::JiraStatus 是管理结构体

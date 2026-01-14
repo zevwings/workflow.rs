@@ -1,7 +1,7 @@
 //! LLM 配置查看命令
 //! 显示当前的 LLM 配置信息
 
-use crate::interactive::{TableBuilder, TableStyle};
+use crate::prompt::{TableBuilder, TableStyle};
 use crate::settings::LLMConfigRow;
 use crate::settings::{LLMSettings, Settings};
 use crate::{br, info, success, warning};

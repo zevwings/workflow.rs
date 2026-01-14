@@ -6,7 +6,7 @@ use duct::cmd;
 
 use super::commit::GitCommit;
 use super::repo::GitRepo;
-use crate::interactive::spinner;
+use crate::prompt::spinner;
 use crate::util::file::FileReader;
 use crate::{br, error, log_debug, success};
 

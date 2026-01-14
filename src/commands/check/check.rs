@@ -2,7 +2,7 @@ use crate::constants::{errors::http_client, git::check_errors, messages::log};
 use crate::git::{GitCommit, GitRepo};
 use crate::http::client::HttpClient;
 use crate::http::{HttpMethod, RequestConfig};
-use crate::interactive::{spinner, TableBuilder, TableStyle};
+use crate::prompt::{spinner, TableBuilder, TableStyle};
 use crate::settings::paths::Paths;
 use crate::settings::Settings;
 use crate::settings::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};

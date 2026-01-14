@@ -1,9 +1,9 @@
 use crate::commands::check;
 use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::interactive::spinner;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
+use crate::prompt::spinner;
 use crate::spinner;
 use crate::{br, error, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};

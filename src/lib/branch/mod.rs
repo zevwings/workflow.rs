@@ -33,13 +33,12 @@
 //! # }
 //! ```
 
-pub mod llm;
 pub mod naming;
 pub mod sync;
 pub mod types;
 
 // Re-export structs and functions
-pub use llm::BranchLLM;
+// Note: TranslateLLM is available at crate::llm::TranslateLLM
 pub use naming::BranchNaming;
 pub use sync::{
     BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult, SourceBranchInfo,

@@ -1,6 +1,6 @@
 use crate::branch::BranchType;
 use crate::git::{GitRepo, RepoType};
-use crate::pr::github::GitHub;
+use crate::infra::adapters::GitHubAdapter;
 use crate::pr::PullRequestRow;
 use color_eyre::Result;
 
@@ -327,7 +327,7 @@ pub trait PlatformProvider {
 /// ```
 pub fn create_provider(repo_type: RepoType) -> Result<Box<dyn PlatformProvider>> {
     match repo_type {
-        RepoType::GitHub => Ok(Box::new(GitHub)),
+        RepoType::GitHub => Ok(Box::new(GitHubAdapter::new())),
         RepoType::Codeup | RepoType::Unknown => {
             color_eyre::eyre::bail!(
                 "Unsupported repository type. Only GitHub is currently supported."

@@ -1,8 +1,8 @@
 //! LLM 配置处理模块
 
 use crate::commands::setup::types::{CollectedConfig, LLMConfig};
-use crate::interactive::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
+use crate::prompt::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::settings::LLMSettings;
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
@@ -287,7 +287,7 @@ fn build_llm_form(existing: &CollectedConfig) -> FormBuilder {
 
 /// 解析 LLM 配置结果
 fn parse_llm_result(
-    form_result: crate::interactive::FormResult,
+    form_result: crate::prompt::FormResult,
     existing: &CollectedConfig,
 ) -> Result<LLMConfig> {
     // 如果用户选择不配置 LLM 组，使用现有值

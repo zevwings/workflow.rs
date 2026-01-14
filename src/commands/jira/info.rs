@@ -1,6 +1,6 @@
-use crate::interactive::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
+use crate::prompt::{TableBuilder, TableStyle};
 use crate::spinner;
 use crate::util::format::DisplayFormatter;
 use crate::{br, info};

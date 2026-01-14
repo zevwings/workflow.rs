@@ -10,10 +10,10 @@ use std::path::PathBuf;
 
 use crate::git::GitRepo;
 use crate::info;
-use crate::interactive::spinner;
+use crate::llm::{FileSummaryGenerator, SummaryGenerator};
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::pr::llm::{FileSummaryGenerator, SummaryGenerator};
 use crate::pr::platform::create_provider_auto;
+use crate::prompt::spinner;
 use crate::settings::default_download_base_dir;
 use crate::settings::Settings;
 use crate::spinner;

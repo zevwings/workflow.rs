@@ -1,7 +1,7 @@
 use crate::constants::errors::input_reading;
-use crate::interactive::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
+use crate::prompt::{TableBuilder, TableStyle};
 use crate::{br, debug, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

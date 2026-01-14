@@ -1,8 +1,8 @@
 //! GitHub 配置相关结构体
 
-use crate::interactive::Tabled;
+use crate::github::GitHub;
 use crate::mask_sensitive_value;
-use crate::pr::GitHub;
+use crate::prompt::Tabled;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;

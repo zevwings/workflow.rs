@@ -2,7 +2,7 @@
 //!
 //! 提供统一的 JIRA 信息表格行结构，用于表格格式显示。
 
-use crate::interactive::Tabled;
+use crate::prompt::Tabled;
 
 /// JIRA 附件表格行
 ///
