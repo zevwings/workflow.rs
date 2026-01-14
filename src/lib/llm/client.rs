@@ -75,7 +75,9 @@ impl LLMClient {
             let adapter = SettingsAdapter::new();
             // 将适配器转换为静态引用（通过 Box::leak）
             let boxed_adapter = Box::leak(Box::new(adapter));
-            LLMClient { config: boxed_adapter }
+            LLMClient {
+                config: boxed_adapter,
+            }
         })
     }
 
@@ -237,12 +239,10 @@ impl LLMClient {
         let provider = self.config.get_provider();
 
         match provider.as_str() {
-            "openai" | "deepseek" => {
-                Ok(self
-                    .config
-                    .get_current_provider_model()
-                    .unwrap_or_else(|| LLMSettings::default_model(&provider)))
-            }
+            "openai" | "deepseek" => Ok(self
+                .config
+                .get_current_provider_model()
+                .unwrap_or_else(|| LLMSettings::default_model(&provider))),
             "proxy" => self
                 .config
                 .get_current_provider_model()

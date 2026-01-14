@@ -44,7 +44,12 @@ pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
     if let Some(caps) = ssh_protocol_re.captures(url) {
         return Ok(caps
             .get(1)
-            .ok_or_else(|| eyre!("Failed to extract repo name from GitHub ssh:// URL: {}", url))?
+            .ok_or_else(|| {
+                eyre!(
+                    "Failed to extract repo name from GitHub ssh:// URL: {}",
+                    url
+                )
+            })?
             .as_str()
             .to_string());
     }

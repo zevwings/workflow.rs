@@ -293,7 +293,10 @@ impl PullRequestCreateCommand {
                 // 如果配置为自动接受，或非交互式环境，直接使用自动选择的结果
                 if should_auto_accept || !is_interactive {
                     if !is_interactive {
-                        info!("Non-interactive environment, using auto-selected change type: {}", change_type_name);
+                        info!(
+                            "Non-interactive environment, using auto-selected change type: {}",
+                            change_type_name
+                        );
                     } else {
                         success!(
                             "Using auto-selected change type: {} (auto-accept enabled)",
@@ -469,7 +472,10 @@ impl PullRequestCreateCommand {
         info!("Branch '{}' already exists on remote.", current_branch);
         if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
             // 非交互式环境，自动使用当前分支
-            info!("Non-interactive environment, using current branch '{}'", current_branch);
+            info!(
+                "Non-interactive environment, using current branch '{}'",
+                current_branch
+            );
         } else {
             crate::confirm!("Create PR for current branch '{}'?", current_branch)
                 .default(true)
@@ -498,7 +504,10 @@ impl PullRequestCreateCommand {
         );
         if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
             // 非交互式环境，自动推送
-            info!("Non-interactive environment, pushing branch '{}'", current_branch);
+            info!(
+                "Non-interactive environment, pushing branch '{}'",
+                current_branch
+            );
         } else {
             crate::confirm!(
                 "Push and create PR for current branch '{}'?",
@@ -563,9 +572,14 @@ impl PullRequestCreateCommand {
                     "You are on branch '{}' with uncommitted changes.",
                     current_branch
                 );
-                let should_use_current = if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+                let should_use_current = if !io::stdin().is_terminal()
+                    || !io::stdout().is_terminal()
+                {
                     // 非交互式环境，使用默认值（true）
-                    info!("Non-interactive environment, using current branch '{}'", current_branch);
+                    info!(
+                        "Non-interactive environment, using current branch '{}'",
+                        current_branch
+                    );
                     true
                 } else {
                     crate::confirm!(

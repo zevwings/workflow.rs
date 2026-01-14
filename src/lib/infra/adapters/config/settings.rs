@@ -3,8 +3,8 @@
 //! 将 Settings 适配为配置提供者，实现配置读取的适配器模式。
 //! 实现 `logger::LogConfigProvider` 和 `llm::LLMConfigProvider` trait，使 logger 和 llm 可以通过适配器使用配置。
 
-use crate::logger::LogConfigProvider;
 use crate::llm::LLMConfigProvider;
+use crate::logger::LogConfigProvider;
 use crate::settings::paths::Paths;
 use crate::settings::{LLMSettings, Settings};
 use crate::LogLevel;

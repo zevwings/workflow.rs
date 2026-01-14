@@ -172,9 +172,8 @@ pub fn get_language_requirement(
     };
 
     let language_instruction = get_language_instruction(&language_code);
-    let language_info = find_language(&language_code)
-        .map(|lang| lang.native_name)
-        .unwrap_or("English");
+    let language_info =
+        find_language(&language_code).map(|lang| lang.native_name).unwrap_or("English");
 
     format!(
         r#"## CRITICAL LANGUAGE REQUIREMENT
