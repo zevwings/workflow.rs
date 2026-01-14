@@ -3,9 +3,9 @@
 //! This module provides the core branch synchronization functionality,
 //! which can be used by both `branch sync` and `pr sync` commands.
 
-use crate::base::interactive::spinner;
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
+use crate::interactive::spinner;
 use crate::{br, error, info, spinner, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

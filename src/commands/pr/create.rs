@@ -1,6 +1,6 @@
 use color_eyre::{eyre::WrapErr, Result};
+use std::io::{self, IsTerminal};
 
-use crate::base::interactive::spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
@@ -9,6 +9,7 @@ use crate::commands::pr::helpers::{
     select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCommit, GitStash};
+use crate::interactive::spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::pr::helpers::{generate_commit_title, generate_pull_request_body};
@@ -122,6 +123,7 @@ impl PullRequestCreateCommand {
     /// 获取或输入 Jira ticket
     ///
     /// 步骤 2：如果提供了 ticket，验证其格式；如果没有提供，提示用户输入并验证。
+    /// 在非交互式环境中，如果没有提供 ticket，则自动返回 None。
     fn resolve_jira_ticket(jira_ticket: Option<String>) -> Result<Option<String>> {
         let ticket = if let Some(t) = jira_ticket {
             let trimmed = t.trim().to_string();
@@ -131,14 +133,20 @@ impl PullRequestCreateCommand {
                 Some(trimmed)
             }
         } else {
-            let input_value = crate::input!("Jira ticket (optional)")
-                .prompt()
-                .wrap_err("Failed to get Jira ticket")?;
-            let trimmed = input_value.trim().to_string();
-            if trimmed.is_empty() {
+            // 检查是否是交互式环境
+            if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+                // 非交互式环境，跳过 Jira ticket 输入
                 None
             } else {
-                Some(trimmed)
+                let input_value = crate::input!("Jira ticket (optional)")
+                    .prompt()
+                    .wrap_err("Failed to get Jira ticket")?;
+                let trimmed = input_value.trim().to_string();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed)
+                }
             }
         };
 
@@ -247,6 +255,7 @@ impl PullRequestCreateCommand {
     ///
     /// 步骤 7：根据分支类型自动选择对应的 PR 变更类型，显示确认对话框。
     /// 用户可以确认使用自动选择，或修改选择。
+    /// 在非交互式环境中，自动接受默认选择。
     ///
     /// # Arguments
     /// * `branch_type` - 可选的分支类型，如果提供则用于自动选择
@@ -254,6 +263,8 @@ impl PullRequestCreateCommand {
     /// # Returns
     /// 返回布尔向量，表示每个 PR 变更类型是否被选中
     fn select_change_types_with_auto_select(branch_type: Option<BranchType>) -> Result<Vec<bool>> {
+        let is_interactive = io::stdin().is_terminal() && io::stdout().is_terminal();
+
         // Step 1: 尝试自动选择
         let auto_selected = if let Some(ty) = branch_type {
             let change_types = map_branch_type_to_change_types(ty);
@@ -279,12 +290,16 @@ impl PullRequestCreateCommand {
                     info!("Auto-accept change type is enabled in personal preference config");
                 }
 
-                // 如果配置为自动接受，直接使用自动选择的结果
-                if should_auto_accept {
-                    success!(
-                        "Using auto-selected change type: {} (auto-accept enabled)",
-                        change_type_name
-                    );
+                // 如果配置为自动接受，或非交互式环境，直接使用自动选择的结果
+                if should_auto_accept || !is_interactive {
+                    if !is_interactive {
+                        info!("Non-interactive environment, using auto-selected change type: {}", change_type_name);
+                    } else {
+                        success!(
+                            "Using auto-selected change type: {} (auto-accept enabled)",
+                            change_type_name
+                        );
+                    }
                     return Ok(selected_types);
                 }
 
@@ -318,6 +333,12 @@ impl PullRequestCreateCommand {
         }
 
         // Step 3: 用户手动选择（原有逻辑）
+        // 在非交互式环境中，如果无法自动选择，返回错误
+        if !is_interactive {
+            color_eyre::eyre::bail!(
+                "Cannot select change types in non-interactive environment. Please provide branch type or use auto-accept configuration."
+            );
+        }
         select_change_types()
     }
 
@@ -446,9 +467,14 @@ impl PullRequestCreateCommand {
         default_branch: &str,
     ) -> Result<(String, String)> {
         info!("Branch '{}' already exists on remote.", current_branch);
-        crate::confirm!("Create PR for current branch '{}'?", current_branch)
-            .default(true)
-            .prompt()?;
+        if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+            // 非交互式环境，自动使用当前分支
+            info!("Non-interactive environment, using current branch '{}'", current_branch);
+        } else {
+            crate::confirm!("Create PR for current branch '{}'?", current_branch)
+                .default(true)
+                .prompt()?;
+        }
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -470,12 +496,17 @@ impl PullRequestCreateCommand {
             "Branch '{}' has commits but not pushed to remote.",
             current_branch
         );
-        crate::confirm!(
-            "Push and create PR for current branch '{}'?",
-            current_branch
-        )
-        .default(true)
-        .prompt()?;
+        if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+            // 非交互式环境，自动推送
+            info!("Non-interactive environment, pushing branch '{}'", current_branch);
+        } else {
+            crate::confirm!(
+                "Push and create PR for current branch '{}'?",
+                current_branch
+            )
+            .default(true)
+            .prompt()?;
+        }
 
         // 推送
         br!();
@@ -532,13 +563,19 @@ impl PullRequestCreateCommand {
                     "You are on branch '{}' with uncommitted changes.",
                     current_branch
                 );
-                let should_use_current = crate::confirm!(
-                    "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
-                    current_branch,
-                    branch_name
-                )
-                .default(true)
-                .prompt()?;
+                let should_use_current = if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+                    // 非交互式环境，使用默认值（true）
+                    info!("Non-interactive environment, using current branch '{}'", current_branch);
+                    true
+                } else {
+                    crate::confirm!(
+                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
+                        current_branch,
+                        branch_name
+                    )
+                    .default(true)
+                    .prompt()?
+                };
 
                 if should_use_current {
                     // 用户期望在当前分支提交并创建 PR

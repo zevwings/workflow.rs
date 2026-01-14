@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
 
-use crate::base::concurrent::TaskResult;
-use crate::{trace_debug, Jira, JiraAttachment};
+use crate::util::concurrent::TaskResult;
+use crate::{log_debug, Jira, JiraAttachment};
 
 use super::constants::*;
 use super::directory::DirectoryManager;
@@ -101,9 +101,9 @@ impl JiraAttachmentDownloader {
             }
 
             // 调试：显示所有附件
-            trace_debug!("Found {} attachment(s):", attachments.len());
+            log_debug!("Found {} attachment(s):", attachments.len());
             for attachment in &attachments {
-                trace_debug!("  - {}", attachment.filename);
+                log_debug!("  - {}", attachment.filename);
             }
 
             let target_attachments = if download_all_attachments {
@@ -173,7 +173,7 @@ impl JiraAttachmentDownloader {
             match AttachmentDownloader::download_file(url, file_path) {
                 Ok(()) => return Ok(file_path.to_path_buf()),
                 Err(e) => {
-                    trace_debug!(
+                    log_debug!(
                         "Failed to download {} from {}: {}",
                         attachment.filename,
                         url,
@@ -438,7 +438,7 @@ impl JiraAttachmentDownloader {
             // 检查是否有分片文件
             if log_z01.exists() {
                 // 检测到分片文件，需要合并
-                trace_debug!("Detected split files, merging...");
+                log_debug!("Detected split files, merging...");
                 self.zip_processor.merge_split_zips(download_dir)?;
             } else {
                 // 单个 zip 文件，直接复制为 merged.zip

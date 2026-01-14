@@ -218,7 +218,7 @@ fn test_completion_generation() {
     // 使用系统临时目录
     let output_dir = std::env::temp_dir().join("workflow_completion_test");
     fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+        .expect(workflow::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
 
     // 测试所有支持的 shell 类型
     let shell_types = ["zsh", "bash", "fish", "powershell", "elvish"];
@@ -277,13 +277,13 @@ fn test_zsh_completion_contains_all_commands() {
     // 使用系统临时目录
     let output_dir = std::env::temp_dir().join("workflow_zsh_test");
     fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+        .expect(workflow::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
 
     let generator = CompletionGenerator::new(
         Some("zsh".to_string()),
         Some(output_dir.to_string_lossy().to_string()),
     )
-    .expect(workflow::base::constants::errors::generator_creation::CREATE_ZSH_GENERATOR_FAILED);
+    .expect(workflow::constants::errors::generator_creation::CREATE_ZSH_GENERATOR_FAILED);
 
     generator.generate_all().expect("Failed to generate zsh completion");
 
@@ -315,7 +315,7 @@ fn test_bash_completion_contains_all_commands() {
     // 使用系统临时目录
     let output_dir = std::env::temp_dir().join("workflow_bash_test");
     fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+        .expect(workflow::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
 
     let generator = CompletionGenerator::new(
         Some("bash".to_string()),
@@ -553,7 +553,7 @@ fn test_all_shell_types_completion_generation() {
     // 使用系统临时目录
     let output_dir = std::env::temp_dir().join("workflow_all_shells_test");
     fs::create_dir_all(&output_dir)
-        .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+        .expect(workflow::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
 
     let expected_filenames = [
         "_workflow",

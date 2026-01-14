@@ -8,18 +8,18 @@ use color_eyre::{
 };
 use std::path::PathBuf;
 
-use crate::base::interactive::spinner;
-use crate::base::settings::default_download_base_dir;
-use crate::base::settings::Settings;
-use crate::base::util::directory::DirectoryWalker;
-use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::info;
+use crate::interactive::spinner;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::pr::llm::{FileSummaryGenerator, SummaryGenerator};
 use crate::pr::platform::create_provider_auto;
+use crate::settings::default_download_base_dir;
+use crate::settings::Settings;
 use crate::spinner;
 use crate::success;
+use crate::util::directory::DirectoryWalker;
+use crate::util::file::FileWriter;
 
 /// PR 总结命令
 pub struct SummarizeCommand;

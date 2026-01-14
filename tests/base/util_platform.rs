@@ -4,7 +4,7 @@
 
 use pretty_assertions::assert_eq;
 use std::env;
-use workflow::base::util::platform::detect_release_platform;
+use workflow::util::platform::detect_release_platform;
 
 // ==================== 平台检测测试 ====================
 

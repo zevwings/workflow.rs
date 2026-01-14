@@ -3,10 +3,10 @@
 //! Manages personal preference configuration that should not be committed to Git.
 //! This configuration is stored in `~/.workflow/config/repository.toml` and supports iCloud sync.
 
-use crate::base::settings::paths::Paths;
-use crate::base::util::file::{FileReader, FileWriter};
-use crate::base::util::path::PathAccess;
 use crate::git::GitRepo;
+use crate::settings::paths::Paths;
+use crate::util::file::{FileReader, FileWriter};
+use crate::util::path::PathAccess;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

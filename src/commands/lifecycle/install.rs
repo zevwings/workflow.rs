@@ -12,9 +12,9 @@ use color_eyre::{
     Result,
 };
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::Detect;
-use crate::base::util::directory::DirectoryWalker;
+use crate::settings::paths::Paths;
+use crate::shell::Detect;
+use crate::util::directory::DirectoryWalker;
 use crate::{br, debug, info, success, warning, Completion};
 
 /// 安装命令

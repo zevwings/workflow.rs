@@ -15,8 +15,8 @@ use color_eyre::Result;
 use rstest::rstest;
 use tempfile::tempdir;
 
-use workflow::base::format::DisplayFormatter;
-use workflow::base::util::{
+use workflow::util::format::DisplayFormatter;
+use workflow::util::{
     checksum::Checksum,
     date::{
         format_document_timestamp, format_filename_timestamp, format_last_updated,

@@ -2,7 +2,7 @@
 //!
 //! 提供统一的日志搜索结果表格行结构，用于表格格式显示。
 
-use crate::base::interactive::Tabled;
+use crate::interactive::Tabled;
 
 /// 日志搜索结果表格行
 ///

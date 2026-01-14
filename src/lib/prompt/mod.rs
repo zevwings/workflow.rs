@@ -1,0 +1,36 @@
+//! Prompt 管理模块
+//!
+//! 本模块提供了 Prompt 常量定义。
+//! Prompt 内容作为编译时常量直接嵌入到二进制文件中。
+//!
+//! ## 使用示例
+//!
+//! ```rust
+//! use workflow::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
+//!
+//! // 直接使用编译时嵌入的 prompt
+//! let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
+//! ```
+
+#[path = "generate_branch.system.rs"]
+pub mod generate_branch_system;
+#[path = "reword_pr.system.rs"]
+pub mod reword_pr_system;
+#[path = "summarize_file_change.system.rs"]
+pub mod summarize_file_change_system;
+#[path = "summarize_pr.system.rs"]
+pub mod summarize_pr_system;
+#[path = "translate.system.rs"]
+pub mod translate_system;
+
+// 重新导出公共 API
+pub use generate_branch_system::GENERATE_BRANCH_SYSTEM_PROMPT;
+pub use reword_pr_system::REWORD_PR_SYSTEM_PROMPT;
+// 从 LLM 模块重新导出语言相关 API（保持向后兼容）
+pub use crate::llm::{
+    find_language, get_language_instruction, get_supported_language_codes,
+    get_supported_language_display_names, SupportedLanguage, SUPPORTED_LANGUAGES,
+};
+pub use summarize_file_change_system::generate_summarize_file_change_system_prompt;
+pub use summarize_pr_system::generate_summarize_pr_system_prompt;
+pub use translate_system::TRANSLATE_SYSTEM_PROMPT;

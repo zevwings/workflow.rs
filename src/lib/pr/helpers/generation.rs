@@ -2,7 +2,7 @@
 //!
 //! 提供生成 commit 标题和 PR body 的函数。
 
-use crate::base::settings::Settings;
+use crate::settings::Settings;
 use crate::template::{
     ChangeTypeItem, CommitTemplateVars, CommitTemplates, PullRequestTemplateVars,
     PullRequestsTemplates, TemplateConfig, TemplateEngine,

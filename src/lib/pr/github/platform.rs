@@ -8,15 +8,15 @@ use color_eyre::{
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use serde_json::Value;
 
-use crate::base::constants::{errors::validation_errors, messages::pull_requests};
-use crate::base::http::{HttpClient, RequestConfig};
-use crate::base::settings::Settings;
+use crate::constants::{errors::validation_errors, messages::pull_requests};
 use crate::git::{self, GitBranch, GitRepo};
+use crate::http::{HttpClient, RequestConfig};
 use crate::jira::history::JiraWorkHistory;
 use crate::pr::github::errors::handle_github_error;
 use crate::pr::helpers::url::extract_github_repo_from_url;
 use crate::pr::platform::{PlatformProvider, PullRequestStatus};
 use crate::pr::PullRequestRow;
+use crate::settings::Settings;
 
 use super::requests::{
     CreatePullRequestRequest, MergePullRequestRequest, UpdatePullRequestRequest,
@@ -80,7 +80,7 @@ impl PlatformProvider for GitHub {
 
         // 检测仓库支持的合并方法：优先使用 squash，否则使用 merge
         let merge_method = Self::get_preferred_merge_method(&owner, &repo_name)?;
-        crate::trace_debug!("Using merge method: {}", merge_method);
+        crate::log_debug!("Using merge method: {}", merge_method);
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}/merge",
@@ -263,7 +263,7 @@ impl PlatformProvider for GitHub {
         let prs_all: Vec<PullRequestInfo> =
             response_all.ensure_success_with(handle_github_error)?.as_json()?;
         if let Some(pr) = prs_all.first() {
-            crate::trace_debug!(
+            crate::log_debug!(
                 "Found PR #{} for branch '{}' (state: {})",
                 pr.number,
                 current_branch,
@@ -278,7 +278,7 @@ impl PlatformProvider for GitHub {
         if let Some(pr_id) =
             JiraWorkHistory::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
         {
-            crate::trace_debug!(
+            crate::log_debug!(
                 "Found PR #{} for branch '{}' from work-history",
                 pr_id,
                 current_branch
@@ -344,7 +344,7 @@ impl PlatformProvider for GitHub {
 
             if is_too_large {
                 // 使用替代方案：通过 files API 获取部分 diff
-                crate::trace_debug!(
+                crate::log_debug!(
                     "PR diff exceeds GitHub API limit (20000 lines), using fallback method"
                 );
                 return GitHub::get_pull_request_diff_fallback(owner, repo_name, pr_number);
@@ -782,7 +782,7 @@ impl GitHub {
 
         // 限制文件数量
         let files_to_process = if files.len() > MAX_FILES {
-            crate::trace_debug!(
+            crate::log_debug!(
                 "PR has {} files, limiting to first {} files",
                 files.len(),
                 MAX_FILES

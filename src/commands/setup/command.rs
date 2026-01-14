@@ -1,14 +1,14 @@
 //! Setup 命令主流程
 
-use crate::base::constants::messages::log;
-use crate::base::settings::paths::Paths;
-use crate::base::settings::{
-    GitHubSettings, JiraSettings, LLMProviderSettings, LLMSettings, LogSettings, Settings,
-};
 use crate::commands::setup::log as log_config;
 use crate::commands::setup::types::CollectedConfig;
 use crate::commands::setup::{github, jira, llm};
+use crate::constants::messages::log;
 use crate::jira::config::ConfigManager;
+use crate::settings::paths::Paths;
+use crate::settings::{
+    GitHubSettings, JiraSettings, LLMProviderSettings, LLMSettings, LogSettings, Settings,
+};
 use crate::{br, info, success, warning};
 use color_eyre::Result;
 use std::collections::HashMap;
@@ -149,6 +149,7 @@ impl SetupCommand {
                 download_base_dir: config.log_download_base_dir.clone(),
                 level: None, // 日志级别通过 workflow log set 命令设置
                 enable_trace_console: config.enable_trace_console,
+                format: None, // 日志格式默认为 text
             },
             llm: LLMSettings {
                 provider: config.llm_provider.clone(),

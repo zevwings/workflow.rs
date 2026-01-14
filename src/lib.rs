@@ -7,8 +7,8 @@
 //! - **核心业务逻辑层** (`lib/`): 所有业务逻辑实现
 
 // 核心库模块声明
-#[path = "lib/base/mod.rs"]
-pub mod base;
+#[path = "lib/alias/mod.rs"]
+pub mod alias;
 #[path = "lib/branch/mod.rs"]
 pub mod branch;
 #[path = "lib/cli/mod.rs"]
@@ -17,42 +17,65 @@ pub mod cli;
 pub mod commit;
 #[path = "lib/completion/mod.rs"]
 pub mod completion;
+#[path = "lib/constants/mod.rs"]
+pub mod constants;
 #[path = "lib/git/mod.rs"]
 pub mod git;
+#[path = "lib/http/mod.rs"]
+pub mod http;
+#[path = "lib/infra/mod.rs"]
+pub mod infra;
+#[path = "lib/interactive/mod.rs"]
+pub mod interactive;
 #[path = "lib/jira/mod.rs"]
 pub mod jira;
+#[path = "lib/llm/mod.rs"]
+pub mod llm;
+#[path = "lib/logger/mod.rs"]
+pub mod logger;
+#[path = "lib/mcp/mod.rs"]
+pub mod mcp;
 #[path = "lib/pr/mod.rs"]
 pub mod pr;
+#[path = "lib/prompt/mod.rs"]
+pub mod prompt;
 #[path = "lib/proxy/mod.rs"]
 pub mod proxy;
 #[path = "lib/repo/mod.rs"]
 pub mod repo;
 #[path = "lib/rollback/mod.rs"]
 pub mod rollback;
+#[path = "lib/settings/mod.rs"]
+pub mod settings;
+#[path = "lib/shell/mod.rs"]
+pub mod shell;
 #[path = "lib/template/mod.rs"]
 pub mod template;
+#[path = "lib/util/mod.rs"]
+pub mod util;
 
 // 命令模块声明
 #[path = "commands/mod.rs"]
 pub mod commands;
 
 // 重新导出所有公共 API，方便外部使用
-// 从 base 模块重新导出基础设施类型，保持向后兼容
-pub use base::format::DisplayFormatter;
-pub use base::settings::{LLMSettings, Paths, Settings};
-pub use base::util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
-pub use base::{
-    Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, LogLevel, Reload,
-    ShellConfigManager, Tracer,
-};
-// 从 base::prompt 重新导出 Prompt 相关 API
-pub use base::prompt::{
+// 重新导出基础设施类型
+pub use alias::{AliasManager, CommandsConfig};
+pub use constants::*;
+pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};
+pub use logger::{LogLevel, Logger};
+pub use prompt::{
     find_language, generate_summarize_pr_system_prompt, get_language_instruction,
     get_supported_language_codes, get_supported_language_display_names, SupportedLanguage,
     GENERATE_BRANCH_SYSTEM_PROMPT, SUPPORTED_LANGUAGES,
 };
-// 从 base::llm 重新导出语言增强 API
-pub use base::llm::get_language_requirement;
+pub use settings::{LLMSettings, Paths, Settings};
+pub use shell::{Detect, Reload, ShellConfigManager};
+pub use util::concurrent::{ConcurrentExecutor, TaskResult};
+pub use util::format::{DisplayFormatter, MessageFormatter};
+pub use util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
+// 从 llm 重新导出语言增强 API
+pub use llm::get_language_requirement;
 
 // 业务模块导出
 pub use branch::BranchNaming;

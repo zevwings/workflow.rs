@@ -3,8 +3,8 @@
 //! 本模块提供了使用 LLM 处理分支名称的功能。
 //! 包括将非英文文本翻译为英文。
 
-use crate::base::llm::{LLMClient, LLMRequestParams};
-use crate::base::prompt::TRANSLATE_SYSTEM_PROMPT;
+use crate::llm::{LLMClient, LLMRequestParams};
+use crate::prompt::TRANSLATE_SYSTEM_PROMPT;
 use color_eyre::Result;
 
 /// Branch LLM 服务

@@ -3,9 +3,9 @@
 //! 提供可复用的交互式选择函数，用于配置设置。
 //! 同时提供配置解析和提取的共享函数，减少代码冗余。
 
-use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
-use crate::base::settings::Settings;
+use crate::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::select;
+use crate::settings::Settings;
 use color_eyre::{
     eyre::{eyre, ContextCompat, WrapErr},
     Result,
@@ -139,7 +139,7 @@ pub fn parse_config(content: &str, path: &Path) -> Result<Settings> {
 ///
 /// ```rust,no_run
 /// use workflow::commands::config::helpers::extract_section;
-/// use workflow::base::settings::settings::Settings;
+/// use workflow::settings::settings::Settings;
 ///
 /// let settings = Settings::default();
 /// let jira_config = extract_section(&settings, "jira")?;

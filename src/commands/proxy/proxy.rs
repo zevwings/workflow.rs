@@ -1,4 +1,4 @@
-use crate::base::util::Clipboard;
+use crate::util::Clipboard;
 use crate::{br, debug, info, success, warning, ProxyManager, SystemProxyReader};
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -16,7 +16,7 @@ impl ProxyCommand {
         // 2. 检查环境变量中的代理设置
         let env_proxy = ProxyManager::check_env_proxy();
         let shell_config_env =
-            crate::base::shell::ShellConfigManager::load_env_vars().unwrap_or_default();
+            crate::shell::ShellConfigManager::load_env_vars().unwrap_or_default();
 
         // 3. 显示系统代理设置
         success!("System proxy settings:");

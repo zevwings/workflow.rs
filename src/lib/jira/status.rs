@@ -12,8 +12,8 @@ use serde_with::skip_serializing_none;
 use super::api::project::JiraProjectApi;
 use super::config::{ConfigManager, JiraConfig};
 use super::helpers::extract_jira_project;
-use crate::base::settings::paths::Paths;
-use crate::{trace_debug, trace_info};
+use crate::settings::paths::Paths;
+use crate::{log_debug, log_info};
 
 // ==================== 返回结构体 ====================
 
@@ -103,7 +103,7 @@ impl JiraStatus {
             );
         };
 
-        trace_debug!("Fetching status list for project: {}", project);
+        log_debug!("Fetching status list for project: {}", project);
         let statuses = JiraProjectApi::get_project_statuses(project)
             .wrap_err_with(|| {
                 format!(
@@ -137,9 +137,9 @@ impl JiraStatus {
         Self::write_status_config(&jira_config)
             .wrap_err("Failed to write Jira status configuration")?;
 
-        trace_info!("Jira status configuration saved");
-        trace_debug!("  PR created status: {}", created_pull_request_status);
-        trace_debug!("  PR merged status: {}", merged_pull_request_status);
+        log_info!("Jira status configuration saved");
+        log_debug!("  PR created status: {}", created_pull_request_status);
+        log_debug!("  PR merged status: {}", merged_pull_request_status);
 
         Ok(StatusConfigResult {
             project: project.to_string(),

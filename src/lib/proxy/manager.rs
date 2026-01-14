@@ -7,10 +7,10 @@ use std::path::PathBuf;
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::shell::ShellConfigManager;
 use crate::proxy::config_generator::ProxyConfigGenerator;
 use crate::proxy::system_reader::SystemProxyReader;
 use crate::proxy::{ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyType};
+use crate::shell::ShellConfigManager;
 
 /// 代理管理器
 ///

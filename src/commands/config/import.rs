@@ -11,12 +11,12 @@ use std::path::{Path, PathBuf};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 // 项目内部导入
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
-use crate::base::util::date::get_unix_timestamp;
-use crate::base::util::file::{FileReader, FileWriter};
 use crate::commands::config::helpers::{extract_section, parse_config};
 use crate::commands::config::validate::ConfigValidateCommand;
+use crate::settings::paths::Paths;
+use crate::settings::Settings;
+use crate::util::date::get_unix_timestamp;
+use crate::util::file::{FileReader, FileWriter};
 use crate::{error, info, success, warning};
 
 /// 导入事务结构

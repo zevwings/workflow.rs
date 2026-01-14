@@ -3,9 +3,9 @@
 //! Rename a local branch, optionally update the remote branch.
 //! Provides interactive workflow following the implementation document.
 
-use crate::base::constants::validation::branch;
 use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::check;
+use crate::constants::validation::branch;
 use crate::git::GitBranch;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
@@ -26,7 +26,7 @@ impl BranchRenameCommand {
         check::CheckCommand::run_all()?;
 
         br!();
-        info!("{}", crate::base::constants::messages::log::BRANCH_RENAME);
+        info!("{}", crate::constants::messages::log::BRANCH_RENAME);
 
         // Select branch to rename (fully interactive)
         let branch_to_rename = Self::select_branch_to_rename()?;

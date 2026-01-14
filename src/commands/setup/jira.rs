@@ -1,7 +1,7 @@
 //! Jira 配置处理模块
 
-use crate::base::interactive::{FormBuilder, GroupConfig, InputFormField};
 use crate::commands::setup::types::{CollectedConfig, JiraConfig};
+use crate::interactive::{FormBuilder, GroupConfig, InputFormField};
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 use std::sync::Arc;

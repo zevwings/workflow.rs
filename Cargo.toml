@@ -37,7 +37,7 @@ sha2 = "0.10"
 dirs = "5.0"
 base64 = "0.22"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 handlebars = "5.1"
 crossterm = "0.28"
 unicode-width = "0.1"

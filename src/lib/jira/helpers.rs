@@ -7,8 +7,8 @@
 //!
 //! 注意：日志处理相关的辅助函数已迁移到 `jira::logs::helpers` 模块。
 
-use crate::base::constants::errors::validation_errors;
-use crate::base::settings::Settings;
+use crate::constants::errors::validation_errors;
+use crate::settings::Settings;
 use color_eyre::Result;
 use regex::Regex;
 

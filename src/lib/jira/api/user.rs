@@ -6,7 +6,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use serde_json::Value;
 
 use super::helpers::{build_jira_url, jira_auth_config};
-use crate::base::http::{Authorization, HttpClient, RequestConfig};
+use crate::http::{Authorization, HttpClient, RequestConfig};
 use crate::jira::types::JiraUser;
 
 pub struct JiraUserApi;

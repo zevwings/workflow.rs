@@ -9,10 +9,10 @@ use clap_complete::{generate, shells::Shell as ClapShell};
 use color_eyre::{eyre::WrapErr, Result};
 
 use super::helpers::get_completion_filename;
-use crate::base::alias::AliasManager;
-use crate::base::settings::paths::Paths;
-use crate::base::util::directory::DirectoryWalker;
-use crate::base::util::file::FileWriter;
+use crate::alias::AliasManager;
+use crate::settings::paths::Paths;
+use crate::util::directory::DirectoryWalker;
+use crate::util::file::FileWriter;
 
 /// 生成结果
 #[derive(Debug, Clone)]
@@ -122,9 +122,9 @@ impl CompletionGenerator {
     ///
     /// 返回 `GenerateResult`，包含生成的消息。
     pub fn generate_all(&self) -> Result<GenerateResult> {
-        crate::trace_debug!("Generating shell completion scripts...");
-        crate::trace_debug!("Shell type: {}", self.shell);
-        crate::trace_debug!("Output directory: {}", self.output_dir.display());
+        crate::log_debug!("Generating shell completion scripts...");
+        crate::log_debug!("Shell type: {}", self.shell);
+        crate::log_debug!("Output directory: {}", self.output_dir.display());
 
         // 创建输出目录
         DirectoryWalker::new(&self.output_dir).ensure_exists()?;

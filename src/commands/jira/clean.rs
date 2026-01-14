@@ -8,11 +8,11 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::constants::errors::input_reading;
-use crate::base::format::DisplayFormatter;
-use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::constants::errors::input_reading;
+use crate::interactive::{TableBuilder, TableStyle};
 use crate::jira::attachments::AttachmentCleaner;
 use crate::jira::table::FileRow;
+use crate::util::format::DisplayFormatter;
 use crate::{br, info, success};
 
 /// 清理日志命令

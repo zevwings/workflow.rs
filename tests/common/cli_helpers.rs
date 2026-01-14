@@ -16,7 +16,7 @@ impl CliTestEnv {
     /// 创建新的 CLI 测试环境
     pub fn new() -> Self {
         let temp_dir = tempfile::tempdir()
-            .expect(workflow::base::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
+            .expect(workflow::constants::errors::file_operations::CREATE_TEMP_DIR_FAILED);
 
         Self { temp_dir }
     }
@@ -48,12 +48,11 @@ impl CliTestEnv {
     pub fn create_file(&self, path: &str, content: &str) -> &Self {
         let full_path = self.temp_dir.path().join(path);
         if let Some(parent) = full_path.parent() {
-            fs::create_dir_all(parent).expect(
-                workflow::base::constants::errors::file_operations::CREATE_PARENT_DIR_FAILED,
-            );
+            fs::create_dir_all(parent)
+                .expect(workflow::constants::errors::file_operations::CREATE_PARENT_DIR_FAILED);
         }
         fs::write(full_path, content)
-            .expect(workflow::base::constants::errors::file_operations::WRITE_FILE_FAILED);
+            .expect(workflow::constants::errors::file_operations::WRITE_FILE_FAILED);
         self
     }
 
@@ -78,11 +77,11 @@ impl CliTestEnv {
     pub fn create_config(&self, content: &str) -> &Self {
         let config_dir = self.temp_dir.path().join(".workflow");
         fs::create_dir_all(&config_dir)
-            .expect(workflow::base::constants::errors::file_operations::CREATE_CONFIG_DIR_FAILED);
+            .expect(workflow::constants::errors::file_operations::CREATE_CONFIG_DIR_FAILED);
 
         let config_file = config_dir.join("workflow.toml");
         fs::write(config_file, content)
-            .expect(workflow::base::constants::errors::file_operations::WRITE_CONFIG_FAILED);
+            .expect(workflow::constants::errors::file_operations::WRITE_CONFIG_FAILED);
 
         self
     }

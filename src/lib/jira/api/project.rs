@@ -10,7 +10,7 @@ use serde_json::Value;
 use std::time::Duration;
 
 use super::helpers::{build_jira_url, jira_auth_config};
-use crate::base::http::{HttpClient, RequestConfig};
+use crate::http::{HttpClient, RequestConfig};
 
 pub struct JiraProjectApi;
 

@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use color_eyre::{eyre::eyre, Result};
 use rstest::rstest;
 
-use workflow::base::http::retry::{HttpRetry, HttpRetryConfig};
+use workflow::http::retry::{HttpRetry, HttpRetryConfig};
 
 use std::sync::{Arc, Mutex};
 

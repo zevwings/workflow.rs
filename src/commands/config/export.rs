@@ -1,12 +1,12 @@
 //! 配置导出命令
 //! 导出配置文件用于备份和迁移
 
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
-use crate::base::util::directory::DirectoryWalker;
-use crate::base::util::file::FileWriter;
 use crate::commands::config::helpers::extract_section;
 use crate::commands::config::validate::ConfigValidateCommand;
+use crate::settings::paths::Paths;
+use crate::settings::Settings;
+use crate::util::directory::DirectoryWalker;
+use crate::util::file::FileWriter;
 use crate::{error, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::path::PathBuf;

@@ -6,9 +6,9 @@ use duct::cmd;
 
 use super::commit::GitCommit;
 use super::repo::GitRepo;
-use crate::base::interactive::spinner;
-use crate::base::util::file::FileReader;
-use crate::{br, error, success, trace_debug};
+use crate::interactive::spinner;
+use crate::util::file::FileReader;
+use crate::{br, error, log_debug, success};
 
 /// Pre-commit 执行结果
 #[derive(Debug, Clone)]
@@ -197,7 +197,7 @@ impl GitPreCommit {
                 color_eyre::eyre::bail!("Pre-commit checks failed");
             } else {
                 // 配置文件存在但 pre-commit 命令不可用，回退到 Git hooks
-                trace_debug!(
+                log_debug!(
                     ".pre-commit-config.yaml exists but pre-commit command not found, falling back to Git hooks"
                 );
                 // 继续执行下面的 Git hooks 检查
@@ -260,7 +260,7 @@ impl GitPreCommit {
             }
         } else {
             // 没有 pre-commit hooks，跳过
-            trace_debug!("No pre-commit hooks found, skipping");
+            log_debug!("No pre-commit hooks found, skipping");
             Ok(PreCommitResult {
                 executed: false,
                 messages: vec![],

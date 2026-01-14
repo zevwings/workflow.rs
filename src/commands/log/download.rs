@@ -1,5 +1,5 @@
-use crate::base::constants::errors::input_reading;
-use crate::base::interactive::Progress;
+use crate::constants::errors::input_reading;
+use crate::interactive::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::{br, info, success};

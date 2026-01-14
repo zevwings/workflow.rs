@@ -11,13 +11,11 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::process::Command;
 
-use crate::base::util::directory::DirectoryWalker;
+use crate::util::directory::DirectoryWalker;
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::completion::get_all_completion_files;
-use crate::{
-    base::settings::paths::Paths, base::shell::Reload, trace_debug, trace_info, trace_warn, Detect,
-};
+use crate::{log_debug, log_info, log_warn, settings::paths::Paths, shell::Reload, Detect};
 
 // ==================== 类型别名 ====================
 
@@ -117,7 +115,7 @@ impl RollbackManager {
 
         DirectoryWalker::new(&backup_dir).ensure_exists()?;
 
-        trace_debug!("Created backup directory: {}", backup_dir.display());
+        log_debug!("Created backup directory: {}", backup_dir.display());
         Ok(backup_dir)
     }
 
@@ -144,7 +142,7 @@ impl RollbackManager {
 
             // 如果文件不存在，跳过
             if !source.exists() {
-                trace_debug!(
+                log_debug!(
                     "Binary file does not exist, skipping backup: {}",
                     source.display()
                 );
@@ -197,7 +195,7 @@ impl RollbackManager {
                 })?;
             }
 
-            trace_debug!(
+            log_debug!(
                 "Backed up binary file: {} -> {}",
                 source.display(),
                 backup_path.display()
@@ -228,7 +226,7 @@ impl RollbackManager {
 
         // 如果补全脚本目录不存在，返回空列表
         if !completion_dir.exists() {
-            trace_debug!(
+            log_debug!(
                 "Completion directory does not exist, skipping backup: {}",
                 completion_dir.display()
             );
@@ -244,7 +242,7 @@ impl RollbackManager {
 
             // 如果文件不存在，跳过
             if !source.exists() {
-                trace_debug!(
+                log_debug!(
                     "Completion script does not exist, skipping backup: {}",
                     source.display()
                 );
@@ -262,7 +260,7 @@ impl RollbackManager {
                 )
             })?;
 
-            trace_debug!(
+            log_debug!(
                 "Backed up completion script: {} -> {}",
                 source.display(),
                 backup_path.display()
@@ -281,7 +279,7 @@ impl RollbackManager {
     ///
     /// 返回 `BackupResult` 结构体，包含备份信息和统计。
     pub fn create_backup() -> Result<BackupResult> {
-        trace_info!("Creating backup");
+        log_info!("Creating backup");
 
         // 创建备份目录
         let backup_dir = Self::create_backup_dir()?;
@@ -305,7 +303,7 @@ impl RollbackManager {
         let binary_count = binary_backups.len();
         let completion_count = completion_backups.len();
 
-        trace_info!(
+        log_info!(
             "Backed up {} binary file(s), {} completion script(s)",
             binary_count,
             completion_count
@@ -341,7 +339,7 @@ impl RollbackManager {
             // 如果备份文件不存在，跳过
             if !backup_path.exists() {
                 let error_msg = format!("Backup file does not exist: {}", backup_path.display());
-                trace_warn!("{}", error_msg);
+                log_warn!("{}", error_msg);
                 failed.push((binary_name.clone(), error_msg));
                 continue;
             }
@@ -400,12 +398,12 @@ impl RollbackManager {
 
             match result {
                 Ok(_) => {
-                    trace_info!("Restored binary file: {}", binary_name);
+                    log_info!("Restored binary file: {}", binary_name);
                     restored.push(binary_name.clone());
                 }
                 Err(e) => {
                     let error_msg = format!("{}", e);
-                    trace_warn!(
+                    log_warn!(
                         "Failed to restore binary file {}: {}",
                         binary_name,
                         error_msg
@@ -446,7 +444,7 @@ impl RollbackManager {
             // 如果备份文件不存在，跳过
             if !backup_path.exists() {
                 let error_msg = format!("Backup file does not exist: {}", backup_path.display());
-                trace_warn!("{}", error_msg);
+                log_warn!("{}", error_msg);
                 failed.push((file_name.clone(), error_msg));
                 continue;
             }
@@ -454,7 +452,7 @@ impl RollbackManager {
             // 复制文件
             match fs::copy(backup_path, &target) {
                 Ok(_) => {
-                    trace_info!("Restored completion script: {}", file_name);
+                    log_info!("Restored completion script: {}", file_name);
                     restored.push(file_name.clone());
                 }
                 Err(e) => {
@@ -464,7 +462,7 @@ impl RollbackManager {
                         target.display(),
                         e
                     );
-                    trace_warn!("{}", error_msg);
+                    log_warn!("{}", error_msg);
                     failed.push((file_name.clone(), error_msg));
                 }
             }
@@ -485,7 +483,7 @@ impl RollbackManager {
     ///
     /// 返回 `RollbackResult` 结构体，包含恢复的文件列表和状态信息。
     pub fn rollback(backup_info: &BackupInfo) -> Result<RollbackResult> {
-        trace_info!("Starting rollback operation");
+        log_info!("Starting rollback operation");
 
         let mut restored_binaries = Vec::new();
         let mut restored_completions = Vec::new();
@@ -494,14 +492,14 @@ impl RollbackManager {
 
         // 恢复二进制文件
         if !backup_info.binary_backups.is_empty() {
-            trace_info!("Restoring binary files");
+            log_info!("Restoring binary files");
             match Self::restore_binaries(&backup_info.binary_backups) {
                 Ok((restored, failed)) => {
                     restored_binaries = restored;
                     failed_binaries = failed;
                 }
                 Err(e) => {
-                    trace_warn!("Failed to restore binaries: {}", e);
+                    log_warn!("Failed to restore binaries: {}", e);
                     // 将所有二进制文件标记为失败
                     for (binary_name, _) in &backup_info.binary_backups {
                         failed_binaries.push((binary_name.clone(), format!("{}", e)));
@@ -512,11 +510,11 @@ impl RollbackManager {
 
         // 恢复补全脚本（不依赖 shell 检测）
         if !backup_info.completion_backups.is_empty() {
-            trace_info!("Restoring completion scripts");
+            log_info!("Restoring completion scripts");
             let completion_dir = match Paths::completion_dir() {
                 Ok(dir) => dir,
                 Err(e) => {
-                    trace_warn!("Failed to get completion directory: {}", e);
+                    log_warn!("Failed to get completion directory: {}", e);
                     // 将所有补全脚本标记为失败
                     for (file_name, _) in &backup_info.completion_backups {
                         failed_completions.push((file_name.clone(), format!("{}", e)));
@@ -538,7 +536,7 @@ impl RollbackManager {
                     failed_completions = failed;
                 }
                 Err(e) => {
-                    trace_warn!("Failed to restore completions: {}", e);
+                    log_warn!("Failed to restore completions: {}", e);
                     // 将所有补全脚本标记为失败
                     for (file_name, _) in &backup_info.completion_backups {
                         if !restored_completions.contains(file_name) {
@@ -552,28 +550,28 @@ impl RollbackManager {
         // 尝试重新加载当前 shell 的配置（需要检测 shell，但这是可选操作）
         let (shell_reload_success, shell_config_file) = match Detect::shell() {
             Ok(shell) => {
-                trace_info!("Reloading shell configuration for {}", shell);
+                log_info!("Reloading shell configuration for {}", shell);
                 let config_file_result = Paths::config_file(&shell);
                 let config_file = config_file_result.ok();
 
                 match Reload::shell(&shell) {
                     Ok(_) => {
-                        trace_info!("Shell configuration reloaded successfully");
+                        log_info!("Shell configuration reloaded successfully");
                         (Some(true), config_file)
                     }
                     Err(e) => {
-                        trace_warn!("Failed to reload shell configuration: {}", e);
+                        log_warn!("Failed to reload shell configuration: {}", e);
                         (Some(false), config_file)
                     }
                 }
             }
             Err(e) => {
-                trace_debug!("Failed to detect shell type, skipping reload: {}", e);
+                log_debug!("Failed to detect shell type, skipping reload: {}", e);
                 (None, None)
             }
         };
 
-        trace_info!(
+        log_info!(
             "Rollback completed: {} binary(ies), {} completion(s) restored",
             restored_binaries.len(),
             restored_completions.len()
@@ -598,7 +596,7 @@ impl RollbackManager {
     /// * `backup_info` - 备份信息
     pub fn cleanup_backup(backup_info: &BackupInfo) -> Result<()> {
         if backup_info.backup_dir.exists() {
-            trace_debug!(
+            log_debug!(
                 "Cleaning up backup directory: {}",
                 backup_info.backup_dir.display()
             );
@@ -608,7 +606,7 @@ impl RollbackManager {
                     backup_info.backup_dir.display()
                 )
             })?;
-            trace_debug!("Backup directory cleaned up");
+            log_debug!("Backup directory cleaned up");
         }
         Ok(())
     }

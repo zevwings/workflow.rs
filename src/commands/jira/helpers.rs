@@ -2,7 +2,7 @@
 //!
 //! 提供 Jira 命令之间共享的公共功能，避免代码重复。
 
-use crate::base::constants::errors::input_reading;
+use crate::constants::errors::input_reading;
 use chrono::{DateTime, FixedOffset};
 use color_eyre::{eyre::WrapErr, Result};
 

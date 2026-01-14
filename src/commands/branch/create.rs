@@ -8,14 +8,14 @@
 //! 3. Format using template: {type}/{jira-ticket}-{branch-name}
 //! 4. Apply repository prefix if configured
 
-use crate::base::format::MessageFormatter;
-use crate::base::interactive::spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitStash};
+use crate::interactive::spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::pr::llm::CreateGenerator;
+use crate::util::format::MessageFormatter;
 use crate::{info, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 

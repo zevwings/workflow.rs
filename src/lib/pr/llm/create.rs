@@ -8,9 +8,9 @@ use color_eyre::{
 };
 use serde_json::Value;
 
-use crate::base::llm::{LLMClient, LLMRequestParams};
-use crate::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 use crate::branch::BranchNaming;
+use crate::llm::{LLMClient, LLMRequestParams};
+use crate::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 
 use super::helpers::extract_json_from_markdown;
 

@@ -4,7 +4,7 @@
 
 use pretty_assertions::assert_eq;
 use rstest::{fixture, rstest};
-use workflow::base::settings::Settings;
+use workflow::settings::Settings;
 
 // ==================== Fixtures ====================
 

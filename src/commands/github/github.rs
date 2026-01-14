@@ -1,17 +1,17 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::base::interactive::spinner;
-use crate::base::interactive::{TableBuilder, TableStyle};
-use crate::base::settings::paths::Paths;
-use crate::base::settings::GitHubAccountListRow;
-use crate::base::settings::Settings;
-use crate::base::util::mask_sensitive_value;
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
 use crate::git::GitConfig;
+use crate::interactive::spinner;
+use crate::interactive::{TableBuilder, TableStyle};
 use crate::jira::config::ConfigManager;
+use crate::settings::paths::Paths;
+use crate::settings::GitHubAccountListRow;
+use crate::settings::Settings;
+use crate::util::mask_sensitive_value;
 use crate::{br, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 

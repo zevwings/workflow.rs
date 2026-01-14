@@ -7,7 +7,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::settings::paths::Paths;
+use crate::settings::paths::Paths;
 
 use super::api::user::JiraUserApi;
 use super::config::{ConfigManager, JiraConfig, JiraUserEntry};

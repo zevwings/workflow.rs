@@ -1,6 +1,5 @@
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::interactive::spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
@@ -9,6 +8,7 @@ use crate::commands::pr::helpers::{
     resolve_title, select_change_types, update_jira_ticket,
 };
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
+use crate::interactive::spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::pr::body_parser::{extract_info_from_source_pr, ExtractedPrInfo, SourcePrInfo};

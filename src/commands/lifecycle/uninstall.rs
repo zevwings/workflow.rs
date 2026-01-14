@@ -9,9 +9,9 @@ use duct::cmd;
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::{Detect, Reload};
-use crate::base::util::Clipboard;
+use crate::settings::paths::Paths;
+use crate::shell::{Detect, Reload};
+use crate::util::Clipboard;
 use crate::{br, debug, info, success, warning, Completion, ProxyManager};
 
 /// 卸载命令
@@ -406,7 +406,7 @@ impl UninstallCommand {
             if workflow_config_path.exists() {
                 fs::remove_file(&workflow_config_path)
                     .wrap_err("Failed to remove workflow.toml")?;
-                removed.push(crate::base::settings::paths::WORKFLOW_CONFIG_FILE.to_string());
+                removed.push(crate::settings::paths::WORKFLOW_CONFIG_FILE.to_string());
             }
         }
 

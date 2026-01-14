@@ -2,19 +2,20 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::base::interactive::spinner;
-use crate::base::util::{Browser, Clipboard};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
+use crate::interactive::spinner;
 use crate::jira::status::JiraStatus;
 use crate::jira::Jira;
 use crate::jira::JiraWorkHistory;
 use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
 use crate::pr::{create_provider_auto, TYPES_OF_CHANGES};
+use crate::util::{Browser, Clipboard};
 use crate::{br, info, success, warning};
 use color_eyre::{
     eyre::{Report, WrapErr},
     Result,
 };
+use std::io::IsTerminal;
 
 /// 处理 stash_pop 的结果
 ///
@@ -340,6 +341,7 @@ pub fn ensure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>
 /// 提示用户输入 PR 标题
 ///
 /// 使用 Input 组件提示用户输入 PR 标题，并验证输入不能为空。
+/// 注意：此函数假设已在交互式环境中调用。
 ///
 /// # 返回
 ///
@@ -361,6 +363,7 @@ pub fn input_pull_request_title() -> Result<String> {
 /// 获取 PR 描述
 ///
 /// 如果提供了描述，直接使用；否则提示用户输入描述（可选）。
+/// 在非交互式环境中，如果没有提供描述，则返回空字符串。
 ///
 /// # 参数
 ///
@@ -373,10 +376,16 @@ pub fn resolve_description(description: Option<String>) -> Result<String> {
     if let Some(desc) = description {
         Ok(desc)
     } else {
-        let desc = crate::input!("Short description (optional)")
-            .prompt()
-            .wrap_err("Failed to get description")?;
-        Ok(desc)
+        // 检查是否是交互式环境
+        if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
+            // 非交互式环境，返回空字符串
+            Ok(String::new())
+        } else {
+            let desc = crate::input!("Short description (optional)")
+                .prompt()
+                .wrap_err("Failed to get description")?;
+            Ok(desc)
+        }
     }
 }
 
@@ -522,6 +531,13 @@ pub fn resolve_title(
     }
 
     // 回退到手动输入
+    // 检查是否是交互式环境
+    if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
+        // 非交互式环境，无法获取标题，返回错误
+        color_eyre::eyre::bail!(
+            "PR title is required in non-interactive environment. Please provide it via --title option."
+        );
+    }
     input_pull_request_title()
 }
 

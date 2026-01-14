@@ -4,11 +4,11 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::interactive::spinner;
 use crate::br;
 use crate::debug;
 use crate::git::GitRepo;
 use crate::info;
+use crate::interactive::spinner;
 use crate::jira::helpers::extract_jira_ticket_id;
 use crate::jira::Jira;
 use crate::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_from_body};

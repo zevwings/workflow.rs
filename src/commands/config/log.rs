@@ -1,9 +1,9 @@
-use crate::base::constants::messages::log;
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
-use crate::base::LogLevel;
+use crate::constants::messages::log;
 use crate::jira::config::ConfigManager;
 use crate::select;
+use crate::settings::paths::Paths;
+use crate::settings::Settings;
+use crate::LogLevel;
 use crate::{br, info, success};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
@@ -14,7 +14,7 @@ impl LogCommand {
     /// 设置日志级别（交互式选择）
     pub fn set() -> Result<()> {
         // 获取当前日志级别
-        let current_level = LogLevel::get_level();
+        let current_level = LogLevel::current();
 
         // 定义日志级别选项
         let log_levels = ["off", "error", "warn", "info", "debug"];
@@ -46,7 +46,7 @@ impl LogCommand {
         br!();
         success!("Log level set to: {}", selected_level_str);
         info!("  Current log level: {}", selected_level.as_str());
-        if let Ok(config_path) = crate::base::Paths::workflow_config() {
+        if let Ok(config_path) = crate::Paths::workflow_config() {
             info!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
         } else {
             info!(
@@ -60,7 +60,7 @@ impl LogCommand {
 
     /// 检查当前日志级别
     pub fn check() -> Result<()> {
-        let current_level = LogLevel::get_level();
+        let current_level = LogLevel::current();
         let default_level = LogLevel::default_level();
         let config_level = Settings::get().log.level.as_ref();
 
@@ -153,7 +153,7 @@ impl LogCommand {
         if selected_idx == 0 {
             success!("Trace console output enabled");
             info!("  Tracing logs will be output to both file and console (stderr)");
-            if let Ok(config_path) = crate::base::Paths::workflow_config() {
+            if let Ok(config_path) = crate::Paths::workflow_config() {
                 info!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
             } else {
                 info!(

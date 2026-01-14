@@ -11,7 +11,7 @@
 //! - `download` - 主下载器（协调各个组件）
 //! - `filter` - 附件过滤逻辑
 //! - `url_resolver` - URL 解析和重试策略
-//! - `http_client` - HTTP 客户端适配器（利用 base::http）
+//! - `http_client` - HTTP 客户端适配器（利用 http 模块）
 //! - `directory` - 目录管理
 //! - `zip` - ZIP 文件处理
 //! - `clean` - 清理功能

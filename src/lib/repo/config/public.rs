@@ -3,9 +3,9 @@
 //! Manages project-level template configuration that should be committed to Git.
 //! This configuration is stored in `.workflow/config.toml` in the project root.
 
-use crate::base::settings::paths::Paths;
-use crate::base::util::file::{FileReader, FileWriter};
-use crate::base::util::path::PathAccess;
+use crate::settings::paths::Paths;
+use crate::util::file::{FileReader, FileWriter};
+use crate::util::path::PathAccess;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use toml::map::Map;

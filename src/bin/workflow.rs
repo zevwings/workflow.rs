@@ -40,8 +40,8 @@ use workflow::cli::{
 };
 use workflow::*;
 
-use workflow::base::alias::AliasManager;
-use workflow::base::settings::Settings;
+use workflow::alias::AliasManager;
+use workflow::settings::Settings;
 
 /// 主函数
 ///
@@ -60,15 +60,20 @@ fn main() -> Result<()> {
         workflow::LogLevel::init(config_level);
     }
 
-    // 初始化 tracing（从配置文件读取，统一管理）
-    workflow::Tracer::init();
-
     // 别名展开：在解析前展开别名
     let args: Vec<String> = std::env::args().collect();
     let expanded_args = AliasManager::expand_args(args)?;
 
     // 使用展开后的参数重新解析
     let cli = Cli::parse_from(expanded_args);
+
+    // 从命令中提取命令名
+    let command_name = workflow::cli::extract_command_name(&cli.command);
+
+    // 初始化日志（从配置文件读取，统一管理，传入命令名）
+    // 创建 SettingsAdapter 作为配置提供者
+    let config_adapter = workflow::infra::adapters::config::SettingsAdapter::new();
+    workflow::Logger::init_with_command(command_name.as_deref(), &config_adapter);
 
     match cli.command {
         // 代理管理命令

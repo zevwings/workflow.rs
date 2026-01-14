@@ -7,9 +7,9 @@
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::PathBuf;
 
-use crate::base::settings::default_download_base_dir;
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
+use crate::settings::default_download_base_dir;
+use crate::settings::paths::Paths;
+use crate::settings::Settings;
 
 /// 附件路径管理器
 ///

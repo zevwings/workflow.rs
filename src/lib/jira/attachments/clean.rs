@@ -12,8 +12,8 @@ use std::path::{Path, PathBuf};
 use color_eyre::{eyre::WrapErr, Result};
 use walkdir::WalkDir;
 
-use crate::base::format::DisplayFormatter;
-use crate::trace_info;
+use crate::log_info;
+use crate::util::format::DisplayFormatter;
 
 use super::paths::AttachmentPaths;
 
@@ -106,7 +106,7 @@ impl AttachmentCleaner {
         };
 
         if !dir.exists() {
-            trace_info!("Directory does not exist: {:?}", dir);
+            log_info!("Directory does not exist: {:?}", dir);
             return Ok(CleanResult {
                 deleted: false,
                 dir_exists: false,
@@ -133,9 +133,9 @@ impl AttachmentCleaner {
         }
 
         if dry_run {
-            trace_info!("[DRY RUN] Would delete {}: {:?}", dir_name, dir);
-            trace_info!("[DRY RUN] Total size: {}", DisplayFormatter::size(size));
-            trace_info!("[DRY RUN] Total files: {}", file_count);
+            log_info!("[DRY RUN] Would delete {}: {:?}", dir_name, dir);
+            log_info!("[DRY RUN] Total size: {}", DisplayFormatter::size(size));
+            log_info!("[DRY RUN] Total files: {}", file_count);
             return Ok(CleanResult {
                 deleted: false,
                 dir_exists: true,
@@ -156,7 +156,7 @@ impl AttachmentCleaner {
         .prompt()?;
 
         if !confirmed {
-            trace_info!("Clean operation cancelled.");
+            log_info!("Clean operation cancelled.");
             return Ok(CleanResult {
                 deleted: false,
                 dir_exists: true,
@@ -170,7 +170,7 @@ impl AttachmentCleaner {
         std::fs::remove_dir_all(&dir)
             .wrap_err_with(|| format!("Failed to delete {}: {:?}", dir_name, dir))?;
 
-        trace_info!("{} deleted successfully: {:?}", dir_name, dir);
+        log_info!("{} deleted successfully: {:?}", dir_name, dir);
         Ok(CleanResult {
             deleted: true,
             dir_exists: true,

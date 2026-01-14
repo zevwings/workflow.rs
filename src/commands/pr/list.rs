@@ -1,4 +1,4 @@
-use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::interactive::{TableBuilder, TableStyle};
 use crate::pr::platform::create_provider_auto;
 use crate::{br, info};
 use color_eyre::Result;

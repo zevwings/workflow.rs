@@ -3,7 +3,7 @@
 //! 本模块提供了 Jira API 请求的通用辅助函数，用于减少代码重复。
 //! 这些函数使用 OnceLock 缓存配置信息，避免重复读取配置文件。
 
-use crate::base::http::Authorization;
+use crate::http::Authorization;
 use crate::jira::helpers::{get_auth, get_base_url};
 use color_eyre::{eyre::eyre, Result};
 use std::sync::OnceLock;
@@ -96,7 +96,7 @@ pub fn build_jira_url(path: &str) -> Result<String> {
 ///
 /// ```rust,no_run
 /// use workflow::jira::api::helpers::jira_auth_config;
-/// use workflow::base::http::RequestConfig;
+/// use workflow::http::RequestConfig;
 /// use serde_json::Value;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {

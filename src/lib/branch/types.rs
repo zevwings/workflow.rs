@@ -111,7 +111,7 @@ impl BranchType {
     ///
     /// Priority:
     /// 1. If repository prefix exists and can be converted to BranchType, use it
-    /// 2. Otherwise, prompt user to select interactively
+    /// 2. Otherwise, prompt user to select interactively (or use default in non-interactive mode)
     ///
     /// # Returns
     ///
@@ -121,12 +121,21 @@ impl BranchType {
     ///
     /// Returns an error if the user selection fails or if the repository prefix cannot be converted to a branch type.
     pub fn resolve_with_repo_prefix() -> Result<Self> {
+        use std::io::IsTerminal;
+        
         // Check if repository prefix exists and use it as branch type
         if let Some(repo_prefix) = RepoConfig::get_branch_prefix() {
             if let Some(ty) = Self::from_str(&repo_prefix) {
                 info!("Using repository prefix '{}' as branch type", repo_prefix);
                 return Ok(ty);
             }
+        }
+
+        // Check if in interactive environment
+        if !std::io::stdin().is_terminal() || !std::io::stdout().is_terminal() {
+            // Non-interactive environment, use default (Feature)
+            info!("Non-interactive environment, using default branch type: feature");
+            return Ok(BranchType::Feature);
         }
 
         // Otherwise, prompt user to select

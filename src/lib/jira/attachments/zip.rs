@@ -1,6 +1,6 @@
 //! ZIP 处理相关功能
 
-use crate::base::util::directory::DirectoryWalker;
+use crate::util::directory::DirectoryWalker;
 use crate::warning;
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs::{File, OpenOptions};

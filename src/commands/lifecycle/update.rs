@@ -1,7 +1,7 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
-use crate::base::util::directory::DirectoryWalker;
+use crate::util::directory::DirectoryWalker;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -14,17 +14,15 @@ use reqwest::header::HeaderMap;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::base::format::DisplayFormatter;
-use crate::base::http::client::HttpClient;
-use crate::base::http::{
-    response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
-};
-use crate::base::interactive::{spinner, Progress};
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
-use crate::base::shell::Detect;
-use crate::base::util::{detect_release_platform, Checksum, Unzip};
+use crate::http::client::HttpClient;
+use crate::http::{response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
+use crate::interactive::{spinner, Progress};
 use crate::rollback::RollbackManager;
+use crate::settings::paths::Paths;
+use crate::settings::Settings;
+use crate::shell::Detect;
+use crate::util::format::DisplayFormatter;
+use crate::util::{detect_release_platform, Checksum, Unzip};
 use crate::{br, debug, error, get_completion_files_for_shell, info, success, warning};
 
 #[cfg(unix)]
@@ -391,8 +389,7 @@ impl UpdateCommand {
                     progress.set_position(downloaded_bytes);
                 }
 
-                progress
-                    .finish_with_message(crate::base::constants::messages::user::DOWNLOAD_COMPLETE);
+                progress.finish_with_message(crate::constants::messages::user::DOWNLOAD_COMPLETE);
                 Ok(())
             },
             &retry_config,

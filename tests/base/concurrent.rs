@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use color_eyre::Result;
 use rstest::rstest;
 
-use workflow::base::concurrent::{ConcurrentExecutor, TaskResult};
+use workflow::util::concurrent::{ConcurrentExecutor, TaskResult};
 
 /// 创建测试任务的辅助函数
 fn create_success_task(

@@ -2,7 +2,7 @@
 //!
 //! 提供 GitHub 账号管理的共享逻辑，减少代码重复。
 
-use crate::base::settings::GitHubAccount;
+use crate::settings::GitHubAccount;
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 收集 GitHub 账号信息

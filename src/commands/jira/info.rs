@@ -1,8 +1,8 @@
-use crate::base::format::DisplayFormatter;
-use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::interactive::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
 use crate::spinner;
+use crate::util::format::DisplayFormatter;
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
@@ -238,7 +238,7 @@ impl InfoCommand {
         }
 
         // 显示 Jira URL
-        let settings = crate::base::settings::Settings::get();
+        let settings = crate::settings::Settings::get();
         let jira_service_address = settings.jira.service_address.clone().unwrap_or_default();
         if !jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);
@@ -428,7 +428,7 @@ impl InfoCommand {
         }
 
         // 显示 Jira URL
-        let settings = crate::base::settings::Settings::get();
+        let settings = crate::settings::Settings::get();
         let jira_service_address = settings.jira.service_address.clone().unwrap_or_default();
         if !jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);

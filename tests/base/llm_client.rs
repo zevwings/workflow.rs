@@ -6,7 +6,7 @@ use insta::assert_json_snapshot;
 use pretty_assertions::assert_eq;
 
 use serde_json::json;
-use workflow::base::llm::client::LLMClient;
+use workflow::llm::client::LLMClient;
 
 #[test]
 fn test_extract_from_openai_standard() {

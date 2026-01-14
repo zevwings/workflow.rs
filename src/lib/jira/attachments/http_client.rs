@@ -1,8 +1,8 @@
 //! HTTP 客户端适配器（用于附件下载）
 
-use crate::base::http::{Authorization, HttpClient, HttpMethod, RequestConfig};
+use crate::http::{Authorization, HttpClient, HttpMethod, RequestConfig};
 use crate::jira::helpers::{get_auth, get_base_url};
-use crate::trace_debug;
+use crate::log_debug;
 use color_eyre::{eyre::WrapErr, Result};
 use reqwest::header::HeaderMap;
 use std::fs::File;
@@ -10,7 +10,7 @@ use std::path::Path;
 
 /// 附件下载器
 ///
-/// 提供文件下载功能，利用现有的 `base::http::HttpClient` 进行流式下载。
+/// 提供文件下载功能，利用现有的 `http::HttpClient` 进行流式下载。
 pub struct AttachmentDownloader;
 
 impl AttachmentDownloader {
@@ -23,7 +23,7 @@ impl AttachmentDownloader {
 
     /// 下载文件到指定路径
     ///
-    /// 利用现有的 `base::http::HttpClient` 进行流式下载。
+    /// 利用现有的 `http::HttpClient` 进行流式下载。
     /// 支持 CloudFront 签名 URL 的特殊处理（先尝试不使用 Basic Auth，失败后重试）。
     ///
     /// # 参数
@@ -73,7 +73,7 @@ impl AttachmentDownloader {
         // 如果失败且是 CloudFront URL，重试时使用 Basic Auth
         if !response.status().is_success() && is_cloudfront {
             let status = response.status();
-            trace_debug!(
+            log_debug!(
                 "CloudFront URL failed (status: {}), retrying with Basic Auth",
                 status
             );
@@ -86,7 +86,7 @@ impl AttachmentDownloader {
                 } else {
                     error_text
                 };
-                trace_debug!("Error response: {}", preview);
+                log_debug!("Error response: {}", preview);
             }
 
             // 重试，这次使用 Basic Auth

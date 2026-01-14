@@ -14,12 +14,12 @@ use serde_json::Value;
 use std::path::Path;
 
 use super::helpers::{build_jira_url, jira_auth_config};
-use crate::base::http::{HttpClient, MultipartRequestConfig, RequestConfig};
-use crate::base::util::FileReader;
+use crate::http::{HttpClient, MultipartRequestConfig, RequestConfig};
 use crate::jira::types::{
     JiraAttachment, JiraChangelog, JiraChangelogHistory, JiraChangelogItem, JiraIssue,
     JiraTransition,
 };
+use crate::util::FileReader;
 
 /// 状态转换请求体
 ///

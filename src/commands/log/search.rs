@@ -1,5 +1,5 @@
-use crate::base::constants::errors::input_reading;
-use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::constants::errors::input_reading;
+use crate::interactive::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
 use crate::{br, debug, info, success, warning};

@@ -19,9 +19,9 @@ use color_eyre::{
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::base::settings::paths::Paths;
-use crate::base::util::file::{FileReader, FileWriter};
-use crate::trace_warn;
+use crate::log_warn;
+use crate::settings::paths::Paths;
+use crate::util::file::{FileReader, FileWriter};
 
 /// 工作历史记录条目
 ///
@@ -315,7 +315,7 @@ impl JiraWorkHistory {
                 pull_request_id
             );
             // 记录到 tracing（用于调试）
-            trace_warn!("{}", warning_msg);
+            log_warn!("{}", warning_msg);
             // 将警告信息分离到 warnings 字段
             warnings.push(warning_msg);
         }

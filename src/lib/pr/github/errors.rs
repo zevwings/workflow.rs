@@ -1,4 +1,4 @@
-use crate::base::http::HttpResponse;
+use crate::http::HttpResponse;
 use color_eyre::eyre::Report;
 use serde::Deserialize;
 use serde_json::Value;

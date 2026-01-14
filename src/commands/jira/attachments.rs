@@ -1,4 +1,4 @@
-use crate::base::interactive::Progress;
+use crate::interactive::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::spinner;

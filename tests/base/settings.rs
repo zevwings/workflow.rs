@@ -8,7 +8,7 @@
 
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
-use workflow::base::settings::{
+use workflow::settings::{
     default_download_base_dir, GitHubAccount, GitHubAccountListRow, GitHubAccountRow,
     GitHubSettings, JiraConfigRow, JiraSettings, LLMConfigRow, LLMProviderSettings, LLMSettings,
     LogSettings, Settings,
@@ -253,6 +253,7 @@ fn test_llm_provider_settings_creation() {
 #[test]
 fn test_log_settings_creation() {
     let log_settings = LogSettings {
+        format: None,
         output_folder_name: Some("custom_logs".to_string()),
         download_base_dir: Some("/custom/path".to_string()),
         level: Some("debug".to_string()),
@@ -417,6 +418,7 @@ fn test_complex_configuration_scenario() {
             current: Some("main".to_string()),
         },
         log: LogSettings {
+            format: None,
             output_folder_name: Some("complex_logs".to_string()),
             download_base_dir: Some("/complex/logs/path".to_string()),
             level: Some("info".to_string()),

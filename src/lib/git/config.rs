@@ -7,7 +7,7 @@
 use color_eyre::{eyre::WrapErr, Result};
 
 use super::GitCommand;
-use crate::trace_info;
+use crate::log_info;
 
 /// Git 配置结果
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ impl GitConfig {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn set_global_user(email: &str, name: &str) -> Result<GitConfigResult> {
-        trace_info!("Updating Git global config: email={}, name={}", email, name);
+        log_info!("Updating Git global config: email={}, name={}", email, name);
 
         // 设置全局 user.email
         GitCommand::new(["config", "--global", "user.email", email])
@@ -51,7 +51,7 @@ impl GitConfig {
             .run()
             .wrap_err("Failed to set git global user.name")?;
 
-        trace_info!("Git global config updated successfully");
+        log_info!("Git global config updated successfully");
 
         Ok(GitConfigResult {
             email: email.to_string(),

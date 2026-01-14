@@ -13,11 +13,11 @@ use std::path::PathBuf;
 use clap_complete::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::ShellConfigManager;
-use crate::base::util::file::FileWriter;
-use crate::trace_debug;
-use crate::trace_info;
+use crate::log_debug;
+use crate::log_info;
+use crate::settings::paths::Paths;
+use crate::shell::ShellConfigManager;
+use crate::util::file::FileWriter;
 
 // Completion 相关常量
 const COMPLETIONS_FILE: &str = ".completions";
@@ -115,7 +115,7 @@ impl Completion {
     /// - zsh 和 bash：创建统一配置文件并添加到 shell 配置文件
     /// - fish, powershell, elvish：直接写入各自的配置文件
     pub fn configure_shell_config(shell: &Shell) -> Result<CompletionConfigResult> {
-        trace_debug!("Configuring shell config for {}", shell);
+        log_debug!("Configuring shell config for {}", shell);
 
         let result = match shell {
             Shell::Zsh | Shell::Bash => {
@@ -166,9 +166,9 @@ impl Completion {
                             shell
                         )
                     })?;
-                    trace_debug!("Completion config written to {} config file", shell);
+                    log_debug!("Completion config written to {} config file", shell);
                 } else {
-                    trace_debug!("Completion config already exists in {} config file", shell);
+                    log_debug!("Completion config already exists in {} config file", shell);
                 }
 
                 CompletionConfigResult {
@@ -205,9 +205,9 @@ impl Completion {
                     })?;
 
                 if !removed {
-                    trace_debug!("Completion config not found in {} config file", shell);
+                    log_debug!("Completion config not found in {} config file", shell);
                 } else {
-                    trace_debug!("Completion config removed from {} config file", shell);
+                    log_debug!("Completion config removed from {} config file", shell);
                 }
             }
             Shell::Fish | Shell::PowerShell | Shell::Elvish => {
@@ -215,7 +215,7 @@ impl Completion {
                 Self::remove_completion_block_from_config(shell)?;
             }
             _ => {
-                trace_debug!("Unsupported shell type: {}", shell);
+                log_debug!("Unsupported shell type: {}", shell);
             }
         }
 
@@ -239,7 +239,7 @@ impl Completion {
             match Self::is_shell_configured_for_removal(shell) {
                 Ok(true) => {
                     if let Err(e) = Self::remove_completion_config(shell) {
-                        trace_debug!("Failed to remove completion config for {}: {}", shell, e);
+                        log_debug!("Failed to remove completion config for {}: {}", shell, e);
                     }
                 }
                 Ok(false) => {
@@ -313,9 +313,9 @@ impl Completion {
             })?;
 
         if removed {
-            trace_debug!("Completion config removed from {} config file", shell);
+            log_debug!("Completion config removed from {} config file", shell);
         } else {
-            trace_debug!("Completion config not found in {} config file", shell);
+            log_debug!("Completion config not found in {} config file", shell);
         }
 
         Ok(())
@@ -348,7 +348,7 @@ impl Completion {
     /// 删除所有 shell 类型的 completion 文件（zsh, bash, fish, powershell, elvish），
     /// 确保卸载时完全清理所有可能存在的 completion 文件。
     pub fn remove_completion_files(_shell: &Shell) -> Result<CompletionRemovalResult> {
-        trace_debug!("Removing completion files");
+        log_debug!("Removing completion files");
 
         let completion_dir = Paths::completion_dir()?;
         // 获取所有 shell 类型的 completion 文件
@@ -365,13 +365,13 @@ impl Completion {
             if file.exists() {
                 match fs::remove_file(file) {
                     Ok(_) => {
-                        trace_debug!("Removed completion file: {}", file.display());
+                        log_debug!("Removed completion file: {}", file.display());
                         removed_files.push(file.clone());
                         removed_count += 1;
                     }
                     Err(e) => {
                         let error_msg = format!("{}", e);
-                        trace_debug!("Failed to delete {}: {}", file.display(), error_msg);
+                        log_debug!("Failed to delete {}: {}", file.display(), error_msg);
                         failed_files.push((file.clone(), error_msg));
                     }
                 }
@@ -379,7 +379,7 @@ impl Completion {
         }
 
         if removed_count == 0 {
-            trace_debug!("Completion script files not found (may not be installed)");
+            log_debug!("Completion script files not found (may not be installed)");
         }
 
         Ok(CompletionRemovalResult {
@@ -391,7 +391,7 @@ impl Completion {
 
     /// 删除 workflow completion 配置文件
     pub fn remove_completion_config_file() -> Result<bool> {
-        trace_debug!("Removing completion config file");
+        log_debug!("Removing completion config file");
 
         // 使用本地路径（强制本地，不使用 iCloud）
         let workflow_config_file = Paths::local_base_dir()?.join(COMPLETIONS_FILE);
@@ -403,13 +403,13 @@ impl Completion {
                     workflow_config_file.display()
                 )
             })?;
-            trace_info!(
+            log_info!(
                 "Removed completion config file: {}",
                 workflow_config_file.display()
             );
             Ok(true)
         } else {
-            trace_info!(
+            log_info!(
                 "Completion config file not found: {}",
                 workflow_config_file.display()
             );

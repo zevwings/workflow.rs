@@ -1,11 +1,11 @@
-use crate::base::constants::{errors::http_client, git::check_errors, messages::log};
-use crate::base::http::client::HttpClient;
-use crate::base::http::{HttpMethod, RequestConfig};
-use crate::base::interactive::{spinner, TableBuilder, TableStyle};
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
-use crate::base::settings::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
+use crate::constants::{errors::http_client, git::check_errors, messages::log};
 use crate::git::{GitCommit, GitRepo};
+use crate::http::client::HttpClient;
+use crate::http::{HttpMethod, RequestConfig};
+use crate::interactive::{spinner, TableBuilder, TableStyle};
+use crate::settings::paths::Paths;
+use crate::settings::Settings;
+use crate::settings::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
 use crate::{br, error, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use duct::cmd;
@@ -136,13 +136,13 @@ impl CheckCommand {
             }
             if let Some(ref verification) = llm_result.verification {
                 match verification {
-                    crate::base::settings::LLMVerificationStatus::Success { test_response } => {
+                    crate::settings::LLMVerificationStatus::Success { test_response } => {
                         info!("  System prompt: You are a helpful assistant.");
                         info!("  User prompt: Say hello");
                         info!("  Response: {}", test_response);
                         success!("LLM verified successfully!");
                     }
-                    crate::base::settings::LLMVerificationStatus::Failed { reason, details } => {
+                    crate::settings::LLMVerificationStatus::Failed { reason, details } => {
                         warning!("{}", reason);
                         for detail in details {
                             info!("  {}", detail);
@@ -169,17 +169,14 @@ impl CheckCommand {
             }
             if let Some(ref verification) = jira_result.verification {
                 match verification {
-                    crate::base::settings::JiraVerificationStatus::Success {
-                        email,
-                        account_id,
-                    } => {
+                    crate::settings::JiraVerificationStatus::Success { email, account_id } => {
                         success!(
                             "Jira verified successfully! Email: {} (Account ID: {})",
                             email,
                             account_id
                         );
                     }
-                    crate::base::settings::JiraVerificationStatus::Failed { reason, details } => {
+                    crate::settings::JiraVerificationStatus::Failed { reason, details } => {
                         warning!("{}", reason);
                         for detail in details {
                             info!("  {}", detail);

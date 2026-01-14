@@ -6,8 +6,8 @@ use std::path::PathBuf;
 use clap_complete::shells::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::Detect;
+use crate::settings::paths::Paths;
+use crate::shell::Detect;
 use crate::{br, debug, info, success, warning, Completion};
 
 /// Shell 配置状态

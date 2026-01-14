@@ -6,8 +6,8 @@ use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::base::settings::paths::Paths;
 use crate::jira::config::ConfigManager;
+use crate::settings::paths::Paths;
 
 /// 迁移历史记录
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

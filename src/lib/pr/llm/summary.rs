@@ -8,8 +8,8 @@ use color_eyre::{
 };
 use serde_json::Value;
 
-use crate::base::llm::{LLMClient, LLMRequestParams};
-use crate::base::prompt::generate_summarize_pr_system_prompt;
+use crate::llm::{LLMClient, LLMRequestParams};
+use crate::prompt::generate_summarize_pr_system_prompt;
 
 use super::helpers::extract_json_from_markdown;
 

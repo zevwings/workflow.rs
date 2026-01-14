@@ -2,7 +2,7 @@ use chrono::{DateTime, Local};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 use super::GitCommand;
-use crate::trace_warn;
+use crate::log_warn;
 
 /// Stash 条目信息
 #[derive(Debug, Clone)]
@@ -300,7 +300,7 @@ impl GitStash {
                     ];
                     // 记录到 tracing（用于调试）
                     for warning in &warnings {
-                        trace_warn!("{}", warning);
+                        log_warn!("{}", warning);
                     }
                     // 返回包含警告的结果，而不是抛出错误
                     Ok(StashPopResult {
@@ -316,7 +316,7 @@ impl GitStash {
                     ];
                     // 记录到 tracing（用于调试）
                     for warning in &warnings {
-                        trace_warn!("{}", warning);
+                        log_warn!("{}", warning);
                     }
                     // 返回包含警告的结果，而不是抛出错误
                     Ok(StashPopResult {

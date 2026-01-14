@@ -1,6 +1,6 @@
 //! 附件过滤逻辑
 
-use crate::{trace_debug, JiraAttachment};
+use crate::{log_debug, JiraAttachment};
 use regex::Regex;
 
 /// 附件过滤器
@@ -44,9 +44,9 @@ impl AttachmentFilter {
 
         // 调试：显示过滤后的日志附件
         if !log_attachments.is_empty() {
-            trace_debug!("Filtered {} log attachment(s):", log_attachments.len());
+            log_debug!("Filtered {} log attachment(s):", log_attachments.len());
             for attachment in &log_attachments {
-                trace_debug!("  - {}", attachment.filename);
+                log_debug!("  - {}", attachment.filename);
             }
         }
 

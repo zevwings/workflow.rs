@@ -82,7 +82,7 @@ impl JiraIdArg {
     ///
     /// 提供统一的、用户友好的错误消息格式。
     fn format_validation_error(original_error: &str) -> String {
-        use crate::base::constants::errors::validation_errors;
+        use crate::constants::errors::validation_errors;
         format!(
             "Invalid JIRA ID format.\n{}\n\nError details: {}",
             validation_errors::JIRA_ID_FORMAT_HELP,
