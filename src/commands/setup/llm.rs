@@ -2,7 +2,7 @@
 
 use crate::base::interactive::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
-use crate::base::settings::settings::LLMSettings;
+use crate::base::settings::LLMSettings;
 use crate::commands::setup::types::{CollectedConfig, LLMConfig};
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};

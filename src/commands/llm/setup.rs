@@ -4,7 +4,7 @@
 use crate::base::interactive::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::{LLMSettings, Settings};
+use crate::base::settings::{LLMSettings, Settings};
 use crate::jira::config::ConfigManager;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};

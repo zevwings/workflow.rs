@@ -2,23 +2,38 @@
 //!
 //! List all stash entries in a table format.
 
-use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle, Tabled};
 use crate::git::GitStash;
 use crate::{br, info, success};
 use color_eyre::{eyre::WrapErr, Result};
-use tabled::Tabled;
 
 /// Stash 表格行
-#[derive(Tabled, Clone)]
+#[derive(Clone)]
 struct StashRow {
-    #[tabled(rename = "#")]
     index: String,
-    #[tabled(rename = "Message")]
     message: String,
-    #[tabled(rename = "Branch")]
     branch: String,
-    #[tabled(rename = "Created")]
     created: String,
+}
+
+impl Tabled for StashRow {
+    fn headers() -> Vec<String> {
+        vec![
+            "#".to_string(),
+            "Message".to_string(),
+            "Branch".to_string(),
+            "Created".to_string(),
+        ]
+    }
+
+    fn row(&self) -> Vec<String> {
+        vec![
+            self.index.clone(),
+            self.message.clone(),
+            self.branch.clone(),
+            self.created.clone(),
+        ]
+    }
 }
 
 /// Stash list command

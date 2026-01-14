@@ -54,5 +54,5 @@ pub use form::{
 };
 pub use output::{
     progress_bar, spinner, table, Alignment, Message, MessageRef, Progress, ProgressBar,
-    ProgressBarBuilder, Spinner, SpinnerBuilder, TableBuilder, TableStyle,
+    ProgressBarBuilder, Spinner, SpinnerBuilder, TableBuilder, TableStyle, Tabled,
 };

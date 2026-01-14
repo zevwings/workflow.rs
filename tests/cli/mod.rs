@@ -6,7 +6,6 @@ pub mod basic_cli;
 pub mod branch;
 pub mod check;
 pub mod commit;
-pub mod config;
 pub mod github;
 pub mod jira;
 pub mod lifecycle;

@@ -1,6 +1,6 @@
 //! GitHub 配置处理模块
 
-use crate::base::settings::settings::GitHubAccount;
+use crate::base::settings::GitHubAccount;
 use crate::commands::github::helpers::collect_github_account;
 use crate::commands::setup::types::CollectedConfig;
 use crate::git::GitConfig;

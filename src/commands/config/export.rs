@@ -2,7 +2,7 @@
 //! 导出配置文件用于备份和迁移
 
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
+use crate::base::settings::Settings;
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileWriter;
 use crate::commands::config::helpers::extract_section;

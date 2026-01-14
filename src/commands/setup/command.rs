@@ -2,8 +2,8 @@
 
 use crate::base::constants::messages::log;
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::{
-    GitHubSettings, JiraSettings, LLMSettings, LogSettings, Settings,
+use crate::base::settings::{
+    GitHubSettings, JiraSettings, LLMProviderSettings, LLMSettings, LogSettings, Settings,
 };
 use crate::commands::setup::log as log_config;
 use crate::commands::setup::types::CollectedConfig;
@@ -153,17 +153,17 @@ impl SetupCommand {
             llm: LLMSettings {
                 provider: config.llm_provider.clone(),
                 language: config.llm_language.clone(),
-                openai: crate::base::settings::settings::LLMProviderSettings {
+                openai: LLMProviderSettings {
                     url: None,
                     key: config.llm_openai_key.clone(),
                     model: config.llm_openai_model.clone(),
                 },
-                deepseek: crate::base::settings::settings::LLMProviderSettings {
+                deepseek: LLMProviderSettings {
                     url: None,
                     key: config.llm_deepseek_key.clone(),
                     model: config.llm_deepseek_model.clone(),
                 },
-                proxy: crate::base::settings::settings::LLMProviderSettings {
+                proxy: LLMProviderSettings {
                     url: config.llm_proxy_url.clone(),
                     key: config.llm_proxy_key.clone(),
                     model: config.llm_proxy_model.clone(),

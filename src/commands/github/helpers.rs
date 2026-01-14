@@ -2,7 +2,7 @@
 //!
 //! 提供 GitHub 账号管理的共享逻辑，减少代码重复。
 
-use crate::base::settings::settings::GitHubAccount;
+use crate::base::settings::GitHubAccount;
 use color_eyre::{eyre::WrapErr, Result};
 
 /// 收集 GitHub 账号信息
@@ -21,7 +21,7 @@ use color_eyre::{eyre::WrapErr, Result};
 ///
 /// 如果用户输入验证失败或输入过程中出错，返回错误
 pub fn collect_github_account() -> Result<GitHubAccount> {
-    let name = crate::input!("GitHub account name (required)")
+    let name = crate::input!("Please enter your GitHub account name (required)")
         .validator(|input: &str| {
             if input.trim().is_empty() {
                 Err("Account name is required and cannot be empty".to_string())
@@ -32,7 +32,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
         .prompt()
         .wrap_err("Failed to get GitHub account name")?;
 
-    let email = crate::input!("GitHub account email (required)")
+    let email = crate::input!("Please enter your GitHub account email (required)")
         .validator(|input: &str| {
             if input.trim().is_empty() {
                 Err("Email is required and cannot be empty".to_string())
@@ -45,7 +45,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
         .prompt()
         .wrap_err("Failed to get GitHub account email")?;
 
-    let api_token = crate::input!("GitHub API token (required)")
+    let api_token = crate::input!("Please enter your GitHub API token (required)")
         .validator(|input: &str| {
             if input.trim().is_empty() {
                 Err("GitHub API token is required and cannot be empty".to_string())
@@ -80,7 +80,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
 ///
 /// 如果用户输入验证失败或输入过程中出错，返回错误
 pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Result<GitHubAccount> {
-    let name = crate::input!("GitHub account name (press Enter to keep)")
+    let name = crate::input!("Please enter your GitHub account name (press Enter to keep)")
         .default(old_account.name.clone())
         .validator(|input: &str| {
             if input.trim().is_empty() {
@@ -92,7 +92,7 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
         .prompt()
         .wrap_err("Failed to get GitHub account name")?;
 
-    let email = crate::input!("GitHub account email (press Enter to keep)")
+    let email = crate::input!("Please enter your GitHub account email (press Enter to keep)")
         .default(old_account.email.clone())
         .validator(|input: &str| {
             if input.trim().is_empty() {
@@ -106,7 +106,7 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
         .prompt()
         .wrap_err("Failed to get GitHub account email")?;
 
-    let api_token = crate::input!("GitHub API token (press Enter to keep)")
+    let api_token = crate::input!("Please enter your GitHub API token (press Enter to keep)")
         .default(old_account.api_token.clone())
         .validator(|input: &str| {
             if input.trim().is_empty() {

@@ -5,6 +5,18 @@ use color_eyre::{eyre, Result};
 use std::io::Write;
 use unicode_width::UnicodeWidthStr;
 
+/// 表格行 trait
+///
+/// 实现此 trait 的类型可以自动转换为表格行。
+/// 提供表头和数据行的映射。
+pub trait Tabled {
+    /// 返回表格的列头
+    fn headers() -> Vec<String>;
+
+    /// 将当前实例转换为表格行数据
+    fn row(&self) -> Vec<String>;
+}
+
 /// 对齐方式
 #[derive(Debug, Clone, Copy)]
 pub enum Alignment {
@@ -515,6 +527,37 @@ pub fn table(headers: Vec<impl Into<String>>) -> TableBuilder {
     TableBuilder::new(headers)
 }
 
+/// 宏：简化 Tabled trait 的实现
+///
+/// 自动生成 `headers()` 和 `row()` 方法。
+///
+/// # 用法
+///
+/// ```rust,no_run
+/// use workflow::base::interactive::output::table::{Tabled, impl_tabled};
+///
+/// struct User {
+///     name: String,
+///     age: u32,
+/// }
+///
+/// impl_tabled!(User, ["Name", "Age"], |s| vec![s.name.clone(), s.age.to_string()]);
+/// ```
+#[macro_export]
+macro_rules! impl_tabled {
+    ($type:ty, [$($header:expr),+], |$self:ident| $body:expr) => {
+        impl $crate::base::interactive::output::table::Tabled for $type {
+            fn headers() -> Vec<String> {
+                vec![$($header.to_string()),+]
+            }
+
+            fn row(&$self) -> Vec<String> {
+                $body
+            }
+        }
+    };
+}
+
 // 支持 Tabled trait 的适配器
 impl TableBuilder {
     /// 从实现了 Tabled trait 的数据创建表格构建器
@@ -526,13 +569,21 @@ impl TableBuilder {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use tabled::Tabled;
-    /// use workflow::base::interactive::output::TableBuilder;
+    /// use workflow::base::interactive::output::table::{TableBuilder, Tabled};
     ///
-    /// #[derive(Tabled)]
     /// struct User {
     ///     name: String,
     ///     age: u32,
+    /// }
+    ///
+    /// impl Tabled for User {
+    ///     fn headers() -> Vec<String> {
+    ///         vec!["Name".to_string(), "Age".to_string()]
+    ///     }
+    ///
+    ///     fn row(&self) -> Vec<String> {
+    ///         vec![self.name.clone(), self.age.to_string()]
+    ///     }
     /// }
     ///
     /// let users = vec![
@@ -544,7 +595,7 @@ impl TableBuilder {
     ///     .with_style(TableStyle::Modern)
     ///     .render();
     /// ```
-    pub fn from_tabled<T: tabled::Tabled>(data: Vec<T>) -> Self {
+    pub fn from_tabled<T: Tabled>(data: Vec<T>) -> Self {
         if data.is_empty() {
             return Self {
                 headers: Vec::new(),
@@ -558,67 +609,9 @@ impl TableBuilder {
             };
         }
 
-        // 优化：只创建一次完整的表格，而不是为每个项目创建临时表格
-        // 使用 ASCII 样式以确保解析的一致性
-        let mut full_table = tabled::Table::new(&data);
-        full_table.with(tabled::settings::Style::ascii());
-        let table_str = format!("{}", full_table);
-        let lines: Vec<&str> = table_str.lines().collect();
-
-        // 从表头行提取列名（通常是第二行，第一行是顶部边框）
-        let headers = if lines.len() >= 2 {
-            let header_line = lines[1];
-            header_line
-                .split('|')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect()
-        } else {
-            Vec::new()
-        };
-
-        // 从完整的表格中提取所有数据行
-        // 表格结构（ASCII 样式）：
-        // - 第0行：顶部边框（如 "+---+---+"）
-        // - 第1行：表头（如 "| Header1 | Header2 |"）
-        // - 第2行：表头分隔线（如 "+---+---+"）
-        // - 第3行开始：数据行（如 "| Data1 | Data2 |"）
-        // - 行分隔线（如 "+---+---+"）
-        // - 最后一行：底部边框（如 "+---+---+"）
-        let rows: Vec<Vec<String>> = lines
-            .iter()
-            .skip(3) // 跳过顶部边框、表头、表头分隔线
-            .filter_map(|line| {
-                // 跳过边框和分隔线（ASCII 样式使用 '+', '-', '|'）
-                // 检查是否是边框/分隔线：只包含 '+', '-', '|', 空格，且包含 '+'
-                let trimmed = line.trim();
-                if trimmed.is_empty() {
-                    return None;
-                }
-                // 如果包含 '+'，说明是边框或分隔线
-                if trimmed.contains('+') {
-                    return None;
-                }
-                // 如果只包含 '-' 和 '|'，也是分隔线
-                if trimmed.chars().all(|c| c == '-' || c == '|' || c.is_whitespace()) {
-                    return None;
-                }
-                // 解析数据行（应该包含 '|' 分隔符）
-                if !trimmed.contains('|') {
-                    return None;
-                }
-                let row: Vec<String> = trimmed
-                    .split('|')
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-                    .collect();
-                if row.is_empty() {
-                    None
-                } else {
-                    Some(row)
-                }
-            })
-            .collect();
+        // 从第一个元素获取表头
+        let headers = T::headers();
+        let rows: Vec<Vec<String>> = data.iter().map(|item| item.row()).collect();
 
         Self {
             headers,

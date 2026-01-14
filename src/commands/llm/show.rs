@@ -2,8 +2,8 @@
 //! 显示当前的 LLM 配置信息
 
 use crate::base::interactive::{TableBuilder, TableStyle};
-use crate::base::settings::settings::{LLMSettings, Settings};
-use crate::base::settings::table::LLMConfigRow;
+use crate::base::settings::LLMConfigRow;
+use crate::base::settings::{LLMSettings, Settings};
 use crate::{br, info, success, warning};
 use color_eyre::Result;
 

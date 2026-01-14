@@ -238,7 +238,7 @@ impl InfoCommand {
         }
 
         // 显示 Jira URL
-        let settings = crate::base::settings::settings::Settings::get();
+        let settings = crate::base::settings::Settings::get();
         let jira_service_address = settings.jira.service_address.clone().unwrap_or_default();
         if !jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);
@@ -428,7 +428,7 @@ impl InfoCommand {
         }
 
         // 显示 Jira URL
-        let settings = crate::base::settings::settings::Settings::get();
+        let settings = crate::base::settings::Settings::get();
         let jira_service_address = settings.jira.service_address.clone().unwrap_or_default();
         if !jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);

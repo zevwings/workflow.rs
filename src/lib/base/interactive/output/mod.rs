@@ -14,4 +14,4 @@ mod table;
 pub use message::{Message, MessageRef};
 pub use progress::{progress_bar, Progress, ProgressBar, ProgressBarBuilder};
 pub use spinner::{spinner, Spinner, SpinnerBuilder};
-pub use table::{table, Alignment, TableBuilder, TableStyle};
+pub use table::{table, Alignment, TableBuilder, TableStyle, Tabled};

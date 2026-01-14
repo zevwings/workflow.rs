@@ -1,12 +1,51 @@
-use crate::base::constants::messages::log;
-use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::base::constants::{errors::http_client, git::check_errors, messages::log};
+use crate::base::http::client::HttpClient;
+use crate::base::http::{HttpMethod, RequestConfig};
+use crate::base::interactive::{spinner, TableBuilder, TableStyle};
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
-use crate::base::settings::table::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
-use crate::base::verify::{ConfigVerifier, EnvironmentVerifier};
+use crate::base::settings::Settings;
+use crate::base::settings::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
+use crate::git::{GitCommit, GitRepo};
 use crate::{br, error, info, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use duct::cmd;
+use serde_json::Value;
+use std::time::Duration;
+
+/// 环境检查结果
+#[derive(Debug, Clone)]
+struct EnvironmentCheckResult {
+    /// Git 状态检查结果
+    #[allow(dead_code)]
+    git_status: GitStatusCheck,
+    /// 网络连接检查结果
+    #[allow(dead_code)]
+    network: NetworkCheck,
+    /// 配置文件权限警告（如果有）
+    config_permissions_warning: Option<String>,
+}
+
+/// Git 状态检查结果
+#[derive(Debug, Clone)]
+struct GitStatusCheck {
+    /// 是否在 Git 仓库中
+    #[allow(dead_code)]
+    is_git_repo: bool,
+    /// Git 状态输出（如果有未提交的更改）
+    #[allow(dead_code)]
+    status_output: Option<String>,
+}
+
+/// 网络连接检查结果
+#[derive(Debug, Clone)]
+struct NetworkCheck {
+    /// 是否成功
+    #[allow(dead_code)]
+    success: bool,
+    /// 错误信息（如果失败）
+    #[allow(dead_code)]
+    error: Option<String>,
+}
 
 /// 环境检查命令
 #[allow(dead_code)]
@@ -39,7 +78,7 @@ impl CheckCommand {
         }
 
         // 2. 环境检查
-        let env_result = EnvironmentVerifier::verify_all()?;
+        let env_result = Self::verify_environment()?;
 
         // 显示配置文件权限警告（如果有）
         if let Some(warning_msg) = env_result.config_permissions_warning {
@@ -75,7 +114,7 @@ impl CheckCommand {
         // 1. 验证 Log 配置
         br!();
         info!("Verifying Log configuration...");
-        let log_config = ConfigVerifier::verify_log_config(&settings.log);
+        let log_config = settings.log.get_config_info();
         info!("Log Output Folder Name: {}", log_config.output_folder_name);
         if let Some(ref dir) = log_config.download_base_dir {
             info!("Download Base Dir: {}", dir);
@@ -83,20 +122,42 @@ impl CheckCommand {
 
         // 2. 验证 LLM 配置
         br!();
-        info!("Verifying LLM configuration...");
-        let llm_config = ConfigVerifier::verify_llm_config(&settings.llm);
-        let config_rows = vec![LLMConfigRow {
-            provider: llm_config.provider.clone(),
-            model: llm_config.model.clone(),
-            key: llm_config.key.clone(),
-            language: llm_config.language.clone(),
-        }];
-        TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).print()?;
+        let llm_result =
+            spinner("Verifying LLM configuration...").with(|| settings.llm.verify())?;
+        if llm_result.configured {
+            if let Some(ref config) = llm_result.config {
+                let config_rows = vec![LLMConfigRow {
+                    provider: config.provider.clone(),
+                    model: config.model.clone(),
+                    key: config.key.clone(),
+                    language: config.language.clone(),
+                }];
+                TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).print()?;
+            }
+            if let Some(ref verification) = llm_result.verification {
+                match verification {
+                    crate::base::settings::LLMVerificationStatus::Success { test_response } => {
+                        info!("  System prompt: You are a helpful assistant.");
+                        info!("  User prompt: Say hello");
+                        info!("  Response: {}", test_response);
+                        success!("LLM verified successfully!");
+                    }
+                    crate::base::settings::LLMVerificationStatus::Failed { reason, details } => {
+                        warning!("{}", reason);
+                        for detail in details {
+                            info!("  {}", detail);
+                        }
+                    }
+                }
+            }
+        } else {
+            info!("No LLM configuration found.");
+        }
 
         // 3. 验证 Jira 配置
         br!();
-        info!("Verifying Jira configuration...");
-        let jira_result = ConfigVerifier::verify_jira_config(&settings.jira)?;
+        let jira_result =
+            spinner("Verifying Jira configuration...").with(|| settings.jira.verify())?;
         if jira_result.configured {
             if let Some(ref config) = jira_result.config {
                 let config_rows = vec![JiraConfigRow {
@@ -104,11 +165,11 @@ impl CheckCommand {
                     service_address: config.service_address.clone(),
                     api_token: config.api_token.clone(),
                 }];
-                TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).print();
+                TableBuilder::from_tabled(config_rows).with_style(TableStyle::Modern).print()?;
             }
             if let Some(ref verification) = jira_result.verification {
                 match verification {
-                    crate::base::settings::settings::JiraVerificationStatus::Success {
+                    crate::base::settings::JiraVerificationStatus::Success {
                         email,
                         account_id,
                     } => {
@@ -118,10 +179,7 @@ impl CheckCommand {
                             account_id
                         );
                     }
-                    crate::base::settings::settings::JiraVerificationStatus::Failed {
-                        reason,
-                        details,
-                    } => {
+                    crate::base::settings::JiraVerificationStatus::Failed { reason, details } => {
                         warning!("{}", reason);
                         for detail in details {
                             info!("  {}", detail);
@@ -135,8 +193,8 @@ impl CheckCommand {
 
         // 4. 验证 GitHub 配置
         br!();
-        info!("Verifying GitHub configuration...");
-        let github_result = ConfigVerifier::verify_github_config(&settings.github)?;
+        let github_result =
+            spinner("Verifying GitHub configuration...").with(|| settings.github.verify())?;
         if github_result.configured {
             let account_rows: Vec<GitHubAccountRow> = github_result
                 .accounts
@@ -189,6 +247,100 @@ impl CheckCommand {
         }
 
         Ok(())
+    }
+
+    /// 执行完整的环境检查
+    ///
+    /// 包括：
+    /// - Git 仓库状态检查
+    /// - 网络连接检查（GitHub）
+    /// - 配置文件权限检查
+    fn verify_environment() -> Result<EnvironmentCheckResult> {
+        info!("Running environment checks...");
+        br!();
+
+        // 1. 检查 Git 状态
+        let git_status = Self::check_git_status()?;
+
+        br!();
+
+        // 2. 检查网络连接
+        let network = Self::check_network()?;
+
+        br!();
+
+        // 3. 检查配置文件权限
+        let config_permissions_warning = Self::check_config_permissions();
+
+        Ok(EnvironmentCheckResult {
+            git_status,
+            network,
+            config_permissions_warning,
+        })
+    }
+
+    /// 检查 Git 仓库状态
+    fn check_git_status() -> Result<GitStatusCheck> {
+        info!("[1/2] Checking Git repository status...");
+        if !GitRepo::is_git_repo() {
+            error!("Not in a Git repository");
+            return Err(color_eyre::eyre::eyre!("{}", check_errors::NOT_GIT_REPO));
+        }
+
+        let git_output = GitCommit::status().wrap_err("Failed to check git status")?;
+        if git_output.trim().is_empty() {
+            success!("Git repository is clean (no uncommitted changes)");
+            Ok(GitStatusCheck {
+                is_git_repo: true,
+                status_output: None,
+            })
+        } else {
+            info!("Git status:\n{}", git_output);
+            Ok(GitStatusCheck {
+                is_git_repo: true,
+                status_output: Some(git_output),
+            })
+        }
+    }
+
+    /// 检查网络连接（GitHub）
+    fn check_network() -> Result<NetworkCheck> {
+        info!("[2/2] Checking network connection to GitHub...");
+        let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
+        let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
+        match client.stream(HttpMethod::Get, crate::git::github::BASE, config) {
+            Ok(response) => {
+                if response.status().is_success() {
+                    success!("GitHub network is available");
+                    Ok(NetworkCheck {
+                        success: true,
+                        error: None,
+                    })
+                } else {
+                    let error_msg = format!(
+                        "GitHub network check failed (status: {})",
+                        response.status()
+                    );
+                    error!("{}", error_msg);
+                    Err(color_eyre::eyre::eyre!("Network check failed"))
+                }
+            }
+            Err(e) => {
+                let error_msg = format!("Failed to check network connection: {}", e);
+                error!("{}", error_msg);
+                error!(
+                    "  This might be due to network issues, proxy settings, or firewall restrictions"
+                );
+                Err(color_eyre::eyre::eyre!("Network check failed: {}", e))
+            }
+        }
+    }
+
+    /// 检查配置文件权限
+    ///
+    /// 返回警告信息（如果有），否则返回 `None`。
+    fn check_config_permissions() -> Option<String> {
+        Settings::check_permissions()
     }
 
     /// 执行代码质量检查（Lint）

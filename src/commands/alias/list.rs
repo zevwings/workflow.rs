@@ -3,18 +3,25 @@
 //! 显示所有已定义的别名，使用表格格式。
 
 use crate::base::alias::AliasManager;
-use crate::base::interactive::{TableBuilder, TableStyle};
+use crate::base::interactive::{TableBuilder, TableStyle, Tabled};
 use crate::{br, info, success};
 use color_eyre::Result;
-use tabled::Tabled;
 
 /// 别名表格行
-#[derive(Tabled, Clone)]
+#[derive(Clone)]
 struct AliasRow {
-    #[tabled(rename = "Alias Name")]
     alias_name: String,
-    #[tabled(rename = "Command")]
     command: String,
+}
+
+impl Tabled for AliasRow {
+    fn headers() -> Vec<String> {
+        vec!["Alias Name".to_string(), "Command".to_string()]
+    }
+
+    fn row(&self) -> Vec<String> {
+        vec![self.alias_name.clone(), self.command.clone()]
+    }
 }
 
 /// 别名列表命令

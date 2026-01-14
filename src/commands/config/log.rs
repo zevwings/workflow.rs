@@ -1,6 +1,6 @@
 use crate::base::constants::messages::log;
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
+use crate::base::settings::Settings;
 use crate::base::LogLevel;
 use crate::jira::config::ConfigManager;
 use crate::select;

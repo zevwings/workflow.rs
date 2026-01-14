@@ -3,7 +3,7 @@
 use crate::base::interactive::{
     ConfirmFormField, FormBuilder, GroupConfig, InputFormField, SelectFormField,
 };
-use crate::base::settings::settings::{default_download_base_dir, LogSettings};
+use crate::base::settings::{default_download_base_dir, LogSettings};
 use crate::commands::setup::types::{CollectedConfig, LogConfig};
 use crate::{br, info};
 use color_eyre::{eyre::WrapErr, Result};

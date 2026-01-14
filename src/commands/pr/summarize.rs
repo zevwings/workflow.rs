@@ -9,7 +9,7 @@ use color_eyre::{
 use std::path::PathBuf;
 
 use crate::base::interactive::spinner;
-use crate::base::settings::settings::default_download_base_dir;
+use crate::base::settings::default_download_base_dir;
 use crate::base::settings::Settings;
 use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileWriter;

@@ -8,12 +8,10 @@
 
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
-use workflow::base::settings::settings::{
-    default_download_base_dir, GitHubAccount, GitHubSettings, JiraSettings, LLMProviderSettings,
-    LogSettings,
-};
 use workflow::base::settings::{
-    GitHubAccountListRow, GitHubAccountRow, JiraConfigRow, LLMConfigRow, LLMSettings, Settings,
+    default_download_base_dir, GitHubAccount, GitHubAccountListRow, GitHubAccountRow,
+    GitHubSettings, JiraConfigRow, JiraSettings, LLMConfigRow, LLMProviderSettings, LLMSettings,
+    LogSettings, Settings,
 };
 
 // ==================== Helper Functions ====================

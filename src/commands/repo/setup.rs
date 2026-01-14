@@ -6,7 +6,7 @@
 use crate::base::interactive::{ConfirmFormField, FormBuilder, GroupConfig, InputFormField};
 use crate::base::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::{GitHubAccount, Settings};
+use crate::base::settings::{GitHubAccount, Settings};
 use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};

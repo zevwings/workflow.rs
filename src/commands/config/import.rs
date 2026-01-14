@@ -12,7 +12,7 @@ use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 // 项目内部导入
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
+use crate::base::settings::Settings;
 use crate::base::util::date::get_unix_timestamp;
 use crate::base::util::file::{FileReader, FileWriter};
 use crate::commands::config::helpers::{extract_section, parse_config};

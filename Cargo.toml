@@ -26,7 +26,6 @@ indicatif = "0.17"
 inquire = "0.9"
 dialoguer = "0.11"
 fuzzy-matcher = "0.3"
-tabled = "0.14"
 reqwest = { version = "0.11", features = ["json", "blocking", "multipart", "rustls-tls"], default-features = false }
 regex = "1.10"
 open = "5.0"

@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 use super::types::{ChatCompletionResponse, LLMRequestParams};
 use crate::{
-    base::{http::HttpResponse, settings::settings::LLMSettings},
+    base::{http::HttpResponse, settings::LLMSettings},
     Settings,
 };
 

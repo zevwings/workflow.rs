@@ -4,7 +4,7 @@
 //! 同时提供配置解析和提取的共享函数，减少代码冗余。
 
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
-use crate::base::settings::settings::Settings;
+use crate::base::settings::Settings;
 use crate::select;
 use color_eyre::{
     eyre::{eyre, ContextCompat, WrapErr},
