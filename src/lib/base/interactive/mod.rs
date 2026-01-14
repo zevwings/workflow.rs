@@ -16,6 +16,7 @@
 //!
 //! ```rust,no_run
 //! use workflow::base::interactive::*;
+//! use workflow::{input, confirm};
 //!
 //! fn main() -> Result<()> {
 //!     // 输入提示（使用宏）

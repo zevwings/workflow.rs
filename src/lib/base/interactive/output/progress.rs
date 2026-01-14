@@ -5,7 +5,7 @@
 //! # 示例
 //!
 //! ```rust,no_run
-//! use workflow::base::interactive::output::{progress_bar, Progress};
+//! use workflow::base::interactive::{progress_bar, Progress};
 //!
 //! // 方式 1：已知总数
 //! let pb = progress_bar("Downloading files...")
@@ -61,7 +61,7 @@ enum ProgressMode {
 /// # 示例
 ///
 /// ```rust,no_run
-/// use workflow::base::interactive::output::progress_bar;
+/// use workflow::base::interactive::progress_bar;
 ///
 /// let pb = progress_bar("Processing...")
 ///     .with_total(100)
@@ -264,7 +264,7 @@ impl ProgressBar {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::interactive::output::progress_bar;
+    /// use workflow::base::interactive::progress_bar;
     /// use std::sync::{Arc, Mutex};
     ///
     /// let progress = Arc::new(Mutex::new(progress_bar("Processing...")
@@ -290,7 +290,7 @@ impl ProgressBar {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::interactive::output::progress_bar;
+    /// use workflow::base::interactive::progress_bar;
     ///
     /// let pb = progress_bar("Downloading...").with_total(100).start();
     /// // 执行操作
@@ -363,7 +363,7 @@ impl Drop for ProgressBar {
 /// # 示例
 ///
 /// ```rust,no_run
-/// use workflow::base::interactive::output::progress_bar;
+/// use workflow::base::interactive::progress_bar;
 /// use std::time::Duration;
 ///
 /// let pb = progress_bar("Downloading...")
@@ -749,6 +749,6 @@ pub fn progress_bar(message: impl Into<String>) -> ProgressBarBuilder {
 #[macro_export]
 macro_rules! progress {
     ($($arg:tt)*) => {
-        $crate::base::interactive::output::progress_bar(format!($($arg)*))
+        $crate::base::interactive::progress_bar(format!($($arg)*))
     };
 }

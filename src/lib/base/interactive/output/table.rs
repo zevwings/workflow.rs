@@ -534,7 +534,8 @@ pub fn table(headers: Vec<impl Into<String>>) -> TableBuilder {
 /// # 用法
 ///
 /// ```rust,no_run
-/// use workflow::base::interactive::output::table::{Tabled, impl_tabled};
+/// use workflow::base::interactive::Tabled;
+/// use workflow::impl_tabled;
 ///
 /// struct User {
 ///     name: String,
@@ -546,12 +547,13 @@ pub fn table(headers: Vec<impl Into<String>>) -> TableBuilder {
 #[macro_export]
 macro_rules! impl_tabled {
     ($type:ty, [$($header:expr),+], |$self:ident| $body:expr) => {
-        impl $crate::base::interactive::output::table::Tabled for $type {
+        impl $crate::base::interactive::Tabled for $type {
             fn headers() -> Vec<String> {
                 vec![$($header.to_string()),+]
             }
 
-            fn row(&$self) -> Vec<String> {
+            fn row(&self) -> Vec<String> {
+                let $self = self;
                 $body
             }
         }
@@ -569,7 +571,7 @@ impl TableBuilder {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::interactive::output::table::{TableBuilder, Tabled};
+    /// use workflow::base::interactive::{TableBuilder, Tabled, TableStyle};
     ///
     /// struct User {
     ///     name: String,

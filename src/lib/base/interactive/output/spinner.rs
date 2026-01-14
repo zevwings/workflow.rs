@@ -260,7 +260,8 @@ impl SpinnerBuilder {
     /// let result: Result<i32, Box<dyn std::error::Error>> = spinner("Creating PR...").with(|| {
     ///     // 执行操作
     ///     Ok(42)
-    /// })?;
+    /// });
+    /// result?;
     /// # Ok(())
     /// # }
     /// ```
@@ -313,7 +314,7 @@ impl SpinnerBuilder {
     /// let result: Result<(), Box<dyn std::error::Error>> = spinner("Pushing to remote...").with_output(|| {
     ///     // 执行操作
     ///     Ok(())
-    /// })?;
+    /// });
     /// result?;
     /// success!("Pushed to remote successfully");
     /// # Ok(())
@@ -386,7 +387,7 @@ pub fn spinner(message: impl Into<String>) -> SpinnerBuilder {
 /// spinner!("Getting ticket info for {}...", "PROJ-123")
 ///     .with(|| {
 ///         // 执行操作
-///         Ok(())
+///         Ok::<(), Box<dyn std::error::Error>>(())
 ///     })?;
 /// # Ok(())
 /// # }

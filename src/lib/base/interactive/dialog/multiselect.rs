@@ -435,13 +435,13 @@ where
 /// ```
 #[macro_export]
 macro_rules! multiselect {
-    // 格式化字符串 + 多个参数 + 选项（用逗号分隔）
-    ($fmt:literal, $($arg:expr),+ $(,)?, $options:expr) => {
-        $crate::base::interactive::MultiSelectBuilder::new(format!($fmt, $($arg),+), $options)
-    };
-    // 格式化字符串 + 单个参数 + 选项（用逗号分隔）
+    // 格式化字符串 + 单个参数 + 选项（用逗号分隔）- 必须放在多参数模式之前以避免歧义
     ($fmt:literal, $arg:expr, $options:expr) => {
         $crate::base::interactive::MultiSelectBuilder::new(format!($fmt, $arg), $options)
+    };
+    // 格式化字符串 + 多个参数（2个或更多）+ 选项（用逗号分隔）
+    ($fmt:literal, $arg1:expr, $arg2:expr, $($arg:expr),+ $(,)?, $options:expr) => {
+        $crate::base::interactive::MultiSelectBuilder::new(format!($fmt, $arg1, $arg2, $($arg),+), $options)
     };
     // 简单字符串字面量 + 选项列表
     ($msg:literal, $options:expr) => {
