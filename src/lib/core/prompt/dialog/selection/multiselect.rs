@@ -454,3 +454,58 @@ macro_rules! multiselect {
         $crate::prompt::MultiSelectBuilder::new($msg, $options)
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_multiselect_builder_new() {
+        let options = vec!["Option 1", "Option 2", "Option 3"];
+        let builder = MultiSelectBuilder::new("Choose options", options.clone());
+        assert_eq!(builder.message, "Choose options");
+        assert_eq!(builder.options.len(), 3);
+        assert!(builder.default.is_empty());
+        assert!(builder.result_title.is_none());
+    }
+
+    #[test]
+    fn test_multiselect_builder_default() {
+        let options = vec!["Option 1", "Option 2", "Option 3"];
+        let builder = MultiSelectBuilder::new("Choose", options).default(vec![0, 2]);
+        assert_eq!(builder.default, vec![0, 2]);
+    }
+
+    #[test]
+    fn test_multiselect_builder_default_empty() {
+        let options = vec!["Option 1", "Option 2"];
+        let builder = MultiSelectBuilder::new("Choose", options).default(vec![]);
+        assert!(builder.default.is_empty());
+    }
+
+    #[test]
+    fn test_multiselect_builder_result_title() {
+        let options = vec!["Option 1", "Option 2"];
+        let builder = MultiSelectBuilder::new("Choose", options).result_title("Selected");
+        assert_eq!(builder.result_title, Some("Selected".to_string()));
+    }
+
+    #[test]
+    fn test_multiselect_builder_chain() {
+        let options = vec!["A", "B", "C"];
+        let builder = MultiSelectBuilder::new("Select", options)
+            .default(vec![0, 1])
+            .result_title("Choices");
+
+        assert_eq!(builder.message, "Select");
+        assert_eq!(builder.default, vec![0, 1]);
+        assert_eq!(builder.result_title, Some("Choices".to_string()));
+    }
+
+    #[test]
+    fn test_multiselect_builder_with_string_options() {
+        let options: Vec<String> = vec!["Option 1".to_string(), "Option 2".to_string()];
+        let builder = MultiSelectBuilder::new("Choose", options);
+        assert_eq!(builder.options.len(), 2);
+    }
+}

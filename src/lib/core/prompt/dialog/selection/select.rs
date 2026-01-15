@@ -362,3 +362,49 @@ macro_rules! select {
         $crate::prompt::SelectBuilder::new($msg, $options)
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_select_builder_new() {
+        let options = vec!["Option 1", "Option 2", "Option 3"];
+        let builder = SelectBuilder::new("Choose an option", options.clone());
+        assert_eq!(builder.message, "Choose an option");
+        assert_eq!(builder.options.len(), 3);
+        assert!(builder.default.is_none());
+        assert!(builder.result_title.is_none());
+    }
+
+    #[test]
+    fn test_select_builder_default() {
+        let options = vec!["Option 1", "Option 2", "Option 3"];
+        let builder = SelectBuilder::new("Choose", options).default(1);
+        assert_eq!(builder.default, Some(1));
+    }
+
+    #[test]
+    fn test_select_builder_result_title() {
+        let options = vec!["Option 1", "Option 2"];
+        let builder = SelectBuilder::new("Choose", options).result_title("Selected");
+        assert_eq!(builder.result_title, Some("Selected".to_string()));
+    }
+
+    #[test]
+    fn test_select_builder_chain() {
+        let options = vec!["A", "B", "C"];
+        let builder = SelectBuilder::new("Select", options).default(0).result_title("Choice");
+
+        assert_eq!(builder.message, "Select");
+        assert_eq!(builder.default, Some(0));
+        assert_eq!(builder.result_title, Some("Choice".to_string()));
+    }
+
+    #[test]
+    fn test_select_builder_with_string_options() {
+        let options: Vec<String> = vec!["Option 1".to_string(), "Option 2".to_string()];
+        let builder = SelectBuilder::new("Choose", options);
+        assert_eq!(builder.options.len(), 2);
+    }
+}

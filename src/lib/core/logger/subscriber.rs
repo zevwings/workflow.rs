@@ -179,12 +179,9 @@ mod tests {
 
     #[rstest]
     #[serial]
-    #[case(None, false)] // 文本格式
-    #[case(Some("json".to_string()), true)] // JSON 格式
-    fn test_logger_init_with_none_level(
-        #[case] log_format: Option<String>,
-        #[case] _use_json: bool,
-    ) {
+    #[case(None)] // 文本格式
+    #[case(Some("json".to_string()))] // JSON 格式
+    fn test_logger_init_with_none_level(#[case] log_format: Option<String>) {
         let config = MockConfigProvider::new(Some(LogLevel::None), log_format, false, None);
         let result = init(Some("test-command"), &config);
         // tracing subscriber 只能初始化一次，后续初始化会失败，这是预期的行为
@@ -197,12 +194,9 @@ mod tests {
 
     #[rstest]
     #[serial]
-    #[case(None, false)] // 文本格式
-    #[case(Some("json".to_string()), true)] // JSON 格式
-    fn test_logger_init_with_file_output(
-        #[case] log_format: Option<String>,
-        #[case] _use_json: bool,
-    ) {
+    #[case(None)] // 文本格式
+    #[case(Some("json".to_string()))] // JSON 格式
+    fn test_logger_init_with_file_output(#[case] log_format: Option<String>) {
         let temp_dir = TempDir::new().expect("Should create temp dir");
         let logs_dir = temp_dir.path().to_path_buf();
         let config =
@@ -218,12 +212,9 @@ mod tests {
 
     #[rstest]
     #[serial]
-    #[case(None, false)] // 文本格式
-    #[case(Some("json".to_string()), true)] // JSON 格式
-    fn test_logger_init_fallback_to_stderr(
-        #[case] log_format: Option<String>,
-        #[case] _use_json: bool,
-    ) {
+    #[case(None)] // 文本格式
+    #[case(Some("json".to_string()))] // JSON 格式
+    fn test_logger_init_fallback_to_stderr(#[case] log_format: Option<String>) {
         let invalid_dir = PathBuf::from("/nonexistent/path/that/should/not/exist");
         let config =
             MockConfigProvider::new(Some(LogLevel::Debug), log_format, false, Some(invalid_dir));
@@ -238,12 +229,9 @@ mod tests {
 
     #[rstest]
     #[serial]
-    #[case(None, false)] // 文本格式
-    #[case(Some("json".to_string()), true)] // JSON 格式
-    fn test_logger_init_with_console_enabled(
-        #[case] log_format: Option<String>,
-        #[case] _use_json: bool,
-    ) {
+    #[case(None)] // 文本格式
+    #[case(Some("json".to_string()))] // JSON 格式
+    fn test_logger_init_with_console_enabled(#[case] log_format: Option<String>) {
         let temp_dir = TempDir::new().expect("Should create temp dir");
         let logs_dir = temp_dir.path().to_path_buf();
         let config = MockConfigProvider::new(

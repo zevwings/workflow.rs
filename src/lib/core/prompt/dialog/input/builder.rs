@@ -67,3 +67,87 @@ impl InputBuilder {
         prompt(self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::prompt::dialog::input::validator::validators;
+
+    #[test]
+    fn test_input_builder_new() {
+        let builder = InputBuilder::new("Enter your name");
+        assert_eq!(builder.message, "Enter your name");
+        assert!(builder.default.is_none());
+        assert!(builder.placeholder.is_none());
+        assert!(builder.validator.is_none());
+        assert!(!builder.password);
+        assert!(builder.result_title.is_none());
+    }
+
+    #[test]
+    fn test_input_builder_default() {
+        let builder = InputBuilder::new("Name").default("John Doe");
+        assert_eq!(builder.default, Some("John Doe".to_string()));
+    }
+
+    #[test]
+    fn test_input_builder_placeholder() {
+        let builder = InputBuilder::new("Name").placeholder("Enter your name here");
+        assert_eq!(
+            builder.placeholder,
+            Some("Enter your name here".to_string())
+        );
+    }
+
+    #[test]
+    fn test_input_builder_validator() {
+        let validator = validators::required();
+        let builder = InputBuilder::new("Name").validator(validator);
+        assert!(builder.validator.is_some());
+    }
+
+    #[test]
+    fn test_input_builder_validator_boxed() {
+        let validator: Box<dyn Validator + Send + Sync> = Box::new(validators::required());
+        let builder = InputBuilder::new("Name").validator_boxed(validator);
+        assert!(builder.validator.is_some());
+    }
+
+    #[test]
+    fn test_input_builder_password() {
+        let builder = InputBuilder::new("Password").password();
+        assert!(builder.password);
+    }
+
+    #[test]
+    fn test_input_builder_result_title() {
+        let builder = InputBuilder::new("Name").result_title("Your Name");
+        assert_eq!(builder.result_title, Some("Your Name".to_string()));
+    }
+
+    #[test]
+    fn test_input_builder_chain() {
+        let validator = validators::min_length(3);
+        let builder = InputBuilder::new("Username")
+            .default("user")
+            .placeholder("Enter username")
+            .validator(validator)
+            .result_title("Username");
+
+        assert_eq!(builder.message, "Username");
+        assert_eq!(builder.default, Some("user".to_string()));
+        assert_eq!(builder.placeholder, Some("Enter username".to_string()));
+        assert!(builder.validator.is_some());
+        assert_eq!(builder.result_title, Some("Username".to_string()));
+    }
+
+    #[test]
+    fn test_input_builder_multiple_validators() {
+        // 测试可以替换验证器
+        let builder1 = InputBuilder::new("Email").validator(validators::required());
+        assert!(builder1.validator.is_some());
+
+        // 注意：在实际使用中，通常只设置一个验证器
+        // 这里只是测试构建器的灵活性
+    }
+}

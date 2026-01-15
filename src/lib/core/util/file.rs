@@ -283,8 +283,9 @@ mod tests {
             let _ = reader2.to_string();
         }
 
-        #[rstest]
-        fn test_open(temp_dir: TempDir) -> Result<()> {
+        #[test]
+        fn test_open() -> Result<()> {
+            let temp_dir = tempfile::tempdir()?;
             let file_path = temp_dir.path().join("test.txt");
             fs::File::create(&file_path)?;
 
@@ -335,108 +336,45 @@ mod tests {
         }
 
         #[rstest]
-        fn test_lines(temp_dir: TempDir) -> Result<()> {
+        #[case("line1\nline2\nline3", 3, vec!["line1", "line2", "line3"])]
+        #[case("", 0, vec![])] // 空文件
+        #[case("line1\n\nline2\n\n\nline3", 6, vec!["line1", "", "line2", "", "", "line3"])] // 包含空行
+        #[case("line1\nline2", 2, vec!["line1", "line2"])] // 无尾随换行符
+        fn test_lines(
+            temp_dir: TempDir,
+            #[case] content: &str,
+            #[case] expected_len: usize,
+            #[case] expected_lines: Vec<&str>,
+        ) -> Result<()> {
             let file_path = temp_dir.path().join("test.txt");
-            let content = "line1\nline2\nline3";
-
-            std::fs::write(&file_path, content)?;
+            if content.is_empty() {
+                fs::File::create(&file_path)?;
+            } else {
+                std::fs::write(&file_path, content)?;
+            }
 
             let reader = FileReader::new(&file_path);
             let lines = reader.lines()?;
 
-            assert_eq!(lines.len(), 3);
-            assert_eq!(lines[0], "line1");
-            assert_eq!(lines[1], "line2");
-            assert_eq!(lines[2], "line3");
+            assert_eq!(lines.len(), expected_len);
+            for (i, expected) in expected_lines.iter().enumerate() {
+                assert_eq!(lines[i], *expected);
+            }
 
             Ok(())
         }
 
         #[rstest]
-        fn test_lines_empty_file(temp_dir: TempDir) -> Result<()> {
-            let file_path = temp_dir.path().join("test.txt");
-            fs::File::create(&file_path)?;
-
-            let reader = FileReader::new(&file_path);
-            let lines = reader.lines()?;
-
-            assert_eq!(lines.len(), 0);
-
-            Ok(())
-        }
-
-        #[rstest]
-        fn test_lines_with_empty_lines(temp_dir: TempDir) -> Result<()> {
-            let file_path = temp_dir.path().join("test.txt");
-            let content = "line1\n\nline2\n\n\nline3";
-
-            std::fs::write(&file_path, content)?;
-
-            let reader = FileReader::new(&file_path);
-            let lines = reader.lines()?;
-
-            assert_eq!(lines.len(), 6);
-            assert_eq!(lines[0], "line1");
-            assert_eq!(lines[1], "");
-            assert_eq!(lines[2], "line2");
-            assert_eq!(lines[3], "");
-            assert_eq!(lines[4], "");
-            assert_eq!(lines[5], "line3");
-
-            Ok(())
-        }
-
-        #[rstest]
-        fn test_lines_without_trailing_newline(temp_dir: TempDir) -> Result<()> {
-            let file_path = temp_dir.path().join("test.txt");
-            let content = "line1\nline2";
-
-            std::fs::write(&file_path, content)?;
-
-            let reader = FileReader::new(&file_path);
-            let lines = reader.lines()?;
-
-            assert_eq!(lines.len(), 2);
-            assert_eq!(lines[0], "line1");
-            assert_eq!(lines[1], "line2");
-
-            Ok(())
-        }
-
-        #[rstest]
-        fn test_bytes(temp_dir: TempDir) -> Result<()> {
+        #[case(b"Hello, World!".as_slice())]
+        #[case(&[])] // 空文件
+        #[case(&[0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD])] // 二进制数据
+        fn test_bytes(temp_dir: TempDir, #[case] content: &[u8]) -> Result<()> {
             let file_path = temp_dir.path().join("test.bin");
-            let content = b"Hello, World!";
-
-            std::fs::write(&file_path, content)?;
-
-            let reader = FileReader::new(&file_path);
-            let bytes = reader.bytes()?;
-
-            assert_eq!(bytes, content);
-
-            Ok(())
-        }
-
-        #[rstest]
-        fn test_bytes_empty_file(temp_dir: TempDir) -> Result<()> {
-            let file_path = temp_dir.path().join("test.bin");
-            fs::File::create(&file_path)?;
-
-            let reader = FileReader::new(&file_path);
-            let bytes = reader.bytes()?;
-
-            assert_eq!(bytes.len(), 0);
-
-            Ok(())
-        }
-
-        #[rstest]
-        fn test_bytes_binary_data(temp_dir: TempDir) -> Result<()> {
-            let file_path = temp_dir.path().join("test.bin");
-            let content: Vec<u8> = vec![0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD];
-
-            std::fs::write(&file_path, &content)?;
+            if content.is_empty() {
+                fs::File::create(&file_path)?;
+            } else {
+                std::fs::write(&file_path, content)?;
+            }
 
             let reader = FileReader::new(&file_path);
             let bytes = reader.bytes()?;
@@ -606,29 +544,25 @@ name = "test"
         }
 
         #[rstest]
-        fn test_ensure_parent_dir(temp_dir: TempDir) -> Result<()> {
-            let file_path = temp_dir.path().join("subdir/nested/file.txt");
+        #[case(false)] // 目录不存在，需要创建
+        #[case(true)] // 目录已存在
+        fn test_ensure_parent_dir(temp_dir: TempDir, #[case] dir_exists: bool) -> Result<()> {
+            let file_path = if dir_exists {
+                temp_dir.path().join("existing/file.txt")
+            } else {
+                temp_dir.path().join("subdir/nested/file.txt")
+            };
+
+            if dir_exists {
+                // 先创建目录
+                fs::create_dir_all(file_path.parent().unwrap())?;
+            }
 
             let writer = FileWriter::new(&file_path);
             writer.ensure_parent_dir()?;
 
             assert!(file_path.parent().unwrap().exists());
             assert!(file_path.parent().unwrap().is_dir());
-
-            Ok(())
-        }
-
-        #[rstest]
-        fn test_ensure_parent_dir_already_exists(temp_dir: TempDir) -> Result<()> {
-            let file_path = temp_dir.path().join("existing/file.txt");
-
-            // 先创建目录
-            fs::create_dir_all(file_path.parent().unwrap())?;
-
-            let writer = FileWriter::new(&file_path);
-            writer.ensure_parent_dir()?;
-
-            assert!(file_path.parent().unwrap().exists());
 
             Ok(())
         }
@@ -644,10 +578,11 @@ name = "test"
         }
 
         #[cfg(unix)]
-        #[rstest]
-        fn test_set_permissions(temp_dir: TempDir) -> Result<()> {
+        #[test]
+        fn test_set_permissions() -> Result<()> {
             use std::os::unix::fs::PermissionsExt;
 
+            let temp_dir = tempfile::tempdir()?;
             let file_path = temp_dir.path().join("test.txt");
             fs::File::create(&file_path)?;
 

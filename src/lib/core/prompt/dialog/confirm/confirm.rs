@@ -45,6 +45,43 @@ impl ConfirmBuilder {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_confirm_builder_new() {
+        let builder = ConfirmBuilder::new("Continue?");
+        assert_eq!(builder.message, "Continue?");
+        assert!(builder.default.is_none());
+        assert!(builder.result_title.is_none());
+    }
+
+    #[test]
+    fn test_confirm_builder_default() {
+        let builder = ConfirmBuilder::new("Continue?").default(true);
+        assert_eq!(builder.default, Some(true));
+
+        let builder = ConfirmBuilder::new("Continue?").default(false);
+        assert_eq!(builder.default, Some(false));
+    }
+
+    #[test]
+    fn test_confirm_builder_result_title() {
+        let builder = ConfirmBuilder::new("Continue?").result_title("Confirmation");
+        assert_eq!(builder.result_title, Some("Confirmation".to_string()));
+    }
+
+    #[test]
+    fn test_confirm_builder_chain() {
+        let builder = ConfirmBuilder::new("Delete file?").default(false).result_title("Delete");
+
+        assert_eq!(builder.message, "Delete file?");
+        assert_eq!(builder.default, Some(false));
+        assert_eq!(builder.result_title, Some("Delete".to_string()));
+    }
+}
+
 /// 清除并显示结果
 fn clear_and_display_result(builder: &ConfirmBuilder, value: bool, theme: &Theme) -> Result<()> {
     let mut stdout = std::io::stdout();

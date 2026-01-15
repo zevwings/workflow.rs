@@ -243,3 +243,292 @@ pub mod validators {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    // ==================== Validator Trait 测试 ====================
+
+    #[test]
+    fn test_function_validator() {
+        let validator = |input: &str| -> ValidationResult {
+            if input.len() > 5 {
+                Ok(())
+            } else {
+                Err("太短".to_string())
+            }
+        };
+
+        assert!(validator.validate("123456").is_ok());
+        assert!(validator.validate("123").is_err());
+        assert_eq!(validator.validate("123").unwrap_err(), "太短");
+    }
+
+    // ==================== required() 验证器测试 ====================
+
+    #[test]
+    fn test_required_validator() {
+        let validator = validators::required();
+
+        // 有效输入
+        assert!(validator.validate("hello").is_ok());
+        assert!(validator.validate("  world  ").is_ok()); // 带空格的有效输入
+        assert!(validator.validate("123").is_ok());
+
+        // 无效输入
+        assert!(validator.validate("").is_err());
+        assert!(validator.validate("   ").is_err()); // 只有空格
+        assert!(validator.validate("\t\n").is_err()); // 只有空白字符
+
+        // 验证错误消息
+        let result = validator.validate("");
+        assert_eq!(result.unwrap_err(), "此字段为必填项");
+    }
+
+    // ==================== email() 验证器测试 ====================
+
+    #[test]
+    fn test_email_validator() {
+        let validator = validators::email();
+
+        // 有效邮箱
+        assert!(validator.validate("user@example.com").is_ok());
+        assert!(validator.validate("test.email@domain.org").is_ok());
+        assert!(validator.validate("user@sub.domain.com").is_ok());
+
+        // 无效邮箱
+        assert!(validator.validate("invalid-email").is_err());
+        // 注意：email() 验证器只检查是否包含 @ 和 .，不检查位置
+        // 所以 "@example.com" 和 "user@" 实际上会通过（因为它们包含 @ 和 .）
+        // 如需更严格的验证，应使用 regex() 验证器
+        assert!(validator.validate("user.example.com").is_err()); // 缺少@
+        assert!(validator.validate("").is_err());
+
+        // 验证错误消息
+        let result = validator.validate("invalid");
+        assert_eq!(result.unwrap_err(), "请输入有效的邮箱地址");
+    }
+
+    // ==================== min_length() 验证器测试 ====================
+
+    #[rstest]
+    #[case(3, "abc", true)]
+    #[case(3, "ab", false)]
+    #[case(3, "", true)] // 空输入被允许
+    #[case(5, "12345", true)] // 正好最小长度
+    #[case(5, "123456", true)] // 超过最小长度
+    #[case(5, "1234", false)] // 太短
+    fn test_min_length_validator(
+        #[case] min: usize,
+        #[case] input: &str,
+        #[case] should_pass: bool,
+    ) {
+        let validator = validators::min_length(min);
+        assert_eq!(validator.validate(input).is_ok(), should_pass);
+    }
+
+    #[test]
+    fn test_min_length_error_message() {
+        let validator = validators::min_length(5);
+        let result = validator.validate("123");
+        assert_eq!(result.unwrap_err(), "长度至少为 5 个字符");
+    }
+
+    // ==================== max_length() 验证器测试 ====================
+
+    #[rstest]
+    #[case(5, "", true)]
+    #[case(5, "12345", true)] // 正好最大长度
+    #[case(5, "1234", true)] // 小于最大长度
+    #[case(5, "123456", false)] // 太长
+    #[case(3, "", true)]
+    fn test_max_length_validator(
+        #[case] max: usize,
+        #[case] input: &str,
+        #[case] should_pass: bool,
+    ) {
+        let validator = validators::max_length(max);
+        assert_eq!(validator.validate(input).is_ok(), should_pass);
+    }
+
+    #[test]
+    fn test_max_length_error_message() {
+        let validator = validators::max_length(5);
+        let result = validator.validate("123456");
+        assert_eq!(result.unwrap_err(), "长度不能超过 5 个字符");
+    }
+
+    // ==================== length() 验证器测试 ====================
+
+    #[rstest]
+    #[case(3, 5, "123", true)] // 最小长度
+    #[case(3, 5, "12345", true)] // 最大长度
+    #[case(3, 5, "1234", true)] // 中间长度
+    #[case(3, 5, "12", false)] // 太短
+    #[case(3, 5, "123456", false)] // 太长
+    #[case(1, 10, "abc", true)]
+    fn test_length_validator(
+        #[case] min: usize,
+        #[case] max: usize,
+        #[case] input: &str,
+        #[case] should_pass: bool,
+    ) {
+        let validator = validators::length(min, max);
+        assert_eq!(validator.validate(input).is_ok(), should_pass);
+    }
+
+    #[test]
+    fn test_length_error_message() {
+        let validator = validators::length(3, 5);
+        let short_result = validator.validate("12");
+        assert_eq!(short_result.unwrap_err(), "长度必须在 3 到 5 个字符之间");
+
+        let long_result = validator.validate("123456");
+        assert_eq!(long_result.unwrap_err(), "长度必须在 3 到 5 个字符之间");
+    }
+
+    // ==================== url() 验证器测试 ====================
+
+    #[test]
+    fn test_url_validator() {
+        let validator = validators::url();
+
+        // 有效 URL
+        assert!(validator.validate("http://example.com").is_ok());
+        assert!(validator.validate("https://example.com").is_ok());
+        assert!(validator.validate("HTTP://EXAMPLE.COM").is_ok()); // 大小写不敏感
+        assert!(validator.validate("https://sub.example.com/path").is_ok());
+        assert!(validator.validate("http://example.com:8080").is_ok());
+
+        // 无效 URL
+        assert!(validator.validate("").is_err()); // 空字符串
+        assert!(validator.validate("   ").is_err()); // 只有空格
+        assert!(validator.validate("example.com").is_err()); // 缺少协议
+        assert!(validator.validate("ftp://example.com").is_err()); // 不支持 ftp
+        assert!(validator.validate("http://").is_err()); // 缺少域名
+        assert!(validator.validate("http://example").is_err()); // 缺少点
+        assert!(validator.validate("http:// example.com").is_err()); // 包含空格
+                                                                     // 注意：url() 验证器只检查是否包含点，不检查点的位置
+                                                                     // 所以 "http://.com" 实际上会通过（因为它包含点）
+                                                                     // 如需更严格的验证，应使用 regex() 验证器
+
+        // 验证错误消息
+        let no_scheme = validator.validate("example.com");
+        assert!(no_scheme.unwrap_err().contains("必须使用 http:// 或 https://"));
+
+        let empty = validator.validate("");
+        assert_eq!(empty.unwrap_err(), "请输入有效的 URL 地址");
+    }
+
+    #[rstest]
+    #[case("http://example.com", true)]
+    #[case("https://example.com", true)]
+    #[case("HTTP://EXAMPLE.COM", true)]
+    #[case("https://sub.example.com/path", true)]
+    #[case("example.com", false)]
+    #[case("ftp://example.com", false)]
+    #[case("http://", false)]
+    #[case("http://example", false)]
+    #[case("http:// example.com", false)]
+    fn test_url_parametrized(#[case] input: &str, #[case] should_pass: bool) {
+        let validator = validators::url();
+        assert_eq!(validator.validate(input).is_ok(), should_pass);
+    }
+
+    // ==================== regex() 验证器测试 ====================
+
+    #[test]
+    fn test_regex_validator() {
+        // 测试数字验证
+        let validator = validators::regex(r"^\d+$", Some("请输入数字")).unwrap();
+
+        assert!(validator.validate("123").is_ok());
+        assert!(validator.validate("0").is_ok());
+        assert!(validator.validate("abc").is_err());
+        assert_eq!(validator.validate("abc").unwrap_err(), "请输入数字");
+
+        // 测试自定义错误消息
+        let validator = validators::regex(r"^[a-z]+$", Some("只能是小写字母")).unwrap();
+        assert!(validator.validate("hello").is_ok());
+        assert!(validator.validate("Hello").is_err());
+        assert_eq!(validator.validate("Hello").unwrap_err(), "只能是小写字母");
+
+        // 测试默认错误消息
+        let validator = validators::regex(r"^\d+$", None).unwrap();
+        assert!(validator.validate("123").is_ok());
+        let err = validator.validate("abc").unwrap_err();
+        assert!(err.contains("输入格式不正确"));
+        assert!(err.contains(r"^\d+$"));
+    }
+
+    #[test]
+    fn test_regex_validator_invalid_pattern() {
+        // 测试无效的正则表达式
+        let result = validators::regex(r"[invalid", None);
+        assert!(result.is_err());
+        match result {
+            Err(err) => {
+                assert!(err.contains("无效的正则表达式"));
+                assert!(err.contains("[invalid"));
+            }
+            Ok(_) => panic!("Expected error for invalid regex pattern"),
+        }
+    }
+
+    #[test]
+    fn test_regex_validator_email() {
+        // 测试更严格的邮箱验证
+        let validator = validators::regex(
+            r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+            Some("请输入有效的邮箱地址"),
+        )
+        .unwrap();
+
+        assert!(validator.validate("user@example.com").is_ok());
+        assert!(validator.validate("test.email@domain.org").is_ok());
+        assert!(validator.validate("invalid").is_err());
+        assert!(validator.validate("@example.com").is_err());
+    }
+
+    // ==================== Unicode 和边界条件测试 ====================
+
+    #[test]
+    fn test_validators_with_unicode() {
+        let min_validator = validators::min_length(3);
+        let max_validator = validators::max_length(5);
+
+        // 注意：len() 计算的是字节数，不是字符数
+        // 对于中文字符，每个字符占3个字节（UTF-8），所以 "你好" 的 len() 是 6，大于 3
+        // 这里使用 ASCII 字符来测试字符数
+        assert!(min_validator.validate("ab").is_err()); // 2个字符（字节）
+        assert!(min_validator.validate("abc").is_ok()); // 3个字符（字节）
+
+        assert!(max_validator.validate("abcde").is_ok()); // 5个字符（字节）
+        assert!(max_validator.validate("abcdef").is_err()); // 6个字符（字节）
+
+        // Unicode 字符测试（基于字节数）
+        // "你好" 是 6 个字节，大于 min_length(3)
+        assert!(min_validator.validate("你好").is_ok()); // 6个字节，大于3
+                                                         // "你好世界" 是 12 个字节，大于 max_length(5)
+        assert!(max_validator.validate("你好世界").is_err()); // 12个字节，大于5
+    }
+
+    #[test]
+    fn test_validators_edge_cases() {
+        // 测试极值
+        let validator = validators::length(0, 1000);
+        assert!(validator.validate("").is_ok());
+        let long_str = "a".repeat(500);
+        assert!(validator.validate(&long_str).is_ok());
+        let too_long = "a".repeat(1001);
+        assert!(validator.validate(&too_long).is_err());
+
+        // 测试 min_length 允许空输入
+        let validator = validators::min_length(10);
+        assert!(validator.validate("").is_ok()); // 空输入被允许
+        assert!(validator.validate("1234567890").is_ok());
+        assert!(validator.validate("123").is_err());
+    }
+}

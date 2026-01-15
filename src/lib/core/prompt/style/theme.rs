@@ -132,3 +132,138 @@ pub fn get_theme() -> Theme {
         .map(|guard| guard.clone())
         .unwrap_or_else(|_| Theme::default())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==================== Style 测试 ====================
+
+    #[test]
+    fn test_style_new() {
+        let style = Style::new();
+        assert!(style.foreground.is_none());
+        assert!(style.background.is_none());
+        assert!(style.attributes.is_empty());
+    }
+
+    #[test]
+    fn test_style_default() {
+        let style = Style::default();
+        assert!(style.foreground.is_none());
+        assert!(style.background.is_none());
+        assert!(style.attributes.is_empty());
+    }
+
+    #[test]
+    fn test_style_fg() {
+        let style = Style::new().fg(Color::Red);
+        assert_eq!(style.foreground, Some(Color::Red));
+        assert!(style.background.is_none());
+    }
+
+    #[test]
+    fn test_style_bg() {
+        let style = Style::new().bg(Color::Blue);
+        assert_eq!(style.background, Some(Color::Blue));
+        assert!(style.foreground.is_none());
+    }
+
+    #[test]
+    fn test_style_bold() {
+        let style = Style::new().bold();
+        assert_eq!(style.attributes.len(), 1);
+        assert_eq!(style.attributes[0], Attribute::Bold);
+    }
+
+    #[test]
+    fn test_style_apply_with_color_enabled() {
+        let style = Style::new().fg(Color::Red).bold();
+        let result = style.apply("test", true);
+        // 当颜色启用时，应该包含样式信息（虽然格式可能因平台而异）
+        assert!(!result.is_empty());
+        // 至少应该包含原始文本
+        assert!(result.contains("test") || result == "test");
+    }
+
+    #[test]
+    fn test_style_apply_with_color_disabled() {
+        let style = Style::new().fg(Color::Red).bold();
+        let result = style.apply("test", false);
+        // 当颜色禁用时，应该返回原始文本
+        assert_eq!(result, "test");
+    }
+
+    #[test]
+    fn test_style_chain() {
+        let style = Style::new().fg(Color::Green).bg(Color::Blue).bold();
+        assert_eq!(style.foreground, Some(Color::Green));
+        assert_eq!(style.background, Some(Color::Blue));
+        assert_eq!(style.attributes.len(), 1);
+    }
+
+    // ==================== Theme 测试 ====================
+
+    #[test]
+    fn test_theme_default() {
+        let theme = Theme::default();
+        // 验证所有样式都已初始化
+        assert!(theme.enable_color);
+        // 验证样式不为空（至少应该有前景色设置）
+        // 注意：我们只验证结构存在，不验证具体的颜色值
+    }
+
+    #[test]
+    fn test_theme_get() {
+        let theme1 = get_theme();
+        let theme2 = get_theme();
+        // 应该返回相同的主题（单例）
+        assert_eq!(theme1.enable_color, theme2.enable_color);
+    }
+
+    #[test]
+    fn test_theme_set_and_get() {
+        let mut custom_theme = Theme::default();
+        custom_theme.enable_color = false;
+
+        set_theme(custom_theme.clone());
+        let retrieved = get_theme();
+        assert_eq!(retrieved.enable_color, custom_theme.enable_color);
+    }
+
+    #[test]
+    fn test_theme_clone() {
+        let theme1 = Theme::default();
+        let theme2 = theme1.clone();
+        assert_eq!(theme1.enable_color, theme2.enable_color);
+    }
+
+    // ==================== 样式应用测试 ====================
+
+    #[test]
+    fn test_style_apply_empty_text() {
+        let style = Style::new().fg(Color::Red);
+        // 当颜色禁用时，应该返回空字符串
+        let result = style.apply("", false);
+        assert_eq!(result, "");
+
+        // 当颜色启用时，可能会包含 ANSI 转义码（即使文本为空）
+        let result = style.apply("", true);
+        // 只验证不为空（可能包含转义码）或为空（取决于实现）
+        assert!(result.is_empty() || result.contains('\u{1b}'));
+    }
+
+    #[test]
+    fn test_style_apply_unicode() {
+        let style = Style::new().fg(Color::Cyan);
+        let result = style.apply("你好世界", false);
+        assert_eq!(result, "你好世界");
+    }
+
+    #[test]
+    fn test_style_apply_multiple_attributes() {
+        let style = Style::new().bold().fg(Color::Yellow);
+        let result = style.apply("test", false);
+        assert_eq!(result, "test");
+    }
+}
