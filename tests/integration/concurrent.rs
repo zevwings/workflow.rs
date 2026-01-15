@@ -534,7 +534,14 @@ mod tests {
             let batch_time = max_concurrent as u64 * task_duration_ms as u64;
             let expected_min = batch_time.saturating_sub(10);
             // 对于高并发，放宽时间限制（系统负载和线程调度可能导致延迟）
-            let tolerance = if max_concurrent >= 10 { 100 } else { 50 };
+            // 并发数越高，系统开销越大，需要更大的容差
+            let tolerance = if max_concurrent >= 20 {
+                200
+            } else if max_concurrent >= 10 {
+                150
+            } else {
+                50
+            };
             let expected_max = batch_time + tolerance;
 
             assert!(

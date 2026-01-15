@@ -3,7 +3,6 @@
 //! 包含 base 模块的所有测试文件。
 
 pub mod alias;
-pub mod concurrent;
 pub mod dialog_validators;
 pub mod llm_client;
 pub mod settings;

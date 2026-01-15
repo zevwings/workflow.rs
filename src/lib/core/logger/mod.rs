@@ -14,13 +14,37 @@
 //!
 //! ### 初始化
 //!
-//! ```rust
-//! use workflow::core::logger;
-//! use workflow::infra::adapters::config::SettingsAdapter;
+//! 首先需要实现 [`ConfigProvider`] trait 来提供配置信息：
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let config = SettingsAdapter::new();
-//! logger::init(Some("pr-create"), &config)?;
+//! ```rust,no_run
+//! use workflow::core::logger::{self, ConfigProvider, LogLevel};
+//! use color_eyre::Result;
+//! use std::path::PathBuf;
+//!
+//! // 实现 ConfigProvider trait
+//! struct MyConfigProvider;
+//!
+//! impl ConfigProvider for MyConfigProvider {
+//!     fn log_level(&self) -> Option<LogLevel> {
+//!         Some(LogLevel::Info)
+//!     }
+//!
+//!     fn log_format(&self) -> Option<String> {
+//!         Some("text".to_string())
+//!     }
+//!
+//!     fn enable_console(&self) -> bool {
+//!         true
+//!     }
+//!
+//!     fn logs_dir(&self) -> Result<PathBuf> {
+//!         Ok(PathBuf::from("/tmp/logs"))
+//!     }
+//! }
+//!
+//! # fn main() -> Result<()> {
+//! let config = MyConfigProvider;
+//! logger::init(Some("my-app"), &config)?;
 //! # Ok(())
 //! # }
 //! ```
