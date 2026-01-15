@@ -85,7 +85,21 @@ impl FormExecutor {
                         }
 
                         // 执行字段
-                        let value = self.execute_field(field, &result, 0)?;
+                        // 注意：如果字段执行失败（例如用户取消或输入错误），
+                        // 错误会向上传播，导致整个表单执行失败，之前已保存的字段也会丢失
+                        let value = self.execute_field(field, &result, 0)
+                            .map_err(|e| {
+                                // 提供更详细的错误信息，包含当前已收集的字段信息
+                                let collected_fields: Vec<String> = result.values.keys().cloned().collect();
+                                color_eyre::eyre::eyre!(
+                                    "Failed to execute field '{}': {}. \
+                                    Already collected fields: {:?}. \
+                                    This may indicate an error during input (e.g., paste operation failed).",
+                                    field.key,
+                                    e,
+                                    collected_fields
+                                )
+                            })?;
 
                         // 收集结果
                         result.set(field.key.clone(), value);

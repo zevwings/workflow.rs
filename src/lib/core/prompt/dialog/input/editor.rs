@@ -80,6 +80,30 @@ impl InputEditor {
         self.cursor += char_len;
     }
 
+    /// 在光标位置插入字符串
+    ///
+    /// 用于批量插入文本（例如粘贴操作），比逐个字符插入更高效。
+    ///
+    /// # 参数
+    ///
+    /// * `text` - 要插入的文本
+    ///
+    /// # 性能
+    ///
+    /// 时间复杂度为 O(n + m)，其中 n 是光标位置之后的字符数，m 是要插入的文本长度。
+    /// 批量插入比逐个字符插入更高效，因为只需要一次内存操作。
+    ///
+    /// # 注意
+    ///
+    /// 此方法目前未使用，但保留用于未来的粘贴功能实现。
+    #[allow(dead_code)]
+    pub(crate) fn insert_str(&mut self, text: &str) {
+        // 将文本插入到光标位置
+        self.buffer.insert_str(self.cursor, text);
+        // 更新光标位置到插入文本的末尾
+        self.cursor += text.len();
+    }
+
     /// 删除光标前的字符（Backspace）
     ///
     /// # 返回
