@@ -364,4 +364,53 @@ mod tests {
         let year_2020_timestamp_nanos = 1_577_836_800_000_000_000_u128;
         assert!(timestamp1 > year_2020_timestamp_nanos);
     }
+
+    // 便利函数测试
+    #[test]
+    fn test_format_last_updated() {
+        let last_updated = format_last_updated();
+        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+        assert!(date_regex.is_match(&last_updated));
+    }
+
+    #[test]
+    fn test_format_last_updated_with_time() {
+        let last_updated_with_time = format_last_updated_with_time();
+        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$").unwrap();
+        assert!(datetime_regex.is_match(&last_updated_with_time));
+    }
+
+    #[test]
+    fn test_format_filename_timestamp() {
+        let filename_timestamp = format_filename_timestamp();
+        let filename_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").unwrap();
+        assert!(filename_regex.is_match(&filename_timestamp));
+        assert!(!filename_timestamp.contains(' '));
+        assert!(!filename_timestamp.contains(':'));
+    }
+
+    #[test]
+    fn test_date_consistency() {
+        // 测试同一时刻的不同格式应该包含相同的日期部分
+        let date_only = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
+        let datetime = format_document_timestamp(DateFormat::DateTime, Timezone::Local);
+        let filename_ts = format_filename_timestamp();
+
+        // 提取日期部分进行比较
+        let date_part_from_datetime = &datetime[..10];
+        let date_part_from_filename = &filename_ts[..10];
+
+        assert_eq!(date_only, date_part_from_datetime);
+        assert_eq!(date_only, date_part_from_filename);
+    }
+
+    #[test]
+    fn test_format_document_timestamp_iso8601() {
+        let iso_local = format_document_timestamp(DateFormat::Iso8601, Timezone::Local);
+        let iso_utc = format_document_timestamp(DateFormat::Iso8601, Timezone::Utc);
+
+        assert!(iso_local.contains('T'));
+        assert!(iso_utc.contains('T'));
+        assert!(iso_utc.ends_with('Z') || iso_utc.contains('+') || iso_utc.contains('-'));
+    }
 }

@@ -29,7 +29,7 @@ pub mod retry;
 
 // 重新导出主要类型（便利性导出）
 pub use auth::Authorization;
-pub use client::{ClientHttpError, HttpClient, HttpClientConfig, HttpMethod, HttpMethodError};
+pub use client::{HttpClient, HttpClientConfig, HttpClientError, HttpMethod, HttpMethodError};
 pub use request::{IntoHeaderMap, MultipartRequestConfig, RequestConfig};
 pub use response::{HttpResponse, HttpResponseError, JsonParser, ResponseParser, TextParser};
 pub use retry::{HttpRetry, HttpRetryConfig, HttpRetryError, RetryResult};

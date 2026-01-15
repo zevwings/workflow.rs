@@ -5,8 +5,9 @@
 pub mod alias;
 pub mod concurrent;
 pub mod dialog_validators;
+pub mod http_client;
+pub mod http_response;
 pub mod http_retry;
 pub mod llm_client;
+pub mod logger_subscriber;
 pub mod settings;
-pub mod util_format;
-pub mod util_platform;

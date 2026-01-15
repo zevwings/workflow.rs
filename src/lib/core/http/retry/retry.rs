@@ -5,135 +5,6 @@ use std::time::{Duration, Instant};
 
 use crate::core::http::retry::config::{HttpRetryConfig, RetryResult};
 use crate::core::http::retry::error::HttpRetryError;
-
-/// 判断错误是否可重试
-///
-/// 检查错误类型，判断是否应该重试。
-/// 可重试的错误包括：
-/// - 网络错误（超时、连接失败、请求中断）
-/// - 5xx 服务器错误（500, 502, 503, 504）
-/// - 429 Too Many Requests（需要特殊处理，使用 Retry-After header）
-///
-/// 不可重试的错误包括：
-/// - 4xx 客户端错误（400, 401, 403, 404 等）
-/// - 解析错误（JSON 解析失败、文件格式错误）
-/// - 其他非网络错误
-///
-/// # 参数
-///
-/// * `error` - 要检查的错误
-///
-/// # 返回
-///
-/// 返回 `true` 如果错误可重试，否则返回 `false`。
-fn is_retryable_error(error: &color_eyre::eyre::Report) -> bool {
-    // 检查是否是 reqwest 网络错误
-    if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
-        // 检查是否是网络连接错误
-        if reqwest_error.is_timeout() || reqwest_error.is_connect() || reqwest_error.is_request() {
-            return true;
-        }
-
-        // 检查 HTTP 状态码
-        if let Some(status) = reqwest_error.status() {
-            // 5xx 服务器错误和 429 Too Many Requests 可重试
-            return status.is_server_error() || status.as_u16() == 429;
-        }
-    }
-
-    // 检查是否是标准库 IO 错误（可能是网络相关的）
-    if let Some(io_error) = error.downcast_ref::<std::io::Error>() {
-        // 网络相关的 IO 错误可重试
-        match io_error.kind() {
-            std::io::ErrorKind::TimedOut
-            | std::io::ErrorKind::ConnectionRefused
-            | std::io::ErrorKind::ConnectionReset
-            | std::io::ErrorKind::ConnectionAborted
-            | std::io::ErrorKind::NotConnected
-            | std::io::ErrorKind::BrokenPipe => return true,
-            _ => {}
-        }
-    }
-
-    false
-}
-
-/// 从错误中提取可读的错误描述
-///
-/// 尝试从错误中提取有用的信息，用于日志输出。
-///
-/// # 参数
-///
-/// * `error` - 要提取描述的错误
-///
-/// # 返回
-///
-/// 返回错误的简短描述。
-fn get_error_description(error: &color_eyre::eyre::Report) -> String {
-    const MAX_ERROR_MSG_LENGTH: usize = 100;
-    const ELLIPSIS: &str = "...";
-
-    // 尝试从 reqwest 错误中提取状态码
-    if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
-        if let Some(status) = reqwest_error.status() {
-            return format!("HTTP {}", status.as_u16());
-        }
-        if reqwest_error.is_timeout() {
-            return "Network timeout".to_string();
-        }
-        if reqwest_error.is_connect() {
-            return "Connection failed".to_string();
-        }
-    }
-
-    // 尝试从 IO 错误中提取信息
-    if let Some(io_error) = error.downcast_ref::<std::io::Error>() {
-        return format!("IO error: {}", io_error.kind());
-    }
-
-    // 默认返回错误消息的前 N 个字符
-    let error_msg = error.to_string();
-    if error_msg.len() > MAX_ERROR_MSG_LENGTH {
-        format!("{}{}", &error_msg[..MAX_ERROR_MSG_LENGTH], ELLIPSIS)
-    } else {
-        error_msg
-    }
-}
-
-/// 从错误中提取 Retry-After header 的值
-///
-/// 对于 429 Too Many Requests 错误，尝试从响应中提取 Retry-After header。
-/// Retry-After 可以是秒数（整数）或 HTTP 日期格式。
-///
-/// 注意：在 blocking 模式下，reqwest::Error 可能不包含响应信息。
-/// 如果需要完整的 Retry-After 支持，建议在 HttpResponse 中检查 header。
-///
-/// # 参数
-///
-/// * `error` - 要检查的错误
-///
-/// # 返回
-///
-/// 如果找到 Retry-After header 且可以解析，返回秒数；否则返回 `None`。
-fn extract_retry_after(error: &color_eyre::eyre::Report) -> Option<u64> {
-    // 检查是否是 reqwest 错误，并且是 429 状态码
-    if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
-        if let Some(status) = reqwest_error.status() {
-            if status.as_u16() == 429 {
-                // 注意：在 blocking 模式下，reqwest::Error 可能不包含响应
-                // 如果需要完整的 Retry-After 支持，建议在 HttpResponse 中检查
-                // 这里返回 None，使用默认的指数退避
-            }
-        }
-    }
-
-    // 检查是否是 ClientHttpError::RateLimitExceeded
-    // 注意：ClientHttpError 可能不包含响应信息，所以这里无法提取 Retry-After
-    // 如果需要，可以在 ClientHttpError 中添加响应信息
-
-    None
-}
-
 /// HTTP 重试工具
 ///
 /// 提供 HTTP 请求重试的功能，支持指数退避算法。
@@ -141,6 +12,101 @@ fn extract_retry_after(error: &color_eyre::eyre::Report) -> Option<u64> {
 pub struct HttpRetry;
 
 impl HttpRetry {
+    /// 判断错误是否可重试
+    ///
+    /// 检查错误类型，判断是否应该重试。
+    /// 可重试的错误包括：
+    /// - 网络错误（超时、连接失败、请求中断）
+    /// - 5xx 服务器错误（500, 502, 503, 504）
+    /// - 429 Too Many Requests（需要特殊处理，使用 Retry-After header）
+    ///
+    /// 不可重试的错误包括：
+    /// - 4xx 客户端错误（400, 401, 403, 404 等）
+    /// - 解析错误（JSON 解析失败、文件格式错误）
+    /// - 其他非网络错误
+    fn is_retryable_error(error: &color_eyre::eyre::Report) -> bool {
+        if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
+            if reqwest_error.is_timeout()
+                || reqwest_error.is_connect()
+                || reqwest_error.is_request()
+            {
+                return true;
+            }
+
+            if let Some(status) = reqwest_error.status() {
+                return status.is_server_error() || status.as_u16() == 429;
+            }
+        }
+
+        if let Some(io_error) = error.downcast_ref::<std::io::Error>() {
+            match io_error.kind() {
+                std::io::ErrorKind::TimedOut
+                | std::io::ErrorKind::ConnectionRefused
+                | std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
+                | std::io::ErrorKind::NotConnected
+                | std::io::ErrorKind::BrokenPipe => return true,
+                _ => {}
+            }
+        }
+
+        false
+    }
+
+    /// 从错误中提取可读的错误描述
+    ///
+    /// 尝试从错误中提取有用的信息，用于日志输出。
+    fn get_error_description(error: &color_eyre::eyre::Report) -> String {
+        const MAX_ERROR_MSG_LENGTH: usize = 100;
+        const ELLIPSIS: &str = "...";
+
+        if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
+            if let Some(status) = reqwest_error.status() {
+                return format!("HTTP {}", status.as_u16());
+            }
+            if reqwest_error.is_timeout() {
+                return "Network timeout".to_string();
+            }
+            if reqwest_error.is_connect() {
+                return "Connection failed".to_string();
+            }
+        }
+
+        if let Some(io_error) = error.downcast_ref::<std::io::Error>() {
+            return format!("IO error: {}", io_error.kind());
+        }
+
+        let error_msg = error.to_string();
+        if error_msg.len() > MAX_ERROR_MSG_LENGTH {
+            format!("{}{}", &error_msg[..MAX_ERROR_MSG_LENGTH], ELLIPSIS)
+        } else {
+            error_msg
+        }
+    }
+
+    /// 从错误中提取 Retry-After header 的值
+    ///
+    /// 对于 429 Too Many Requests 错误，尝试从响应中提取 Retry-After header。
+    /// Retry-After 可以是秒数（整数）或 HTTP 日期格式。
+    ///
+    /// 注意：在 blocking 模式下，reqwest::Error 可能不包含响应信息。
+    /// 如果需要完整的 Retry-After 支持，建议在 HttpResponse 中检查 header。
+    fn extract_retry_after(error: &color_eyre::eyre::Report) -> Option<u64> {
+        if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
+            if let Some(status) = reqwest_error.status() {
+                if status.as_u16() == 429 {
+                    // 在 blocking 模式下，reqwest::Error 可能不包含响应，这里返回 None
+                }
+            }
+        }
+
+        // 检查是否是 HttpClientError::RateLimitExceeded
+        // 注意：HttpClientError 可能不包含响应信息，所以这里无法提取 Retry-After
+        // 如果需要，可以在 HttpClientError 中添加响应信息
+
+        None
+    }
+
     /// 使用指数退避算法重试 HTTP 操作
     ///
     /// 执行一个可能失败的 HTTP 操作，如果失败且错误可重试，则按照配置的重试策略进行重试。
@@ -239,7 +205,7 @@ impl HttpRetry {
 
                     // 检查是否可重试
                     if let Some(ref err) = last_error {
-                        if !is_retryable_error(err) {
+                        if !Self::is_retryable_error(err) {
                             // 错误不可重试，立即返回
                             tracing::warn!(
                                 module = "http",
@@ -259,10 +225,10 @@ impl HttpRetry {
                     // 如果还有重试机会
                     if attempt < config.max_retries {
                         if let Some(ref err) = last_error {
-                            let error_desc = get_error_description(err);
+                            let error_desc = HttpRetry::get_error_description(err);
 
                             // 检查是否是 429 错误，并尝试提取 Retry-After header
-                            let retry_after = extract_retry_after(err);
+                            let retry_after = Self::extract_retry_after(err);
                             let actual_delay = retry_after.unwrap_or(delay);
 
                             tracing::warn!(
@@ -294,7 +260,7 @@ impl HttpRetry {
                     } else {
                         // 所有重试都失败了
                         if let Some(ref err) = last_error {
-                            let error_desc = get_error_description(err);
+                            let error_desc = HttpRetry::get_error_description(err);
                             tracing::error!(
                                 module = "http",
                                 operation = %operation_name,

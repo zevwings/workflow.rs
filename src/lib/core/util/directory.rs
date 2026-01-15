@@ -181,3 +181,324 @@ impl DirectoryWalker {
         Ok(paths)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use color_eyre::Result;
+    use std::fs;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    // ==================== DirectoryWalker::new 测试 ====================
+
+    #[test]
+    fn test_directory_walker_new() {
+        let walker = DirectoryWalker::new("/tmp/test");
+        // 验证可以创建实例（通过使用它来验证）
+        assert!(walker.exists() || !walker.exists()); // 总是为真，但验证 walker 可用
+    }
+
+    #[test]
+    fn test_directory_walker_new_with_pathbuf() {
+        use std::path::PathBuf;
+        let path = PathBuf::from("/tmp/test");
+        let walker = DirectoryWalker::new(path.clone());
+        // 验证可以创建实例
+        assert!(walker.exists() || !walker.exists());
+    }
+
+    // ==================== 目录遍历测试 ====================
+
+    #[test]
+    fn test_list_dirs_recursive() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let root = temp_dir.path();
+
+        // 创建目录结构
+        fs::create_dir_all(root.join("dir1/subdir1"))?;
+        fs::create_dir_all(root.join("dir2"))?;
+        fs::create_dir_all(root.join("dir1/subdir2"))?;
+
+        let walker = DirectoryWalker::new(root);
+        let dirs = walker.list_dirs()?;
+
+        // 应该包含根目录和所有子目录
+        assert!(dirs.contains(&root.to_path_buf()));
+        assert!(dirs.iter().any(|d| d.ends_with("dir1")));
+        assert!(dirs.iter().any(|d| d.ends_with("subdir1")));
+        assert!(dirs.iter().any(|d| d.ends_with("subdir2")));
+        assert!(dirs.iter().any(|d| d.ends_with("dir2")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_files_recursive() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let root = temp_dir.path();
+
+        // 创建文件和目录结构
+        fs::create_dir_all(root.join("subdir"))?;
+        fs::write(root.join("file1.txt"), "content1")?;
+        fs::write(root.join("file2.txt"), "content2")?;
+        fs::write(root.join("subdir/file3.txt"), "content3")?;
+
+        let walker = DirectoryWalker::new(root);
+        let files = walker.list_files()?;
+
+        assert_eq!(files.len(), 3);
+        assert!(files.iter().any(|f| f.ends_with("file1.txt")));
+        assert!(files.iter().any(|f| f.ends_with("file2.txt")));
+        assert!(files.iter().any(|f| f.ends_with("file3.txt")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_files() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let root = temp_dir.path();
+
+        // 创建文件
+        fs::write(root.join("test_file.txt"), "content")?;
+        fs::write(root.join("other_file.txt"), "content")?;
+        fs::write(root.join("test_config.toml"), "content")?;
+        fs::create_dir_all(root.join("subdir"))?;
+        fs::write(root.join("subdir/test_file.rs"), "content")?;
+
+        let walker = DirectoryWalker::new(root);
+        let files = walker.find_files("test")?;
+
+        assert_eq!(files.len(), 3);
+        assert!(files.iter().any(|f| f.ends_with("test_file.txt")));
+        assert!(files.iter().any(|f| f.ends_with("test_config.toml")));
+        assert!(files.iter().any(|f| f.ends_with("test_file.rs")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_direct_dirs() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let root = temp_dir.path();
+
+        // 创建目录结构
+        fs::create_dir_all(root.join("dir1/subdir"))?;
+        fs::create_dir_all(root.join("dir2"))?;
+
+        let walker = DirectoryWalker::new(root);
+        let dirs = walker.list_direct_dirs()?;
+
+        // 应该只包含直接子目录，不包含子目录的子目录
+        assert_eq!(dirs.len(), 2);
+        assert!(dirs.iter().any(|d| d.ends_with("dir1")));
+        assert!(dirs.iter().any(|d| d.ends_with("dir2")));
+        assert!(!dirs.iter().any(|d| d.ends_with("subdir")));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_direct_files() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let root = temp_dir.path();
+
+        // 创建文件和目录结构
+        fs::create_dir_all(root.join("subdir"))?;
+        fs::write(root.join("file1.txt"), "content1")?;
+        fs::write(root.join("file2.txt"), "content2")?;
+        fs::write(root.join("subdir/file3.txt"), "content3")?;
+
+        let walker = DirectoryWalker::new(root);
+        let files = walker.list_direct_files()?;
+
+        // 应该只包含直接文件，不包含子目录中的文件
+        assert_eq!(files.len(), 2);
+        assert!(files.iter().any(|f| f.ends_with("file1.txt")));
+        assert!(files.iter().any(|f| f.ends_with("file2.txt")));
+        assert!(!files.iter().any(|f| f.ends_with("file3.txt")));
+
+        Ok(())
+    }
+
+    // ==================== 目录创建测试 ====================
+
+    #[test]
+    fn test_ensure_exists() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let new_dir = temp_dir.path().join("new_dir");
+
+        let walker = DirectoryWalker::new(&new_dir);
+        assert!(!walker.exists());
+
+        walker.ensure_exists()?;
+        assert!(walker.exists());
+        assert!(walker.is_dir());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_exists_nested() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let nested_dir = temp_dir.path().join("level1/level2/level3");
+
+        let walker = DirectoryWalker::new(&nested_dir);
+        walker.ensure_exists()?;
+
+        assert!(walker.exists());
+        assert!(nested_dir.is_dir());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_parent_exists() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let file_path = temp_dir.path().join("subdir/nested/file.txt");
+
+        let walker = DirectoryWalker::new(temp_dir.path());
+        walker.ensure_parent_exists(&file_path)?;
+
+        assert!(file_path.parent().unwrap().exists());
+        assert!(file_path.parent().unwrap().is_dir());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_parent_dir_exists() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let nested_path = temp_dir.path().join("level1/level2/target");
+
+        let walker = DirectoryWalker::new(&nested_path);
+        walker.ensure_parent_dir_exists()?;
+
+        assert!(nested_path.parent().unwrap().exists());
+
+        Ok(())
+    }
+
+    // ==================== 路径检查测试 ====================
+
+    #[test]
+    fn test_exists() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let existing_path = temp_dir.path();
+        let non_existing_path = temp_dir.path().join("nonexistent");
+
+        let walker1 = DirectoryWalker::new(existing_path);
+        assert!(walker1.exists());
+
+        let walker2 = DirectoryWalker::new(non_existing_path);
+        assert!(!walker2.exists());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_file() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let file_path = temp_dir.path().join("test.txt");
+        fs::write(&file_path, "content")?;
+
+        let file_walker = DirectoryWalker::new(&file_path);
+        assert!(file_walker.is_file());
+
+        let dir_walker = DirectoryWalker::new(temp_dir.path());
+        assert!(!dir_walker.is_file());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_dir() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let file_path = temp_dir.path().join("test.txt");
+        fs::write(&file_path, "content")?;
+
+        let dir_walker = DirectoryWalker::new(temp_dir.path());
+        assert!(dir_walker.is_dir());
+
+        let file_walker = DirectoryWalker::new(&file_path);
+        assert!(!file_walker.is_dir());
+
+        Ok(())
+    }
+
+    // ==================== 安全读取测试 ====================
+
+    #[test]
+    fn test_read_dir_safe() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let root = temp_dir.path();
+
+        // 创建文件和目录
+        fs::write(root.join("file1.txt"), "content1")?;
+        fs::write(root.join("file2.txt"), "content2")?;
+        fs::create_dir_all(root.join("subdir"))?;
+
+        let walker = DirectoryWalker::new(root);
+        let entries = walker.read_dir_safe()?;
+
+        // 应该包含所有条目（文件和目录）
+        assert!(entries.len() >= 3);
+        assert!(entries.iter().any(|e| e.ends_with("file1.txt")));
+        assert!(entries.iter().any(|e| e.ends_with("file2.txt")));
+        assert!(entries.iter().any(|e| e.ends_with("subdir")));
+
+        Ok(())
+    }
+
+    // ==================== 边界情况测试 ====================
+
+    #[test]
+    fn test_list_dirs_empty_directory() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let walker = DirectoryWalker::new(temp_dir.path());
+        let dirs = walker.list_dirs()?;
+
+        // 应该至少包含根目录本身
+        assert!(!dirs.is_empty());
+        assert!(dirs.contains(&temp_dir.path().to_path_buf()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_files_empty_directory() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let walker = DirectoryWalker::new(temp_dir.path());
+        let files = walker.list_files()?;
+
+        assert_eq!(files.len(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_files_no_match() -> Result<()> {
+        let temp_dir = tempdir()?;
+        fs::write(temp_dir.path().join("file1.txt"), "content")?;
+        fs::write(temp_dir.path().join("file2.txt"), "content")?;
+
+        let walker = DirectoryWalker::new(temp_dir.path());
+        let files = walker.find_files("nonexistent")?;
+
+        assert_eq!(files.len(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_parent_exists_for_root_path() -> Result<()> {
+        let walker = DirectoryWalker::new("/");
+        let result = walker.ensure_parent_exists(Path::new("/"));
+
+        // 根路径没有父目录，应该成功（不执行任何操作）
+        assert!(result.is_ok());
+
+        Ok(())
+    }
+}

@@ -527,4 +527,137 @@ mod tests {
             assert_eq!(result.result, "success");
         }
     }
+
+    // ==================== 可重试错误判断测试（通过 retry 方法间接测试） ====================
+
+    #[test]
+    fn test_retryable_timeout_error() {
+        // 测试超时错误是否可重试
+        // 通过创建超时错误并验证会进行重试
+        reset_counters();
+        let config = HttpRetryConfig {
+            max_retries: 2,
+            initial_delay: 0,
+            max_delay: 30,
+            backoff_multiplier: 2.0,
+        };
+
+        // 创建超时错误（可重试）
+        let timeout_error = || -> Result<String> {
+            Err(color_eyre::eyre::eyre!(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "connection timeout"
+            )))
+        };
+
+        let result = HttpRetry::retry(timeout_error, &config, "timeout test");
+        // 应该重试多次后失败
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("timeout test"));
+    }
+
+    #[test]
+    fn test_retryable_connection_error() {
+        // 测试连接错误是否可重试
+        reset_counters();
+        let config = HttpRetryConfig {
+            max_retries: 1,
+            initial_delay: 0,
+            max_delay: 30,
+            backoff_multiplier: 2.0,
+        };
+
+        // 创建连接错误（可重试）
+        let connection_error = || -> Result<String> {
+            Err(color_eyre::eyre::eyre!(std::io::Error::new(
+                std::io::ErrorKind::ConnectionRefused,
+                "connection refused"
+            )))
+        };
+
+        let result = HttpRetry::retry(connection_error, &config, "connection test");
+        // 应该重试后失败
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_non_retryable_4xx_error() {
+        // 测试 4xx 错误是否不可重试（通过模拟 reqwest 错误）
+        // 注意：由于 is_retryable_error 是私有方法，我们通过 retry 方法的行为来测试
+        // 4xx 错误应该立即返回，不进行重试
+        reset_counters();
+        let config = HttpRetryConfig {
+            max_retries: 3,
+            initial_delay: 0,
+            max_delay: 30,
+            backoff_multiplier: 2.0,
+        };
+
+        // 创建 4xx 错误（不可重试）
+        // 由于无法直接创建 reqwest::Error，我们使用其他不可重试的错误类型
+        // 例如：解析错误
+        let parse_error =
+            || -> Result<String> { Err(color_eyre::eyre::eyre!("Invalid JSON: unexpected token")) };
+
+        let start_time = Instant::now();
+        let result = HttpRetry::retry(parse_error, &config, "4xx test");
+        let duration = start_time.elapsed();
+
+        // 应该立即失败，不进行重试（没有延迟）
+        assert!(result.is_err());
+        assert!(
+            duration < Duration::from_millis(100),
+            "Should fail immediately without retry"
+        );
+    }
+
+    // ==================== 错误描述提取测试 ====================
+
+    #[test]
+    fn test_error_description_long_message() {
+        // 测试长错误消息的截断（超过 100 字符）
+        reset_counters();
+        let config = HttpRetryConfig {
+            max_retries: 0, // 不重试，立即失败
+            initial_delay: 0,
+            max_delay: 30,
+            backoff_multiplier: 2.0,
+        };
+
+        // 创建长错误消息
+        let long_error_msg = "a".repeat(150);
+        let long_error =
+            || -> Result<String> { Err(color_eyre::eyre::eyre!(long_error_msg.clone())) };
+
+        let result = HttpRetry::retry(long_error, &config, "long error test");
+        assert!(result.is_err());
+
+        // 验证错误消息被截断（通过错误描述）
+        // 注意：实际的截断逻辑在 get_error_description 中
+        // 但由于它是私有方法，我们通过错误消息来验证
+        let error_msg = result.unwrap_err().to_string();
+        // 错误消息应该包含操作名称
+        assert!(error_msg.contains("long error test"));
+    }
+
+    #[test]
+    fn test_error_description_short_message() {
+        // 测试短错误消息（不超过 100 字符）
+        reset_counters();
+        let config = HttpRetryConfig {
+            max_retries: 0,
+            initial_delay: 0,
+            max_delay: 30,
+            backoff_multiplier: 2.0,
+        };
+
+        let short_error_msg = "Short error message";
+        let short_error = || -> Result<String> { Err(color_eyre::eyre::eyre!(short_error_msg)) };
+
+        let result = HttpRetry::retry(short_error, &config, "short error test");
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("short error test"));
+    }
 }

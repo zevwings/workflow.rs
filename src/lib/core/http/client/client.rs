@@ -1,13 +1,14 @@
 //! HTTP 客户端实现
 
+use crate::core::http::auth::Authorization;
 use crate::core::http::client::config::HttpClientConfig;
-use crate::core::http::client::error::ClientHttpError;
-use crate::core::http::client::helpers::{apply_auth_for_multipart, apply_common_config};
+use crate::core::http::client::error::HttpClientError;
 use crate::core::http::client::method::HttpMethod;
 use crate::core::http::request::{MultipartRequestConfig, RequestConfig};
 use crate::core::http::{HttpResponse, HttpRetry, HttpRetryConfig};
 use color_eyre::Result;
-use reqwest::blocking::Client;
+use reqwest::blocking::{Client, RequestBuilder};
+use reqwest::header::HeaderMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -108,7 +109,7 @@ impl HttpClient {
             builder = builder.danger_accept_invalid_certs(true);
         }
 
-        let client = builder.build().map_err(ClientHttpError::CreateClientFailed)?;
+        let client = builder.build().map_err(HttpClientError::CreateClientFailed)?;
         Ok(Self { client, config })
     }
 
@@ -364,6 +365,68 @@ impl HttpClient {
     // Internal Methods
     // ========================================================================
 
+    /// 应用通用请求配置（query, auth, headers, timeout）
+    fn apply_common_config(
+        mut request: RequestBuilder,
+        query: &Option<serde_json::Value>,
+        auth: &Option<Authorization>,
+        headers: &Option<HeaderMap>,
+        timeout: Option<Duration>,
+    ) -> RequestBuilder {
+        if let Some(query) = query {
+            request = request.query(query);
+        }
+
+        if let Some(auth) = auth {
+            match auth {
+                Authorization::Basic { username, password } => {
+                    request = request.basic_auth(username, Some(password));
+                }
+                Authorization::Bearer { token } => {
+                    request = request.bearer_auth(token);
+                }
+                Authorization::Custom { .. } => {
+                    let mut auth_headers = HeaderMap::new();
+                    if auth.apply_to_headers(&mut auth_headers).is_ok() {
+                        for (key, value) in auth_headers.iter() {
+                            request = request.header(key, value);
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(headers) = headers {
+            for (key, value) in headers.iter() {
+                request = request.header(key, value);
+            }
+        }
+
+        let timeout_duration = timeout.unwrap_or_else(|| Duration::from_secs(30));
+        request.timeout(timeout_duration)
+    }
+
+    /// 为 multipart 请求应用认证（Bearer token 需要特殊处理）
+    fn apply_auth_for_multipart(
+        mut request: RequestBuilder,
+        auth: &Authorization,
+    ) -> RequestBuilder {
+        match auth {
+            Authorization::Basic { username, password } => {
+                request = request.basic_auth(username, Some(password));
+            }
+            Authorization::Bearer { token: _ } | Authorization::Custom { .. } => {
+                let mut auth_headers = HeaderMap::new();
+                if auth.apply_to_headers(&mut auth_headers).is_ok() {
+                    for (key, value) in auth_headers.iter() {
+                        request = request.header(key, value);
+                    }
+                }
+            }
+        }
+        request
+    }
+
     fn build_request(
         &self,
         method: HttpMethod,
@@ -384,7 +447,7 @@ impl HttpClient {
         }
 
         // 应用通用配置（query, auth, headers, timeout）
-        request = apply_common_config(
+        request = Self::apply_common_config(
             request,
             &config.query,
             &config.auth,
@@ -415,7 +478,7 @@ impl HttpClient {
 
         // 应用认证（multipart 需要特殊处理 Bearer token）
         if let Some(auth) = &config.auth {
-            request = apply_auth_for_multipart(request, auth);
+            request = Self::apply_auth_for_multipart(request, auth);
         }
 
         // 应用 query 和 headers
@@ -514,10 +577,10 @@ impl HttpClient {
         }
     }
 
-    fn handle_request_error(error: reqwest::Error, url: &str, method: &str) -> ClientHttpError {
+    fn handle_request_error(error: reqwest::Error, url: &str, method: &str) -> HttpClientError {
         // 检查是否是网络超时
         if error.is_timeout() {
-            return ClientHttpError::Timeout {
+            return HttpClientError::Timeout {
                 url: url.to_owned(),
                 method: method.to_owned(),
             };
@@ -525,7 +588,7 @@ impl HttpClient {
 
         // 检查是否是连接失败
         if error.is_connect() {
-            return ClientHttpError::ConnectionFailed {
+            return HttpClientError::ConnectionFailed {
                 url: url.to_owned(),
                 method: method.to_owned(),
             };
@@ -534,7 +597,7 @@ impl HttpClient {
         // 检查是否是速率限制（429）
         if let Some(status) = error.status() {
             if status.as_u16() == 429 {
-                return ClientHttpError::RateLimitExceeded {
+                return HttpClientError::RateLimitExceeded {
                     url: url.to_owned(),
                     method: method.to_owned(),
                 };
@@ -542,7 +605,7 @@ impl HttpClient {
         }
 
         // 其他错误，使用通用消息
-        ClientHttpError::RequestFailed {
+        HttpClientError::RequestFailed {
             method: method.to_owned(),
             url: url.to_owned(),
             source: error,

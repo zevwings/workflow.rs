@@ -7,7 +7,7 @@ use thiserror::Error;
 ///
 /// 用于客户端初始化、网络连接、请求执行相关的错误。
 #[derive(Debug, Error)]
-pub enum ClientHttpError {
+pub enum HttpClientError {
     /// 创建 HTTP 客户端失败
     #[error("Failed to create HTTP client: {0}")]
     CreateClientFailed(#[from] reqwest::Error),

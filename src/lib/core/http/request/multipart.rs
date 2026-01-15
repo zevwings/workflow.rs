@@ -114,3 +114,94 @@ impl MultipartRequestConfig {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use reqwest::header::HeaderMap;
+
+    // ==================== MultipartRequestConfig 基础测试 ====================
+
+    #[test]
+    fn test_multipart_request_config_new() {
+        let config = MultipartRequestConfig::new();
+
+        assert!(config.multipart.is_none());
+        assert!(config.query.is_none());
+        assert!(config.auth.is_none());
+        assert!(config.headers.is_none());
+        assert!(config.timeout.is_none());
+        assert!(config.retry_config.is_none());
+    }
+
+    #[test]
+    fn test_multipart_request_config_default() {
+        let config = MultipartRequestConfig::default();
+
+        assert!(config.multipart.is_none());
+        assert!(config.query.is_none());
+        assert!(config.auth.is_none());
+        assert!(config.headers.is_none());
+        assert!(config.timeout.is_none());
+        assert!(config.retry_config.is_none());
+    }
+
+    // ==================== MultipartRequestConfig Builder 测试 ====================
+
+    #[test]
+    fn test_multipart_request_config_multipart() {
+        use reqwest::blocking::multipart;
+        let form = multipart::Form::new().text("key", "value");
+        let config = MultipartRequestConfig::new().multipart(form);
+
+        assert!(config.multipart.is_some());
+    }
+
+    #[test]
+    fn test_multipart_request_config_auth() {
+        let auth = Authorization::bearer("token");
+        let config = MultipartRequestConfig::new().auth(auth);
+
+        assert!(config.auth.is_some());
+    }
+
+    #[test]
+    fn test_multipart_request_config_headers() {
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Custom-Header", "value".parse().unwrap());
+        let config = MultipartRequestConfig::new().headers(&headers);
+
+        assert!(config.headers.is_some());
+    }
+
+    // ==================== MultipartRequestConfig 链式调用测试 ====================
+
+    #[test]
+    fn test_multipart_request_config_chaining() {
+        use reqwest::blocking::multipart;
+        let form = multipart::Form::new().text("key", "value");
+        let auth = Authorization::bearer("token");
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Custom-Header", "value".parse().unwrap());
+
+        let config = MultipartRequestConfig::new().multipart(form).auth(auth).headers(&headers);
+
+        assert!(config.multipart.is_some());
+        assert!(config.auth.is_some());
+        assert!(config.headers.is_some());
+    }
+
+    // ==================== MultipartRequestConfig Retry 配置测试 ====================
+
+    #[test]
+    fn test_multipart_request_config_retry_ignored() {
+        // 注意：MultipartRequestConfig 没有 retry 方法
+        // 但可以通过直接设置 retry_config 字段来测试
+        // 在实际使用中，post_multipart 会忽略 retry_config 并发出警告
+        let mut config = MultipartRequestConfig::new();
+        config.retry_config = Some(HttpRetryConfig::new());
+
+        // 验证 retry_config 可以被设置（虽然会被忽略）
+        assert!(config.retry_config.is_some());
+    }
+}

@@ -5,9 +5,8 @@ pub mod error;
 pub mod method;
 
 mod client;
-mod helpers;
 
 pub use client::HttpClient;
 pub use config::HttpClientConfig;
-pub use error::ClientHttpError;
+pub use error::HttpClientError;
 pub use method::{HttpMethod, HttpMethodError};

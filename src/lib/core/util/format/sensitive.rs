@@ -76,6 +76,7 @@ pub fn mask_sensitive_value(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_mask_short_value() {
@@ -100,5 +101,74 @@ mod tests {
     fn test_mask_with_string() {
         let s = String::from("verylongapikey123456");
         assert_eq!(s.mask(), "very***3456");
+    }
+
+    #[test]
+    fn test_mask_short_strings() {
+        assert_eq!("".mask(), "***");
+        assert_eq!("a".mask(), "***");
+        assert_eq!("short".mask(), "***");
+        assert_eq!("12345".mask(), "***");
+        assert_eq!("123456789012".mask(), "***"); // 恰好12个字符
+    }
+
+    #[test]
+    fn test_mask_long_strings() {
+        assert_eq!("1234567890123".mask(), "1234***0123"); // 13个字符
+        assert_eq!("verylongapikey123456".mask(), "very***3456");
+        assert_eq!("ghp_1234567890abcdefghijklmnop".mask(), "ghp_***mnop");
+        assert_eq!(
+            "sk-1234567890abcdefghijklmnopqrstuvwxyz".mask(),
+            "sk-1***wxyz"
+        );
+    }
+
+    #[test]
+    fn test_mask_with_string_type() {
+        let s = String::from("verylongapikey123456");
+        assert_eq!(s.mask(), "very***3456");
+
+        let short_string = String::from("short");
+        assert_eq!(short_string.mask(), "***");
+    }
+
+    #[test]
+    fn test_mask_backward_compatibility() {
+        // 测试原有函数仍然可用
+        assert_eq!(mask_sensitive_value("short"), "***");
+        assert_eq!(mask_sensitive_value("verylongapikey123456"), "very***3456");
+        assert_eq!(mask_sensitive_value(""), "***");
+    }
+
+    #[rstest]
+    #[case("", "***")]
+    #[case("a", "***")]
+    #[case("abc", "***")]
+    #[case("123456789012", "***")] // 12 chars
+    #[case("1234567890123", "1234***0123")] // 13 chars
+    #[case("abcdefghijklmnop", "abcd***mnop")] // 16 chars
+    #[case("github_pat_1234567890abcdefghijklmnop", "gith***mnop")]
+    #[case("very_long_api_key_with_underscores_123456", "very***3456")]
+    fn test_mask_parametrized(#[case] input: &str, #[case] expected: &str) {
+        assert_eq!(input.mask(), expected);
+        assert_eq!(mask_sensitive_value(input), expected);
+    }
+
+    #[test]
+    fn test_mask_special_characters() {
+        assert_eq!("key-with-dashes-123456789".mask(), "key-***6789");
+        assert_eq!("key_with_underscores_123456".mask(), "key_***3456");
+        assert_eq!("key.with.dots.123456789".mask(), "key.***6789");
+        assert_eq!("key@with@symbols#123456".mask(), "key@***3456");
+    }
+
+    #[test]
+    fn test_mask_unicode_strings() {
+        assert_eq!("短字符串".mask(), "***");
+        assert_eq!(
+            "这是一个很长的中文字符串包含数字123456".mask(),
+            "这是一个***3456"
+        );
+        assert_eq!("émoji🚀test123456789".mask(), "émoj***6789");
     }
 }
