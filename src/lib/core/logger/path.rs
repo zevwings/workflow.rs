@@ -50,6 +50,7 @@ pub(crate) fn log_file_path(
 mod tests {
     use super::*;
     use crate::core::logger::LogLevel;
+    use rstest::{fixture, rstest};
 
     /// 测试用的配置提供者
     struct TestConfigProvider {
@@ -79,12 +80,41 @@ mod tests {
         }
     }
 
+    /// Fixture: 测试用的配置提供者
+    #[fixture]
+    fn test_config() -> TestConfigProvider {
+        TestConfigProvider::new()
+    }
+
+    /// 返回错误的配置提供者（用于测试错误处理）
+    struct ErrorConfigProvider;
+
+    impl ConfigProvider for ErrorConfigProvider {
+        fn log_level(&self) -> Option<LogLevel> {
+            Some(LogLevel::Info)
+        }
+        fn log_format(&self) -> Option<String> {
+            None
+        }
+        fn enable_console(&self) -> bool {
+            false
+        }
+        fn logs_dir(&self) -> color_eyre::Result<PathBuf> {
+            Err(color_eyre::eyre::eyre!("Failed to get logs directory"))
+        }
+    }
+
+    /// Fixture: 返回错误的配置提供者
+    #[fixture]
+    fn error_config() -> ErrorConfigProvider {
+        ErrorConfigProvider
+    }
+
     /// 测试日志文件路径生成
-    #[test]
-    fn test_log_file_path_with_command() {
+    #[rstest]
+    fn test_log_file_path_with_command(test_config: TestConfigProvider) {
         let command_name = Some("pr-create");
-        let config = TestConfigProvider::new();
-        let result = log_file_path(command_name, &config);
+        let result = log_file_path(command_name, &test_config);
         assert!(result.is_ok());
 
         let path = result.unwrap();
@@ -99,10 +129,9 @@ mod tests {
     }
 
     /// 测试日志文件路径生成（无命令名）
-    #[test]
-    fn test_log_file_path_without_command() {
-        let config = TestConfigProvider::new();
-        let result = log_file_path(None, &config);
+    #[rstest]
+    fn test_log_file_path_without_command(test_config: TestConfigProvider) {
+        let result = log_file_path(None, &test_config);
         assert!(result.is_ok());
 
         let path = result.unwrap();
@@ -116,10 +145,9 @@ mod tests {
     }
 
     /// 测试日志文件路径包含时间戳和 PID
-    #[test]
-    fn test_log_file_path_contains_timestamp_and_pid() {
-        let config = TestConfigProvider::new();
-        let result = log_file_path(Some("test-command"), &config);
+    #[rstest]
+    fn test_log_file_path_contains_timestamp_and_pid(test_config: TestConfigProvider) {
+        let result = log_file_path(Some("test-command"), &test_config);
         assert!(result.is_ok());
 
         let path = result.unwrap();
@@ -148,10 +176,9 @@ mod tests {
     }
 
     /// 测试日志目录创建
-    #[test]
-    fn test_log_directory_creation() {
-        let config = TestConfigProvider::new();
-        let result = log_file_path(Some("test"), &config);
+    #[rstest]
+    fn test_log_directory_creation(test_config: TestConfigProvider) {
+        let result = log_file_path(Some("test"), &test_config);
         assert!(result.is_ok());
 
         let path = result.unwrap();
@@ -159,37 +186,49 @@ mod tests {
 
         assert!(parent.exists(), "Log directory should exist: {:?}", parent);
 
-        let expected_dir = config.logs_dir().unwrap().join("tracing");
+        let expected_dir = test_config.logs_dir().unwrap().join("tracing");
         assert_eq!(parent, expected_dir);
     }
 
     /// 测试不同命令名的路径生成
-    #[test]
-    fn test_different_command_names() {
-        let commands = vec![
-            ("pr-create", "pr-create"),
-            ("jira-info", "jira-info"),
-            ("jira-log-download", "jira-log-download"),
-            ("branch-create", "branch-create"),
-        ];
+    #[rstest]
+    #[case("pr-create", "pr-create")]
+    #[case("jira-info", "jira-info")]
+    #[case("jira-log-download", "jira-log-download")]
+    #[case("branch-create", "branch-create")]
+    fn test_different_command_names(
+        test_config: TestConfigProvider,
+        #[case] command: &str,
+        #[case] expected_prefix: &str,
+    ) {
+        let result = log_file_path(Some(command), &test_config);
+        assert!(
+            result.is_ok(),
+            "Should generate path for command: {}",
+            command
+        );
 
-        let config = TestConfigProvider::new();
-        for (command, expected_prefix) in commands {
-            let result = log_file_path(Some(command), &config);
-            assert!(
-                result.is_ok(),
-                "Should generate path for command: {}",
-                command
-            );
+        let path = result.unwrap();
+        let filename = path.file_name().unwrap().to_string_lossy();
+        assert!(
+            filename.starts_with(expected_prefix),
+            "Filename should start with {}: {}",
+            expected_prefix,
+            filename
+        );
+    }
 
-            let path = result.unwrap();
-            let filename = path.file_name().unwrap().to_string_lossy();
-            assert!(
-                filename.starts_with(expected_prefix),
-                "Filename should start with {}: {}",
-                expected_prefix,
-                filename
-            );
-        }
+    // ==================== 错误处理测试 ====================
+
+    #[rstest]
+    fn test_log_file_path_logs_dir_error(error_config: ErrorConfigProvider) {
+        let result = log_file_path(Some("test-command"), &error_config);
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(
+            error.to_string().contains("Failed to get logs directory"),
+            "Error message should contain logs directory error: {}",
+            error
+        );
     }
 }

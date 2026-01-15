@@ -253,3 +253,116 @@ macro_rules! log_error_with_fields {
         }
     };
 }
+
+#[cfg(test)]
+mod tests {
+    // ==================== __extract_module_name! 宏测试 ====================
+    //
+    // 测试策略：
+    // 1. 在 workflow::core::logger::macros::tests 中测试（应该提取 "logger"）
+    // 2. 创建嵌套模块来模拟不同的模块路径
+    // 3. 验证提取逻辑的正确性
+
+    #[test]
+    fn test_extract_module_name_in_logger_module() {
+        // 在 workflow::core::logger::macros::tests 中
+        // module_path!() 返回 "workflow::core::logger::macros::tests"
+        // 应该提取 "logger"（索引2）
+        let module = crate::__extract_module_name!();
+        assert_eq!(
+            module, "logger",
+            "Should extract 'logger' from workflow::core::logger::macros::tests"
+        );
+    }
+
+    // 创建嵌套模块来测试不同的路径格式
+    mod nested {
+        use crate::__extract_module_name;
+
+        // 这个模块的路径是 workflow::core::logger::macros::tests::nested
+        // 应该提取 "logger"（索引2）
+
+        #[test]
+        fn test_extract_module_name_nested_module() {
+            let module = __extract_module_name!();
+            assert_eq!(
+                module, "logger",
+                "Should extract 'logger' from nested module"
+            );
+        }
+
+        mod deeper {
+            use crate::__extract_module_name;
+
+            // 这个模块的路径是 workflow::core::logger::macros::tests::nested::deeper
+            // 应该提取 "logger"（索引2）
+
+            #[test]
+            fn test_extract_module_name_deeper_nested() {
+                let module = __extract_module_name!();
+                assert_eq!(
+                    module, "logger",
+                    "Should extract 'logger' from deeper nested module"
+                );
+            }
+        }
+    }
+
+    // 测试其他格式的模块路径（非 workflow 格式）
+    // 注意：在实际代码库中，所有模块都在 workflow 下，所以这个测试主要验证逻辑
+    mod other_format {
+        use crate::__extract_module_name;
+
+        // 这个模块仍然在 workflow 下，但我们可以测试提取逻辑
+
+        #[test]
+        fn test_extract_module_name_other_format() {
+            // 即使在这个嵌套模块中，仍然应该提取 "logger"
+            let module = __extract_module_name!();
+            assert_eq!(module, "logger");
+        }
+    }
+
+    // 测试模块名提取的一致性
+    #[test]
+    fn test_extract_module_name_consistency() {
+        // 多次调用应该返回相同的结果
+        let module1 = crate::__extract_module_name!();
+        let module2 = crate::__extract_module_name!();
+        assert_eq!(
+            module1, module2,
+            "Multiple calls should return the same module name"
+        );
+    }
+
+    // 测试模块名不为空
+    #[test]
+    fn test_extract_module_name_not_empty() {
+        let module = crate::__extract_module_name!();
+        assert!(!module.is_empty(), "Module name should not be empty");
+        assert_ne!(
+            module, "unknown",
+            "Module name should not be 'unknown' in workflow modules"
+        );
+    }
+
+    // 验证提取逻辑：workflow::xxx::yyy 格式应该提取 yyy（索引2）
+    #[test]
+    fn test_extract_module_name_workflow_format_logic() {
+        // 在 workflow::core::logger::macros::tests 中
+        // 路径是 ["workflow", "core", "logger", "macros", "tests"]
+        // 应该提取索引2的元素，即 "logger"
+        let module = crate::__extract_module_name!();
+
+        // 验证提取的是索引2的元素
+        let current_path = module_path!();
+        let parts: Vec<&str> = current_path.split("::").collect();
+        if parts.len() >= 3 && parts[0] == "workflow" {
+            let expected = parts[2];
+            assert_eq!(
+                module, expected,
+                "Should extract element at index 2 for workflow format"
+            );
+        }
+    }
+}

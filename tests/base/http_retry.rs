@@ -625,10 +625,13 @@ mod tests {
             backoff_multiplier: 2.0,
         };
 
-        // 创建长错误消息
+        // 创建长错误消息，使用可重试的错误（TimedOut）以确保错误被包装在 HttpRetryError 中
         let long_error_msg = "a".repeat(150);
-        let long_error =
-            || -> Result<String> { Err(color_eyre::eyre::eyre!(long_error_msg.clone())) };
+        let long_error = || -> Result<String> {
+            let io_error =
+                std::io::Error::new(std::io::ErrorKind::TimedOut, long_error_msg.clone());
+            Err(color_eyre::eyre::eyre!(io_error))
+        };
 
         let result = HttpRetry::retry(long_error, &config, "long error test");
         assert!(result.is_err());
@@ -637,7 +640,7 @@ mod tests {
         // 注意：实际的截断逻辑在 get_error_description 中
         // 但由于它是私有方法，我们通过错误消息来验证
         let error_msg = result.unwrap_err().to_string();
-        // 错误消息应该包含操作名称
+        // 错误消息应该包含操作名称（因为错误被包装在 HttpRetryError 中）
         assert!(error_msg.contains("long error test"));
     }
 
@@ -652,12 +655,17 @@ mod tests {
             backoff_multiplier: 2.0,
         };
 
+        // 使用可重试的错误（TimedOut）以确保错误被包装在 HttpRetryError 中
         let short_error_msg = "Short error message";
-        let short_error = || -> Result<String> { Err(color_eyre::eyre::eyre!(short_error_msg)) };
+        let short_error = || -> Result<String> {
+            let io_error = std::io::Error::new(std::io::ErrorKind::TimedOut, short_error_msg);
+            Err(color_eyre::eyre::eyre!(io_error))
+        };
 
         let result = HttpRetry::retry(short_error, &config, "short error test");
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
+        // 错误消息应该包含操作名称（因为错误被包装在 HttpRetryError 中）
         assert!(error_msg.contains("short error test"));
     }
 }

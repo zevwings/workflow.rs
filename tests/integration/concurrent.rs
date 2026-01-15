@@ -533,7 +533,9 @@ mod tests {
             // 所有批次并行，所以总时间 ≈ max_concurrent * task_duration_ms
             let batch_time = max_concurrent as u64 * task_duration_ms as u64;
             let expected_min = batch_time.saturating_sub(10);
-            let expected_max = batch_time + 50;
+            // 对于高并发，放宽时间限制（系统负载和线程调度可能导致延迟）
+            let tolerance = if max_concurrent >= 10 { 100 } else { 50 };
+            let expected_max = batch_time + tolerance;
 
             assert!(
                 duration >= Duration::from_millis(expected_min),

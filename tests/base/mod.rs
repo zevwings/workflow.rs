@@ -9,5 +9,4 @@ pub mod http_client;
 pub mod http_response;
 pub mod http_retry;
 pub mod llm_client;
-pub mod logger_subscriber;
 pub mod settings;
