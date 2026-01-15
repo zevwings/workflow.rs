@@ -80,22 +80,67 @@ pub fn progress(current: usize, total: usize, item: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
-    #[test]
-    fn test_error_formatting() {
-        let msg = error("read", "config.toml", "Permission denied");
-        assert_eq!(msg, "Failed to read config.toml: Permission denied");
+    #[rstest]
+    #[case(
+        "read",
+        "config.toml",
+        "Permission denied",
+        "Failed to read config.toml: Permission denied"
+    )]
+    #[case(
+        "write",
+        "data.json",
+        "Disk full",
+        "Failed to write data.json: Disk full"
+    )]
+    #[case(
+        "delete",
+        "temp.txt",
+        "File not found",
+        "Failed to delete temp.txt: File not found"
+    )]
+    #[case(
+        "open",
+        "database.db",
+        "Connection timeout",
+        "Failed to open database.db: Connection timeout"
+    )]
+    fn test_error_formatting(
+        #[case] operation: &str,
+        #[case] target: &str,
+        #[case] error_msg: &str,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(error(operation, target, error_msg), expected);
     }
 
-    #[test]
-    fn test_operation_formatting() {
-        let msg = operation("Creating", "new branch");
-        assert_eq!(msg, "Creating new branch...");
+    #[rstest]
+    #[case("Creating", "new branch", "Creating new branch...")]
+    #[case("Updating", "config file", "Updating config file...")]
+    #[case("Deleting", "old files", "Deleting old files...")]
+    #[case("Processing", "data", "Processing data...")]
+    fn test_operation_formatting(
+        #[case] action: &str,
+        #[case] target: &str,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(operation(action, target), expected);
     }
 
-    #[test]
-    fn test_progress_formatting() {
-        let msg = progress(3, 10, "files");
-        assert_eq!(msg, "[3/10] Processing files");
+    #[rstest]
+    #[case(3, 10, "files", "[3/10] Processing files")]
+    #[case(0, 100, "items", "[0/100] Processing items")]
+    #[case(50, 100, "tasks", "[50/100] Processing tasks")]
+    #[case(1, 1, "file", "[1/1] Processing file")]
+    #[case(99, 100, "operations", "[99/100] Processing operations")]
+    fn test_progress_formatting(
+        #[case] current: usize,
+        #[case] total: usize,
+        #[case] item: &str,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(progress(current, total, item), expected);
     }
 }

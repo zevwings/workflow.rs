@@ -45,71 +45,42 @@ mod tests {
     use crate::util::format::DisplayFormatter;
     use rstest::rstest;
 
-    #[test]
-    fn test_format_size_bytes() {
-        assert_eq!(DisplayFormatter::size(0), "0 B");
-        assert_eq!(DisplayFormatter::size(1), "1 B");
-        assert_eq!(DisplayFormatter::size(512), "512 B");
-        assert_eq!(DisplayFormatter::size(1023), "1023 B");
-    }
-
-    #[test]
-    fn test_format_size_kilobytes() {
-        assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
-        assert_eq!(DisplayFormatter::size(1536), "1.50 KB"); // 1024 + 512
-        assert_eq!(DisplayFormatter::size(2048), "2.00 KB");
-        assert_eq!(DisplayFormatter::size(1024 * 1023), "1023.00 KB");
-    }
-
-    #[test]
-    fn test_format_size_megabytes() {
-        assert_eq!(DisplayFormatter::size(1024 * 1024), "1.00 MB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024 + 512 * 1024), "1.50 MB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024 * 5), "5.00 MB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024 * 1023), "1023.00 MB");
-    }
-
-    #[test]
-    fn test_format_size_gigabytes() {
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(3)), "1.00 GB");
-        assert_eq!(
-            DisplayFormatter::size(1024_u64.pow(3) + 512 * 1024_u64.pow(2)),
-            "1.50 GB"
-        );
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(3) * 10), "10.00 GB");
-    }
-
-    #[test]
-    fn test_format_size_terabytes() {
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(4)), "1.00 TB");
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(4) * 2), "2.00 TB");
-        assert_eq!(
-            DisplayFormatter::size(1024_u64.pow(4) + 512 * 1024_u64.pow(3)),
-            "1.50 TB"
-        );
-    }
-
+    // 基础格式化测试 - 覆盖所有单位
     #[rstest]
     #[case(0, "0 B")]
     #[case(1, "1 B")]
+    #[case(512, "512 B")]
     #[case(1023, "1023 B")]
     #[case(1024, "1.00 KB")]
-    #[case(1536, "1.50 KB")]
+    #[case(1536, "1.50 KB")] // 1024 + 512
+    #[case(2048, "2.00 KB")]
+    #[case(1024 * 1023, "1023.00 KB")]
+    #[case(1024 * 1024, "1.00 MB")]
+    #[case(1024 * 1024 + 512 * 1024, "1.50 MB")]
+    #[case(1024 * 1024 * 5, "5.00 MB")]
+    #[case(1024 * 1024 * 1023, "1023.00 MB")]
+    #[case(1024_u64.pow(3), "1.00 GB")]
+    #[case(1024_u64.pow(3) + 512 * 1024_u64.pow(2), "1.50 GB")]
+    #[case(1024_u64.pow(3) * 10, "10.00 GB")]
+    #[case(1024_u64.pow(4), "1.00 TB")]
+    #[case(1024_u64.pow(4) * 2, "2.00 TB")]
+    #[case(1024_u64.pow(4) + 512 * 1024_u64.pow(3), "1.50 TB")]
     #[case(1048576, "1.00 MB")] // 1024^2
     #[case(1073741824, "1.00 GB")] // 1024^3
     #[case(1099511627776, "1.00 TB")] // 1024^4
     #[case(2147483648, "2.00 GB")] // 2 * 1024^3
     #[case(5368709120, "5.00 GB")] // 5 * 1024^3
-    fn test_format_size_parametrized(#[case] bytes: u64, #[case] expected: &str) {
+    fn test_format_size_basic(#[case] bytes: u64, #[case] expected: &str) {
         assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
-    #[test]
-    fn test_format_size_precision() {
-        // 测试小数精度
-        assert_eq!(DisplayFormatter::size(1024 + 256), "1.25 KB"); // 1.25 KB
-        assert_eq!(DisplayFormatter::size(1024 + 102), "1.10 KB"); // 约1.10 KB
-        assert_eq!(DisplayFormatter::size(1024 + 51), "1.05 KB"); // 约1.05 KB
+    // 小数精度测试
+    #[rstest]
+    #[case(1024 + 256, "1.25 KB")] // 1.25 KB
+    #[case(1024 + 102, "1.10 KB")] // 约1.10 KB
+    #[case(1024 + 51, "1.05 KB")] // 约1.05 KB
+    fn test_format_size_precision(#[case] bytes: u64, #[case] expected: &str) {
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
     #[test]

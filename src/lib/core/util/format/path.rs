@@ -26,7 +26,9 @@ pub trait PathDisplay {
 
 impl PathDisplay for Path {
     fn to_display_string(&self) -> String {
-        if let Ok(relative) = self.strip_prefix(std::env::current_dir().unwrap_or_default()) {
+        if let Ok(relative) = self
+            .strip_prefix(std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf()))
+        {
             relative.display().to_string()
         } else {
             self.display().to_string()
@@ -40,12 +42,19 @@ mod tests {
     use std::env;
     use std::path::Path;
 
+    /// 获取当前工作目录的辅助函数
+    ///
+    /// 如果无法获取当前目录，返回 "." 路径。
+    fn get_current_dir() -> std::path::PathBuf {
+        env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf())
+    }
+
     // ==================== 相对路径显示测试 ====================
 
     #[test]
     fn test_to_display_string_relative_path() {
         // 获取当前工作目录
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
 
         // 创建一个相对于当前目录的路径
         let relative_path = current_dir.join("test_file.txt");
@@ -61,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_current_dir_file() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
         let file_in_current_dir = current_dir.join("file.txt");
 
         let display = file_in_current_dir.to_display_string();
@@ -72,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_nested_relative() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
         let nested_path = current_dir.join("subdir/nested/file.txt");
 
         let display = nested_path.to_display_string();
@@ -124,9 +133,7 @@ mod tests {
         let display = home_path.to_display_string();
 
         // 如果不在当前目录下，应该显示为绝对路径
-        if !home_path
-            .starts_with(env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf()))
-        {
+        if !home_path.starts_with(get_current_dir()) {
             assert_eq!(display, home_path.display().to_string());
         }
     }
@@ -135,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_current_dir() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
         let display = current_dir.to_display_string();
 
         // 当前目录 strip_prefix 会返回空路径，显示为空字符串或 "."
@@ -147,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_parent_dir() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
         let parent_dir = current_dir.parent().unwrap_or(Path::new(".."));
 
         let display = parent_dir.to_display_string();
@@ -170,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_with_special_characters() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
         let special_path = current_dir.join("file with spaces.txt");
 
         let display = special_path.to_display_string();
@@ -181,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_unicode() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
         let unicode_path = current_dir.join("测试文件.txt");
 
         let display = unicode_path.to_display_string();
@@ -194,7 +201,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_consistency() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
         let test_path = current_dir.join("test.txt");
 
         let display1 = test_path.to_display_string();
@@ -208,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_to_display_string_same_path_different_representations() {
-        let current_dir = env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let current_dir = get_current_dir();
 
         // 使用不同的方式表示同一个路径
         let path1 = current_dir.join("subdir").join("file.txt");

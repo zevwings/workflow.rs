@@ -117,6 +117,7 @@ impl Default for FuzzyFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_filter_empty_query() {
@@ -151,12 +152,13 @@ mod tests {
         assert_eq!(filtered.len(), 0);
     }
 
-    #[test]
-    fn test_matches() {
+    #[rstest]
+    #[case("feature/user-auth", "feat", true)]
+    #[case("feature/user-auth", "xyz", false)]
+    #[case("feature/user-auth", "", true)]
+    fn test_matches(#[case] option: &str, #[case] query: &str, #[case] should_match: bool) {
         let filter = FuzzyFilter::new();
-
-        assert!(filter.matches("feature/user-auth", "feat").is_some());
-        assert!(filter.matches("feature/user-auth", "xyz").is_none());
-        assert!(filter.matches("feature/user-auth", "").is_some());
+        let result = filter.matches(option, query);
+        assert_eq!(result.is_some(), should_match);
     }
 }

@@ -101,6 +101,7 @@ pub fn key_value(key: &str, value: &str, separator: Option<&str>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_list_item_formatting() {
@@ -108,12 +109,15 @@ mod tests {
         assert_eq!(item, "  - config.toml");
     }
 
-    #[test]
-    fn test_key_value_formatting() {
-        let kv = key_value("Version", "1.0.0", None);
-        assert_eq!(kv, "Version: 1.0.0");
-
-        let kv = key_value("Status", "Active", Some(" = "));
-        assert_eq!(kv, "Status = Active");
+    #[rstest]
+    #[case("Version", "1.0.0", None, "Version: 1.0.0")]
+    #[case("Status", "Active", Some(" = "), "Status = Active")]
+    fn test_key_value_formatting(
+        #[case] key: &str,
+        #[case] value: &str,
+        #[case] separator: Option<&str>,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(key_value(key, value, separator), expected);
     }
 }

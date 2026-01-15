@@ -236,6 +236,7 @@ pub fn detect_release_platform() -> Result<String> {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use rstest::rstest;
     use std::env;
 
     // ==================== 平台检测测试 ====================
@@ -429,24 +430,6 @@ mod tests {
     // ==================== Platform::release_identifier 测试 ====================
 
     #[test]
-    fn test_platform_release_identifier_macos_x86_64() {
-        // 测试 macOS x86_64 平台标识符
-        let platform = Platform::new("macos", "x86_64");
-        let identifier = platform.release_identifier().expect("Should return identifier");
-
-        assert_eq!(identifier, "macOS-Intel");
-    }
-
-    #[test]
-    fn test_platform_release_identifier_macos_aarch64() {
-        // 测试 macOS aarch64 平台标识符
-        let platform = Platform::new("macos", "aarch64");
-        let identifier = platform.release_identifier().expect("Should return identifier");
-
-        assert_eq!(identifier, "macOS-AppleSilicon");
-    }
-
-    #[test]
     fn test_platform_release_identifier_linux_x86_64() {
         // 测试 Linux x86_64 平台标识符
         // 注意：Linux x86_64 可能是 "Linux-x86_64" 或 "Linux-x86_64-static"
@@ -461,94 +444,50 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_platform_release_identifier_linux_aarch64() {
-        // 测试 Linux aarch64 平台标识符
-        let platform = Platform::new("linux", "aarch64");
-        let identifier = platform.release_identifier().expect("Should return identifier");
-
-        assert_eq!(identifier, "Linux-ARM64");
+    // 使用参数化测试简化支持的平台组合测试
+    #[rstest]
+    #[case("macos", "x86_64", "macOS-Intel")]
+    #[case("macos", "aarch64", "macOS-AppleSilicon")]
+    #[case("linux", "aarch64", "Linux-ARM64")]
+    #[case("windows", "x86_64", "Windows-x86_64")]
+    #[case("windows", "aarch64", "Windows-ARM64")]
+    fn test_platform_release_identifier_supported(
+        #[case] os: &str,
+        #[case] arch: &str,
+        #[case] expected: &str,
+    ) {
+        let platform = Platform::new(os, arch);
+        let identifier = platform
+            .release_identifier()
+            .expect(&format!("Should return identifier for {}-{}", os, arch));
+        assert_eq!(identifier, expected);
     }
 
-    #[test]
-    fn test_platform_release_identifier_windows_x86_64() {
-        // 测试 Windows x86_64 平台标识符
-        let platform = Platform::new("windows", "x86_64");
-        let identifier = platform.release_identifier().expect("Should return identifier");
-
-        assert_eq!(identifier, "Windows-x86_64");
-    }
-
-    #[test]
-    fn test_platform_release_identifier_windows_aarch64() {
-        // 测试 Windows aarch64 平台标识符
-        let platform = Platform::new("windows", "aarch64");
-        let identifier = platform.release_identifier().expect("Should return identifier");
-
-        assert_eq!(identifier, "Windows-ARM64");
-    }
-
-    #[test]
-    fn test_platform_release_identifier_unsupported_platform() {
-        // 测试不支持的平台应该返回错误
-        let platform = Platform::new("unsupported", "unknown");
+    #[rstest]
+    #[case(
+        "unsupported",
+        "unknown",
+        Some("Unsupported platform"),
+        Some("unsupported-unknown")
+    )]
+    #[case("freebsd", "x86_64", None, None)]
+    #[case("macos", "armv7", None, None)]
+    fn test_platform_release_identifier_unsupported(
+        #[case] os: &str,
+        #[case] arch: &str,
+        #[case] expected_error_contains: Option<&str>,
+        #[case] expected_error_contains2: Option<&str>,
+    ) {
+        let platform = Platform::new(os, arch);
         let result = platform.release_identifier();
 
         assert!(result.is_err());
         let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("Unsupported platform"));
-        assert!(error_msg.contains("unsupported-unknown"));
-    }
-
-    #[test]
-    fn test_platform_release_identifier_unsupported_os() {
-        // 测试不支持的操作系统
-        let platform = Platform::new("freebsd", "x86_64");
-        let result = platform.release_identifier();
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_platform_release_identifier_unsupported_arch() {
-        // 测试不支持的架构
-        let platform = Platform::new("macos", "armv7");
-        let result = platform.release_identifier();
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_platform_release_identifier_all_supported_combinations() {
-        // 测试所有支持的平台组合
-        let test_cases = vec![
-            ("macos", "x86_64", "macOS-Intel"),
-            ("macos", "aarch64", "macOS-AppleSilicon"),
-            ("linux", "aarch64", "Linux-ARM64"),
-            ("windows", "x86_64", "Windows-x86_64"),
-            ("windows", "aarch64", "Windows-ARM64"),
-        ];
-
-        for (os, arch, expected_prefix) in test_cases {
-            let platform = Platform::new(os, arch);
-            let identifier = platform
-                .release_identifier()
-                .expect(&format!("Should return identifier for {}-{}", os, arch));
-
-            // Linux x86_64 可能是 static 版本
-            if os == "linux" && arch == "x86_64" {
-                assert!(
-                    identifier == "Linux-x86_64" || identifier == "Linux-x86_64-static",
-                    "Linux x86_64 should be Linux-x86_64 or Linux-x86_64-static, got: {}",
-                    identifier
-                );
-            } else {
-                assert_eq!(
-                    identifier, expected_prefix,
-                    "Platform {}-{} should return {}",
-                    os, arch, expected_prefix
-                );
-            }
+        if let Some(expected) = expected_error_contains {
+            assert!(error_msg.contains(expected));
+        }
+        if let Some(expected) = expected_error_contains2 {
+            assert!(error_msg.contains(expected));
         }
     }
 
