@@ -95,8 +95,7 @@ impl InputEditor {
     ///
     /// # 注意
     ///
-    /// 此方法目前未使用，但保留用于未来的粘贴功能实现。
-    #[allow(dead_code)]
+    /// 用于批量插入文本（例如粘贴操作），比逐个字符插入更高效。
     pub(crate) fn insert_str(&mut self, text: &str) {
         // 将文本插入到光标位置
         self.buffer.insert_str(self.cursor, text);

@@ -11,6 +11,12 @@ define HELP_BUILD
 	@echo "  make release          - 构建 release 版本（打包）"
 	@echo "  make clean            - 清理构建产物"
 	@echo ""
+	@echo "运行相关："
+	@echo "  make run [ARGS=...]   - 运行 workflow 命令（例如: make run ARGS=\"setup\"）"
+	@echo "  make run-<command>    - 运行 workflow 命令（例如: make run-setup）"
+	@echo "  make run <command>    - 运行 workflow 命令（例如: make run setup）"
+	@echo "                        注意: 如果 <command> 是已定义的目标，建议使用上述两种方式"
+	@echo ""
 	@echo "安装相关："
 	@echo "  make install          - 一次性安装全部（构建 + 安装二进制 + 安装 completion）"
 	@echo "  make update           - 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）"
@@ -41,6 +47,45 @@ clean:
 	@echo "清理构建产物..."
 	cargo clean
 	@echo "清理完成"
+
+# ============================================
+# 运行相关目标
+# ============================================
+
+# 运行 workflow 命令
+# 使用方式 1: make run ARGS="setup"
+# 使用方式 2: make run-setup
+# 使用方式 3: make run setup
+.PHONY: run
+run:
+	@if [ -n "$(ARGS)" ]; then \
+		cargo run --bin $(BINARY_NAME) -- $(ARGS); \
+	else \
+		RUN_ARGS=""; \
+		for goal in $(filter-out run,$(MAKECMDGOALS)); do \
+			RUN_ARGS="$$RUN_ARGS $$goal"; \
+		done; \
+		if [ -n "$$RUN_ARGS" ]; then \
+			cargo run --bin $(BINARY_NAME) -- $$RUN_ARGS; \
+		else \
+			cargo run --bin $(BINARY_NAME); \
+		fi; \
+	fi
+
+# 支持 make run-<command> 语法
+# 例如: make run-setup 会运行 cargo run --bin workflow -- setup
+# 注意: 如果命令包含多个单词，请使用 make run ARGS="setup jira"
+run-%:
+	@cargo run --bin $(BINARY_NAME) -- $*
+
+# 辅助目标：用于捕获 make run <command> 中的额外参数
+# 这个规则会在解析时为所有非 run 的目标创建空规则
+# 注意: 这可能会覆盖已存在的目标（如 setup），但这是预期的行为
+#       如果遇到问题，建议使用 make run ARGS="..." 或 make run-<command>
+ifneq ($(filter run,$(MAKECMDGOALS)),)
+  # 如果 run 在目标列表中，为其他目标创建空规则以防止它们被执行
+  $(foreach goal,$(filter-out run,$(MAKECMDGOALS)),$(eval $(goal):;@:))
+endif
 
 # ============================================
 # 安装和部署相关目标

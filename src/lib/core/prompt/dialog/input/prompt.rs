@@ -335,6 +335,20 @@ pub(super) fn prompt(builder: InputBuilder) -> Result<String> {
     loop {
         // 读取键盘事件
         match event::read() {
+            Ok(Event::Paste(text)) => {
+                // 处理粘贴事件：使用 insert_str 批量插入文本，比逐个字符插入更高效
+                editor.insert_str(&text);
+                // 粘贴后，立即进行实时验证
+                validate_and_update_prompt(
+                    &builder,
+                    &editor,
+                    &theme,
+                    &mut validation_status,
+                    &mut cursor_line,
+                )?;
+                // 渲染输入（render_input 会确保光标在输入行的正确位置）
+                render_input(&builder, &editor, &theme, &mut cursor_line)?;
+            }
             Ok(Event::Key(KeyEvent {
                 code, modifiers, ..
             })) => {
