@@ -612,3 +612,49 @@ impl HttpClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    // ==================== HttpClient::global 单例测试 ====================
+
+    #[test]
+    #[serial]
+    fn test_http_client_global_singleton() {
+        // 测试全局单例：多次调用应该返回同一个实例
+        let client1 = HttpClient::global().expect("Should create global client");
+        let client2 = HttpClient::global().expect("Should return same global client");
+
+        // 验证是同一个实例（通过地址比较）
+        // 注意：由于 HttpClient 不实现 Eq，我们通过其他方式验证
+        // 实际上，OnceLock 保证返回同一个引用
+        assert!(std::ptr::eq(client1, client2));
+    }
+
+    #[test]
+    #[serial]
+    fn test_http_client_global_multiple_calls() {
+        // 测试多次调用 global() 的一致性
+        let clients: Vec<&HttpClient> = (0..5)
+            .map(|_| HttpClient::global().expect("Should create global client"))
+            .collect();
+
+        // 所有客户端应该是同一个实例
+        let first = clients[0];
+        for client in clients.iter().skip(1) {
+            assert!(std::ptr::eq(first, *client));
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_http_client_global_initialization() {
+        // 测试全局客户端初始化
+        // 正常情况下应该成功
+        let result = HttpClient::global();
+
+        assert!(result.is_ok());
+    }
+}

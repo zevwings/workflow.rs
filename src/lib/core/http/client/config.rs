@@ -98,3 +98,60 @@ impl HttpClientConfig {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_http_client_config_default() {
+        let config = HttpClientConfig::default();
+
+        assert_eq!(config.pool_max_idle_per_host, 100);
+        assert_eq!(config.keep_alive_timeout.as_secs(), 90);
+        assert_eq!(config.connect_timeout.as_secs(), 10);
+        assert_eq!(config.timeout.as_secs(), 30);
+        assert!(config.user_agent.contains("workflow"));
+        assert!(config.tls_verify);
+        assert_eq!(config.max_request_body_size, 10 * 1024 * 1024);
+        assert_eq!(config.max_response_body_size, 100 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_http_client_config_new() {
+        let config = HttpClientConfig::new();
+        let default_config = HttpClientConfig::default();
+
+        assert_eq!(
+            config.pool_max_idle_per_host,
+            default_config.pool_max_idle_per_host
+        );
+        assert_eq!(config.keep_alive_timeout, default_config.keep_alive_timeout);
+        assert_eq!(config.connect_timeout, default_config.connect_timeout);
+        assert_eq!(config.timeout, default_config.timeout);
+        assert_eq!(config.user_agent, default_config.user_agent);
+        assert_eq!(config.tls_verify, default_config.tls_verify);
+    }
+
+    #[test]
+    fn test_http_client_config_builder() {
+        let config = HttpClientConfig::new()
+            .pool_max_idle_per_host(50)
+            .keep_alive_timeout(Duration::from_secs(60))
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(20))
+            .user_agent("custom-agent")
+            .tls_verify(false)
+            .max_request_body_size(5 * 1024 * 1024)
+            .max_response_body_size(50 * 1024 * 1024);
+
+        assert_eq!(config.pool_max_idle_per_host, 50);
+        assert_eq!(config.keep_alive_timeout.as_secs(), 60);
+        assert_eq!(config.connect_timeout.as_secs(), 5);
+        assert_eq!(config.timeout.as_secs(), 20);
+        assert_eq!(config.user_agent, "custom-agent");
+        assert!(!config.tls_verify);
+        assert_eq!(config.max_request_body_size, 5 * 1024 * 1024);
+        assert_eq!(config.max_response_body_size, 50 * 1024 * 1024);
+    }
+}

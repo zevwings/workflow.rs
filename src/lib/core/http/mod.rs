@@ -27,6 +27,12 @@ pub mod request;
 pub mod response;
 pub mod retry;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+pub use mock::HttpMockServer;
+
 // 重新导出主要类型（便利性导出）
 pub use auth::Authorization;
 pub use client::{HttpClient, HttpClientConfig, HttpClientError, HttpMethod, HttpMethodError};
