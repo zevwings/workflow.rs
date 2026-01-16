@@ -1,5 +1,5 @@
 use crate::services::jira::JiraIssueApi;
-use crate::{br, debug, info};
+use crate::{br, debug, info, separator};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
 use serde_saphyr;
@@ -42,7 +42,7 @@ impl ChangelogCommand {
             .wrap_err_with(|| format!("Failed to get changelog for {}", jira_id))?;
 
         br!();
-        br!('=', 40, "Changelog");
+        separator!('=', 40, "Changelog");
 
         if changelog.histories.is_empty() {
             info!("No change history available.");

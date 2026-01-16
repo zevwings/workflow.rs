@@ -1,6 +1,6 @@
 use crate::services::git::GitBranch;
 use crate::services::jira::history::JiraWorkHistory;
-use crate::{br, info};
+use crate::{br, info, separator};
 use color_eyre::Result;
 use serde_json;
 use std::collections::HashMap;
@@ -34,7 +34,7 @@ impl RelatedCommand {
     /// 表格格式输出
     fn output_table(jira_id: &str) -> Result<()> {
         br!();
-        br!('=', 40, "Related Information");
+        separator!('=', 40, "Related Information");
         info!("Jira Ticket: {}", jira_id);
         br!();
 

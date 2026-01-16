@@ -7,7 +7,7 @@ use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::check;
 use crate::core::constants::validation;
 use crate::services::git::GitBranch;
-use crate::{br, info, success, warning};
+use crate::{br, info, separator, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::process::Command;
 
@@ -149,7 +149,7 @@ impl BranchRenameCommand {
         let has_remote_tracking = Self::check_remote_tracking(old_branch_name)?;
 
         br!();
-        br!('━', 80, "Branch Rename Preview");
+        separator!('━', 80, "Branch Rename Preview");
         info!("");
         info!("  Old branch name:  {}", old_branch_name);
         info!("  New branch name:  {}", new_branch_name);
@@ -184,7 +184,7 @@ impl BranchRenameCommand {
             }
         );
         info!("");
-        br!('━', 80);
+        separator!('━', 80);
 
         // Final confirmation
         crate::confirm!("Confirm to execute branch rename?")
@@ -277,7 +277,7 @@ impl BranchRenameCommand {
 
         // Completion message
         br!();
-        br!('━', 80, "Branch Rename Completed");
+        separator!('━', 80, "Branch Rename Completed");
         info!("");
         success!(
             "  ✓ Local branch renamed: {} -> {}",
@@ -304,7 +304,7 @@ impl BranchRenameCommand {
             new_branch_name, new_branch_name
         );
         info!("");
-        br!('━', 80);
+        separator!('━', 80);
 
         Ok(())
     }

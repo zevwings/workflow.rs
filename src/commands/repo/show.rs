@@ -5,7 +5,7 @@
 use crate::config::template::config::TemplateConfig;
 use crate::domain::repo::config::RepoConfig;
 use crate::services::git::GitRepo;
-use crate::{br, info};
+use crate::{br, info, separator};
 use color_eyre::{eyre::WrapErr, Result};
 
 /// Repository show command
@@ -24,7 +24,7 @@ impl RepoShowCommand {
 
         // 2. 显示分支配置
         info!("Branch Configuration");
-        br!('-', 40);
+        separator!('-', 40);
 
         // Load from personal preference config
         let prefix = RepoConfig::get_branch_prefix();
@@ -39,7 +39,7 @@ impl RepoShowCommand {
         // 3. 显示模板配置
         br!();
         info!("Template Configuration");
-        br!('-', 40);
+        separator!('-', 40);
 
         let template_config = TemplateConfig::load().unwrap_or_default();
 

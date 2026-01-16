@@ -43,8 +43,7 @@ impl FormExecutor {
             if group.optional {
                 let should_configure = if let Some(title) = &group.title {
                     crate::br!();
-                    crate::info!("{}", title);
-                    crate::br!('-', 40);
+                    crate::separator!('─', 80, title);
                     if let Some(description) = &group.description {
                         crate::debug!("{}", description);
                         crate::br!();
@@ -63,8 +62,7 @@ impl FormExecutor {
                 // 必填组：显示标题和描述（如果有）
                 if let Some(title) = &group.title {
                     crate::br!();
-                    crate::info!("{}", title);
-                    crate::br!('-', 40);
+                    crate::separator!('─', 80, title);
                 }
                 if let Some(description) = &group.description {
                     crate::debug!("{}", description);
@@ -101,8 +99,8 @@ impl FormExecutor {
                                 )
                             })?;
 
-                        // 收集结果
-                        result.set(field.key.clone(), value);
+                        // 收集结果（使用 set_boxed 因为 value 已经是 Box<dyn std::any::Any + Send + Sync>）
+                        result.set_boxed(field.key.clone(), value);
                     }
                 }
             }
@@ -177,8 +175,8 @@ impl FormExecutor {
             // 执行字段
             let value = self.execute_field(field, &result, level)?;
 
-            // 收集结果
-            result.set(field.key.clone(), value);
+            // 收集结果（使用 set_boxed 因为 value 已经是 Box<dyn std::any::Any + Send + Sync>）
+            result.set_boxed(field.key.clone(), value);
         }
 
         // 输出结束分割线（仅主表单显示）

@@ -10,7 +10,7 @@ use crate::core::prompt::{ConfirmFormField, FormBuilder, GroupConfig, InputFormF
 use crate::core::util::file::FileWriter;
 use crate::domain::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
 use crate::services::git::GitRepo;
-use crate::{br, debug, info, success, warning};
+use crate::{br, debug, info, separator, success, warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal};
@@ -328,7 +328,7 @@ impl RepoSetupCommand {
         // MCP Configuration (顺序交互式流程)
         br!();
         info!("MCP Configuration (Project-level)");
-        br!('-', 40);
+        separator!('-', 40);
         debug!("Configure MCP servers for Cursor IDE integration.");
         br!();
 
@@ -395,7 +395,7 @@ impl RepoSetupCommand {
     /// 配置 JIRA MCP
     fn configure_jira_mcp(settings: &Settings) -> Result<MCPServerConfig> {
         info!("Configuring JIRA MCP...");
-        br!('-', 40);
+        separator!('-', 40);
 
         // 尝试从现有 MCP 配置中读取 JIRA 信息
         let mcp_manager = MCPConfigManager::new()?;
@@ -597,7 +597,7 @@ impl RepoSetupCommand {
     /// 配置 GitHub MCP
     fn configure_github_mcp(settings: &Settings) -> Result<MCPServerConfig> {
         info!("Configuring GitHub MCP...");
-        br!('-', 40);
+        separator!('-', 40);
 
         // 尝试从现有 MCP 配置中读取 GitHub 信息
         let mcp_manager = MCPConfigManager::new()?;

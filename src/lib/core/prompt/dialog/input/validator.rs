@@ -44,28 +44,6 @@ pub mod validators {
         }
     }
 
-    /// 邮箱地址验证器
-    ///
-    /// 简单的邮箱格式验证，检查是否包含 `@` 和 `.`。
-    ///
-    /// # 注意
-    ///
-    /// 这是一个简单的验证，不进行完整的 RFC 5322 验证。
-    /// 如需更严格的验证，请使用 `regex` 验证器。
-    ///
-    /// # 返回
-    ///
-    /// 返回一个验证器，如果输入不符合邮箱格式则返回错误。
-    pub fn email() -> impl Validator {
-        move |input: &str| {
-            if input.contains('@') && input.contains('.') {
-                Ok(())
-            } else {
-                Err("请输入有效的邮箱地址".to_string())
-            }
-        }
-    }
-
     /// 最小长度验证器
     ///
     /// 验证输入的长度至少为指定值。
@@ -137,55 +115,6 @@ pub mod validators {
             } else {
                 Err(format!("长度必须在 {} 到 {} 个字符之间", min, max))
             }
-        }
-    }
-
-    /// URL 地址验证器
-    ///
-    /// 验证输入是否为有效的 HTTP/HTTPS URL。
-    ///
-    /// # 返回
-    ///
-    /// 返回一个验证器，如果输入不是有效的 URL 则返回错误。
-    ///
-    /// # 注意
-    ///
-    /// 这是一个简单的验证，只检查基本格式（必须以 http:// 或 https:// 开头，包含域名等）。
-    /// 如需更严格的验证，请使用 `regex` 验证器。
-    pub fn url() -> impl Validator {
-        const ERROR_MSG: &str = "请输入有效的 URL 地址";
-        const ERROR_MSG_SCHEME: &str = "请输入有效的 URL 地址（必须使用 http:// 或 https://）";
-        const HTTP_SCHEME: &str = "http://";
-        const HTTPS_SCHEME: &str = "https://";
-        const SCHEME_SEPARATOR: &str = "://";
-
-        move |input: &str| {
-            if input.trim().is_empty() {
-                return Err(ERROR_MSG.to_string());
-            }
-            // 检查是否包含空格（URL 不应该包含未编码的空格）
-            if input.contains(' ') {
-                return Err(ERROR_MSG.to_string());
-            }
-            // 简单的 URL 验证（不依赖外部 crate）
-            // 检查是否以 http:// 或 https:// 开头
-            let input_lower = input.to_lowercase();
-            if !input_lower.starts_with(HTTP_SCHEME) && !input_lower.starts_with(HTTPS_SCHEME) {
-                return Err(ERROR_MSG_SCHEME.to_string());
-            }
-            // 检查是否有 host（在 :// 之后至少有一个字符）
-            if let Some(after_scheme) = input.split(SCHEME_SEPARATOR).nth(1) {
-                if after_scheme.trim().is_empty() {
-                    return Err(ERROR_MSG.to_string());
-                }
-                // 检查是否包含至少一个点（表示域名）
-                if !after_scheme.contains('.') {
-                    return Err(ERROR_MSG.to_string());
-                }
-            } else {
-                return Err(ERROR_MSG.to_string());
-            }
-            Ok(())
         }
     }
 
@@ -287,30 +216,6 @@ mod tests {
         assert_eq!(result.unwrap_err(), "此字段为必填项");
     }
 
-    // ==================== email() 验证器测试 ====================
-
-    #[test]
-    fn test_email_validator() {
-        let validator = validators::email();
-
-        // 有效邮箱
-        assert!(validator.validate("user@example.com").is_ok());
-        assert!(validator.validate("test.email@domain.org").is_ok());
-        assert!(validator.validate("user@sub.domain.com").is_ok());
-
-        // 无效邮箱
-        assert!(validator.validate("invalid-email").is_err());
-        // 注意：email() 验证器只检查是否包含 @ 和 .，不检查位置
-        // 所以 "@example.com" 和 "user@" 实际上会通过（因为它们包含 @ 和 .）
-        // 如需更严格的验证，应使用 regex() 验证器
-        assert!(validator.validate("user.example.com").is_err()); // 缺少@
-        assert!(validator.validate("").is_err());
-
-        // 验证错误消息
-        let result = validator.validate("invalid");
-        assert_eq!(result.unwrap_err(), "请输入有效的邮箱地址");
-    }
-
     // ==================== min_length() 验证器测试 ====================
 
     #[rstest]
@@ -387,54 +292,6 @@ mod tests {
 
         let long_result = validator.validate("123456");
         assert_eq!(long_result.unwrap_err(), "长度必须在 3 到 5 个字符之间");
-    }
-
-    // ==================== url() 验证器测试 ====================
-
-    #[test]
-    fn test_url_validator() {
-        let validator = validators::url();
-
-        // 有效 URL
-        assert!(validator.validate("http://example.com").is_ok());
-        assert!(validator.validate("https://example.com").is_ok());
-        assert!(validator.validate("HTTP://EXAMPLE.COM").is_ok()); // 大小写不敏感
-        assert!(validator.validate("https://sub.example.com/path").is_ok());
-        assert!(validator.validate("http://example.com:8080").is_ok());
-
-        // 无效 URL
-        assert!(validator.validate("").is_err()); // 空字符串
-        assert!(validator.validate("   ").is_err()); // 只有空格
-        assert!(validator.validate("example.com").is_err()); // 缺少协议
-        assert!(validator.validate("ftp://example.com").is_err()); // 不支持 ftp
-        assert!(validator.validate("http://").is_err()); // 缺少域名
-        assert!(validator.validate("http://example").is_err()); // 缺少点
-        assert!(validator.validate("http:// example.com").is_err()); // 包含空格
-                                                                     // 注意：url() 验证器只检查是否包含点，不检查点的位置
-                                                                     // 所以 "http://.com" 实际上会通过（因为它包含点）
-                                                                     // 如需更严格的验证，应使用 regex() 验证器
-
-        // 验证错误消息
-        let no_scheme = validator.validate("example.com");
-        assert!(no_scheme.unwrap_err().contains("必须使用 http:// 或 https://"));
-
-        let empty = validator.validate("");
-        assert_eq!(empty.unwrap_err(), "请输入有效的 URL 地址");
-    }
-
-    #[rstest]
-    #[case("http://example.com", true)]
-    #[case("https://example.com", true)]
-    #[case("HTTP://EXAMPLE.COM", true)]
-    #[case("https://sub.example.com/path", true)]
-    #[case("example.com", false)]
-    #[case("ftp://example.com", false)]
-    #[case("http://", false)]
-    #[case("http://example", false)]
-    #[case("http:// example.com", false)]
-    fn test_url_parametrized(#[case] input: &str, #[case] should_pass: bool) {
-        let validator = validators::url();
-        assert_eq!(validator.validate(input).is_ok(), should_pass);
     }
 
     // ==================== regex() 验证器测试 ====================

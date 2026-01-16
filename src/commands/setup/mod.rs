@@ -7,7 +7,5 @@ mod github;
 mod jira;
 mod llm;
 mod log;
-mod types;
 
 pub use command::SetupCommand;
-pub use types::{CollectedConfig, JiraConfig, LLMConfig, LogConfig};

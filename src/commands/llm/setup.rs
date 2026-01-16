@@ -6,7 +6,7 @@ use crate::config::settings::{LLMSettings, Settings};
 use crate::core::prompt::{FormBuilder, GroupConfig, InputFormField, SelectFormField};
 use crate::services::jira::config::ConfigManager;
 use crate::services::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
-use crate::{br, info, success};
+use crate::{br, info, separator, success};
 use color_eyre::{eyre::WrapErr, Result};
 use std::sync::Arc;
 
@@ -16,7 +16,7 @@ pub struct LLMSetupCommand;
 impl LLMSetupCommand {
     /// 交互式设置 LLM 配置
     pub fn setup() -> Result<()> {
-        br!('=', 40, "LLM Configuration Setup");
+        separator!('=', 40, "LLM Configuration Setup");
         br!();
 
         // 加载当前配置
@@ -24,7 +24,7 @@ impl LLMSetupCommand {
         let existing = &settings.llm;
 
         info!("  LLM/AI Configuration");
-        br!('─', 65);
+        separator!('─', 65);
 
         // 准备配置字段的提示信息
         let llm_providers = ["openai", "deepseek", "proxy"];

@@ -55,6 +55,18 @@ impl PasswordFormField {
         self
     }
 
+    /// 设置验证器
+    pub fn validator(mut self, validator: Arc<dyn Validator + Send + Sync>) -> Self {
+        self.validator = Some(validator);
+        self
+    }
+
+    /// 设置条件函数
+    pub fn condition(mut self, condition: Condition) -> Self {
+        self.condition = Some(condition);
+        self
+    }
+
     /// 设置输入完成后显示的 title
     pub fn result_title(mut self, title: impl Into<String>) -> Self {
         self.result_title = Some(title.into());

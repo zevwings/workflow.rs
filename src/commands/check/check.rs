@@ -6,7 +6,7 @@ use crate::core::http::HttpClient;
 use crate::core::http::{HttpMethod, RequestConfig};
 use crate::core::prompt::{spinner, TableBuilder, TableStyle};
 use crate::services::git::{GitCommit, GitRepo};
-use crate::{br, error, info, success, warning};
+use crate::{br, error, info, separator, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use duct::cmd;
 use std::time::Duration;
@@ -67,7 +67,7 @@ impl CheckCommand {
             Paths::workflow_config().map_err(|_| eyre!("Failed to get workflow config path"))?;
 
         if workflow_config_path.exists() {
-            br!('=', 80, "Current Configuration");
+            separator!('=', 80, "Current Configuration");
             br!();
             info!("Workflow config: {:?}", workflow_config_path);
             br!();
@@ -112,11 +112,8 @@ impl CheckCommand {
     pub fn verify_and_display_all(settings: &Settings) -> Result<()> {
         // 1. 验证 Log 配置
         br!();
-        info!("Verifying Log configuration...");
-        let log_config = settings.log.get_config_info();
-        info!("Log Output Folder Name: {}", log_config.output_folder_name);
-        if let Some(ref dir) = log_config.download_base_dir {
-            info!("Download Base Dir: {}", dir);
+        if let Some(ref level) = settings.log.level {
+            info!("Log Level: {}", level);
         }
 
         // 2. 验证 LLM 配置

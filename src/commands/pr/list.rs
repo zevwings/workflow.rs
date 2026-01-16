@@ -1,6 +1,6 @@
 use crate::core::prompt::{TableBuilder, TableStyle};
 use crate::domain::pr::platform::create_provider_auto;
-use crate::{br, info};
+use crate::{info, separator};
 use color_eyre::Result;
 
 /// PR 列表命令
@@ -11,7 +11,7 @@ pub struct PullRequestListCommand;
 impl PullRequestListCommand {
     /// 列出 PR
     pub fn list(state: Option<String>, limit: Option<usize>) -> Result<()> {
-        br!('=', 40, "PR List");
+        separator!('=', 40, "PR List");
         let provider = create_provider_auto()?;
 
         // 默认只获取 open 状态的 PR

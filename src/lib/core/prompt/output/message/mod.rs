@@ -68,6 +68,11 @@ impl MessageRef {
         Self::with_lock(|m| m.debug(msg))
     }
 
+    /// 输出纯文本（无 emoji 前缀）
+    pub fn print(&self, msg: impl AsRef<str>) -> Result<()> {
+        Self::with_lock(|m| m.print(msg))
+    }
+
     /// 输出空行
     pub fn break_line(&self) -> Result<()> {
         Self::with_lock(|m| m.break_line())
@@ -185,6 +190,16 @@ impl Message {
     pub fn debug(&mut self, msg: impl AsRef<str>) -> Result<()> {
         let styled =
             self.theme.debug.apply(&format!("⚙ {}", msg.as_ref()), self.theme.enable_color);
+        writeln!(self.writer, "{}", styled).map_err(|e| eyre::eyre!("IO error: {}", e))?;
+        Ok(())
+    }
+
+    /// 输出纯文本（无 emoji 前缀）
+    ///
+    /// 直接输出文本，不添加任何前缀或 emoji，但会应用主题样式（如果有）。
+    pub fn print(&mut self, msg: impl AsRef<str>) -> Result<()> {
+        // 使用 info 样式但不添加 emoji 前缀
+        let styled = self.theme.info.apply(msg.as_ref(), self.theme.enable_color);
         writeln!(self.writer, "{}", styled).map_err(|e| eyre::eyre!("IO error: {}", e))?;
         Ok(())
     }
@@ -344,7 +359,25 @@ macro_rules! debug {
     };
 }
 
-/// 输出分隔线或换行
+/// 格式化并输出纯文本（无 emoji 前缀）
+///
+/// # Examples
+///
+/// ```
+/// use workflow::print;
+///
+/// print!("Plain text message");
+/// let name = "Alice";
+/// print!("Hello, {}!", name);
+/// ```
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => {
+        let _ = $crate::prompt::Message::global().print(&format!($($arg)*));
+    };
+}
+
+/// 输出换行
 ///
 /// # Examples
 ///
@@ -353,21 +386,35 @@ macro_rules! debug {
 ///
 /// // 输出换行符
 /// br!();
-///
-/// // 使用默认分隔符（80个 '-'）
-/// br!('-');
-///
-/// // 指定分隔符字符和长度
-/// br!('=', 100);
-///
-/// // 在分隔线中间插入文本
-/// br!('=', 40, "Section Title");
-/// // 输出: ===========  Section Title ===========
 /// ```
 #[macro_export]
 macro_rules! br {
     () => {
         let _ = $crate::prompt::Message::global().break_line();
+    };
+}
+
+/// 输出分隔线
+///
+/// # Examples
+///
+/// ```
+/// use workflow::separator;
+///
+/// // 使用默认分隔符（80个 '─'）
+/// separator!();
+///
+/// // 指定分隔符字符和长度
+/// separator!('─', 80);
+///
+/// // 在分隔线中间插入文本
+/// separator!('─', 80, "GitHub Configuration (Required)");
+/// // 输出: ───────────────────────  GitHub Configuration (Required) ───────────────────────
+/// ```
+#[macro_export]
+macro_rules! separator {
+    () => {
+        let _ = $crate::prompt::Message::global().separator('─', 80);
     };
     ($char:expr) => {
         let _ = $crate::prompt::Message::global().separator($char, 80);

@@ -21,6 +21,12 @@ impl FormResult {
         self.values.insert(key, Box::new(value));
     }
 
+    /// 设置字段值（接受已装箱的值）
+    /// 用于从 execute_field 传递 Box<dyn std::any::Any + Send + Sync>
+    pub fn set_boxed(&mut self, key: String, value: Box<dyn std::any::Any + Send + Sync>) {
+        self.values.insert(key, value);
+    }
+
     /// 获取字段值（用于条件函数，内部使用）
     pub fn get_raw(&self, key: &str) -> Option<&Box<dyn std::any::Any + Send + Sync>> {
         self.values.get(key)

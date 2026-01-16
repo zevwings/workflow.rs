@@ -1,9 +1,7 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::commands::github::helpers::{
-    collect_github_account, collect_github_account_with_defaults,
-};
+use crate::commands::github::helpers::{build_github_account, build_github_account_with_defaults};
 use crate::config::settings::paths::Paths;
 use crate::config::settings::GitHubAccountListRow;
 use crate::config::settings::Settings;
@@ -12,7 +10,7 @@ use crate::core::prompt::{TableBuilder, TableStyle};
 use crate::core::util::format::Sensitive;
 use crate::services::git::GitConfig;
 use crate::services::jira::config::ConfigManager;
-use crate::{br, info, success, warning};
+use crate::{br, info, separator, success, warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 /// GitHub 账号管理命令
@@ -95,7 +93,7 @@ impl GitHubCommand {
 
     /// 显示当前激活的 GitHub 账号
     pub fn current() -> Result<()> {
-        br!('=', 40, "Current GitHub Account");
+        separator!('=', 40, "Current GitHub Account");
         br!();
 
         let settings = Settings::load();
@@ -115,10 +113,10 @@ impl GitHubCommand {
 
     /// 添加新的 GitHub 账号
     pub fn add() -> Result<()> {
-        br!('=', 40, "Add GitHub Account");
+        separator!('=', 40, "Add GitHub Account");
         br!();
 
-        let account = collect_github_account()?;
+        let account = build_github_account()?;
 
         // 先检查账号名称是否已存在
         let settings = Settings::load();
@@ -180,7 +178,7 @@ impl GitHubCommand {
 
     /// 删除 GitHub 账号
     pub fn remove() -> Result<()> {
-        br!('=', 40, "Remove GitHub Account");
+        separator!('=', 40, "Remove GitHub Account");
         br!();
 
         let settings = Settings::load();
@@ -296,7 +294,7 @@ impl GitHubCommand {
 
     /// 切换当前 GitHub 账号
     pub fn switch() -> Result<()> {
-        br!('=', 40, "Switch GitHub Account");
+        separator!('=', 40, "Switch GitHub Account");
         br!();
 
         let settings = Settings::load();
@@ -355,7 +353,7 @@ impl GitHubCommand {
 
     /// 更新 GitHub 账号信息
     pub fn update() -> Result<()> {
-        br!('=', 40, "Update GitHub Account");
+        separator!('=', 40, "Update GitHub Account");
         br!();
 
         let settings = Settings::load();
@@ -396,7 +394,7 @@ impl GitHubCommand {
         br!();
 
         // 收集新的账号信息（使用现有值作为默认值）
-        let new_account = collect_github_account_with_defaults(old_account)?;
+        let new_account = build_github_account_with_defaults(old_account)?;
 
         // 如果账号名称改变了，检查新名称是否已存在（排除当前正在更新的账号）
         if new_account.name != old_account.name

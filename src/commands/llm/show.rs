@@ -4,7 +4,7 @@
 use crate::config::settings::LLMConfigRow;
 use crate::config::settings::{LLMSettings, Settings};
 use crate::core::prompt::{TableBuilder, TableStyle};
-use crate::{br, info, success, warning};
+use crate::{br, info, separator, success, warning};
 use color_eyre::Result;
 
 /// LLM 配置查看命令
@@ -13,7 +13,7 @@ pub struct LLMShowCommand;
 impl LLMShowCommand {
     /// 显示当前 LLM 配置
     pub fn show() -> Result<()> {
-        br!('=', 40, "LLM Configuration");
+        separator!('=', 40, "LLM Configuration");
         br!();
 
         let settings = Settings::load();

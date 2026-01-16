@@ -1,5 +1,5 @@
 use crate::services::jira::Jira;
-use crate::{br, debug, info};
+use crate::{br, debug, info, separator};
 use chrono::{DateTime, FixedOffset};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
@@ -130,7 +130,7 @@ impl CommentsCommand {
         }
 
         br!();
-        br!('=', 40, "Comments");
+        separator!('=', 40, "Comments");
         info!(
             "Showing {}/{} comment(s):",
             paginated_comments.len(),

@@ -1,5 +1,5 @@
 use crate::domain::pr::create_provider_auto;
-use crate::{br, info};
+use crate::{br, info, separator};
 use color_eyre::Result;
 
 /// PR 状态命令
@@ -42,7 +42,7 @@ impl PullRequestStatusCommand {
         let info = provider.get_pull_request_info(pr_identifier)?;
 
         br!();
-        br!('=', 40, "PR Information");
+        separator!('=', 40, "PR Information");
         info!("{}", info);
         Ok(())
     }

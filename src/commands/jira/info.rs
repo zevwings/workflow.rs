@@ -3,7 +3,7 @@ use crate::core::util::format::SizeDisplay;
 use crate::services::jira::table::AttachmentRow;
 use crate::services::jira::Jira;
 use crate::spinner;
-use crate::{br, info};
+use crate::{br, info, separator};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
 use serde_saphyr;
@@ -51,7 +51,7 @@ impl InfoCommand {
     /// 表格格式输出
     fn output_table(issue: &crate::jira::JiraIssue) -> Result<()> {
         // 显示基本信息
-        br!('=', 40, "Ticket Information");
+        separator!('=', 40, "Ticket Information");
         info!("Key: {}", issue.key);
         info!("ID: {}", issue.id);
         info!("Summary: {}", issue.fields.summary);
