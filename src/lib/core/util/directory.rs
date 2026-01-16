@@ -361,8 +361,9 @@ mod tests {
         let walker = DirectoryWalker::new(temp_dir.path());
         walker.ensure_parent_exists(&file_path)?;
 
-        assert!(file_path.parent().unwrap().exists());
-        assert!(file_path.parent().unwrap().is_dir());
+        let parent = file_path.parent().expect("File path should have a parent directory");
+        assert!(parent.exists());
+        assert!(parent.is_dir());
 
         Ok(())
     }
@@ -375,7 +376,8 @@ mod tests {
         let walker = DirectoryWalker::new(&nested_path);
         walker.ensure_parent_dir_exists()?;
 
-        assert!(nested_path.parent().unwrap().exists());
+        let parent = nested_path.parent().expect("Nested path should have a parent directory");
+        assert!(parent.exists());
 
         Ok(())
     }

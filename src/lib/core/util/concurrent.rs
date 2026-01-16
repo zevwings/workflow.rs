@@ -284,8 +284,20 @@ impl ConcurrentExecutor {
             let result = match task() {
                 Ok(value) => {
                     if let Some(cb) = &callback {
-                        if let Some(cb_fn) = cb.lock().unwrap().as_ref() {
-                            cb_fn(&name, true, None);
+                        match cb.lock() {
+                            Ok(guard) => {
+                                if let Some(cb_fn) = guard.as_ref() {
+                                    cb_fn(&name, true, None);
+                                }
+                            }
+                            Err(_) => {
+                                // Mutex 被毒化，记录警告但继续执行
+                                // 这通常发生在持有锁的线程 panic 时
+                                tracing::warn!(
+                                    "Mutex was poisoned in progress callback for task '{}', skipping callback",
+                                    name
+                                );
+                            }
                         }
                     }
                     TaskResult::Success(value)
@@ -293,8 +305,19 @@ impl ConcurrentExecutor {
                 Err(err) => {
                     let err_str = err.to_string();
                     if let Some(cb) = &callback {
-                        if let Some(cb_fn) = cb.lock().unwrap().as_ref() {
-                            cb_fn(&name, false, Some(&err_str));
+                        match cb.lock() {
+                            Ok(guard) => {
+                                if let Some(cb_fn) = guard.as_ref() {
+                                    cb_fn(&name, false, Some(&err_str));
+                                }
+                            }
+                            Err(_) => {
+                                // Mutex 被毒化，记录警告但继续执行
+                                tracing::warn!(
+                                    "Mutex was poisoned in progress callback for task '{}', skipping callback",
+                                    name
+                                );
+                            }
                         }
                     }
                     TaskResult::Failure(err)
@@ -334,8 +357,19 @@ impl ConcurrentExecutor {
                     let result = match task() {
                         Ok(value) => {
                             if let Some(cb) = &callback_clone {
-                                if let Some(cb_fn) = cb.lock().unwrap().as_ref() {
-                                    cb_fn(&name, true, None);
+                                match cb.lock() {
+                                    Ok(guard) => {
+                                        if let Some(cb_fn) = guard.as_ref() {
+                                            cb_fn(&name, true, None);
+                                        }
+                                    }
+                                    Err(_) => {
+                                        // Mutex 被毒化，记录警告但继续执行
+                                        tracing::warn!(
+                                            "Mutex was poisoned in progress callback for task '{}', skipping callback",
+                                            name
+                                        );
+                                    }
                                 }
                             }
                             TaskResult::Success(value)
@@ -343,8 +377,19 @@ impl ConcurrentExecutor {
                         Err(err) => {
                             let err_str = err.to_string();
                             if let Some(cb) = &callback_clone {
-                                if let Some(cb_fn) = cb.lock().unwrap().as_ref() {
-                                    cb_fn(&name, false, Some(&err_str));
+                                match cb.lock() {
+                                    Ok(guard) => {
+                                        if let Some(cb_fn) = guard.as_ref() {
+                                            cb_fn(&name, false, Some(&err_str));
+                                        }
+                                    }
+                                    Err(_) => {
+                                        // Mutex 被毒化，记录警告但继续执行
+                                        tracing::warn!(
+                                            "Mutex was poisoned in progress callback for task '{}', skipping callback",
+                                            name
+                                        );
+                                    }
                                 }
                             }
                             TaskResult::Failure(err)
