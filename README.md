@@ -3,7 +3,7 @@
 ![GitHub Release](https://img.shields.io/github/v/release/zevwings/workflow.rs)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![CI](https://github.com/zevwings/workflow.rs/workflows/CI/badge.svg)
-![Rust Version](https://img.shields.io/badge/rust-1.89+-orange)
+![Rust Version](https://img.shields.io/badge/rust-1.82+-orange)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
 
 工作流自动化工具的 Rust 实现版本。
@@ -59,8 +59,8 @@ brew install workflow
 # 安装最新版本
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 
-# 安装指定版本
-VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
+# 安装指定版本（版本号见 GitHub Release，如 v0.0.1）
+VERSION=v0.0.1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 ```
 
 **功能特性**：
@@ -88,31 +88,17 @@ VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevw
 **卸载**：
 
 ```bash
-# 使用卸载脚本
+# 使用卸载脚本（会先尝试 workflow uninstall，不可用时回退到手动删除）
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.sh)"
-
-# 或使用已安装的命令
-workflow uninstall
 ```
+
+v2 暂无 `workflow uninstall` 子命令，卸载脚本会回退到手动删除二进制与 `~/.workflow`；也可按脚本提示手动删除。
 
 卸载脚本功能：
 - ✅ 自动检测已安装的 Workflow CLI
-- ✅ 优先使用 `workflow uninstall` 命令（如果可用）
-- ✅ 手动卸载作为备选方案
+- ✅ 若支持则尝试 `workflow uninstall`，否则执行手动卸载
 - ✅ 清理二进制文件、配置文件和 completion 脚本
 - ✅ 交互式确认，避免误删
-
-卸载流程：
-1. **检测安装**：检查 `workflow` 命令是否在 PATH 中
-2. **确认卸载**：提示用户确认是否卸载
-3. **执行卸载**：
-   - 优先使用 `workflow uninstall` 命令（如果可用）
-   - 如果命令不可用，执行手动卸载
-4. **清理文件**：
-   - 删除二进制文件（`/usr/local/bin/workflow`, `/usr/local/bin/install`）
-   - 可选删除配置文件（`~/.workflow/`）
-   - 删除 completion 脚本
-   - 从 shell 配置文件中移除 completion 配置
 
 #### 方式三：使用安装脚本（Windows）
 
@@ -164,13 +150,13 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/m
 # 或一行命令
 powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
 
-# 或使用已安装的命令
+# 或若支持则使用已安装的命令（v2 暂无此子命令时会回退到手动删除）
 workflow uninstall
 ```
 
 卸载脚本功能：
 - ✅ 自动检测已安装的 Workflow CLI
-- ✅ 优先使用 `workflow uninstall` 命令（如果可用）
+- ✅ 若支持则尝试 `workflow uninstall`，否则执行手动卸载
 - ✅ 手动卸载作为备选方案
 - ✅ 清理二进制文件、配置文件和 completion 脚本
 - ✅ 从 PATH 环境变量中移除安装目录
@@ -180,10 +166,9 @@ workflow uninstall
 1. **检测安装**：检查 `workflow` 命令是否在 PATH 中
 2. **确认卸载**：提示用户确认是否卸载
 3. **执行卸载**：
-   - 优先使用 `workflow uninstall` 命令（如果可用）
-   - 如果命令不可用，执行手动卸载
+   - 若支持则尝试 `workflow uninstall`，否则执行手动卸载
 4. **清理文件**：
-   - 删除二进制文件（`%LOCALAPPDATA%\Programs\workflow\bin\workflow.exe`, `install.exe`）
+   - 删除二进制文件（`%LOCALAPPDATA%\Programs\workflow\bin\workflow.exe`、`install.exe`）
    - 可选删除配置文件（`%APPDATA%\workflow\`）
    - 删除 completion 脚本
    - 从 PowerShell profile 中移除 completion 配置
@@ -402,10 +387,8 @@ workflow config import <INPUT>     # 导入配置文件（合并模式）
 workflow config import <INPUT> --overwrite      # 导入配置文件（覆盖模式）
 workflow config import <INPUT> --section jira   # 只导入指定配置段
 workflow config import <INPUT> --dry-run        # 预览导入变更（不实际导入）
-workflow update                    # 更新 Workflow CLI（重新构建并更新所有组件）
-workflow update --version 1.6.7    # 更新到指定版本
-workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
 workflow version                   # 显示 Workflow CLI 版本
+# v2 暂无 update/uninstall 子命令；更新请重新拉取后 make install，卸载请使用 scripts/install/uninstall.sh 或手动删除
 workflow migrate                   # 执行配置迁移（自动检测并迁移所有待迁移版本）
 workflow migrate --dry-run         # 预览迁移操作
 workflow migrate --keep-old        # 迁移后保留旧配置文件

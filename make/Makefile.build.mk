@@ -13,8 +13,8 @@ define HELP_BUILD
 	@echo ""
 	@echo "安装相关："
 	@echo "  make install          - 一次性安装全部（构建 + 安装二进制 + 安装 completion）"
-	@echo "  make update           - 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）"
-	@echo "  make uninstall        - 卸载二进制文件和 shell completion 脚本"
+	@echo "  make update           - 重新构建并显示版本（v2 无 update 子命令，请重新拉取后 make install）"
+	@echo "  make uninstall        - 提示手动卸载（删除二进制与 ~/.workflow，或使用 scripts/install/uninstall.sh）"
 	@echo ""
 endef
 
@@ -58,13 +58,14 @@ install:
 	@echo "安装 Workflow CLI (二进制文件 + shell completion)..."
 	@./target/release/install
 
-# 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）
-# 使用 workflow update 命令
+# 更新 Workflow CLI（v2 无 workflow update 子命令，仅重新构建并显示版本）
 update:
-	@echo "更新 Workflow CLI..."
-	@cargo build --release --bin $(BINARY_NAME)
-	@./target/release/$(BINARY_NAME) update
+	@echo "重新构建 Workflow CLI..."
+	@cargo build --release -p app
+	@./target/release/$(BINARY_NAME) --version
+	@echo "若需更新到最新版，请重新拉取仓库后执行 make install"
 
-# 卸载二进制文件和 shell completion 脚本（一次性清理全部）
+# 卸载：v2 无 workflow uninstall 子命令，提示用户手动删除或使用卸载脚本
 uninstall:
-	@cargo run --bin $(BINARY_NAME) -- uninstall
+	@echo "v2 无 workflow uninstall 子命令。请手动删除二进制（如 /usr/local/bin/workflow、/usr/local/bin/install）"
+	@echo "及配置目录 ~/.workflow，或执行: bash scripts/install/uninstall.sh"

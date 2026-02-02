@@ -254,7 +254,7 @@ pub const DEFAULT_TIMEOUT_SECS: u64 = 30;
 对于在多个命令中重复使用的参数，应该提取为共用参数组：
 
 ```rust
-// src/lib/cli/args.rs
+// crates/app/src/cli/args.rs
 #[derive(Args, Debug, Clone)]
 pub struct JiraIdArg {
     /// Jira ticket ID
@@ -271,38 +271,37 @@ jira_id: JiraIdArg,
 
 ## 📁 模块组织规范
 
-### 目录结构
+### 目录结构（v2 workspace）
 
-遵循项目的三层架构：
+遵循 workspace 多 crate 结构：
 
 ```
-src/
-├── main.rs              # CLI 入口
-├── lib.rs               # 库入口
-├── bin/                 # 独立可执行文件
-│   └── install.rs
-├── commands/            # 命令封装层
-│   ├── pr/
-│   ├── log/
-│   └── ...
-└── lib/                 # 核心业务逻辑层
-    ├── base/           # 基础模块
-    ├── pr/             # PR 模块
-    ├── jira/           # Jira 模块
-    └── ...
+crates/
+├── app/                 # CLI 入口与命令
+│   ├── src/bin/         # workflow、install 二进制
+│   ├── cli/             # 参数与子命令定义
+│   ├── commands/        # 命令实现
+│   └── workflows/       # 工作流编排
+├── domain/              # 领域模型与仓储 trait
+├── storage/             # Git/CNB 等存储实现
+├── services/            # 应用服务
+├── toolkit/             # HTTP、日志、路径、模板等
+├── prompt/              # 交互与输出
+└── registry/             # 依赖注入
 ```
 
 ### 模块职责
 
-- **`commands/`**：CLI 命令封装，处理用户交互、参数解析
-- **`lib/`**：核心业务逻辑，可复用的功能模块
-- **`bin/`**：独立的可执行文件入口
+- **`app`**：CLI 入口、命令封装与工作流编排
+- **`domain`**：领域实体与仓储接口
+- **`storage`** / **`services`**：存储与业务实现
+- **`toolkit`** / **`prompt`**：通用能力与交互
 
 ### 模块依赖规则
 
-- **命令层** → **库层**：命令层可以依赖库层，但不能反向依赖
-- **库层内部**：可以相互依赖，但避免循环依赖
-- **基础模块**：`lib/base/` 不依赖其他业务模块
+- **app** 依赖 domain、storage、services、toolkit、prompt、registry
+- **domain** 不依赖 app、storage 的具体实现
+- **storage** 实现 domain 中的仓储接口
 
 ---
 
@@ -329,12 +328,7 @@ src/
 ///
 /// # 示例
 ///
-/// ```rust
-/// use workflow::jira::logs::JiraLogs;
-///
-/// let logs = JiraLogs::new()?;
-/// let data = logs.download_from_jira("PROJ-123")?;
-/// ```
+/// 参见各 crate 的公共 API（如 `app::commands::*`、`domain::*`）。
 pub fn download_from_jira(&self, ticket_id: &str) -> Result<Vec<u8>> {
     // 实现
 }
@@ -439,15 +433,15 @@ cargo test
 # 4. 编译检查
 cargo check
 
-# 5. 补全脚本完整性测试
-cargo test --test completeness
+# 5. 运行测试
+cargo test
 ```
 
 #### 一键检查命令
 
 ```bash
 # 快速检查
-make lint && make test && cargo test --test completeness
+make lint && make test
 ```
 
 #### 版本检查（如需要）
@@ -455,8 +449,8 @@ make lint && make test && cargo test --test completeness
 如果提交包含新功能（feat）或 bug 修复（fix），需要检查：
 
 ```bash
-# 检查版本号是否已更新
-grep "^version" Cargo.toml
+# 检查版本号是否已更新（v2 在 [workspace.package] 下）
+grep -A1 "\[workspace.package\]" Cargo.toml | grep version
 
 # 检查 CHANGELOG.md 是否已更新
 head -30 CHANGELOG.md

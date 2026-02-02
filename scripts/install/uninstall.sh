@@ -45,11 +45,11 @@ check_workflow_installed() {
     fi
 }
 
-# 使用 workflow uninstall 命令卸载
+# 使用 workflow uninstall 命令卸载（v2 无此子命令时会失败并回退到手动删除）
 uninstall_with_command() {
-    log_info "Using 'workflow uninstall' command..."
+    log_info "Using 'workflow uninstall' command (if supported)..."
 
-    if workflow uninstall; then
+    if workflow uninstall 2>/dev/null; then
         log_success "Uninstallation completed successfully!"
         return 0
     else

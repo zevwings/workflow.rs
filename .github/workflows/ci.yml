@@ -231,16 +231,16 @@ jobs:
           # 构建项目
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
             # Linux x86_64 使用详细输出以便调试
-            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+            cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install
           elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             # Linux ARM64 交叉编译
             echo "🔨 Building for Linux ARM64..."
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+            cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install
           else
             # 其他目标（macOS, Windows, musl）
-            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+            cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install
           fi
 
   # 确保所有检查都通过（汇总 job）

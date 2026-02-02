@@ -225,28 +225,28 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.generate_version.outputs.version }}"
 
-          # 更新 Cargo.toml 中的版本号
+          # 更新 Cargo.toml 中 [workspace.package] 下的版本号（v2 workspace）
           if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+            sed -i '' '/\[workspace.package\]/ { n; s/^version = ".*"/version = "'"$NEW_VERSION"'"/ }' Cargo.toml
           else
-            sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+            sed -i '/\[workspace.package\]/ { n; s/^version = ".*"/version = "'"$NEW_VERSION"'"/ }' Cargo.toml
           fi
 
           # 验证 Cargo.toml 更新
-          UPDATED_VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          UPDATED_VERSION=$(grep -A1 '\[workspace.package\]' Cargo.toml | grep -oE 'version = "([^"]+)"' | head -1 | sed -E 's/version = "([^"]+)".*/\1/')
           if [ "$UPDATED_VERSION" != "$NEW_VERSION" ]; then
             echo "❌ Error: Failed to update version in Cargo.toml"
             exit 1
           fi
 
-          # 更新 Cargo.lock 中的版本号
-          if grep -q 'name = "workflow"' Cargo.lock; then
+          # 更新 Cargo.lock 中 app crate 的版本号（v2 主包为 app）
+          if grep -q 'name = "app"' Cargo.lock; then
             if [[ "$OSTYPE" == "darwin"* ]]; then
-              sed -i '' '/^name = "workflow"$/,/^version = /{
+              sed -i '' '/^name = "app"$/,/^version = /{
                 /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
               }' Cargo.lock
             else
-              sed -i '/^name = "workflow"$/,/^version = /{
+              sed -i '/^name = "app"$/,/^version = /{
                 /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
               }' Cargo.lock
             fi
@@ -450,7 +450,7 @@ jobs:
           # 构建项目
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
             # Linux x86_64 使用详细输出以便调试
-            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install -vv 2>&1 | tee build.log; then
+            if cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install -vv 2>&1 | tee build.log; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false
@@ -463,7 +463,7 @@ jobs:
             # 确保环境变量已设置
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+            if cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false
@@ -471,7 +471,7 @@ jobs:
             fi
           else
             # 其他目标（macOS, Windows, musl）
-            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+            if cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false
