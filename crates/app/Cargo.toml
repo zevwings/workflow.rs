@@ -1,0 +1,28 @@
+[package]
+name = "app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "应用层（Application Layer），CLI 应用程序入口和命令处理"
+default-run = "workflow"
+
+[[bin]]
+name = "workflow"
+path = "src/bin/workflow.rs"
+
+[[bin]]
+name = "install"
+path = "src/bin/install.rs"
+
+[dependencies]
+domain = { path = "../domain" }
+services = { path = "../services" }
+storage = { path = "../storage" }
+toolkit = { path = "../toolkit" }
+prompt = { path = "../prompt" }
+registry = { path = "../registry" }
+once_cell.workspace = true
+clap.workspace = true
+color-eyre = "0.6"
+serde_json.workspace = true
+git2 = { version = "0.20.3", features = ["https", "ssh", "vendored-libgit2", "vendored-openssl"] }

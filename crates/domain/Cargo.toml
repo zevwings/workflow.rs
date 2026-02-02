@@ -1,0 +1,12 @@
+[package]
+name = "domain"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "领域层（DDD Domain Layer），包含实体、值对象、仓储接口、领域服务接口和领域异常"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+serde_with = "3.0"

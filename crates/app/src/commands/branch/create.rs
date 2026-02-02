@@ -1,0 +1,224 @@
+//! 创建分支命令
+
+use color_eyre::Result;
+use domain::GitRepository;
+use prompt::{error, info, input, select, success};
+
+use crate::registry;
+use crate::workflows::utils::branch::{
+    generate_branch_name_from_jira, select_branch_type, to_slug,
+};
+
+/// Branch Create 命令
+pub struct BranchCreateCommand {
+    jira_id: Option<String>,
+    from_default: bool,
+    dry_run: bool,
+}
+
+impl BranchCreateCommand {
+    /// 创建新的 BranchCreateCommand
+    pub fn new(jira_id: Option<String>, from_default: bool, dry_run: bool) -> Self {
+        Self {
+            jira_id,
+            from_default,
+            dry_run,
+        }
+    }
+
+    /// 运行 `workflow branch create` 命令
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let branch_repo = registry::get_git_repository();
+
+        // 确定源分支
+        let source_branch = if self.from_default {
+            branch_repo
+                .get_default_branch()
+                .map_err(|e| format!("Failed to get default branch: {}", e))?
+        } else {
+            branch_repo
+                .get_current_branch()
+                .map_err(|e| format!("Failed to get current branch: {}", e))?
+        };
+
+        let jira_id =
+            crate::workflows::utils::jira::get_jira_id_interactive_optional(self.jira_id.clone())?;
+
+        // 生成分支名
+        let branch_name = if let Some(jira_id) = jira_id {
+            generate_branch_name_from_jira(&jira_id)?
+        } else {
+            self.generate_branch_name_manual()?
+        };
+
+        if self.dry_run {
+            info!(
+                "[DRY RUN] Would create branch '{}' from '{}'",
+                branch_name, source_branch
+            );
+            return Ok(());
+        }
+
+        // 检查分支是否已存在
+        let (exists_local, exists_remote) = branch_repo
+            .has_branch(&branch_name)
+            .map_err(|e| format!("Failed to check branch existence: {}", e))?;
+
+        if exists_local || exists_remote {
+            error!("Branch '{}' already exists", branch_name);
+            if exists_local {
+                info!("  Local branch exists");
+            }
+            if exists_remote {
+                info!("  Remote branch exists");
+            }
+            return Err(format!("Branch '{}' already exists", branch_name).into());
+        }
+
+        // 获取当前分支和默认分支
+        let current_branch = branch_repo
+            .get_current_branch()
+            .map_err(|e| format!("Failed to get current branch: {}", e))?;
+
+        let default_branch = branch_repo
+            .get_default_branch()
+            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+
+        // 确定源分支和是否需要恢复 stash
+        let (final_source_branch, needs_stash_restore) = if self.from_default {
+            // 如果指定了 from_default，强制从默认分支创建
+            if default_branch != current_branch {
+                let needs_stash = self.prepare_default_branch(
+                    branch_repo.as_ref(),
+                    &current_branch,
+                    &default_branch,
+                )?;
+                (default_branch.clone(), needs_stash)
+            } else {
+                (default_branch.clone(), false)
+            }
+        } else if default_branch != current_branch {
+            // 如果没有指定 from_default，且当前分支不是默认分支，询问用户从哪里创建
+            let options = vec![
+                format!("从当前分支创建 ({})", current_branch),
+                format!("从默认分支创建 ({})", default_branch),
+            ];
+
+            let selected = select!("请选择从哪里创建新分支:", options)
+                .prompt()
+                .map_err(|e| format!("Failed to select source branch: {}", e))?;
+
+            if selected.starts_with("从当前分支创建") {
+                // 从当前分支创建
+                (current_branch.clone(), false)
+            } else {
+                // 从默认分支创建，需要 stash、切换、拉取
+                let needs_stash = self.prepare_default_branch(
+                    branch_repo.as_ref(),
+                    &current_branch,
+                    &default_branch,
+                )?;
+                (default_branch.clone(), needs_stash)
+            }
+        } else {
+            // 当前分支就是默认分支，直接使用
+            (source_branch.clone(), false)
+        };
+
+        // 创建分支
+        info!(
+            "Creating branch '{}' from '{}'...",
+            branch_name, final_source_branch
+        );
+        branch_repo
+            .create_branch(&branch_name)
+            .map_err(|e| format!("Failed to create branch: {}", e))?;
+
+        // 切换到新分支
+        branch_repo
+            .checkout_branch(&branch_name)
+            .map_err(|e| format!("Failed to checkout branch: {}", e))?;
+
+        // 如果之前 stash 了代码，在新分支上恢复
+        if needs_stash_restore {
+            info!("Restoring stashed changes on new branch...");
+            branch_repo
+                .stash_pop(0)
+                .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
+        }
+
+        success!("Created and switched to branch '{}'", branch_name);
+        Ok(())
+    }
+
+    /// 手动输入分支名（不使用 JIRA ID）
+    fn generate_branch_name_manual(&self) -> Result<String, Box<dyn std::error::Error>> {
+        // 让用户选择分支类型
+        let branch_type = select_branch_type()?;
+
+        // 提示用户输入分支名
+        let branch_name = input!("Please enter your new branch name:")
+            .validator(|input: &str| {
+                let trimmed = input.trim();
+                if trimmed.is_empty() {
+                    Err("Branch name cannot be empty".to_string())
+                } else {
+                    Ok(())
+                }
+            })
+            .prompt()
+            .map(|s: String| s.trim().to_string())
+            .map_err(|e| format!("Failed to get branch name: {}", e))?;
+
+        // 将输入转换为 slug 格式
+        let branch_name_slug = to_slug(&branch_name);
+
+        // 使用模板生成分支名（不包含 JIRA ID）
+        let full_branch_name = format!("{}/{}", branch_type.as_str(), branch_name_slug);
+
+        Ok(full_branch_name)
+    }
+
+    /// 准备默认分支的辅助方法
+    ///
+    /// 处理 stash、切换分支、拉取最新代码等操作
+    ///
+    /// # 返回
+    /// 返回是否需要在新分支上恢复 stash
+    fn prepare_default_branch(
+        &self,
+        branch_repo: &dyn GitRepository,
+        _current_branch: &str,
+        default_branch: &str,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        // 检查工作区状态
+        let status = branch_repo
+            .get_working_tree_status()
+            .map_err(|e| format!("Failed to check working tree status: {}", e))?;
+
+        let needs_stash = !status.is_clean();
+
+        // 如果有未提交的更改，先 stash
+        if needs_stash {
+            info!("Working tree has uncommitted changes, stashing...");
+            branch_repo
+                .stash_push(Some("Auto-stash before creating branch from default"))
+                .map_err(|e| format!("Failed to stash changes: {}", e))?;
+        }
+
+        // 切换到默认分支
+        info!("Switching to default branch '{}'...", default_branch);
+        branch_repo
+            .checkout_branch(default_branch)
+            .map_err(|e| format!("Failed to switch to branch '{}': {}", default_branch, e))?;
+
+        // 拉取最新代码
+        info!("Pulling latest changes from '{}'...", default_branch);
+        branch_repo
+            .pull(default_branch)
+            .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
+
+        // 返回是否需要恢复 stash（将在新分支上恢复）
+        Ok(needs_stash)
+    }
+}

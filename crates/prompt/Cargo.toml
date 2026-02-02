@@ -1,0 +1,22 @@
+[package]
+name = "prompt"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "交互式提示库，提供输入提示、确认提示、选择提示、表单、消息输出、加载指示器和表格显示等功能"
+
+[dependencies]
+thiserror.workspace = true
+
+# 终端控制
+crossterm = "0.28"
+unicode-width = "0.1"
+
+# 模糊匹配（用于 select/multiselect 的搜索过滤）
+fuzzy-matcher = "0.3"
+
+# 正则表达式（用于验证器）
+regex = "1.10"
+
+[dev-dependencies]
+rstest = "0.19"

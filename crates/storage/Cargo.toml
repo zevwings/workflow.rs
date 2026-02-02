@@ -1,0 +1,62 @@
+[package]
+name = "storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "存储实现层（Storage Adapters），实现各种仓储接口，提供数据持久化和外部服务调用"
+
+[features]
+default = []
+test-helpers = ["dep:tempfile"]
+
+[dependencies]
+domain = { path = "../domain" }
+toolkit = { path = "../toolkit" }
+registry = { path = "../registry" }
+
+# HTTP 客户端
+reqwest = { version = "0.11", features = ["json", "blocking", "multipart", "rustls-tls"], default-features = false }
+
+
+# Shell 工具
+duct = "0.13"
+
+# 工具
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_with = "3.0"
+thiserror = { workspace = true }
+regex = "1.10"
+glob = "0.3"
+base64 = "0.22"
+zip = "0.6"
+flate2 = "1.0"
+walkdir = "2.4"
+tar = "0.4"
+dirs = "5.0"
+chrono = "0.4"
+toml = "0.8"
+fs2 = "0.4"
+urlencoding = "2.1"
+
+# Git 库
+git2 = { version = "0.20.3", features = ["https", "ssh", "vendored-libgit2", "vendored-openssl"] }
+
+# 延迟初始化
+once_cell = "1.19"
+
+# 测试辅助（可选）
+tempfile = { version = "3.0", optional = true }
+
+[dev-dependencies]
+tempfile = "3.0"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "git_services_bench"
+harness = false
+required-features = ["test-helpers"]
+
+[[example]]
+name = "performance_monitoring"
+required-features = ["test-helpers"]

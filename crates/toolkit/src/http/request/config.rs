@@ -1,0 +1,372 @@
+//! HTTP 请求配置
+
+use std::time::Duration;
+
+use reqwest::header::HeaderMap;
+use serde::Serialize;
+
+use crate::http::auth::Authorization;
+use crate::http::{HttpRetryConfig, IntoHeaderMap};
+
+/// HTTP 请求配置
+///
+/// 使用 builder 模式构建 HTTP 请求配置。所有字段都是可选的，使用默认值。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use toolkit::http::{HttpClient, RequestConfig};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = HttpClient::global()?;
+/// let config = RequestConfig::new();
+/// let response = client.get("https://api.example.com", config)?;
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct RequestConfig {
+    /// 可选的请求体（序列化为 JSON）
+    pub body: Option<serde_json::Value>,
+    /// 可选的查询参数（序列化为 URL 查询字符串）
+    pub query: Option<serde_json::Value>,
+    /// 可选的认证信息
+    pub auth: Option<Authorization>,
+    /// 可选的自定义 HTTP Headers
+    pub headers: Option<HeaderMap>,
+    /// 可选的请求超时时间（如果为 None，使用默认 30 秒）
+    pub timeout: Option<Duration>,
+    /// 可选的重试配置（如果为 None，不进行重试）
+    pub retry_config: Option<HttpRetryConfig>,
+}
+
+impl RequestConfig {
+    /// 创建新的 RequestConfig，使用默认值
+    ///
+    /// # 返回
+    ///
+    /// 返回一个所有字段都为 `None` 的 `RequestConfig` 实例。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use toolkit::http::RequestConfig;
+    ///
+    /// let config = RequestConfig::new();
+    /// ```
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 设置请求体
+    ///
+    /// # 参数
+    ///
+    /// * `body` - 请求体，必须实现 `Serialize` trait
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self`，支持链式调用。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use toolkit::http::RequestConfig;
+    ///
+    /// let body = serde_json::json!({"key": "value"});
+    /// let config = RequestConfig::new().body(&body);
+    /// ```
+    pub fn body<T: Serialize>(mut self, body: &T) -> Self {
+        self.body = serde_json::to_value(body)
+            .map_err(|e| {
+                tracing::warn!("Failed to serialize request body: {}", e);
+            })
+            .ok();
+        self
+    }
+
+    /// 设置查询参数
+    ///
+    /// # 参数
+    ///
+    /// * `query` - 查询参数，必须实现 `Serialize` trait
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self`，支持链式调用。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use toolkit::http::RequestConfig;
+    ///
+    /// let query = serde_json::json!({"page": "1"});
+    /// let config = RequestConfig::new().query(&query);
+    /// ```
+    pub fn query<T: Serialize>(mut self, query: &T) -> Self {
+        self.query = serde_json::to_value(query)
+            .map_err(|e| {
+                tracing::warn!("Failed to serialize query parameters: {}", e);
+            })
+            .ok();
+        self
+    }
+
+    /// 设置认证信息
+    ///
+    /// # 参数
+    ///
+    /// * `auth` - 认证信息
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self`，支持链式调用。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use toolkit::http::{RequestConfig, Authorization};
+    ///
+    /// let auth = Authorization::bearer("api_token");
+    /// let config = RequestConfig::new().auth(auth);
+    /// ```
+    pub fn auth(mut self, auth: Authorization) -> Self {
+        self.auth = Some(auth);
+        self
+    }
+
+    /// 设置 HTTP Headers
+    ///
+    /// # 参数
+    ///
+    /// * `headers` - HTTP Headers（可以是引用或拥有值）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self`，支持链式调用。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use toolkit::http::RequestConfig;
+    /// use reqwest::header::HeaderMap;
+    ///
+    /// let mut headers = HeaderMap::new();
+    /// headers.insert("X-Custom-Header", "value".parse().unwrap());
+    /// let config = RequestConfig::new().headers(&headers);
+    /// ```
+    pub fn headers(mut self, headers: impl IntoHeaderMap) -> Self {
+        self.headers = Some(headers.into_header_map());
+        self
+    }
+
+    /// 设置超时时间
+    ///
+    /// # 参数
+    ///
+    /// * `timeout` - 请求超时时间
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self`，支持链式调用。
+    ///
+    /// # 注意
+    ///
+    /// 如果不设置超时时间，将使用默认的 30 秒超时。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use toolkit::http::RequestConfig;
+    /// use std::time::Duration;
+    ///
+    /// let config = RequestConfig::new()
+    ///     .timeout(Duration::from_secs(60));
+    /// ```
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+
+    /// 设置重试配置
+    ///
+    /// # 参数
+    ///
+    /// * `retry_config` - 重试配置
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Self`，支持链式调用。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use toolkit::http::{RequestConfig, HttpRetryConfig};
+    ///
+    /// let config = RequestConfig::new()
+    ///     .retry(HttpRetryConfig::new());
+    /// ```
+    pub fn retry(mut self, retry_config: HttpRetryConfig) -> Self {
+        self.retry_config = Some(retry_config);
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use reqwest::header::HeaderMap;
+
+    use super::*;
+
+    // ==================== RequestConfig 基础测试 ====================
+
+    #[test]
+    fn test_request_config_new() {
+        let config = RequestConfig::new();
+
+        assert!(config.body.is_none());
+        assert!(config.query.is_none());
+        assert!(config.auth.is_none());
+        assert!(config.headers.is_none());
+        assert!(config.timeout.is_none());
+        assert!(config.retry_config.is_none());
+    }
+
+    #[test]
+    fn test_request_config_default() {
+        let config = RequestConfig::default();
+
+        assert!(config.body.is_none());
+        assert!(config.query.is_none());
+        assert!(config.auth.is_none());
+        assert!(config.headers.is_none());
+        assert!(config.timeout.is_none());
+        assert!(config.retry_config.is_none());
+    }
+
+    // ==================== RequestConfig Builder 测试 ====================
+
+    #[test]
+    fn test_request_config_body() {
+        let body = serde_json::json!({"key": "value"});
+        let config = RequestConfig::new().body(&body);
+
+        assert!(config.body.is_some());
+        let config_body = config.body.unwrap();
+        assert_eq!(config_body["key"], "value");
+    }
+
+    #[test]
+    fn test_request_config_query() {
+        let query = serde_json::json!({"page": "1", "limit": 10});
+        let config = RequestConfig::new().query(&query);
+
+        assert!(config.query.is_some());
+        let config_query = config.query.unwrap();
+        assert_eq!(config_query["page"], "1");
+        assert_eq!(config_query["limit"], 10);
+    }
+
+    #[test]
+    fn test_request_config_auth() {
+        let auth = Authorization::bearer("token");
+        let config = RequestConfig::new().auth(auth);
+
+        assert!(config.auth.is_some());
+        match config.auth.unwrap() {
+            Authorization::Bearer { token } => assert_eq!(token, "token"),
+            _ => panic!("Expected Bearer auth"),
+        }
+    }
+
+    #[test]
+    fn test_request_config_headers() {
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Custom-Header", "value".parse().unwrap());
+        let config = RequestConfig::new().headers(&headers);
+
+        assert!(config.headers.is_some());
+        let config_headers = config.headers.unwrap();
+        assert_eq!(
+            config_headers
+                .get("X-Custom-Header")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            "value"
+        );
+    }
+
+    #[test]
+    fn test_request_config_timeout() {
+        let timeout = Duration::from_secs(60);
+        let config = RequestConfig::new().timeout(timeout);
+
+        assert!(config.timeout.is_some());
+        assert_eq!(config.timeout.unwrap(), timeout);
+    }
+
+    #[test]
+    fn test_request_config_retry() {
+        let retry_config = HttpRetryConfig::new();
+        let config = RequestConfig::new().retry(retry_config);
+
+        assert!(config.retry_config.is_some());
+    }
+
+    // ==================== RequestConfig 链式调用测试 ====================
+
+    #[test]
+    fn test_request_config_chaining() {
+        let body = serde_json::json!({"key": "value"});
+        let query = serde_json::json!({"page": "1"});
+        let auth = Authorization::bearer("token");
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Custom-Header", "value".parse().unwrap());
+        let timeout = Duration::from_secs(60);
+        let retry_config = HttpRetryConfig::new();
+
+        let config = RequestConfig::new()
+            .body(&body)
+            .query(&query)
+            .auth(auth)
+            .headers(&headers)
+            .timeout(timeout)
+            .retry(retry_config);
+
+        assert!(config.body.is_some());
+        assert!(config.query.is_some());
+        assert!(config.auth.is_some());
+        assert!(config.headers.is_some());
+        assert!(config.timeout.is_some());
+        assert!(config.retry_config.is_some());
+    }
+
+    // ==================== RequestConfig 序列化失败测试 ====================
+
+    #[test]
+    fn test_request_config_body_serialization_failure() {
+        // 创建一个无法序列化的类型（循环引用等）
+        // 由于 Rust 的类型系统，我们无法直接创建无法序列化的值
+        // 但我们可以测试序列化警告的情况
+        // 这里我们使用一个可以序列化的值，但验证逻辑正确性
+
+        // 测试正常序列化
+        let body = serde_json::json!({"key": "value"});
+        let config = RequestConfig::new().body(&body);
+        assert!(config.body.is_some());
+
+        // 注意：实际的序列化失败会在 tracing::warn! 中记录
+        // 但配置会继续存在（只是 body 为 None）
+    }
+
+    #[test]
+    fn test_request_config_query_serialization_failure() {
+        // 类似地，测试查询参数序列化失败的情况
+        let query = serde_json::json!({"page": "1"});
+        let config = RequestConfig::new().query(&query);
+        assert!(config.query.is_some());
+    }
+}

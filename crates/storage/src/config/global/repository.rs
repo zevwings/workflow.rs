@@ -1,0 +1,144 @@
+//! 全局配置仓储实现
+//!
+//! 提供 GlobalConfig 的加载、保存和缓存管理功能。
+
+use std::sync::{Mutex, OnceLock};
+
+use domain::{GlobalConfig, GlobalConfigRepository, ServiceError};
+use toolkit::{FileReader, FileWriter, Paths};
+
+/// 全局配置缓存
+static GLOBAL_CONFIG: OnceLock<Mutex<Option<GlobalConfig>>> = OnceLock::new();
+
+/// 全局配置仓储实现
+pub struct GlobalConfigRepositoryImpl;
+
+impl Default for GlobalConfigRepositoryImpl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl GlobalConfigRepositoryImpl {
+    /// 创建新的全局配置存储服务实例
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// 清除全局配置缓存
+    ///
+    /// 用于在配置保存后清除缓存，确保下次加载时读取最新配置。
+    fn clear(&self) {
+        if let Some(cache) = GLOBAL_CONFIG.get() {
+            if let Ok(mut cached) = cache.lock() {
+                *cached = None;
+            }
+        }
+    }
+}
+
+impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
+    /// 加载全局配置（带缓存）
+    ///
+    /// 使用缓存机制，首次加载后后续调用返回缓存的配置。
+    /// 保存配置后会自动清除缓存，下次加载时会重新读取文件。
+    fn load(&self) -> Result<GlobalConfig, ServiceError> {
+        let cache = GLOBAL_CONFIG.get_or_init(|| Mutex::new(None));
+
+        // 尝试从缓存获取
+        {
+            let cached = cache.lock().map_err(|_| {
+                ServiceError::OperationFailed("Failed to acquire cache lock".to_string())
+            })?;
+            if let Some(config) = cached.as_ref() {
+                return Ok(config.clone());
+            }
+        }
+
+        // 缓存未命中，加载配置
+        let config_path = Paths::workflow_config().map_err(|e| {
+            ServiceError::OperationFailed(format!("Failed to get config path: {}", e))
+        })?;
+
+        let settings = if !config_path.exists() {
+            GlobalConfig::default()
+        } else {
+            let content = FileReader::new(&config_path).to_string().map_err(|e| {
+                ServiceError::OperationFailed(format!("Failed to read config: {}", e))
+            })?;
+
+            toml::from_str(&content).map_err(|e| {
+                ServiceError::OperationFailed(format!("Failed to parse config: {}", e))
+            })?
+        };
+
+        // 更新缓存
+        {
+            let mut cached = cache.lock().map_err(|_| {
+                ServiceError::OperationFailed("Failed to acquire cache lock".to_string())
+            })?;
+            *cached = Some(settings.clone());
+        }
+
+        Ok(settings)
+    }
+
+    /// 保存全局配置
+    ///
+    /// 保存配置后会自动清除缓存，下次加载时会重新读取文件。
+    /// 在 Unix 系统上会自动设置文件权限为 600 以确保安全性。
+    fn save(&self, settings: &GlobalConfig) -> Result<(), ServiceError> {
+        let config_path = Paths::workflow_config().map_err(|e| {
+            ServiceError::OperationFailed(format!("Failed to get config path: {}", e))
+        })?;
+
+        let content = toml::to_string(settings).map_err(|e| {
+            ServiceError::OperationFailed(format!("Failed to serialize settings: {}", e))
+        })?;
+
+        let writer = FileWriter::new(&config_path);
+        writer
+            .write_str(&content)
+            .map_err(|e| ServiceError::OperationFailed(format!("Failed to write config: {}", e)))?;
+
+        // 设置文件权限为 600（仅 Unix 系统）
+        #[cfg(unix)]
+        {
+            writer.set_permissions(0o600).map_err(|e| {
+                ServiceError::OperationFailed(format!(
+                    "Failed to set config file permissions: {}",
+                    e
+                ))
+            })?;
+        }
+
+        // 清除缓存，下次加载时会重新读取
+        self.clear();
+
+        Ok(())
+    }
+
+    /// 检查配置文件权限（仅 Unix 系统）
+    fn check_permissions(&self) -> Option<String> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(config_path) = Paths::workflow_config() {
+                if config_path.exists() {
+                    if let Ok(metadata) = config_path.metadata() {
+                        let permissions = metadata.permissions();
+                        let mode = permissions.mode();
+                        // 检查是否有组或其他用户权限（非 600）
+                        if (mode & 0o077) != 0 {
+                            return Some(format!(
+                                "Warning: Configuration file has overly permissive permissions (current: {:o}). Consider setting to 600 for better security.",
+                                mode & 0o777
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+}

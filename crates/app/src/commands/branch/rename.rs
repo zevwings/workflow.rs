@@ -1,0 +1,148 @@
+//! 重命名分支命令
+
+use std::process::Command;
+
+use color_eyre::Result;
+use prompt::{confirm, error, info, input, select, success, warning};
+
+use crate::registry;
+
+/// Branch Rename 命令
+pub struct BranchRenameCommand;
+
+impl Default for BranchRenameCommand {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl BranchRenameCommand {
+    /// 创建新的 BranchRenameCommand
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// 运行 `workflow branch rename` 命令
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let branch_repo = registry::get_git_repository();
+
+        // 列出所有本地分支
+        let branch_items = branch_repo
+            .list_branches(false, false)
+            .map_err(|e| format!("Failed to list branches: {}", e))?;
+
+        if branch_items.is_empty() {
+            error!("No branches found");
+            return Err("No branches available".into());
+        }
+
+        // 提取分支名称用于选择（本地分支的 name 和 display_name 相同）
+        let branch_names: Vec<String> = branch_items.iter().map(|item| item.name.clone()).collect();
+
+        // 交互式选择要重命名的分支
+        let old_branch = select!("Select branch to rename:", branch_names)
+            .prompt()
+            .map_err(|e| format!("Failed to select branch: {}", e))?;
+
+        // 输入新分支名
+        let new_branch = input!("Please enter your new branch name:")
+            .default(&old_branch)
+            .prompt()
+            .map_err(|e| format!("Failed to get new branch name: {}", e))?;
+
+        if new_branch == old_branch {
+            info!("Branch name unchanged");
+            return Ok(());
+        }
+
+        // 检查新分支名是否已存在
+        let (exists_local, exists_remote) = branch_repo
+            .has_branch(&new_branch)
+            .map_err(|e| format!("Failed to check branch existence: {}", e))?;
+
+        if exists_local || exists_remote {
+            error!("Branch '{}' already exists", new_branch);
+            return Err(format!("Branch '{}' already exists", new_branch).into());
+        }
+
+        // 检查旧分支是否有远程分支
+        let (_, has_remote) = branch_repo
+            .has_branch(&old_branch)
+            .map_err(|e| format!("Failed to check branch existence: {}", e))?;
+
+        // 重命名本地分支
+        info!("Renaming branch '{}' to '{}'...", old_branch, new_branch);
+        branch_repo
+            .rename_branch(Some(&old_branch), &new_branch)
+            .map_err(|e| format!("Failed to rename branch: {}", e))?;
+
+        // 如果有远程分支，处理远程分支
+        if has_remote {
+            let should_update_remote = confirm!(
+                "Remote branch 'origin/{}' exists. Update remote?",
+                old_branch
+            )
+            .default(true)
+            .prompt()
+            .map_err(|e| format!("Failed to get confirmation: {}", e))?;
+
+            if should_update_remote {
+                // 推送新分支到远程
+                let push_output = Command::new("git")
+                    .args(["push", "origin", &new_branch])
+                    .output()
+                    .map_err(|e| format!("Failed to execute git push: {}", e))?;
+
+                if !push_output.status.success() {
+                    let error_msg = String::from_utf8_lossy(&push_output.stderr);
+                    error!("Failed to push new branch: {}", error_msg);
+                    warning!("Local branch renamed, but remote update failed");
+                    return Err(format!("Failed to push new branch: {}", error_msg).into());
+                }
+
+                // 设置新分支跟踪远程分支
+                let upstream_output = Command::new("git")
+                    .args([
+                        "branch",
+                        "--set-upstream-to",
+                        &format!("origin/{}", new_branch),
+                        &new_branch,
+                    ])
+                    .output()
+                    .map_err(|e| {
+                        format!("Failed to execute git branch --set-upstream-to: {}", e)
+                    })?;
+
+                if !upstream_output.status.success() {
+                    let error_msg = String::from_utf8_lossy(&upstream_output.stderr);
+                    warning!("Failed to set upstream: {}", error_msg);
+                }
+
+                // 删除远程旧分支
+                let delete_output = Command::new("git")
+                    .args(["push", "origin", "--delete", &old_branch])
+                    .output()
+                    .map_err(|e| format!("Failed to execute git push --delete: {}", e))?;
+
+                if !delete_output.status.success() {
+                    let error_msg = String::from_utf8_lossy(&delete_output.stderr);
+                    if !error_msg.contains("remote ref does not exist") {
+                        warning!("Failed to delete remote branch: {}", error_msg.trim());
+                    }
+                }
+
+                success!(
+                    "Renamed '{}' to '{}' (local and remote)",
+                    old_branch,
+                    new_branch
+                );
+            } else {
+                success!("Renamed '{}' to '{}' (local only)", old_branch, new_branch);
+            }
+        } else {
+            success!("Renamed '{}' to '{}'", old_branch, new_branch);
+        }
+
+        Ok(())
+    }
+}

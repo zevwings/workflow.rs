@@ -1,0 +1,264 @@
+//! Git 仓储接口
+//!
+//! 提供 Git 仓库的完整操作接口定义。
+
+use crate::git::entity::{
+    BlameLineInfo, CommitInfo, MergeStrategy, RepoInfo, TagCreateInfo, TagCreateScope,
+    TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+};
+use crate::git::error::GitError;
+
+/// 仅提供仓库信息的仓储接口（兼容 GitHub 等依赖）
+pub trait GitRepoRepository: Send + Sync {
+    fn get_repo_info(&self) -> RepoInfo;
+}
+
+impl<T: GitRepository + Send + Sync> GitRepoRepository for T {
+    fn get_repo_info(&self) -> RepoInfo {
+        self.get_repo_info()
+    }
+}
+
+/// Git 仓储接口
+///
+/// 提供 Git 仓库的完整操作，包括仓库管理、分支、提交、合并、变基、远程、标签和追溯等功能。
+pub trait GitRepository: Send + Sync {
+    // ========== Repo 操作 ==========
+
+    /// 获取仓库信息
+    ///
+    /// 一次性获取仓库的所有基本信息，包括：
+    /// - 是否为 Git 仓库
+    /// - 仓库类型（GitHub、Codeup、Unknown）
+    /// - origin 远程仓库 URL
+    /// - Git 目录路径
+    /// - 仓库名称（owner/repo 格式）
+    fn get_repo_info(&self) -> RepoInfo;
+
+    /// 获取 .gitignore 中的目录模式
+    ///
+    /// 解析 .gitignore 文件，提取其中的目录模式（以 / 结尾或常见的构建/缓存目录）。
+    /// 这些模式可用于在 git 操作中提前过滤，避免扫描大型目录。
+    ///
+    /// # 返回
+    /// 返回目录模式列表，例如 ["target", "node_modules", "dist"]
+    ///
+    /// # 注意
+    /// - 如果 .gitignore 不存在，返回空列表
+    /// - 只提取目录模式，不包括文件模式
+    /// - 自动添加一些常见的大型目录（如果 .gitignore 中没有）
+    fn get_ignore_directory_patterns(&self) -> Vec<String>;
+
+    /// 获取工作区相对于指定分支的完整 diff
+    ///
+    /// 获取当前工作区、暂存区和已提交更改相对于指定分支的完整 diff。
+    /// 这包括：
+    /// 1. 已提交的更改（当前分支相对于基础分支）
+    /// 2. 暂存区的更改
+    /// 3. 工作区的未暂存更改
+    ///
+    /// # 性能优化（内部自动处理）
+    /// - 自动从 .gitignore 读取并排除大型目录
+    /// - 跳过大文件（> 1MB）以避免内存问题
+    /// - 限制总 diff 大小以提高 LLM 处理速度
+    ///
+    /// # 参数
+    /// - `base_branch`: 基础分支名称，例如 "main" 或 "master"
+    ///
+    /// # 返回
+    /// - `Ok(Some(String))`: 返回 diff 内容
+    /// - `Ok(None)`: 没有更改
+    /// - `Err`: 操作失败
+    fn get_working_tree_diff(&self, base_branch: &str) -> Result<Option<String>, GitError>;
+
+    // ========== Branch 操作 ==========
+
+    /// 创建新分支
+    fn create_branch(&self, name: &str) -> Result<(), GitError>;
+
+    /// 删除本地分支
+    fn delete_branch(&self, name: &str, force: bool) -> Result<(), GitError>;
+
+    /// 重命名分支
+    fn rename_branch(&self, old_name: Option<&str>, new_name: &str) -> Result<(), GitError>;
+
+    /// 列出分支
+    ///
+    /// # 参数
+    /// - `remove_prefix`: 是否移除前缀
+    /// - `all`: true 返回本地和远程分支，false 只返回本地分支
+    ///
+    /// # 返回
+    /// 返回分支信息列表，包含原始名称、显示名称和是否为远程分支
+    fn list_branches(
+        &self,
+        remove_prefix: bool,
+        all: bool,
+    ) -> Result<Vec<crate::BranchInfo>, GitError>;
+
+    /// 切换或创建分支
+    fn checkout_branch(&self, name: &str) -> Result<(), GitError>;
+
+    /// 获取当前分支名
+    fn get_current_branch(&self) -> Result<String, GitError>;
+
+    /// 检查分支是否存在
+    ///
+    /// 返回元组 `(本地存在, 远程存在)`
+    fn has_branch(&self, name: &str) -> Result<(bool, bool), GitError>;
+
+    /// 获取默认分支
+    fn get_default_branch(&self) -> Result<String, GitError>;
+
+    // ========== Commit 操作 ==========
+
+    /// 获取提交信息
+    ///
+    /// 参数支持多种格式：
+    /// - 完整 SHA (40 字符): `"a1b2c3d4..."`
+    /// - 短 SHA (至少 7 字符): `"a1b2c3d"`
+    /// - 符号引用: `"HEAD"`, `"main"`, `"origin/main"`
+    /// - 相对引用: `"HEAD~1"`, `"main^"`
+    fn get_commit_info(&self, ref_or_sha: &str) -> Result<CommitInfo, GitError>;
+
+    /// 获取工作树状态
+    fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError>;
+
+    /// 修改最后一次提交（amend）
+    fn amend_commit(
+        &self,
+        message: Option<&str>,
+        no_edit: bool,
+        no_verify: bool,
+    ) -> Result<String, GitError>;
+
+    /// 创建提交
+    ///
+    /// # 参数
+    /// - `message`: 提交消息
+    /// - `all`: 是否添加所有更改（包括未跟踪的文件）
+    ///
+    /// # 返回
+    /// 返回创建的提交的 SHA
+    fn commit(&self, message: &str, all: bool) -> Result<String, GitError>;
+
+    // ========== Merge 操作 ==========
+
+    /// 合并指定分支到当前分支
+    fn merge_branch(&self, source_branch: &str, strategy: MergeStrategy) -> Result<(), GitError>;
+
+    /// 检查是否有合并冲突
+    fn has_merge_conflicts(&self) -> Result<bool, GitError>;
+
+    /// 检查分支是否已合并到指定分支
+    fn is_branch_merged(&self, branch: &str, base_branch: &str) -> Result<bool, GitError>;
+
+    /// 获取两个分支的共同祖先（merge base）
+    fn merge_base(&self, branch1: &str, branch2: &str) -> Result<String, GitError>;
+
+    // ========== Rebase 操作 ==========
+
+    /// 将当前分支 rebase 到目标分支
+    fn rebase_onto(&self, target_branch: &str) -> Result<(), GitError>;
+
+    /// 将指定范围的提交 rebase 到目标分支
+    fn rebase_onto_with_upstream(
+        &self,
+        newbase: &str,
+        upstream: &str,
+        branch: &str,
+    ) -> Result<(), GitError>;
+
+    // ========== Remote 操作 ==========
+
+    /// 推送到远程仓库
+    fn push(&self, branch_name: &str, set_upstream: bool) -> Result<(), GitError>;
+
+    /// 从远程拉取指定分支的最新更改
+    fn pull(&self, branch_name: &str) -> Result<(), GitError>;
+
+    /// 检查 commit 是否在远程分支中
+    fn is_commit_in_remote_branch(&self, branch: &str, commit_sha: &str) -> Result<bool, GitError>;
+
+    // ========== Stash 操作 ==========
+
+    /// 创建 stash
+    ///
+    /// # 参数
+    /// - `message`: 可选的 stash 消息
+    ///
+    /// # 返回
+    /// 返回创建的 stash 的索引（0 表示最新的 stash）
+    fn stash_push(&self, message: Option<&str>) -> Result<usize, GitError>;
+
+    /// 应用并删除 stash
+    ///
+    /// # 参数
+    /// - `index`: stash 索引（0 表示最新的 stash）
+    ///
+    /// # 返回
+    /// 成功返回 Ok(())
+    fn stash_pop(&self, index: usize) -> Result<(), GitError>;
+
+    // ========== Tag 操作 ==========
+
+    /// 创建 Tag
+    fn create_tag(
+        &self,
+        name: &str,
+        target: Option<&str>,
+        message: Option<&str>,
+        scope: TagCreateScope,
+        force: bool,
+    ) -> Result<TagCreateInfo, GitError>;
+
+    /// 删除 Tag
+    fn delete_tag(
+        &self,
+        name: &str,
+        scope: TagDeleteScope,
+        force: bool,
+    ) -> Result<TagDeleteInfo, GitError>;
+
+    /// 按模式删除 Tag
+    fn delete_tags_by_pattern(
+        &self,
+        pattern: &str,
+        scope: TagDeleteScope,
+        force: bool,
+    ) -> Result<Vec<TagDeleteInfo>, GitError>;
+
+    /// 列出所有 Tag
+    fn list_tags(&self, include_remote: bool) -> Result<Vec<String>, GitError>;
+
+    /// 检查 Tag 是否存在
+    ///
+    /// 返回元组 `(本地存在, 远程存在)`
+    fn has_tag(&self, name: &str) -> Result<(bool, bool), GitError>;
+
+    /// 预览删除操作（dry-run）
+    fn preview_delete(
+        &self,
+        name: Option<&str>,
+        pattern: Option<&str>,
+        scope: TagDeleteScope,
+    ) -> Result<Vec<TagDeleteInfo>, GitError>;
+
+    // ========== Blame 操作 ==========
+
+    /// 获取文件的 blame 信息
+    fn get_file_blame(
+        &self,
+        file_path: &str,
+        revision: Option<&str>,
+    ) -> Result<Vec<BlameLineInfo>, GitError>;
+
+    /// 获取文件指定行范围的 blame 信息
+    fn get_file_blame_range(
+        &self,
+        file_path: &str,
+        start_line: usize,
+        end_line: usize,
+        revision: Option<&str>,
+    ) -> Result<Vec<BlameLineInfo>, GitError>;
+}

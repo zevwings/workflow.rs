@@ -1,0 +1,356 @@
+//! 服务绑定
+
+// 标准库
+use std::any::Any;
+use std::sync::{Arc, OnceLock};
+
+// 内部导入
+use crate::error::Result;
+use crate::scope::Scope;
+use crate::ServiceIdentifier;
+
+/// 类型化的工厂函数类型
+type TypedFactory<T> = Box<dyn for<'a> Fn(&'a crate::container::Container) -> Arc<T> + Send + Sync>;
+
+/// 类型擦除的工厂函数类型
+/// 返回 Box 包装的 Arc，以支持 ?Sized 类型
+type ErasedFactory = Box<
+    dyn for<'a> Fn(&'a crate::container::Container) -> Box<dyn Any + Send + Sync> + Send + Sync,
+>;
+
+/// 可转换为绑定工厂的类型
+///
+/// 此 trait 允许 `bind` 方法接受不同类型的参数：
+/// - 闭包：`|c| Arc::new(ServiceImpl::new())`
+/// - Arc 实例：`Arc::new(ServiceImpl::new())`
+pub trait IntoFactory<T: ?Sized> {
+    fn into_factory(self) -> TypedFactory<T>;
+}
+
+// 为闭包实现 IntoFactory
+impl<T, F> IntoFactory<T> for F
+where
+    T: 'static + Send + Sync + ?Sized,
+    F: for<'a> Fn(&'a crate::container::Container) -> Arc<T> + Send + Sync + 'static,
+{
+    fn into_factory(self) -> TypedFactory<T> {
+        Box::new(self)
+    }
+}
+
+// 为 Arc<T> 实现 IntoFactory（用于直接绑定实例）
+impl<T> IntoFactory<T> for Arc<T>
+where
+    T: 'static + Send + Sync + ?Sized,
+{
+    fn into_factory(self) -> TypedFactory<T> {
+        Box::new(move |_| self.clone())
+    }
+}
+
+/// 服务绑定信息
+pub struct Binding {
+    pub(crate) identifier: ServiceIdentifier,
+    pub(crate) type_name: &'static str,
+    pub(crate) factory: ErasedFactory,
+    pub(crate) scope: Scope,
+    pub(crate) instance: OnceLock<Box<dyn Any + Send + Sync>>,
+}
+
+impl Binding {
+    /// 创建新的绑定
+    pub fn new(
+        identifier: ServiceIdentifier,
+        type_name: &'static str,
+        factory: ErasedFactory,
+        scope: Scope,
+    ) -> Self {
+        Self {
+            identifier,
+            type_name,
+            factory,
+            scope,
+            instance: OnceLock::new(),
+        }
+    }
+
+    /// 解析服务实例，返回 `Arc<T>`
+    pub fn resolve<T: 'static + Send + Sync + ?Sized>(
+        &self,
+        container: &crate::container::Container,
+    ) -> Result<Arc<T>> {
+        match self.scope {
+            Scope::Singleton => {
+                // 使用 OnceLock 确保只初始化一次
+                let cached = self.instance.get_or_init(|| (self.factory)(container));
+                Self::try_unbox_arc::<T>(cached, self.identifier)
+            }
+            Scope::Transient => {
+                let boxed = (self.factory)(container);
+                Self::try_unbox_arc::<T>(&boxed, self.identifier)
+            }
+        }
+    }
+
+    /// 将 Arc<T> 包装到 Box<dyn Any> 进行类型擦除
+    ///
+    /// Arc<T> 本身是 Sized 的（即使 T 是 ?Sized），所以可以安全地放入 Box<dyn Any>
+    pub(crate) fn box_arc<T: 'static + Send + Sync + ?Sized>(
+        arc: Arc<T>,
+    ) -> Box<dyn Any + Send + Sync> {
+        // Arc<T> 本身是 Sized 的，可以直接放入 Box
+        Box::new(arc)
+    }
+
+    /// 尝试从 Box<dyn Any> 中取出 Arc<T>
+    ///
+    /// 这是 `box_arc()` 的逆操作，从类型擦除的 Box 中恢复原始 Arc<T>
+    pub(crate) fn try_unbox_arc<T: 'static + Send + Sync + ?Sized>(
+        boxed: &Box<dyn Any + Send + Sync>,
+        expected_type_id: ServiceIdentifier,
+    ) -> Result<Arc<T>> {
+        // 运行时类型验证：检查期望的 TypeId 是否匹配
+        let actual_type_id = std::any::TypeId::of::<Arc<T>>();
+        if actual_type_id != expected_type_id {
+            return Err(crate::error::RegistryError::TypeCast(format!(
+                "Type mismatch: expected {:?}, got {:?}. Expected type: {}",
+                expected_type_id,
+                actual_type_id,
+                std::any::type_name::<Arc<T>>()
+            )));
+        }
+
+        // 尝试从 Box<dyn Any> 中 downcast 到 Arc<T>
+        // Arc<T> 本身是 Sized 的，所以 downcast_ref 可以工作
+        boxed
+            .downcast_ref::<Arc<T>>()
+            .map(Arc::clone)
+            .ok_or_else(|| {
+                crate::error::RegistryError::TypeCast(format!(
+                    "Failed to downcast to Arc<{}>",
+                    std::any::type_name::<T>()
+                ))
+            })
+    }
+}
+
+/// 辅助函数：将类型化的 factory 转换为类型擦除的 factory
+///
+/// 使用 HRTB (higher-ranked trait bound) 确保工厂函数可以接受任意生命周期的 Container 引用
+fn erase_factory_type<T: 'static + Send + Sync + ?Sized>(
+    factory: TypedFactory<T>,
+) -> ErasedFactory {
+    Box::new(move |c| {
+        let arc = factory(c);
+        Binding::box_arc(arc)
+    })
+}
+
+/// 绑定构建器
+pub struct BindingBuilder<'a> {
+    identifier: ServiceIdentifier,
+    type_name: &'static str,
+    factory: ErasedFactory,
+    container: &'a crate::container::Container,
+}
+
+impl<'a> BindingBuilder<'a> {
+    /// 创建新的绑定构建器
+    pub(crate) fn new<T: 'static + Send + Sync + ?Sized>(
+        identifier: ServiceIdentifier,
+        factory: impl IntoFactory<T>,
+        container: &'a crate::container::Container,
+    ) -> Self {
+        let type_name = std::any::type_name::<Arc<T>>();
+        let factory = factory.into_factory();
+        let factory = erase_factory_type(factory);
+        Self {
+            identifier,
+            type_name,
+            factory,
+            container,
+        }
+    }
+
+    /// 设置作用域并完成绑定，自动注册到容器
+    pub fn in_scope(self, scope: Scope) -> Result<()> {
+        let binding = Binding::new(self.identifier, self.type_name, self.factory, scope);
+        self.container.add_binding(binding)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // 标准库
+    use std::sync::Arc;
+
+    // 第三方库
+    use pretty_assertions::assert_eq;
+    use rstest::rstest;
+
+    // 内部导入
+    use super::*;
+    use crate::scope::Scope;
+
+    // 测试工具
+    pub(crate) trait TestService: Send + Sync {
+        fn value(&self) -> i32;
+        fn id(&self) -> usize;
+    }
+
+    pub(crate) struct TestServiceImpl {
+        pub value: i32,
+        pub id: usize,
+    }
+
+    impl TestService for TestServiceImpl {
+        fn value(&self) -> i32 {
+            self.value
+        }
+        fn id(&self) -> usize {
+            self.id
+        }
+    }
+
+    // 1. 核心功能：参数化测试 Singleton 和 Transient
+    #[rstest]
+    #[case(Scope::Singleton, true)]
+    #[case(Scope::Transient, false)]
+    fn test_binding_resolve_scope(#[case] scope: Scope, #[case] should_be_same: bool) {
+        let container = crate::container::Container::new();
+        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let type_name = std::any::type_name::<Arc<dyn TestService>>();
+        let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(1));
+        let counter_clone = counter.clone();
+        let factory: ErasedFactory = Box::new(move |_| {
+            let id = counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let arc: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 42, id });
+            Binding::box_arc(arc)
+        });
+        let binding = Binding::new(identifier, type_name, factory, scope);
+
+        let service1: Arc<dyn TestService> = binding.resolve(&container).unwrap();
+        let service2: Arc<dyn TestService> = binding.resolve(&container).unwrap();
+
+        assert_eq!(service1.value(), 42);
+        assert_eq!(service2.value(), 42);
+
+        if should_be_same {
+            assert_eq!(service1.id(), service2.id());
+            assert!(Arc::ptr_eq(&service1, &service2));
+        } else {
+            assert_ne!(service1.id(), service2.id());
+            assert!(!Arc::ptr_eq(&service1, &service2));
+        }
+    }
+
+    // 2. BindingBuilder 链式调用和作用域
+    #[test]
+    fn test_binding_builder_in_scope() {
+        let container = crate::container::Container::new();
+        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+
+        let factory = |_c: &crate::container::Container| -> Arc<dyn TestService> {
+            Arc::new(TestServiceImpl { value: 42, id: 1 })
+        };
+
+        let result =
+            BindingBuilder::new(identifier, factory, &container).in_scope(Scope::Transient);
+
+        assert!(result.is_ok());
+        assert!(container.is_bound::<dyn TestService>());
+
+        // 验证 Transient 作用域
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert!(!Arc::ptr_eq(&service1, &service2));
+    }
+
+    // 3. BindingBuilder in_scope 方法（Singleton 作用域）
+    #[test]
+    fn test_binding_builder_singleton() {
+        let container = crate::container::Container::new();
+        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+
+        let factory = |_c: &crate::container::Container| -> Arc<dyn TestService> {
+            Arc::new(TestServiceImpl { value: 42, id: 1 })
+        };
+
+        let result =
+            BindingBuilder::new(identifier, factory, &container).in_scope(Scope::Singleton);
+
+        assert!(result.is_ok());
+        assert!(container.is_bound::<dyn TestService>());
+
+        // 验证 Singleton 作用域
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert!(Arc::ptr_eq(&service1, &service2));
+    }
+
+    // 4. 测试 IntoFactory trait - 使用 Arc<T> 直接绑定
+    #[test]
+    fn test_into_factory_with_arc_instance() {
+        let container = crate::container::Container::new();
+        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+
+        // 直接传递 Arc 实例
+        let instance: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 99, id: 42 });
+        let result =
+            BindingBuilder::new(identifier, instance, &container).in_scope(Scope::Singleton);
+
+        assert!(result.is_ok());
+        assert!(container.is_bound::<dyn TestService>());
+
+        // 验证服务值
+        let service: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert_eq!(service.value(), 99);
+        assert_eq!(service.id(), 42);
+    }
+
+    // 5. 测试 IntoFactory trait - Arc 实例的 Singleton 行为
+    #[test]
+    fn test_into_factory_arc_singleton_behavior() {
+        let container = crate::container::Container::new();
+        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+
+        // 使用 Arc 实例绑定
+        let instance: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 100, id: 1 });
+        BindingBuilder::new(identifier, instance, &container)
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 多次获取应该返回同一个实例（Singleton）
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+
+        assert_eq!(service1.value(), 100);
+        assert_eq!(service2.value(), 100);
+        assert!(Arc::ptr_eq(&service1, &service2));
+    }
+
+    // 6. 测试 IntoFactory trait - 闭包方式仍然有效
+    #[test]
+    fn test_into_factory_with_closure_still_works() {
+        let container = crate::container::Container::new();
+        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+
+        // 使用闭包绑定
+        let factory = |_c: &crate::container::Container| -> Arc<dyn TestService> {
+            Arc::new(TestServiceImpl { value: 200, id: 2 })
+        };
+
+        let result =
+            BindingBuilder::new(identifier, factory, &container).in_scope(Scope::Transient);
+
+        assert!(result.is_ok());
+
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+
+        // Transient 应该创建不同实例
+        assert_eq!(service1.value(), 200);
+        assert_eq!(service2.value(), 200);
+        assert!(!Arc::ptr_eq(&service1, &service2));
+    }
+}

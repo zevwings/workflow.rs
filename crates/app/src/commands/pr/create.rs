@@ -1,0 +1,686 @@
+//! 创建 Pull Request 命令
+
+use color_eyre::Result;
+use domain::{GitRepository, PullRequestContent};
+use prompt::{error, info, input, select, success, Spinner};
+
+use crate::registry;
+use crate::workflows::utils::branch::{
+    generate_branch_name_by_summary, generate_branch_name_from_jira,
+    generate_branch_name_from_template,
+};
+use crate::workflows::utils::jira::get_jira_id_interactive_optional;
+
+/// Pull Request Create 命令
+pub struct PullRequestCreateCommand {
+    jira_id: Option<String>,
+    #[allow(dead_code)]
+    title: Option<String>,
+    #[allow(dead_code)]
+    description: Option<String>,
+    dry_run: bool,
+}
+
+impl PullRequestCreateCommand {
+    /// 创建新的 PullRequestCreateCommand
+    pub fn new(
+        jira_id: Option<String>,
+        title: Option<String>,
+        description: Option<String>,
+        dry_run: bool,
+    ) -> Self {
+        Self {
+            jira_id,
+            title,
+            description,
+            dry_run,
+        }
+    }
+
+    /// 运行 `workflow pr create` 命令
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let branch_repo = registry::get_git_repository();
+
+        // 获取 JIRA ID（交互式或从参数）
+        let jira_id = get_jira_id_interactive_optional(self.jira_id.clone())?;
+
+        // 保存 description 用于后续提交
+        let mut description_for_commit = None;
+
+        // 第一步：创建分支
+        let branch_name = if let Some(ref jira_id) = jira_id {
+            // 从 JIRA ID 生成分支名
+            generate_branch_name_from_jira(jira_id)?
+        } else {
+            // 如果没有 JIRA ID，让用户输入描述
+            let description = input!("Please enter ticket description:")
+                .validator(|input: &str| {
+                    let trimmed = input.trim();
+                    if trimmed.is_empty() {
+                        Err("Description cannot be empty".to_string())
+                    } else {
+                        Ok(())
+                    }
+                })
+                .prompt()
+                .map(|s: String| s.trim().to_string())
+                .map_err(|e| format!("Failed to get description: {}", e))?;
+
+            // 保存 description 用于后续提交
+            description_for_commit = Some(description.clone());
+
+            // 使用核心逻辑生成分支类型和基础分支名
+            let (branch_type, base_branch_name) = Spinner::new("Generating branch name...")
+                .with(|| generate_branch_name_by_summary(description.as_str()))
+                .map_err(|e| format!("Failed to generate branch name: {}", e))?;
+
+            // 使用模板将基础分支名与 branch_type 组合成完整分支名（不包含 JIRA ID）
+            let branch_name =
+                generate_branch_name_from_template(branch_type, &base_branch_name, None)?;
+
+            branch_name
+        };
+
+        // 获取默认分支和当前分支
+        let default_branch = branch_repo
+            .get_default_branch()
+            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+
+        let current_branch = branch_repo
+            .get_current_branch()
+            .map_err(|e| format!("Failed to get current branch: {}", e))?;
+
+        // 根据当前分支和默认分支的关系，处理不同的逻辑
+        let final_branch_name = if default_branch != current_branch {
+            // 情况1: 不是默认分支，询问用户如何处理
+            self.handle_non_default_branch(
+                branch_repo.as_ref(),
+                &current_branch,
+                &default_branch,
+                &branch_name,
+                &jira_id,
+                description_for_commit.as_deref(),
+            )?
+        } else {
+            // 情况2: 是默认分支，提交代码并创建新 PR
+            self.handle_default_branch(
+                branch_repo.as_ref(),
+                &default_branch,
+                &branch_name,
+                &jira_id,
+                description_for_commit.as_deref(),
+            )?
+        };
+
+        // 如果返回了分支名，说明需要创建新分支并创建 PR
+        if let Some(new_branch_name) = final_branch_name {
+            // 检查分支是否已存在
+            let (exists_local, exists_remote) = branch_repo
+                .has_branch(&new_branch_name)
+                .map_err(|e| format!("Failed to check branch existence: {}", e))?;
+
+            if exists_local || exists_remote {
+                error!("Branch '{}' already exists", new_branch_name);
+                if exists_local {
+                    info!("  Local branch exists");
+                }
+                if exists_remote {
+                    info!("  Remote branch exists");
+                }
+                return Err(format!("Branch '{}' already exists", new_branch_name).into());
+            }
+
+            // 获取当前分支作为源分支（可能在 handle_non_default_branch 中已经切换）
+            let source_branch = branch_repo
+                .get_current_branch()
+                .map_err(|e| format!("Failed to get current branch: {}", e))?;
+
+            // 创建新分支
+            if self.dry_run {
+                info!(
+                    "[DRY RUN] Would create branch '{}' from '{}'",
+                    new_branch_name, source_branch
+                );
+                info!("[DRY RUN] Would switch to branch '{}'", new_branch_name);
+            } else {
+                info!(
+                    "Creating branch '{}' from '{}'...",
+                    new_branch_name, source_branch
+                );
+                branch_repo
+                    .create_branch(&new_branch_name)
+                    .map_err(|e| format!("Failed to create branch: {}", e))?;
+
+                branch_repo
+                    .checkout_branch(&new_branch_name)
+                    .map_err(|e| format!("Failed to checkout branch: {}", e))?;
+
+                success!("Created and switched to branch '{}'", new_branch_name);
+            }
+
+            // 生成 PR 详细总结（在提交之前）
+            let pr_content = self.generate_pr_summary(
+                branch_repo.as_ref(),
+                &new_branch_name,
+                &jira_id,
+                description_for_commit.as_deref(),
+            )?;
+
+            // 提交代码（如果有更改）
+            if !self.dry_run {
+                self.commit_changes(
+                    branch_repo.as_ref(),
+                    &jira_id,
+                    description_for_commit.as_deref(),
+                )?;
+            } else {
+                let status = branch_repo
+                    .get_working_tree_status()
+                    .map_err(|e| format!("Failed to check working tree status: {}", e))?;
+
+                if !status.is_clean() {
+                    info!("[DRY RUN] Would commit changes");
+                    let commit_message = if let Some(jira_id) = &jira_id {
+                        format!("[DRY RUN] Commit message would be: {}: <JIRA summary>", jira_id)
+                    } else if let Some(desc) = description_for_commit.as_deref() {
+                        format!("[DRY RUN] Commit message would be: {}", desc)
+                    } else {
+                        "[DRY RUN] Commit message would be generated".to_string()
+                    };
+                    info!("{}", commit_message);
+                    info!("[DRY RUN] Would push branch '{}' to remote", new_branch_name);
+                } else {
+                    info!("[DRY RUN] No changes to commit");
+                }
+            }
+
+            // 创建 PR（如果有 PR 内容）
+            if let Some(pr_content) = pr_content {
+                self.create_pull_request(branch_repo.as_ref(), &new_branch_name, &pr_content)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 处理非默认分支的情况
+    ///
+    /// 返回 Option<String>：
+    /// - None: 使用当前分支，不需要创建新分支
+    /// - Some(branch_name): 需要创建的新分支名
+    fn handle_non_default_branch(
+        &self,
+        branch_repo: &dyn GitRepository,
+        current_branch: &str,
+        default_branch: &str,
+        generated_branch_name: &str,
+        jira_id: &Option<String>,
+        description: Option<&str>,
+    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        let options = vec![
+            format!("直接使用当前分支 ({})", current_branch),
+            format!("基于当前分支创建新分支 ({})", generated_branch_name),
+            format!("切换到默认分支，创建新分支 ({})", generated_branch_name),
+        ];
+
+        let selected = select!("请选择分支处理方式:", options)
+            .prompt()
+            .map_err(|e| format!("Failed to select branch option: {}", e))?;
+
+        if selected.starts_with("直接使用当前分支") {
+            // 1.1 直接使用当前分支
+            let pr_service = registry::get_pull_request_service();
+
+            // 检查当前分支是否已有 PR
+            let existing_pr_id = pr_service
+                .get_current_branch_pull_request(current_branch)
+                .map_err(|e| format!("Failed to check existing PR: {}", e))?;
+
+            if let Some(pr_id) = existing_pr_id {
+                // 已有 PR，询问是否更新
+                let update_options = vec!["是，更新 PR", "否，取消操作"];
+                let update_selected = select!(
+                    format!("当前分支 '{}' 已有 PR #{}，是否更新?", current_branch, pr_id),
+                    update_options
+                )
+                .prompt()
+                .map_err(|e| format!("Failed to select update option: {}", e))?;
+
+                if update_selected == "是，更新 PR" {
+                    // 生成 PR 内容
+                    let pr_content = self.generate_pr_summary(
+                        branch_repo,
+                        current_branch,
+                        jira_id,
+                        description,
+                    )?;
+
+                    if let Some(pr_content) = pr_content {
+                        // 更新 PR
+                        if self.dry_run {
+                            info!("[DRY RUN] Would update PR #{}", pr_id);
+                            info!("  Title: {}", pr_content.pr_title);
+                            if let Some(ref desc) = pr_content.description {
+                                info!("  Description:\n{}", desc);
+                            }
+                        } else {
+                            let mut pr_body = String::new();
+                            if let Some(ref description) = pr_content.description {
+                                pr_body.push_str(description);
+                            }
+                            if let Some(ref summary) = pr_content.summary {
+                                if !pr_body.is_empty() {
+                                    pr_body.push_str("\n\n");
+                                }
+                                pr_body.push_str("## Summary\n\n");
+                                pr_body.push_str(summary);
+                            }
+
+                            info!("Updating PR #{}...", pr_id);
+                            pr_service
+                                .update_pull_request(
+                                    &pr_id,
+                                    Some(&pr_content.pr_title),
+                                    Some(&pr_body),
+                                )
+                                .map_err(|e| format!("Failed to update PR: {}", e))?;
+                            success!("PR #{} updated successfully!", pr_id);
+                        }
+                    }
+                } else {
+                    info!("Operation cancelled");
+                }
+                return Ok(None);
+            } else {
+                // 没有 PR，创建新 PR
+                // 先提交代码
+                if !self.dry_run {
+                    self.commit_changes(branch_repo, jira_id, description)?;
+                } else {
+                    let status = branch_repo
+                        .get_working_tree_status()
+                        .map_err(|e| format!("Failed to check working tree status: {}", e))?;
+
+                    if !status.is_clean() {
+                        info!("[DRY RUN] Would commit changes");
+                    } else {
+                        info!("[DRY RUN] No changes to commit");
+                    }
+                }
+
+                // 生成 PR 内容并创建 PR
+                let pr_content = self.generate_pr_summary(
+                    branch_repo,
+                    current_branch,
+                    jira_id,
+                    description,
+                )?;
+
+                if let Some(pr_content) = pr_content {
+                    self.create_pull_request(branch_repo, current_branch, &pr_content)?;
+                }
+                return Ok(None);
+            }
+        } else if selected.starts_with("基于当前分支创建新分支") {
+            // 1.2 基于当前分支创建新分支
+            Ok(Some(generated_branch_name.to_string()))
+        } else {
+            // 1.3 切换到默认分支，创建新分支
+            if self.dry_run {
+                info!("[DRY RUN] Would stash changes, switch to '{}', and pull latest", default_branch);
+                let status = branch_repo
+                    .get_working_tree_status()
+                    .map_err(|e| format!("Failed to check working tree status: {}", e))?;
+                if !status.is_clean() {
+                    info!("[DRY RUN] Would stash changes before switching");
+                }
+            } else {
+                self.prepare_default_branch(branch_repo, current_branch, default_branch)?;
+            }
+            Ok(Some(generated_branch_name.to_string()))
+        }
+    }
+
+    /// 处理默认分支的情况
+    ///
+    /// 返回 Option<String>：
+    /// - Some(branch_name): 需要创建的新分支名（默认分支需要创建新分支）
+    fn handle_default_branch(
+        &self,
+        _branch_repo: &dyn GitRepository,
+        _default_branch: &str,
+        generated_branch_name: &str,
+        _jira_id: &Option<String>,
+        _description: Option<&str>,
+    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        // 情况2: 是默认分支，需要创建新分支
+        // 分支创建和后续操作在主逻辑中统一处理
+        Ok(Some(generated_branch_name.to_string()))
+    }
+
+    /// 提交代码更改
+    ///
+    /// 如果有 JIRA ID，使用 `{jira-id}: {summary}` 作为 commit message
+    /// 如果没有 JIRA ID，使用输入的 description 作为 commit message
+    ///
+    /// # 返回
+    /// 返回提交的 SHA（如果有提交），否则返回 None
+    fn commit_changes(
+        &self,
+        branch_repo: &dyn GitRepository,
+        jira_id: &Option<String>,
+        description: Option<&str>,
+    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        // 性能优化：移除 get_working_tree_status() 调用
+        // 直接尝试提交，如果没有更改会在 commit 方法中处理
+
+        // 生成 commit message
+        let commit_message = if let Some(jira_id) = jira_id {
+            // 检查 JIRA ID 是否为空字符串
+            if jira_id.trim().is_empty() {
+                // JIRA ID 为空，使用 description
+                if let Some(desc) = description {
+                    desc.to_string()
+                } else {
+                    return Err("No commit message available".into());
+                }
+            } else {
+                // 获取 JIRA summary
+                info!("Fetching JIRA ticket '{}'...", jira_id);
+                let jira_repo = registry::get_jira_repository();
+
+                // 尝试获取 JIRA ticket 信息，如果失败则使用 JIRA ID 作为降级方案
+                match Spinner::new(format!("Fetching JIRA ticket '{}'...", jira_id))
+                    .with(|| jira_repo.get_issue_info(jira_id))
+                {
+                    Ok(issue) => {
+                        info!("Successfully fetched JIRA ticket '{}'", jira_id);
+                        format!("{}: {}", jira_id, issue.summary)
+                    }
+                    Err(e) => {
+                        error!("Failed to fetch JIRA ticket '{}': {}", jira_id, e);
+                        info!("Using JIRA ID as commit message: {}", jira_id);
+                        jira_id.clone()
+                    }
+                }
+            }
+        } else if let Some(desc) = description {
+            desc.to_string()
+        } else {
+            return Err("No commit message available".into());
+        };
+
+        // 提交更改
+        info!("Committing changes with message: {}", commit_message);
+
+        // 直接尝试提交所有更改（包括未暂存的）
+        // commit 函数会处理 .gitignore 并检查是否有实际更改
+        let commit_sha = match Spinner::new("Committing changes...")
+            .with(|| branch_repo.commit(&commit_message, true))
+        {
+            Ok(sha) => sha,
+            Err(e) => {
+                let err_msg = e.to_string();
+                if err_msg.contains("没有更改需要提交") || err_msg.contains("nothing to commit") {
+                    info!("No changes to commit");
+                    return Ok(None);
+                }
+                return Err(format!("Failed to commit changes: {}", e).into());
+            }
+        };
+
+        success!("Committed changes: {}", &commit_sha[..7]);
+
+        // 推送代码到远端
+        self.push_branch(branch_repo)?;
+
+        Ok(Some(commit_sha))
+    }
+
+    /// 创建 Pull Request
+    ///
+    /// 使用生成的 PR 内容创建 Pull Request
+    fn create_pull_request(
+        &self,
+        branch_repo: &dyn GitRepository,
+        branch_name: &str,
+        pr_content: &PullRequestContent,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // 获取默认分支作为目标分支
+        let default_branch = branch_repo
+            .get_default_branch()
+            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+
+        // 构建 PR 描述
+        let mut pr_body = String::new();
+        if let Some(ref description) = pr_content.description {
+            pr_body.push_str(description);
+        }
+        if let Some(ref summary) = pr_content.summary {
+            if !pr_body.is_empty() {
+                pr_body.push_str("\n\n");
+            }
+            pr_body.push_str("## Summary\n\n");
+            pr_body.push_str(summary);
+        }
+
+        if self.dry_run {
+            info!("[DRY RUN] Would create Pull Request:");
+            info!("  Title: {}", pr_content.pr_title);
+            info!("  Source branch: {}", branch_name);
+            info!("  Target branch: {}", default_branch);
+            if !pr_body.is_empty() {
+                info!("  Description:\n{}", pr_body);
+            }
+            return Ok(());
+        }
+
+        // 创建 PR
+        info!("Creating Pull Request...");
+        let pr_service = registry::get_pull_request_service();
+        let pr_id = Spinner::new("Creating Pull Request...")
+            .with(|| {
+                pr_service.create_pull_request(
+                    None, // jira_id
+                    Some(&pr_content.pr_title),
+                    Some(&pr_body),
+                )
+            })
+            .map_err(|e| format!("Failed to create Pull Request: {}", e))?;
+
+        success!("Pull Request created successfully!");
+        info!("PR ID: {}", pr_id);
+
+        // 尝试获取 PR URL（如果可能）
+        if let Ok(_pr_info) = pr_service.get_pull_request(&pr_id) {
+            // GitHub repository 返回的 PR ID 就是 PR number，可以用来构建 URL
+            let repo_info = branch_repo.get_repo_info();
+            if let Some(ref origin_url) = repo_info.origin_url {
+                // 尝试从 origin_url 提取 owner/repo
+                // 例如: https://github.com/owner/repo.git 或 git@github.com:owner/repo.git
+                if let Some(pr_url) = extract_pr_url(origin_url, &pr_id) {
+                    success!("PR URL: {}", pr_url);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 推送分支到远端
+    fn push_branch(
+        &self,
+        branch_repo: &dyn GitRepository,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // 获取当前分支名
+        let current_branch = branch_repo
+            .get_current_branch()
+            .map_err(|e| format!("Failed to get current branch: {}", e))?;
+
+        // 推送分支到远端
+        info!("Pushing branch '{}' to remote...", current_branch);
+        branch_repo
+            .push(&current_branch, true)
+            .map_err(|e| format!("Failed to push branch: {}", e))?;
+
+        success!("Pushed branch '{}' to remote", current_branch);
+
+        Ok(())
+    }
+
+    /// 准备默认分支的辅助方法
+    ///
+    /// 处理 stash、切换分支、拉取最新代码等操作
+    ///
+    /// # 返回
+    /// 返回是否需要在新分支上恢复 stash
+    fn prepare_default_branch(
+        &self,
+        branch_repo: &dyn GitRepository,
+        _current_branch: &str,
+        default_branch: &str,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        // 检查工作区状态
+        let status = branch_repo
+            .get_working_tree_status()
+            .map_err(|e| format!("Failed to check working tree status: {}", e))?;
+
+        let needs_stash = !status.is_clean();
+
+        // 如果有未提交的更改，先 stash
+        if needs_stash {
+            info!("Working tree has uncommitted changes, stashing...");
+            branch_repo
+                .stash_push(Some("Auto-stash before creating branch from default"))
+                .map_err(|e| format!("Failed to stash changes: {}", e))?;
+        }
+
+        // 切换到默认分支
+        info!("Switching to default branch '{}'...", default_branch);
+        branch_repo
+            .checkout_branch(default_branch)
+            .map_err(|e| format!("Failed to switch to branch '{}': {}", default_branch, e))?;
+
+        // 拉取最新代码
+        info!("Pulling latest changes from '{}'...", default_branch);
+        branch_repo
+            .pull(default_branch)
+            .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
+
+        // 返回是否需要恢复 stash（将在新分支上恢复）
+        Ok(needs_stash)
+    }
+
+    /// 生成 PR 详细总结
+    ///
+    /// 获取当前工作区和暂存区相对于默认分支的 diff，然后调用 LLM 生成详细的 PR 总结。
+    /// 在提交代码之前调用此方法。
+    ///
+    /// # 返回
+    /// 返回生成的 PR 内容（如果有更改），否则返回 None
+    fn generate_pr_summary(
+        &self,
+        branch_repo: &dyn GitRepository,
+        _branch_name: &str,
+        jira_id: &Option<String>,
+        description: Option<&str>,
+    ) -> Result<Option<PullRequestContent>, Box<dyn std::error::Error>> {
+        // 获取默认分支
+        let default_branch = branch_repo
+            .get_default_branch()
+            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+
+        // 获取工作区和暂存区相对于默认分支的 diff
+        // storage 层会自动应用 .gitignore 忽略规则和大小限制
+        // 这个 diff 包括：已提交的更改、暂存区更改、工作区未暂存更改
+        let git_diff = branch_repo
+            .get_working_tree_diff(&default_branch)
+            .map_err(|e| format!("Failed to get working tree diff: {}", e))?;
+
+        // 如果没有 diff（既没有已提交的 commits，也没有未提交的更改），跳过生成总结
+        if git_diff.is_none() || git_diff.as_ref().unwrap().trim().is_empty() {
+            info!("No changes to generate PR summary");
+            return Ok(None);
+        }
+
+        // 生成 commit title（用于生成 PR 内容）
+        let commit_title = if let Some(jira_id) = jira_id {
+            // 获取 JIRA summary
+            let jira_repo = registry::get_jira_repository();
+            let issue = Spinner::new(format!("Fetching JIRA ticket '{}'...", jira_id))
+                .with(|| jira_repo.get_issue_info(jira_id))
+                .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
+            format!("{}: {}", jira_id, issue.summary)
+        } else if let Some(desc) = description {
+            desc.to_string()
+        } else {
+            // 使用 description 或默认消息
+            description.unwrap_or("Update").to_string()
+        };
+
+        // 获取已存在的分支列表（用于避免重复分支名）
+        let existing_branches = branch_repo
+            .list_branches(false, true)
+            .map_err(|e| format!("Failed to list branches: {}", e))?;
+        let branch_names: Vec<String> = existing_branches
+            .iter()
+            .map(|b| b.display_name.clone())
+            .collect();
+
+        // 调用 LLM 生成 PR 内容（包括详细总结）
+        info!("Generating PR summary...");
+        let llm_repo = registry::get_llm_repository();
+        let pr_content = Spinner::new("Generating PR content and summary...")
+            .with(|| {
+                llm_repo.create_pr_content(
+                    &commit_title,
+                    Some(branch_names),
+                    git_diff,
+                )
+            })
+            .map_err(|e| format!("Failed to generate PR content: {}", e))?;
+
+        // 显示 PR 内容
+        info!("PR Title: {}", pr_content.pr_title);
+        if let Some(ref desc) = pr_content.description {
+            info!("PR Description:\n{}", desc);
+        }
+        if let Some(ref scope) = pr_content.scope {
+            info!("Scope: {}", scope);
+        }
+
+        // 显示详细总结
+        if let Some(ref summary) = pr_content.summary {
+            success!("PR Summary generated successfully!");
+            println!("\n{}", summary);
+        } else {
+            info!("No detailed summary generated (this is normal if git diff is empty or too large)");
+        }
+
+        Ok(Some(pr_content))
+    }
+
+}
+
+/// 从远程 URL 提取 PR URL
+///
+/// 支持以下格式：
+/// - https://github.com/owner/repo.git
+/// - git@github.com:owner/repo.git
+fn extract_pr_url(remote_url: &str, pr_id: &str) -> Option<String> {
+    // 处理 https:// 格式
+    if let Some(stripped) = remote_url.strip_prefix("https://github.com/") {
+        if let Some(repo) = stripped.strip_suffix(".git") {
+            return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
+        }
+    }
+
+    // 处理 git@ 格式
+    if let Some(stripped) = remote_url.strip_prefix("git@github.com:") {
+        if let Some(repo) = stripped.strip_suffix(".git") {
+            return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
+        }
+    }
+
+    None
+}
