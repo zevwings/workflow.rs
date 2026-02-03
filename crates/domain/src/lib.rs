@@ -4,6 +4,7 @@
 //!
 //! 按业务域组织，每个业务域包含相关的实体、服务接口、仓储接口和错误类型。
 
+pub mod alias;
 pub mod branch;
 pub mod commit;
 pub mod completion;
@@ -18,6 +19,9 @@ pub mod template;
 
 // Re-export public types
 // 避免使用 glob 导出以防止与子模块名称冲突（如 `template`）
+// Re-export alias types
+pub use alias::{AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService};
+
 // Re-export config types
 pub use config::{
     BranchConfig,

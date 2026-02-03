@@ -13,6 +13,7 @@ pub struct ServicesModule;
 /// 构建 Services 模块
 ///
 /// 注册所有 services 层的服务，包括：
+/// - AliasService
 /// - PullRequestService
 /// - CompletionService
 pub fn build_services_module() -> ServicesModule {
@@ -23,6 +24,16 @@ pub fn build_services_module() -> ServicesModule {
 /// 注册所有 services 服务
 fn register_services() -> registry::Result<()> {
     use std::sync::Arc;
+
+    // AliasService - 依赖 GlobalConfigRepository
+    bind!(dyn domain::AliasService, |c: &Container| {
+        let config_repo = c
+            .get::<dyn domain::GlobalConfigRepository>()
+            .expect("GlobalConfigRepository not found");
+
+        Arc::new(crate::AliasServiceImpl::new(config_repo))
+    })
+    .in_scope(Scope::Singleton)?;
 
     // PullRequestService - 依赖 GitRepository、GitHubRepository 和 LLMRepository
     bind!(dyn domain::PullRequestService, |c: &Container| {

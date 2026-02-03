@@ -35,6 +35,11 @@ pub fn get_service<T: 'static + Send + Sync + ?Sized>() -> Arc<T> {
 // 便捷的服务获取函数
 // ============================================================================
 
+/// 获取 AliasService
+pub fn get_alias_service() -> Arc<dyn domain::alias::AliasService> {
+    get_service::<dyn domain::alias::AliasService>()
+}
+
 /// 获取 GlobalConfigRepository
 pub fn get_global_config_repository() -> Arc<dyn domain::GlobalConfigRepository> {
     get_service::<dyn domain::GlobalConfigRepository>()

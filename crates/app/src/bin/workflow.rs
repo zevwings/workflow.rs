@@ -6,9 +6,9 @@ use clap::Parser;
 use toolkit::{logger, LoggerConfig, Paths};
 
 use app::cli::{
-    AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, CompletionCommand, GithubCommand,
-    IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
-    StashSubcommand, TagSubcommand,
+    AliasCommand, AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, CompletionCommand,
+    GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
+    RepoCommand, StashSubcommand, TagSubcommand,
 };
 use app::commands;
 use app::registry;
@@ -32,6 +32,7 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Push => Some("push"),
         Command::Pull => Some("pull"),
         Command::Completion(_) => Some("completion"),
+        Command::Alias(_) => Some("alias"),
     }
 }
 
@@ -353,6 +354,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             CompletionCommand::Remove { all } => {
                 let cmd = commands::completion::CompletionRemoveCommand::new(all);
+                cmd.run()?;
+            }
+        },
+        Command::Alias(alias_cmd) => match alias_cmd {
+            AliasCommand::List => {
+                let cmd = commands::alias::AliasListCommand::new();
+                cmd.run()?;
+            }
+            AliasCommand::Add {
+                name,
+                command,
+                force,
+            } => {
+                let cmd = commands::alias::AliasAddCommand::new(name, command, force);
+                cmd.run()?;
+            }
+            AliasCommand::Remove { name } => {
+                let cmd = commands::alias::AliasRemoveCommand::new(name);
                 cmd.run()?;
             }
         },

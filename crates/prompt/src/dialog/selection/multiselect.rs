@@ -57,6 +57,7 @@ pub struct MultiSelectBuilder<T> {
     options: Vec<T>,
     default: Vec<usize>,
     result_title: Option<String>,
+    page_size: Option<usize>,
 }
 
 impl<T> MultiSelectBuilder<T>
@@ -69,6 +70,7 @@ where
             options,
             default: Vec::new(),
             result_title: None,
+            page_size: None,
         }
     }
 
@@ -80,6 +82,14 @@ where
     /// 设置输入完成后显示的 title
     pub fn result_title(mut self, title: impl Into<String>) -> Self {
         self.result_title = Some(title.into());
+        self
+    }
+
+    /// 设置分页大小（每页显示的选项数量）
+    ///
+    /// 默认值为 10。当选项数量超过分页大小时，会启用滚动窗口。
+    pub fn page_size(mut self, size: usize) -> Self {
+        self.page_size = Some(size);
         self
     }
 
@@ -189,6 +199,7 @@ where
             } else {
                 Some(&search_query)
             },
+            page_size: self.page_size,
         })?;
 
         loop {
@@ -240,6 +251,7 @@ where
                                     } else {
                                         Some(&search_query)
                                     },
+                                    page_size: self.page_size,
                                 },
                             )?;
                         }
@@ -272,6 +284,7 @@ where
                                     renderer: &renderer,
                                     hint_text,
                                     search_query: Some(&search_query),
+                                    page_size: self.page_size,
                                 },
                             )?;
                         }
@@ -313,6 +326,7 @@ where
                                         } else {
                                             Some(&search_query)
                                         },
+                                        page_size: self.page_size,
                                     },
                                 )?;
                             }
@@ -342,6 +356,7 @@ where
                                         } else {
                                             Some(&search_query)
                                         },
+                                        page_size: self.page_size,
                                     },
                                 )?;
                             }
@@ -373,6 +388,7 @@ where
                                         } else {
                                             Some(&search_query)
                                         },
+                                        page_size: self.page_size,
                                     },
                                 )?;
                             }
@@ -398,15 +414,13 @@ where
                                     .join(", ")
                             };
 
-                            let has_search = !search_query.is_empty();
                             // 使用 result_title（如果存在），否则使用 message
                             let title_text = self.result_title.as_ref().unwrap_or(&self.message);
                             crate::dialog::selection::renderer::clear_and_display_result_with_search(
-                                filtered_options.len(),
+                                rendered_lines,
                                 title_text,
                                 &result_text,
                                 &theme,
-                                has_search,
                             )?;
                             return Ok(selected_items);
                         }
@@ -436,6 +450,7 @@ where
                                         hint_text:
                                             "使用 ↑/↓ 导航，输入搜索，空格键切换选择，回车确认",
                                         search_query: None,
+                                        page_size: self.page_size,
                                     },
                                 )?;
                             } else {
