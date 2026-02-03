@@ -78,7 +78,18 @@ pub trait GitRepository: Send + Sync {
     fn create_branch(&self, name: &str) -> Result<(), GitError>;
 
     /// 删除本地分支
-    fn delete_branch(&self, name: &str, force: bool) -> Result<(), GitError>;
+    fn delete_local_branch(&self, name: &str, force: bool) -> Result<(), GitError>;
+
+    /// 删除远程分支
+    ///
+    /// # 参数
+    /// - `name`: 分支名称（不包含 origin/ 前缀）
+    ///
+    /// # 返回
+    /// - `Ok(())`: 删除成功
+    /// - `Err(GitError::BranchNotFound)`: 远程分支不存在
+    /// - `Err`: 其他错误
+    fn delete_remote_branch(&self, name: &str) -> Result<(), GitError>;
 
     /// 重命名分支
     fn rename_branch(&self, old_name: Option<&str>, new_name: &str) -> Result<(), GitError>;

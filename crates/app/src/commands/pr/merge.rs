@@ -94,12 +94,14 @@ impl PullRequestMergeCommand {
         }
         success!("Pulled latest changes from '{}'", target_branch);
 
-        // 5. 删除本地源分支（如果存在且不是当前分支）
-        let (local_exists, _) = git_repo.has_branch(&source_branch).unwrap_or((false, false));
+        // 5. 删除本地和远程源分支
+        let (local_exists, remote_exists) =
+            git_repo.has_branch(&source_branch).unwrap_or((false, false));
 
+        // 5.1 删除本地分支
         if local_exists {
             info!("Cleaning up local branch '{}'...", source_branch);
-            match git_repo.delete_branch(&source_branch, false) {
+            match git_repo.delete_local_branch(&source_branch, false) {
                 Ok(()) => {
                     success!("Deleted local branch '{}'", source_branch);
                 }
@@ -114,7 +116,7 @@ impl PullRequestMergeCommand {
                                 .unwrap_or(false);
 
                             if force_delete {
-                                match git_repo.delete_branch(&source_branch, true) {
+                                match git_repo.delete_local_branch(&source_branch, true) {
                                     Ok(()) => {
                                         success!("Force deleted local branch '{}'", source_branch);
                                     }
@@ -134,6 +136,26 @@ impl PullRequestMergeCommand {
                             warning!("Failed to delete local branch '{}': {}", source_branch, e);
                         }
                     }
+                }
+            }
+        }
+
+        // 5.2 删除远程分支
+        if remote_exists {
+            info!("Cleaning up remote branch '{}'...", source_branch);
+            match git_repo.delete_remote_branch(&source_branch) {
+                Ok(()) => {
+                    success!("Deleted remote branch '{}'", source_branch);
+                }
+                Err(GitError::BranchNotFound(_)) => {
+                    // 远程分支可能已被 GitHub 自动删除
+                    info!(
+                        "Remote branch '{}' already deleted (may have been auto-deleted by GitHub)",
+                        source_branch
+                    );
+                }
+                Err(e) => {
+                    warning!("Failed to delete remote branch '{}': {}", source_branch, e);
                 }
             }
         }
