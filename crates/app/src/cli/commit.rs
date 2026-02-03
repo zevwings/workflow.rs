@@ -17,7 +17,7 @@ pub struct CommitCommand {
 
     /// 自动暂存所有变更（类似 git commit -a）
     /// Automatically stage all changes (similar to git commit -a)
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = true)]
     pub all: bool,
 
     /// 子命令

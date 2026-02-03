@@ -41,12 +41,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     if let Ok(global_config) = registry::get_global_config_repository().load() {
-        // 创建 LoggerConfig
+        // RUST_LOG 优先于配置文件，便于调试时用 RUST_LOG=debug 看详细日志
+        let level = std::env::var("RUST_LOG")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or(global_config.log.level.clone());
         let logger_config = LoggerConfig::new(
-            global_config.log.level.clone(),  // level: Option<String>
-            global_config.log.format.clone(), // format: Option<String>
-            global_config.log.enable_trace_console.unwrap_or(false), // enable_console: bool
-            Paths::logs_dir()?,               // logs_dir: PathBuf
+            level,
+            global_config.log.format.clone(),
+            global_config.log.enable_trace_console.unwrap_or(false),
+            Paths::logs_dir()?,
         );
 
         // 初始化 logger（从配置文件读取 LogSettings 并转换为 LoggerConfig）
@@ -55,6 +59,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // 忽略初始化错误（可能已经初始化过了，或者日志级别为 off）
         let _ = logger::init(command_name, &logger_config);
+        toolkit::log_info!(
+            "Logger initialized (console={}, level={})",
+            logger_config.enable_console,
+            logger_config.level.as_deref().unwrap_or("off")
+        );
     }
 
     // 额外的构建信息通过环境变量注入（如果存在）

@@ -16,6 +16,10 @@
 *.ipr
 out/
 
+# Claude AI
+.claude/
+.claude/**
+
 # IDE - RustRover
 .rustrover/
 
@@ -64,6 +68,10 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.lnk
+
+.rs/
+.rs2/
+.git2/
 
 # Logs
 *.log

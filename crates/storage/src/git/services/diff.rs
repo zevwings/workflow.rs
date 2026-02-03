@@ -5,6 +5,7 @@
 use super::GitContext;
 use domain::git::GitError;
 use git2::DiffOptions;
+use toolkit::log_warn;
 
 /// Diff 服务接口
 pub trait DiffService: Send + Sync {
@@ -173,7 +174,10 @@ impl DiffService for DiffServiceImpl {
         process_diff(&diff)?;
 
         if size_limit_reached {
-            eprintln!("Warning: Diff size limit reached ({}MB), content truncated", MAX_DIFF_SIZE / 1024 / 1024);
+            log_warn!(
+                "Diff size limit reached ({}MB), content truncated",
+                MAX_DIFF_SIZE / 1024 / 1024
+            );
         }
 
         if diff_str.trim().is_empty() {
