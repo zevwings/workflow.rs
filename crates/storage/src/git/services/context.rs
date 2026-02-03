@@ -14,6 +14,8 @@ static URL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
         // GitHub SSH over 443: git@ssh.github.com:443/owner/repo.git
         Regex::new(r"git@ssh\.github\.com:\d+/(.+?)(?:\.git)?/?$").unwrap(),
+        // GitHub SSH 协议格式（含 ssh.github.com）: ssh://git@ssh.github.com:443/owner/repo.git
+        Regex::new(r"ssh://git@ssh\.github\.com(?::\d+)?/(.+?)(?:\.git)?/?$").unwrap(),
         // GitHub SSH 协议格式: ssh://git@github.com/owner/repo.git
         Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$").unwrap(),
         // GitHub SSH 格式: git@github.com:owner/repo.git (需在 ssh.github.com 之后，避免误匹配)
@@ -193,9 +195,11 @@ impl GitContext {
     /// 从 URL 解析仓库类型
     pub fn parse_repo_kind(url: &str) -> CodePlatform {
         if url.contains("github.com")
+            || url.contains("ssh.github.com")
             || url.starts_with("git@github")
             || url.starts_with("git@ssh.github")
             || url.starts_with("ssh://git@github")
+            || url.starts_with("ssh://git@ssh.github")
         {
             CodePlatform::GitHub
         } else if url.contains("cnb.cool") || url.starts_with("git@cnb.cool:") {
