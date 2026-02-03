@@ -89,6 +89,23 @@ impl BranchSwitchCommand {
             .map_err(|e| format!("Failed to switch to branch: {}", e))?;
 
         success!("Switched to branch '{}'", target_branch);
+
+        // 如果远程分支存在，询问是否需要 pull
+        if exists_remote {
+            let should_pull = confirm!("Pull latest changes from remote?")
+                .default(true)
+                .prompt()
+                .map_err(|e| format!("Failed to get confirmation: {}", e))?;
+
+            if should_pull {
+                info!("Pulling latest changes...");
+                branch_repo
+                    .pull(&target_branch)
+                    .map_err(|e| format!("Failed to pull: {}", e))?;
+                success!("Pulled latest changes from remote");
+            }
+        }
+
         Ok(())
     }
 }

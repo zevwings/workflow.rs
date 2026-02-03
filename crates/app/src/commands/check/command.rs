@@ -4,7 +4,7 @@
 
 use std::time::Duration;
 
-use prompt::{br, error, info, separator, success, warning, Spinner};
+use prompt::{br, error, info, separator, spinner, success, warning};
 
 use crate::registry;
 use crate::workflows::core::stage::WorkflowExecutor;
@@ -128,7 +128,7 @@ impl CheckCommand {
 
         // 检查工作区状态（使用 spinner 显示进度）
         // 注意：状态检查可能会很慢，特别是在大仓库中
-        let spinner = Spinner::new("Checking working tree status...").start();
+        let spinner = spinner!("Checking working tree status...").start();
         // 给 spinner 一点时间启动
         std::thread::sleep(Duration::from_millis(50));
         let status_result = git_repo.get_working_tree_status();

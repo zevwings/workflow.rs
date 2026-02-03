@@ -2,7 +2,7 @@
 
 use crate::registry;
 use color_eyre::Result;
-use prompt::{info, success, Spinner};
+use prompt::{info, spinner, success};
 
 /// Pull Request Summarize 命令
 pub struct PullRequestSummarizeCommand {
@@ -21,7 +21,7 @@ impl PullRequestSummarizeCommand {
 
         // 总结 PR
         info!("Generating Pull Request summary...");
-        let summary = Spinner::new("Generating summary using LLM...")
+        let summary = spinner!("Generating summary using LLM...")
             .with(|| pr_service.summarize_pull_request(self.pr_id.as_deref()))
             .map_err(|e| format!("Failed to summarize Pull Request: {}", e))?;
 

@@ -2,7 +2,7 @@
 
 use color_eyre::Result;
 use domain::{GitRepository, PullRequestContent};
-use prompt::{error, info, input, select, success, Spinner};
+use prompt::{error, info, input, select, spinner, success};
 
 use crate::registry;
 use crate::workflows::utils::branch::{
@@ -164,7 +164,7 @@ impl PullRequestCreateCommand {
                     .ok();
 
                 let llm_repo = registry::get_llm_repository();
-                match Spinner::new("Generating branch name...")
+                match spinner!("Generating branch name...")
                     .with(|| {
                         llm_repo.generate_branch_name(Some(description.as_str()), exists_branches)
                     }) {
@@ -586,7 +586,7 @@ impl PullRequestCreateCommand {
                 let jira_repo = registry::get_jira_repository();
 
                 // 尝试获取 JIRA ticket 信息，如果失败则使用 JIRA ID 作为降级方案
-                match Spinner::new(format!("Fetching JIRA ticket '{}'...", jira_id))
+                match spinner!("Fetching JIRA ticket '{}'...", jira_id)
                     .with(|| jira_repo.get_issue_info(jira_id))
                 {
                     Ok(issue) => {
@@ -611,7 +611,7 @@ impl PullRequestCreateCommand {
 
         // 直接尝试提交所有更改（包括未暂存的）
         // commit 函数会处理 .gitignore 并检查是否有实际更改
-        let commit_sha = match Spinner::new("Committing changes...")
+        let commit_sha = match spinner!("Committing changes...")
             .with(|| branch_repo.commit(&commit_message, true))
         {
             Ok(sha) => sha,
@@ -680,12 +680,13 @@ impl PullRequestCreateCommand {
         // 创建 PR
         info!("Creating Pull Request...");
         let pr_service = registry::get_pull_request_service();
-        let pr_id = Spinner::new("Creating Pull Request...")
+        let pr_id = spinner!("Creating Pull Request...")
             .with(|| {
                 pr_service.create_pull_request(
                     None, // jira_id
                     Some(&pr_content.pr_title),
                     Some(&pr_body),
+                    Some(target), // 使用用户选择的目标分支
                 )
             })
             .map_err(|e| format!("Failed to create Pull Request: {}", e))?;
@@ -851,7 +852,7 @@ impl PullRequestCreateCommand {
         let commit_title = if let Some(jira_id) = jira_id {
             // 获取 JIRA summary
             let jira_repo = registry::get_jira_repository();
-            let issue = Spinner::new(format!("Fetching JIRA ticket '{}'...", jira_id))
+            let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
                 .with(|| jira_repo.get_issue_info(jira_id))
                 .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
             format!("{}: {}", jira_id, issue.summary)
@@ -874,7 +875,7 @@ impl PullRequestCreateCommand {
         // 调用 LLM 生成 PR 内容（包括详细总结）
         info!("Generating PR summary...");
         let llm_repo = registry::get_llm_repository();
-        let pr_content = Spinner::new("Generating PR content and summary...")
+        let pr_content = spinner!("Generating PR content and summary...")
             .with(|| {
                 llm_repo.create_pr_content(
                     &commit_title,
