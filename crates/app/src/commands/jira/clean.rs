@@ -1,9 +1,9 @@
 //! 清理 Jira 附件命令
 
+use prompt::{confirm, info, spinner, success};
+
 use crate::registry;
 use crate::workflows::utils::jira::get_jira_id_interactive;
-use color_eyre::Result;
-use prompt::{confirm, info, spinner, success};
 
 /// Jira Clean 命令
 pub struct JiraCleanCommand {

@@ -2,9 +2,10 @@
 //!
 //! 提供远程相关的业务逻辑实现。
 
-use super::{GitContext, MergeService, MergeServiceImpl};
-use domain::git::{GitError, MergeStrategy};
 use git2::PushOptions;
+
+use domain::git::{GitError, MergeStrategy};
+use super::{GitContext, MergeService, MergeServiceImpl};
 
 /// 远程服务接口
 pub trait RemoteService: Send + Sync {

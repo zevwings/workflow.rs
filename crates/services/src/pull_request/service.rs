@@ -110,8 +110,8 @@ impl PullRequestService for PullRequestServiceImpl {
 
             // 如果提供了 jira_id，添加到描述中
             if let Some(jid) = jira_id {
-                let jira_link = format!("\n\nJira: {}", jid);
-                desc = desc + &jira_link;
+                desc.push_str("\n\nJira: ");
+                desc.push_str(jid);
             }
 
             (pr_content.pr_title, desc)
@@ -121,8 +121,8 @@ impl PullRequestService for PullRequestServiceImpl {
 
             // 如果提供了 jira_id，添加到描述中
             if let Some(jid) = jira_id {
-                let jira_link = format!("\n\nJira: {}", jid);
-                desc = desc + &jira_link;
+                desc.push_str("\n\nJira: ");
+                desc.push_str(jid);
             }
 
             (title, desc)

@@ -25,6 +25,8 @@ where
 
 /// 内置验证器
 pub mod validators {
+    use regex::Regex;
+
     use super::Validator;
 
     /// 必填字段验证器
@@ -155,7 +157,6 @@ pub mod validators {
         pattern: &'static str,
         error_msg: Option<&'static str>,
     ) -> Result<impl Validator, String> {
-        use regex::Regex;
         let re =
             Regex::new(pattern).map_err(|e| format!("无效的正则表达式 '{}': {}", pattern, e))?;
 

@@ -2,8 +2,8 @@
 //!
 //! 提供提交相关的业务逻辑实现。
 
-use super::GitContext;
 use domain::git::{CommitInfo, FileStatusInfo, FileStatusType, GitError, WorkingTreeStatus};
+use super::GitContext;
 
 /// 提交服务接口
 pub trait CommitService: Send + Sync {

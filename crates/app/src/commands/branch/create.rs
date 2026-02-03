@@ -1,6 +1,5 @@
 //! 创建分支命令
 
-use color_eyre::Result;
 use domain::GitRepository;
 use prompt::{error, info, input, select, success};
 

@@ -4,6 +4,7 @@
 
 use clap::CommandFactory;
 use color_eyre::{eyre::WrapErr, Result};
+
 use prompt::{br, info, success, warning, InputBuilder, SelectBuilder};
 
 use crate::cli::Cli;

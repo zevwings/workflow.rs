@@ -1,6 +1,5 @@
 //! 切换分支命令
 
-use color_eyre::Result;
 use prompt::{confirm, error, info, select, success, warning};
 
 use crate::registry;

@@ -5,6 +5,7 @@
 use std::io::{self, IsTerminal};
 
 use color_eyre::{eyre::WrapErr, Result};
+
 use domain::{
     BranchConfig, BranchTemplates, CommitTemplates, ProjectConfig, PullRequestsTemplates,
     TemplateConfig, UserConfig,

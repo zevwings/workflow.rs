@@ -1,10 +1,10 @@
 //! 下载 Jira ticket 附件命令
 
-use crate::registry;
-use crate::workflows::utils::jira::get_jira_id_interactive;
-use color_eyre::Result;
 use prompt::{error, info, spinner, success};
 use toolkit::paths::{default_download_base_dir, Paths};
+
+use crate::registry;
+use crate::workflows::utils::jira::get_jira_id_interactive;
 
 /// Jira Attachments 命令
 pub struct JiraAttachmentsCommand {

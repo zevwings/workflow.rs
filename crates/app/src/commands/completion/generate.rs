@@ -5,6 +5,7 @@
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use color_eyre::{eyre::WrapErr, Result};
+
 use toolkit::{detect_shell, shell_from_string, shell_to_string};
 
 use crate::cli::Cli;

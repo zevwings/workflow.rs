@@ -3,7 +3,6 @@
 //! 最简单的 commit 实现，直接使用 git2 库。
 
 use prompt::{info, success};
-
 use storage::git::GitContext;
 
 /// Commit Create 命令

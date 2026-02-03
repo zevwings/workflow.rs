@@ -6,6 +6,7 @@ use crate::form::executor::field_executors::FieldExecutors;
 use crate::form::executor::separator::{print_nested_form_separator_simple, print_separator};
 use crate::form::field::{FieldType, FormField};
 use crate::form::types::{FormResult, FormStep, StepType};
+use crate::PromptError;
 
 /// 表单执行器
 pub struct FormExecutor;
@@ -197,7 +198,6 @@ impl FormExecutor {
         field: &FormField,
         level: usize,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
-        use crate::PromptError;
         let nested_form = field
             .nested_form
             .as_ref()

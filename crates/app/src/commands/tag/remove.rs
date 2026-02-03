@@ -1,6 +1,5 @@
 //! 删除 Tag 命令
 
-use color_eyre::Result;
 use domain::TagDeleteScope;
 use prompt::{confirm, error, info, select, success, warning};
 

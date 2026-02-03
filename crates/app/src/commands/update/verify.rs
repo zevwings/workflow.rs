@@ -3,17 +3,17 @@
 //! 提供安装验证功能。
 
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use color_eyre::{eyre::WrapErr, Result};
+
 use prompt::{success, warning, Spinner};
 use toolkit::{detect_shell, get_completion_files_for_shell, shell_to_string, Paths};
 
 use super::types::{BinaryStatus, VerificationResult};
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 /// 检查文件是否可执行
 #[cfg(unix)]

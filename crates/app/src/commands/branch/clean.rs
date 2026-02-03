@@ -1,6 +1,5 @@
 //! 清理本地分支命令
 
-use color_eyre::Result;
 use domain::GitError;
 use prompt::{confirm, error, info, success, warning};
 

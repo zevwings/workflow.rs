@@ -5,9 +5,10 @@ use std::any::Any;
 use std::sync::{Arc, OnceLock};
 
 // 内部导入
+use std::any::TypeId;
+
 use crate::error::Result;
 use crate::scope::Scope;
-use crate::ServiceIdentifier;
 
 /// 类型化的工厂函数类型
 type TypedFactory<T> = Box<dyn for<'a> Fn(&'a crate::container::Container) -> Arc<T> + Send + Sync>;
@@ -16,6 +17,17 @@ type TypedFactory<T> = Box<dyn for<'a> Fn(&'a crate::container::Container) -> Ar
 /// 返回 Box 包装的 Arc，以支持 ?Sized 类型
 type ErasedFactory = Box<
     dyn for<'a> Fn(&'a crate::container::Container) -> Box<dyn Any + Send + Sync> + Send + Sync,
+>;
+
+/// 可失败的类型化工厂函数类型
+type FallibleTypedFactory<T> =
+    Box<dyn for<'a> Fn(&'a crate::container::Container) -> Result<Arc<T>> + Send + Sync>;
+
+/// 可失败的类型擦除工厂函数类型
+type FallibleErasedFactory = Box<
+    dyn for<'a> Fn(&'a crate::container::Container) -> Result<Box<dyn Any + Send + Sync>>
+        + Send
+        + Sync,
 >;
 
 /// 可转换为绑定工厂的类型
@@ -48,9 +60,28 @@ where
     }
 }
 
+/// 可转换为可失败绑定工厂的类型
+///
+/// 此 trait 允许 `try_bind` 方法接受返回 `Result<Arc<T>>` 的闭包：
+/// - 闭包：`|c| { let dep = c.get::<Dep>()?; Ok(Arc::new(ServiceImpl::new(dep))) }`
+pub trait IntoFallibleFactory<T: ?Sized> {
+    fn into_fallible_factory(self) -> FallibleTypedFactory<T>;
+}
+
+// 为返回 Result 的闭包实现 IntoFallibleFactory
+impl<T, F> IntoFallibleFactory<T> for F
+where
+    T: 'static + Send + Sync + ?Sized,
+    F: for<'a> Fn(&'a crate::container::Container) -> Result<Arc<T>> + Send + Sync + 'static,
+{
+    fn into_fallible_factory(self) -> FallibleTypedFactory<T> {
+        Box::new(self)
+    }
+}
+
 /// 服务绑定信息
 pub struct Binding {
-    pub(crate) identifier: ServiceIdentifier,
+    pub(crate) identifier: TypeId,
     pub(crate) type_name: &'static str,
     pub(crate) factory: ErasedFactory,
     pub(crate) scope: Scope,
@@ -60,7 +91,7 @@ pub struct Binding {
 impl Binding {
     /// 创建新的绑定
     pub fn new(
-        identifier: ServiceIdentifier,
+        identifier: TypeId,
         type_name: &'static str,
         factory: ErasedFactory,
         scope: Scope,
@@ -107,7 +138,7 @@ impl Binding {
     /// 这是 `box_arc()` 的逆操作，从类型擦除的 Box 中恢复原始 Arc<T>
     pub(crate) fn try_unbox_arc<T: 'static + Send + Sync + ?Sized>(
         boxed: &Box<dyn Any + Send + Sync>,
-        expected_type_id: ServiceIdentifier,
+        expected_type_id: TypeId,
     ) -> Result<Arc<T>> {
         // 运行时类型验证：检查期望的 TypeId 是否匹配
         let actual_type_id = std::any::TypeId::of::<Arc<T>>();
@@ -143,9 +174,19 @@ fn erase_factory_type<T: 'static + Send + Sync + ?Sized>(
     })
 }
 
+/// 辅助函数：将可失败的类型化 factory 转换为类型擦除的 factory
+fn erase_fallible_factory_type<T: 'static + Send + Sync + ?Sized>(
+    factory: FallibleTypedFactory<T>,
+) -> FallibleErasedFactory {
+    Box::new(move |c| {
+        let arc = factory(c)?;
+        Ok(Binding::box_arc(arc))
+    })
+}
+
 /// 绑定构建器
 pub struct BindingBuilder<'a> {
-    identifier: ServiceIdentifier,
+    identifier: TypeId,
     type_name: &'static str,
     factory: ErasedFactory,
     container: &'a crate::container::Container,
@@ -154,7 +195,7 @@ pub struct BindingBuilder<'a> {
 impl<'a> BindingBuilder<'a> {
     /// 创建新的绑定构建器
     pub(crate) fn new<T: 'static + Send + Sync + ?Sized>(
-        identifier: ServiceIdentifier,
+        identifier: TypeId,
         factory: impl IntoFactory<T>,
         container: &'a crate::container::Container,
     ) -> Self {
@@ -173,6 +214,95 @@ impl<'a> BindingBuilder<'a> {
     pub fn in_scope(self, scope: Scope) -> Result<()> {
         let binding = Binding::new(self.identifier, self.type_name, self.factory, scope);
         self.container.add_binding(binding)
+    }
+}
+
+/// 可失败的服务绑定信息
+pub struct FallibleBinding {
+    pub(crate) identifier: TypeId,
+    pub(crate) type_name: &'static str,
+    pub(crate) factory: FallibleErasedFactory,
+    pub(crate) scope: Scope,
+    pub(crate) instance: OnceLock<Box<dyn Any + Send + Sync>>,
+}
+
+impl FallibleBinding {
+    /// 创建新的可失败绑定
+    pub fn new(
+        identifier: TypeId,
+        type_name: &'static str,
+        factory: FallibleErasedFactory,
+        scope: Scope,
+    ) -> Self {
+        Self {
+            identifier,
+            type_name,
+            factory,
+            scope,
+            instance: OnceLock::new(),
+        }
+    }
+
+    /// 解析服务实例，返回 `Result<Arc<T>>`
+    pub fn resolve<T: 'static + Send + Sync + ?Sized>(
+        &self,
+        container: &crate::container::Container,
+    ) -> Result<Arc<T>> {
+        match self.scope {
+            Scope::Singleton => {
+                // 对于 Singleton，需要特殊处理：如果还没有缓存，调用 factory 并缓存结果
+                if let Some(cached) = self.instance.get() {
+                    return Binding::try_unbox_arc::<T>(cached, self.identifier);
+                }
+
+                // 调用 factory（可能失败）
+                let boxed = (self.factory)(container)?;
+
+                // 尝试缓存（可能已被其他线程设置）
+                let _ = self.instance.set(boxed);
+
+                // 从缓存中获取（确保使用同一个实例）
+                let cached = self.instance.get().expect("OnceLock should be set");
+                Binding::try_unbox_arc::<T>(cached, self.identifier)
+            }
+            Scope::Transient => {
+                let boxed = (self.factory)(container)?;
+                Binding::try_unbox_arc::<T>(&boxed, self.identifier)
+            }
+        }
+    }
+}
+
+/// 可失败的绑定构建器
+pub struct FallibleBindingBuilder<'a> {
+    identifier: TypeId,
+    type_name: &'static str,
+    factory: FallibleErasedFactory,
+    container: &'a crate::container::Container,
+}
+
+impl<'a> FallibleBindingBuilder<'a> {
+    /// 创建新的可失败绑定构建器
+    pub(crate) fn new<T: 'static + Send + Sync + ?Sized>(
+        identifier: TypeId,
+        factory: impl IntoFallibleFactory<T>,
+        container: &'a crate::container::Container,
+    ) -> Self {
+        let type_name = std::any::type_name::<Arc<T>>();
+        let factory = factory.into_fallible_factory();
+        let factory = erase_fallible_factory_type(factory);
+        Self {
+            identifier,
+            type_name,
+            factory,
+            container,
+        }
+    }
+
+    /// 设置作用域并完成绑定，自动注册到容器
+    pub fn in_scope(self, scope: Scope) -> Result<()> {
+        let binding = FallibleBinding::new(self.identifier, self.type_name, self.factory, scope);
+        self.container.add_fallible_binding(binding)
     }
 }
 

@@ -1,6 +1,5 @@
 //! 删除分支命令
 
-use color_eyre::Result;
 use domain::GitError;
 use prompt::{error, info, multiselect, success, warning};
 

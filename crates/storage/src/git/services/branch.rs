@@ -2,9 +2,12 @@
 //!
 //! 提供分支相关的业务逻辑实现。
 
-use super::GitContext;
+use std::collections::HashMap;
+
+use git2::{BranchType, PushOptions};
+
 use domain::git::GitError;
-use git2::BranchType;
+use super::GitContext;
 
 /// 分支服务接口
 pub trait BranchService: Send + Sync {
@@ -128,8 +131,6 @@ impl BranchService for BranchServiceImpl {
     }
 
     fn delete_remote_branch(&self, name: &str) -> Result<(), GitError> {
-        use git2::PushOptions;
-
         let repo = self.ctx.repository();
 
         let mut remote = repo
@@ -195,7 +196,6 @@ impl BranchService for BranchServiceImpl {
     ) -> Result<Vec<domain::BranchInfo>, GitError> {
         let repo = self.ctx.repository();
 
-        use std::collections::HashMap;
         let mut branches: HashMap<String, (bool, bool)> = HashMap::new(); // (has_local, has_remote)
 
         // 收集本地分支

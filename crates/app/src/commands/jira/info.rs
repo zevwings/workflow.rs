@@ -1,10 +1,10 @@
 //! 显示 Jira ticket 信息命令
 
-use crate::registry;
-use crate::workflows::utils::jira::get_jira_id_interactive;
-use color_eyre::Result;
 use domain::JiraIssue;
 use prompt::{info, spinner, success};
+
+use crate::registry;
+use crate::workflows::utils::jira::get_jira_id_interactive;
 
 /// Jira Info 命令
 pub struct JiraInfoCommand {

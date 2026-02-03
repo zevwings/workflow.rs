@@ -2,9 +2,10 @@
 //!
 //! 提供代码追溯（blame）相关的业务逻辑实现。
 
-use super::GitContext;
-use domain::git::{BlameLineInfo, GitError};
 use std::path::Path;
+
+use domain::git::{BlameLineInfo, GitError};
+use super::GitContext;
 
 /// Blame 服务接口
 pub trait BlameService: Send + Sync {

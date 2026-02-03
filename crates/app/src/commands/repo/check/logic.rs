@@ -3,6 +3,7 @@
 //! 验证仓库级别的配置文件并运行验证检查。
 
 use color_eyre::{eyre::WrapErr, Result};
+
 use domain::{BranchTemplates, CommitTemplates, PullRequestsTemplates};
 use prompt::{br, info, print, separator, success, warning, TableBuilder};
 

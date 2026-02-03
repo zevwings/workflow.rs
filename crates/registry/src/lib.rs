@@ -140,18 +140,50 @@ macro_rules! bind_instance {
     }};
 }
 
+/// 简化可失败 trait object 绑定的宏
+///
+/// 支持返回 `Result<Arc<T>>` 的工厂函数，允许工厂函数在创建服务时返回错误，
+/// 从而消除 `expect()` 导致的 panic 风险。
+///
+/// # 示例
+///
+/// ```rust,ignore
+/// use registry::try_bind;
+///
+/// // 有依赖的服务（可失败）
+/// try_bind!(dyn OtherService, |c: &Container| {
+///     let dep = c.get::<dyn Service>()?;
+///     Ok(Arc::new(OtherServiceImpl::new(dep)))
+/// })
+/// .in_scope(Scope::Singleton)?;
+/// ```
+#[macro_export]
+macro_rules! try_bind {
+    ($trait_type:ty, $factory:expr) => {{
+        let factory_fn = $factory;
+        let wrapped: ::std::boxed::Box<
+            dyn for<'a> ::std::ops::Fn(
+                    &'a $crate::Container,
+                ) -> $crate::Result<::std::sync::Arc<$trait_type>>
+                + ::std::marker::Send
+                + ::std::marker::Sync,
+        > = ::std::boxed::Box::new(
+            move |c: &$crate::Container| -> $crate::Result<::std::sync::Arc<$trait_type>> {
+                factory_fn(c).map(|v| v as ::std::sync::Arc<$trait_type>)
+            },
+        );
+        $crate::Container::global().try_bind::<$trait_type>(wrapped)
+    }};
+}
+
 // 重新导出所有公共类型和函数
-pub use binding::{Binding, BindingBuilder, IntoFactory};
+pub use binding::{
+    Binding, BindingBuilder, FallibleBinding, FallibleBindingBuilder, IntoFactory,
+    IntoFallibleFactory,
+};
 pub use container::Container;
 pub use error::{RegistryError, Result};
 pub use scope::Scope;
-
-// ============================================================================
-// 服务标识符类型
-// ============================================================================
-
-/// 服务标识符类型，使用 `TypeId` 作为服务标识符
-pub type ServiceIdentifier = std::any::TypeId;
 
 // ============================================================================
 // 从全局容器获取服务

@@ -1,9 +1,9 @@
 //! 合并 Pull Request 命令
 
-use crate::registry;
-use color_eyre::Result;
 use domain::GitError;
 use prompt::{confirm, error, info, spinner, success, warning};
+
+use crate::registry;
 
 /// Pull Request Merge 命令
 pub struct PullRequestMergeCommand {

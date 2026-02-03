@@ -1,6 +1,5 @@
 //! 创建 Pull Request 命令
 
-use color_eyre::Result;
 use domain::git::CodePlatform;
 use domain::{GitRepository, PullRequestContent};
 use prompt::{error, info, input, select, spinner, success, warning};
@@ -98,10 +97,6 @@ impl std::fmt::Display for ConfirmOption {
 /// Pull Request Create 命令
 pub struct PullRequestCreateCommand {
     jira_id: Option<String>,
-    #[allow(dead_code)]
-    title: Option<String>,
-    #[allow(dead_code)]
-    description: Option<String>,
     dry_run: bool,
 }
 
@@ -109,16 +104,11 @@ impl PullRequestCreateCommand {
     /// 创建新的 PullRequestCreateCommand
     pub fn new(
         jira_id: Option<String>,
-        title: Option<String>,
-        description: Option<String>,
+        _title: Option<String>,
+        _description: Option<String>,
         dry_run: bool,
     ) -> Self {
-        Self {
-            jira_id,
-            title,
-            description,
-            dry_run,
-        }
+        Self { jira_id, dry_run }
     }
 
     /// 运行 `workflow pr create` 命令

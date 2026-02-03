@@ -2,10 +2,11 @@
 //!
 //! 提供 diff 相关的业务逻辑实现。
 
-use super::GitContext;
-use domain::git::GitError;
 use git2::DiffOptions;
 use toolkit::log_warn;
+
+use domain::git::GitError;
+use super::GitContext;
 
 /// Diff 服务接口
 pub trait DiffService: Send + Sync {

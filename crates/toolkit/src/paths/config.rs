@@ -2,18 +2,17 @@
 //!
 //! 提供所有配置相关的路径获取功能。
 
-use crate::paths::PathError;
-use crate::util::fs::DirectoryWalker;
 use std::fs;
-use std::path::PathBuf;
-
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 
 use crate::paths::base::{config_base_dir, local_base_dir};
 use crate::paths::constants::{
     CONFIG_DIR, JIRA_CONFIG_FILE, LLM_CONFIG_FILE, WORKFLOW_CONFIG_FILE,
 };
+use crate::paths::PathError;
+use crate::util::fs::DirectoryWalker;
 
 /// 获取配置目录路径（支持 iCloud 同步）
 ///

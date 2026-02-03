@@ -2,10 +2,10 @@
 //!
 //! 提供 Git stash 相关的业务逻辑实现。
 
-use chrono::{DateTime, Local, TimeZone};
+use chrono::{Local, TimeZone};
 
+use domain::git::{GitError, StashApplyResult, StashEntry, StashPopResult};
 use super::GitContext;
-use domain::git::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
 
 /// Stash 服务接口
 pub trait StashService: Send + Sync {
@@ -91,28 +91,6 @@ impl StashServiceImpl {
 
         // 如果无法提取，返回整个消息作为消息，分支为 unknown
         ("unknown".to_string(), full_message.to_string())
-    }
-
-    /// 获取 stash 的统计信息
-    #[allow(dead_code)]
-    fn get_stash_stat(&self, stash_commit: &git2::Commit) -> Option<StashStat> {
-        let repo = self.ctx.repository();
-
-        // 获取 stash commit 的父 commit（工作目录状态的基准）
-        let parent = stash_commit.parent(0).ok()?;
-        let parent_tree = parent.tree().ok()?;
-        let stash_tree = stash_commit.tree().ok()?;
-
-        // 计算 diff
-        let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None).ok()?;
-
-        let stats = diff.stats().ok()?;
-
-        Some(StashStat {
-            files_changed: stats.files_changed(),
-            insertions: stats.insertions(),
-            deletions: stats.deletions(),
-        })
     }
 }
 
@@ -243,8 +221,7 @@ impl StashService for StashServiceImpl {
 
             // 获取时间戳
             let time = commit.time();
-            let timestamp =
-                Local.timestamp_opt(time.seconds(), 0).single().map(|dt: DateTime<Local>| dt);
+            let timestamp = Local.timestamp_opt(time.seconds(), 0).single();
 
             // 从消息中提取分支名和消息
             let (branch, msg) = Self::extract_branch_and_message(message);

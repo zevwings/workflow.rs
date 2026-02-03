@@ -1,8 +1,8 @@
 //! 批准 Pull Request 命令
 
-use crate::registry;
-use color_eyre::Result;
 use prompt::{spinner, success};
+
+use crate::registry;
 
 /// Pull Request Approve 命令
 pub struct PullRequestApproveCommand {
