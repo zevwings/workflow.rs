@@ -9,8 +9,9 @@ pub mod repository;
 // Re-export public types
 pub use entity::{
     BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitInfo, FileStatusInfo,
-    FileStatusType, MergeStrategy, RemoteInfo, RepoInfo, TagCreateInfo, TagCreateScope,
-    TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+    FileStatusType, MergeStrategy, RemoteInfo, RepoInfo, StashApplyResult, StashEntry,
+    StashPopResult, StashStat, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
+    WorkingTreeStatus,
 };
 pub use error::GitError;
 pub use repository::{GitRepoRepository, GitRepository};

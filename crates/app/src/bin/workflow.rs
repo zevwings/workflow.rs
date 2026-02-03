@@ -7,7 +7,7 @@ use toolkit::{logger, LoggerConfig, Paths};
 
 use app::cli::{
     AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, GithubCommand, IgnoreSubcommand,
-    JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand, TagSubcommand,
+    JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand, StashSubcommand, TagSubcommand,
 };
 use app::commands;
 use app::registry;
@@ -25,6 +25,7 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Jira(_) => Some("jira"),
         Command::Branch(_) => Some("branch"),
         Command::Commit(_) => Some("commit"),
+        Command::Stash(_) => Some("stash"),
         Command::Tag(_) => Some("tag"),
         Command::Pr(_) => Some("pr"),
         Command::Push => Some("push"),
@@ -240,6 +241,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let cmd = commands::sync::pull::PullCommand::new();
             cmd.run()?;
         }
+        Command::Stash(stash_cmd) => match stash_cmd {
+            StashSubcommand::Push => {
+                commands::stash::StashPushCommand::run()?;
+            }
+            StashSubcommand::Pop => {
+                commands::stash::StashPopCommand::run()?;
+            }
+            StashSubcommand::Apply => {
+                commands::stash::StashApplyCommand::run()?;
+            }
+            StashSubcommand::Drop => {
+                commands::stash::StashDropCommand::run()?;
+            }
+            StashSubcommand::List => {
+                commands::stash::StashListCommand::run()?;
+            }
+        },
         Command::Tag(tag_cmd) => match tag_cmd {
             TagSubcommand::Create {
                 tag_name,

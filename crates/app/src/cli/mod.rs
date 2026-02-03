@@ -13,6 +13,7 @@ mod log;
 mod main;
 mod pr;
 mod repo;
+mod stash;
 mod tag;
 
 // 重新导出所有子命令枚举和参数结构
@@ -26,4 +27,5 @@ pub use log::LogCommand;
 pub use main::{Cli, Command};
 pub use pr::PrSubcommand;
 pub use repo::RepoCommand;
+pub use stash::StashSubcommand;
 pub use tag::TagSubcommand;

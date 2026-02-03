@@ -5,8 +5,9 @@
 use std::sync::Arc;
 
 use domain::git::{
-    BlameLineInfo, CommitInfo, GitError, GitRepository, MergeStrategy, RepoInfo, TagCreateInfo,
-    TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+    BlameLineInfo, CommitInfo, GitError, GitRepository, MergeStrategy, RepoInfo, StashApplyResult,
+    StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
+    WorkingTreeStatus,
 };
 
 use crate::git::services::{
@@ -190,8 +191,20 @@ impl GitRepository for GitRepositoryImpl {
         self.stash_service.stash_push(message)
     }
 
-    fn stash_pop(&self, index: usize) -> Result<(), GitError> {
+    fn stash_pop(&self, index: usize) -> Result<StashPopResult, GitError> {
         self.stash_service.stash_pop(index)
+    }
+
+    fn stash_apply(&self, index: usize) -> Result<StashApplyResult, GitError> {
+        self.stash_service.stash_apply(index)
+    }
+
+    fn stash_list(&self) -> Result<Vec<StashEntry>, GitError> {
+        self.stash_service.stash_list()
+    }
+
+    fn stash_drop(&self, index: usize) -> Result<(), GitError> {
+        self.stash_service.stash_drop(index)
     }
 
     // ========== Tag 操作 ==========
