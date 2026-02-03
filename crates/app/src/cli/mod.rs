@@ -6,6 +6,7 @@
 mod args;
 mod branch;
 mod commit;
+mod completion;
 mod github;
 mod jira;
 mod llm;
@@ -20,6 +21,7 @@ mod tag;
 pub use args::{DryRunArgs, ForceArgs, JiraIdArg};
 pub use branch::{BranchSubcommand, IgnoreSubcommand};
 pub use commit::{AmendArgs, CommitCommand, CommitSubcommand};
+pub use completion::CompletionCommand;
 pub use github::GithubCommand;
 pub use jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand};
 pub use llm::LlmCommand;

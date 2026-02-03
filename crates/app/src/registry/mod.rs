@@ -79,3 +79,8 @@ pub fn get_llm_repository() -> Arc<dyn domain::llm::repository::LLMRepository> {
 pub fn get_pull_request_service() -> Arc<dyn domain::pr::service::PullRequestService> {
     get_service::<dyn domain::pr::service::PullRequestService>()
 }
+
+/// 获取 CompletionService
+pub fn get_completion_service() -> Arc<dyn domain::completion::service::CompletionService> {
+    get_service::<dyn domain::completion::service::CompletionService>()
+}

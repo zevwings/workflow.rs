@@ -6,6 +6,7 @@ use clap::{Parser, Subcommand};
 
 use super::branch::BranchSubcommand;
 use super::commit::CommitCommand;
+use super::completion::CompletionCommand;
 use super::github::GithubCommand;
 use super::jira::JiraCommand;
 use super::llm::LlmCommand;
@@ -72,4 +73,7 @@ pub enum Command {
     Push,
     /// 从远程拉取当前分支
     Pull,
+    /// Shell Completion 管理命令
+    #[command(subcommand)]
+    Completion(CompletionCommand),
 }

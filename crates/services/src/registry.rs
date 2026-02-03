@@ -14,6 +14,7 @@ pub struct ServicesModule;
 ///
 /// 注册所有 services 层的服务，包括：
 /// - PullRequestService
+/// - CompletionService
 pub fn build_services_module() -> ServicesModule {
     register_services().expect("Failed to register services");
     ServicesModule
@@ -40,6 +41,12 @@ fn register_services() -> registry::Result<()> {
             github_repo,
             llm_repo,
         ))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    // CompletionService - 无外部依赖
+    bind!(dyn domain::CompletionService, |_c: &Container| {
+        Arc::new(crate::CompletionServiceImpl::new())
     })
     .in_scope(Scope::Singleton)?;
 

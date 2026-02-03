@@ -22,6 +22,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"]
 
 # Shell 自动补全
 clap_complete = "4.5"
+whattheshell = "1.1"    # Shell 检测（通过进程树推断当前 shell）
+
+# Shell 命令执行
+duct = "0.13"
 
 # 工具
 base64 = "0.22"
