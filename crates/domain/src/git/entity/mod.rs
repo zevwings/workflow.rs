@@ -6,6 +6,7 @@ mod commit;
 mod merge;
 mod remote;
 mod repo;
+mod stash;
 mod status;
 mod tag;
 
@@ -15,5 +16,6 @@ pub use commit::CommitInfo;
 pub use merge::MergeStrategy;
 pub use remote::RemoteInfo;
 pub use repo::{CodePlatform, RepoInfo};
+pub use stash::{StashApplyResult, StashEntry, StashPopResult, StashStat};
 pub use status::{FileStatusInfo, FileStatusType, WorkingTreeStatus};
 pub use tag::{TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope};

@@ -3,6 +3,7 @@
 use color_eyre::Result;
 use domain::{GitRepository, PullRequestContent};
 use prompt::{error, info, input, select, spinner, success};
+use toolkit::BrowserExt;
 
 use crate::registry;
 use crate::workflows::utils::branch::{
@@ -694,13 +695,24 @@ impl PullRequestCreateCommand {
         success!("Pull Request created successfully!");
         info!("PR ID: {}", pr_id);
 
-        // 获取 PR URL
+        // 获取 PR URL 并打开浏览器
         let repo_info = branch_repo.get_repo_info();
         if let Some(ref origin_url) = repo_info.origin_url {
             // 从 origin_url 提取 owner/repo 并构建 PR URL
             // 例如: https://github.com/owner/repo.git 或 git@github.com:owner/repo.git
             if let Some(pr_url) = extract_pr_url(origin_url, &pr_id) {
-                info!("PR: {}", pr_url);
+                info!("PR URL: {}", pr_url);
+
+                // 使用默认浏览器打开 PR 页面
+                match pr_url.open_in_browser() {
+                    Ok(()) => {
+                        success!("Opened PR in browser");
+                    }
+                    Err(e) => {
+                        // 打开浏览器失败不应该阻止整个流程
+                        error!("Failed to open PR in browser: {}", e);
+                    }
+                }
             }
         }
 

@@ -3,8 +3,9 @@
 //! 提供 Git 仓库的完整操作接口定义。
 
 use crate::git::entity::{
-    BlameLineInfo, CommitInfo, MergeStrategy, RepoInfo, TagCreateInfo, TagCreateScope,
-    TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+    BlameLineInfo, CommitInfo, MergeStrategy, RepoInfo, StashApplyResult, StashEntry,
+    StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
+    WorkingTreeStatus,
 };
 use crate::git::error::GitError;
 
@@ -214,7 +215,31 @@ pub trait GitRepository: Send + Sync {
     ///
     /// # 返回
     /// 成功返回 Ok(())
-    fn stash_pop(&self, index: usize) -> Result<(), GitError>;
+    fn stash_pop(&self, index: usize) -> Result<StashPopResult, GitError>;
+
+    /// 应用 stash（不删除）
+    ///
+    /// # 参数
+    /// - `index`: stash 索引（0 表示最新的 stash）
+    ///
+    /// # 返回
+    /// 返回 `StashApplyResult`，包含应用状态、冲突信息和警告
+    fn stash_apply(&self, index: usize) -> Result<StashApplyResult, GitError>;
+
+    /// 列出所有 stash 条目
+    ///
+    /// # 返回
+    /// 返回所有 stash 条目的列表，按索引从新到旧排列（stash@{0} 在第一个）
+    fn stash_list(&self) -> Result<Vec<StashEntry>, GitError>;
+
+    /// 删除指定的 stash
+    ///
+    /// # 参数
+    /// - `index`: stash 索引（0 表示最新的 stash）
+    ///
+    /// # 返回
+    /// 成功返回 Ok(())
+    fn stash_drop(&self, index: usize) -> Result<(), GitError>;
 
     // ========== Tag 操作 ==========
 

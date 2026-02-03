@@ -12,6 +12,7 @@ use super::llm::LlmCommand;
 use super::log::LogCommand;
 use super::pr::PrSubcommand;
 use super::repo::RepoCommand;
+use super::stash::StashSubcommand;
 use super::tag::TagSubcommand;
 
 /// 顶层 CLI 定义
@@ -58,6 +59,9 @@ pub enum Command {
     Branch(BranchSubcommand),
     /// 提交管理命令
     Commit(CommitCommand),
+    /// Stash 管理命令
+    #[command(subcommand)]
+    Stash(StashSubcommand),
     /// Tag 管理命令
     #[command(subcommand)]
     Tag(TagSubcommand),
