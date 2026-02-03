@@ -2,7 +2,7 @@
 
 use crate::registry;
 use domain::{BranchNaming, BranchTemplateVars, BranchType};
-use prompt::{info, select, Spinner};
+use prompt::{info, select, spinner};
 use toolkit::TemplateEngine;
 
 /// 使用模板生成分支名
@@ -148,10 +148,10 @@ pub fn generate_branch_name_by_summary(
 
     // 使用 LLM 生成基础分支名（不包含 branch_type 前缀）
     let llm_repo = registry::get_llm_repository();
-    let base_branch_name = match Spinner::new("Generating branch name...")
+    let base_branch_name = match spinner!("Generating branch name...")
         .with(|| llm_repo.generate_branch_name(Some(summary), exists_branches))
     {
-        Ok(name) => name,
+        Ok(name) => strip_branch_type_prefix(&name),
         Err(e) => {
             info!("LLM generation failed: {}, using fallback method", e);
             to_slug(summary)
@@ -159,6 +159,29 @@ pub fn generate_branch_name_by_summary(
     };
 
     Ok((branch_type, base_branch_name))
+}
+
+/// 移除分支名中可能存在的类型前缀
+///
+/// 防御性处理：如果 LLM 返回了带类型前缀的分支名，移除它。
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(strip_branch_type_prefix("feature/my-branch"), "my-branch");
+/// assert_eq!(strip_branch_type_prefix("my-branch"), "my-branch");
+/// assert_eq!(strip_branch_type_prefix("bugfix/fix-issue"), "fix-issue");
+/// ```
+fn strip_branch_type_prefix(name: &str) -> String {
+    let prefixes = ["feature/", "bugfix/", "hotfix/", "refactoring/", "chore/"];
+
+    for prefix in prefixes {
+        if let Some(stripped) = name.strip_prefix(prefix) {
+            return stripped.to_string();
+        }
+    }
+
+    name.to_string()
 }
 
 /// 从 JIRA ID 生成分支名
@@ -177,7 +200,7 @@ pub fn generate_branch_name_from_jira(jira_id: &str) -> Result<String, Box<dyn s
     let jira_repo = registry::get_jira_repository();
 
     // 获取 JIRA ticket 信息
-    let issue = Spinner::new(format!("Fetching JIRA ticket '{}'...", jira_id))
+    let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
         .with(|| jira_repo.get_issue_info(jira_id))
         .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
 

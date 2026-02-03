@@ -2,7 +2,7 @@
 
 use crate::registry;
 use color_eyre::Result;
-use prompt::{error, success, Spinner};
+use prompt::{error, spinner, success};
 
 /// Pull Request Update 命令
 pub struct PullRequestUpdateCommand {
@@ -28,7 +28,7 @@ impl PullRequestUpdateCommand {
         }
 
         // 更新 PR
-        Spinner::new(format!("Updating PR #{}...", self.pr_id))
+        spinner!("Updating PR #{}...", self.pr_id)
             .with(|| {
                 pr_service.update_pull_request(
                     &self.pr_id,

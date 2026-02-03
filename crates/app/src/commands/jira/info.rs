@@ -4,7 +4,7 @@ use crate::registry;
 use crate::workflows::utils::jira::get_jira_id_interactive;
 use color_eyre::Result;
 use domain::JiraIssue;
-use prompt::{info, success, Spinner};
+use prompt::{info, spinner, success};
 
 /// Jira Info 命令
 pub struct JiraInfoCommand {
@@ -32,7 +32,7 @@ impl JiraInfoCommand {
         let jira_repo = registry::get_jira_repository();
 
         // 获取 ticket 信息
-        let issue = Spinner::new(format!("Fetching JIRA ticket '{}'...", jira_id))
+        let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
             .with(|| jira_repo.get_issue_info(&jira_id))
             .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
 

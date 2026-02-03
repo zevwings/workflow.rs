@@ -26,7 +26,7 @@ impl LLMConversation for BranchNameConversation {
     type Output = String;
 
     fn get_system_prompt(&self, _language_code: &str) -> String {
-        r#"You are a helpful Assitant that generate a git branch name.
+        r#"You are a helpful Assistant that generates a git branch name.
 
 Generate a branch name based on the input above, and return the branch name in JSON format.
 
@@ -37,7 +37,8 @@ Rules:
 - ASCII characters and hyphens only
 - Translate non-English text to English first
 - Keep it concise and descriptive
-- Don't duplicate existing branch names
+- Do NOT duplicate existing branch names
+- Do NOT respond with any prefix
 
 Return JSON format:
 {
@@ -63,6 +64,7 @@ Return JSON format:
             "- The branch name should be lowercase, use hyphens to separate words".to_string(),
             "- Keep it concise and descriptive".to_string(),
             "- Do not duplicate existing branch names".to_string(),
+            "- Do NOT include any prefix like 'feature/', 'bugfix/', etc.".to_string(),
         ];
 
         // 如果有已存在的分支列表，添加到 prompt 中

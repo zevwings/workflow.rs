@@ -3,7 +3,7 @@
 use crate::registry;
 use crate::workflows::utils::jira::get_jira_id_interactive;
 use color_eyre::Result;
-use prompt::{confirm, info, success, Spinner};
+use prompt::{confirm, info, spinner, success};
 
 /// Jira Clean 命令
 pub struct JiraCleanCommand {
@@ -38,7 +38,7 @@ impl JiraCleanCommand {
                 return Ok(());
             }
 
-            Spinner::new("Cleaning all attachment directories...")
+            spinner!("Cleaning all attachment directories...")
                 .with(|| jira_repo.clean_attachments(None))
                 .map_err(|e| format!("Failed to clean attachments: {}", e))?;
 
@@ -63,7 +63,7 @@ impl JiraCleanCommand {
                 return Ok(());
             }
 
-            Spinner::new(format!("Cleaning attachment directory for {}...", jira_id))
+            spinner!("Cleaning attachment directory for {}...", jira_id)
                 .with(|| jira_repo.clean_attachments(Some(&jira_id)))
                 .map_err(|e| format!("Failed to clean attachments: {}", e))?;
 

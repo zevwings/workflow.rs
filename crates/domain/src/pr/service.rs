@@ -6,11 +6,18 @@ use crate::pr::entity::PullRequestInfo;
 /// PR 服务接口
 pub trait PullRequestService: Send + Sync {
     /// 创建 Pull Request
+    ///
+    /// # 参数
+    /// * `jira_id` - JIRA ID（可选）
+    /// * `title` - PR 标题（可选，不提供时使用 LLM 生成）
+    /// * `description` - PR 描述（可选）
+    /// * `target_branch` - 目标分支（可选，不提供时使用仓库默认分支）
     fn create_pull_request(
         &self,
         jira_id: Option<&str>,
         title: Option<&str>,
         description: Option<&str>,
+        target_branch: Option<&str>,
     ) -> Result<String, ServiceError>; // 返回 PR ID
 
     /// 合并 Pull Request
