@@ -1,10 +1,51 @@
 //! Install 命令入口
+//!
+//! 独立的安装程序，用于将 workflow 工具安装到系统路径。
+//!
+//! ## 功能
+//!
+//! - 安装二进制文件到系统目录（通常是 /usr/local/bin）
+//! - 安装 shell completion 脚本
+//! - 支持 Unix 和 Windows 平台
+//!
+//! ## 使用方式
+//!
+//! ```bash
+//! # 安装全部（二进制文件 + completion）
+//! ./install
+//!
+//! # 仅安装二进制文件
+//! ./install --binaries-only
+//!
+//! # 仅安装 completion 脚本
+//! ./install --completions-only
+//! ```
 
-fn main() {
-    // TODO: 实现 install 命令入口（优先级：低）
-    // 功能：安装 workflow 工具到系统路径
-    // 包括：二进制文件、配置文件、shell 补全脚本等
-    // 当前暂未实现，待后续版本添加
-    eprintln!("Install command is not yet implemented");
-    std::process::exit(1);
+use clap::Parser;
+use color_eyre::Result;
+
+use app::commands::install::InstallCommand;
+
+/// Workflow CLI 安装程序
+#[derive(Parser, Debug)]
+#[command(name = "install")]
+#[command(about = "安装 Workflow CLI 到系统路径")]
+#[command(version)]
+struct Args {
+    /// 仅安装二进制文件
+    #[arg(long, conflicts_with = "completions_only")]
+    binaries_only: bool,
+
+    /// 仅安装 shell completion 脚本
+    #[arg(long, conflicts_with = "binaries_only")]
+    completions_only: bool,
+}
+
+fn main() -> Result<()> {
+    color_eyre::install()?;
+
+    let args = Args::parse();
+
+    let cmd = InstallCommand::new(args.binaries_only, args.completions_only);
+    cmd.run()
 }

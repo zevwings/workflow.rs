@@ -8,6 +8,7 @@ use std::io;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::logger::{config::LoggerConfig, path, LoggerError};
+use crate::terminal::SpinnerAwareMakeWriter;
 
 /// 宏：根据 use_json 创建并初始化 layer
 macro_rules! init_with_layer {
@@ -104,7 +105,7 @@ pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), Log
         if let Ok(file) = OpenOptions::new().create(true).append(true).open(&file_path) {
             return if use_json {
                 if enable_console {
-                    add_json_layer!(add_json_layer!(registry, file), io::stderr).try_init().map_err(
+                    add_json_layer!(add_json_layer!(registry, file), SpinnerAwareMakeWriter).try_init().map_err(
                         |e| {
                             LoggerError::InitializationFailed(format!(
                                 "Failed to initialize tracing subscriber with file and console: {}",
@@ -121,7 +122,7 @@ pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), Log
                     })
                 }
             } else if enable_console {
-                add_text_layer!(add_text_layer!(registry, file), io::stderr).try_init().map_err(
+                add_text_layer!(add_text_layer!(registry, file), SpinnerAwareMakeWriter).try_init().map_err(
                     |e| {
                         LoggerError::InitializationFailed(format!(
                             "Failed to initialize tracing subscriber with file and console: {}",
@@ -140,11 +141,11 @@ pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), Log
         }
     }
 
-    // 回退到 stderr 输出
+    // 回退到 stderr 输出（使用 SpinnerAwareMakeWriter 协调 spinner）
     init_with_layer!(
         registry,
         use_json,
-        io::stderr,
+        SpinnerAwareMakeWriter,
         "Failed to initialize tracing subscriber with stderr"
     )
 }

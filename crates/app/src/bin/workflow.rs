@@ -3,12 +3,13 @@
 //! 这里只负责解析顶层命令，将实际逻辑委托给 `commands` 模块。
 
 use clap::Parser;
-use toolkit::{logger, LoggerConfig, Paths};
+use prompt::{terminal_resume, terminal_suspend};
+use toolkit::{logger, register_spinner_handlers, LoggerConfig, Paths};
 
 use app::cli::{
     AliasCommand, AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, CompletionCommand,
     GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
-    RepoCommand, StashSubcommand, TagSubcommand,
+    RepoCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
 };
 use app::commands;
 use app::registry;
@@ -19,6 +20,8 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Version => Some("version"),
         Command::Check => Some("check"),
         Command::Setup => Some("setup"),
+        Command::Update(_) => Some("update"),
+        Command::Uninstall(_) => Some("uninstall"),
         Command::Repo(_) => Some("repo"),
         Command::Log(_) => Some("log"),
         Command::Llm(_) => Some("llm"),
@@ -62,6 +65,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // 忽略初始化错误（可能已经初始化过了，或者日志级别为 off）
         let _ = logger::init(command_name, &logger_config);
+
+        // 注册终端处理器，让 tracing 输出时能协调 spinner/progress
+        register_spinner_handlers(terminal_suspend, terminal_resume);
+
         toolkit::log_info!(
             "Logger initialized (console={}, level={})",
             logger_config.enable_console,
@@ -85,6 +92,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Setup => {
             let cmd = commands::setup::SetupCommand::new();
+            cmd.run()?;
+        }
+        Command::Update(UpdateArgs {
+            target_version,
+            force,
+            github_token,
+        }) => {
+            // 优先使用命令行参数，其次使用环境变量
+            let token = github_token.or_else(|| std::env::var("GITHUB_TOKEN").ok());
+            let cmd = commands::update::UpdateCommand::new(target_version, force, token);
+            cmd.run()?;
+        }
+        Command::Uninstall(UninstallArgs { force, keep_config }) => {
+            let cmd = commands::uninstall::UninstallCommand::new(force, keep_config);
             cmd.run()?;
         }
         Command::Repo(repo_cmd) => match repo_cmd {

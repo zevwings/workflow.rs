@@ -16,6 +16,7 @@ pub mod paths;
 pub mod rollback;
 pub mod shell;
 pub mod template;
+pub mod terminal;
 pub mod util;
 
 // Private module to re-export tracing for use in exported macros
@@ -64,3 +65,6 @@ pub use rollback::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell, BackupInfo,
     BackupResult, Reload, ReloadResult, RollbackManager, RollbackResult,
 };
+
+// Terminal 模块 - 导出终端协调相关类型和函数
+pub use terminal::{register_spinner_handlers, SpinnerAwareLayer};

@@ -4,7 +4,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use color_eyre::{eyre::WrapErr, Result};
 use prompt::{success, warning, Spinner};
@@ -213,18 +213,33 @@ pub fn run_installer(extract_dir: &Path) -> Result<()> {
             .wrap_err("Failed to set executable permission for install")?;
     }
 
-    // 运行安装程序
+    // 运行安装程序，捕获输出以避免与 spinner 冲突
+    // stdin 继承以支持交互式输入（如 sudo 密码）
+    // stdout/stderr 捕获，在 spinner 停止后显示
     let spinner = Spinner::new("Installing binaries and completion scripts...");
     let spinner_instance = spinner.start();
 
-    let status = Command::new(&install_binary)
+    let output = Command::new(&install_binary)
         .current_dir(extract_dir)
-        .status()
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
         .wrap_err("Failed to run install")?;
 
     spinner_instance.stop();
 
-    if !status.success() {
+    // Spinner 停止后，显示子进程的输出
+    if !output.stdout.is_empty() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        eprint!("{}", stdout);
+    }
+    if !output.stderr.is_empty() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprint!("{}", stderr);
+    }
+
+    if !output.status.success() {
         color_eyre::eyre::bail!("Installation failed");
     }
 

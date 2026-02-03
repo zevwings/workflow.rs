@@ -41,6 +41,10 @@ pub enum Command {
     Check,
     /// 交互式初始化或更新配置
     Setup,
+    /// 更新 Workflow CLI 到最新版本
+    Update(UpdateArgs),
+    /// 卸载 Workflow CLI
+    Uninstall(UninstallArgs),
     /// 仓库管理命令
     #[command(subcommand)]
     Repo(RepoCommand),
@@ -80,4 +84,32 @@ pub enum Command {
     /// 别名管理命令
     #[command(subcommand)]
     Alias(AliasCommand),
+}
+
+/// Update 命令参数
+#[derive(Parser, Debug)]
+pub struct UpdateArgs {
+    /// 目标版本号（如 1.2.3），不指定则更新到最新版本
+    #[arg(short = 't', long = "target")]
+    pub target_version: Option<String>,
+
+    /// 跳过确认，直接执行更新
+    #[arg(short, long)]
+    pub force: bool,
+
+    /// GitHub Token（用于提高 API 速率限制，也可通过 GITHUB_TOKEN 环境变量设置）
+    #[arg(long)]
+    pub github_token: Option<String>,
+}
+
+/// Uninstall 命令参数
+#[derive(Parser, Debug)]
+pub struct UninstallArgs {
+    /// 跳过确认，直接执行卸载
+    #[arg(short, long)]
+    pub force: bool,
+
+    /// 保留配置文件（不删除 workflow.toml 等）
+    #[arg(long)]
+    pub keep_config: bool,
 }

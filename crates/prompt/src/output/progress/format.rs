@@ -25,6 +25,8 @@ pub(crate) struct ProgressFormatParams<'a> {
     pub progress_chars: &'a str,
     /// 主题样式
     pub theme: &'a Theme,
+    /// 终端宽度（可选，用于截断输出）
+    pub terminal_width: Option<usize>,
 }
 
 /// 格式化进度条文本
@@ -157,7 +159,18 @@ pub(crate) fn format_progress_text(params: &ProgressFormatParams<'_>) -> String 
         parts.push(msg_styled);
     }
 
-    parts.join(" ")
+    let result = parts.join(" ");
+
+    // 根据终端宽度截断输出
+    if let Some(term_width) = params.terminal_width {
+        if term_width > 0 {
+            truncate_to_width(&result, term_width)
+        } else {
+            result
+        }
+    } else {
+        result
+    }
 }
 
 /// 格式化已用时间
@@ -212,5 +225,69 @@ fn format_bytes(bytes: u64) -> String {
         format!("{} {}", bytes, UNITS[exp])
     } else {
         format!("{:.1} {}", value, UNITS[exp])
+    }
+}
+
+/// 按显示宽度截断字符串（正确处理 ANSI 转义序列）
+fn truncate_to_width(s: &str, max_width: usize) -> String {
+    let mut result = String::new();
+    let mut display_width = 0;
+    let mut in_escape = false;
+    let mut chars = s.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // 开始 ANSI 转义序列
+            in_escape = true;
+            result.push(c);
+        } else if in_escape {
+            result.push(c);
+            // ANSI 序列以字母结束（a-z, A-Z）
+            if c.is_ascii_alphabetic() {
+                in_escape = false;
+            }
+        } else {
+            // 计算字符的显示宽度
+            let char_width = unicode_width(c);
+            if display_width + char_width > max_width {
+                break;
+            }
+            result.push(c);
+            display_width += char_width;
+        }
+    }
+
+    // 确保关闭所有 ANSI 样式（重置）
+    if result.contains('\x1b') {
+        result.push_str("\x1b[0m");
+    }
+
+    result
+}
+
+/// 计算字符的显示宽度
+fn unicode_width(c: char) -> usize {
+    // 简单的 Unicode 宽度估算
+    // 大多数 CJK 字符和表情符号占 2 个宽度
+    // ASCII 和大多数拉丁字符占 1 个宽度
+    if c.is_ascii() {
+        1
+    } else {
+        // 使用 Unicode 块来估算宽度
+        let code = c as u32;
+        match code {
+            // CJK 统一表意文字
+            0x4E00..=0x9FFF => 2,
+            // CJK 扩展
+            0x3400..=0x4DBF | 0x20000..=0x2A6DF => 2,
+            // 全角字符
+            0xFF00..=0xFFEF => 2,
+            // 表情符号（大多数）
+            0x1F300..=0x1F9FF => 2,
+            // 方框绘制字符（如进度条字符）
+            0x2580..=0x259F => 1,
+            // 其他默认为 1
+            _ => 1,
+        }
     }
 }
