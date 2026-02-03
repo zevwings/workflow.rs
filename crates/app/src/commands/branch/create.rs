@@ -9,6 +9,28 @@ use crate::workflows::utils::branch::{
     generate_branch_name_from_jira, select_branch_type, to_slug,
 };
 
+/// 源分支选项
+#[derive(Clone)]
+enum SourceBranchOption {
+    /// 从当前分支创建
+    FromCurrent(String),
+    /// 从默认分支创建
+    FromDefault(String),
+}
+
+impl std::fmt::Display for SourceBranchOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SourceBranchOption::FromCurrent(branch) => {
+                write!(f, "Create from current branch ({})", branch)
+            }
+            SourceBranchOption::FromDefault(branch) => {
+                write!(f, "Create from default branch ({})", branch)
+            }
+        }
+    }
+}
+
 /// Branch Create 命令
 pub struct BranchCreateCommand {
     jira_id: Option<String>,
@@ -100,25 +122,28 @@ impl BranchCreateCommand {
         } else if default_branch != current_branch {
             // 如果没有指定 from_default，且当前分支不是默认分支，询问用户从哪里创建
             let options = vec![
-                format!("从当前分支创建 ({})", current_branch),
-                format!("从默认分支创建 ({})", default_branch),
+                SourceBranchOption::FromCurrent(current_branch.clone()),
+                SourceBranchOption::FromDefault(default_branch.clone()),
             ];
 
-            let selected = select!("请选择从哪里创建新分支:", options)
+            let selected = select!("Please select where to create the new branch:", options)
                 .prompt()
                 .map_err(|e| format!("Failed to select source branch: {}", e))?;
 
-            if selected.starts_with("从当前分支创建") {
-                // 从当前分支创建
-                (current_branch.clone(), false)
-            } else {
-                // 从默认分支创建，需要 stash、切换、拉取
-                let needs_stash = self.prepare_default_branch(
-                    branch_repo.as_ref(),
-                    &current_branch,
-                    &default_branch,
-                )?;
-                (default_branch.clone(), needs_stash)
+            match selected {
+                SourceBranchOption::FromCurrent(_) => {
+                    // 从当前分支创建
+                    (current_branch.clone(), false)
+                }
+                SourceBranchOption::FromDefault(_) => {
+                    // 从默认分支创建，需要 stash、切换、拉取
+                    let needs_stash = self.prepare_default_branch(
+                        branch_repo.as_ref(),
+                        &current_branch,
+                        &default_branch,
+                    )?;
+                    (default_branch.clone(), needs_stash)
+                }
             }
         } else {
             // 当前分支就是默认分支，直接使用
