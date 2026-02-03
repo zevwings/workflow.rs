@@ -12,9 +12,11 @@ use std::sync::{Arc, Mutex};
 /// URL 解析器模式
 static URL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
+        // GitHub SSH over 443: git@ssh.github.com:443/owner/repo.git
+        Regex::new(r"git@ssh\.github\.com:\d+/(.+?)(?:\.git)?/?$").unwrap(),
         // GitHub SSH 协议格式: ssh://git@github.com/owner/repo.git
         Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$").unwrap(),
-        // GitHub SSH 格式: git@github.com:owner/repo.git
+        // GitHub SSH 格式: git@github.com:owner/repo.git (需在 ssh.github.com 之后，避免误匹配)
         Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").unwrap(),
         // GitHub HTTPS 格式: https://github.com/owner/repo.git
         Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$").unwrap(),
@@ -202,6 +204,7 @@ impl GitContext {
     pub fn parse_repo_kind(url: &str) -> CodePlatform {
         if url.contains("github.com")
             || url.starts_with("git@github")
+            || url.starts_with("git@ssh.github")
             || url.starts_with("ssh://git@github")
         {
             CodePlatform::GitHub
@@ -440,6 +443,13 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_github_ssh_over_443_url() {
+        let url = "git@ssh.github.com:443/owner/repo.git";
+        let result = GitContext::extract_repo_name(url);
+        assert_eq!(result, Some("owner/repo".to_string()));
+    }
+
+    #[test]
     fn test_parse_github_kind() {
         assert_eq!(
             GitContext::parse_repo_kind("git@github.com:owner/repo.git"),
@@ -460,6 +470,10 @@ mod tests {
         assert_eq!(
             GitContext::parse_repo_kind("https://gitlab.com/owner/repo.git"),
             CodePlatform::Unknown
+        );
+        assert_eq!(
+            GitContext::parse_repo_kind("git@ssh.github.com:443/owner/repo.git"),
+            CodePlatform::GitHub
         );
     }
 
