@@ -1,7 +1,7 @@
 //! Spinner 加载指示器
 
 mod builder;
-mod format;
+pub(crate) mod format;
 #[allow(clippy::module_inception)]
 mod spinner;
 

@@ -2,6 +2,7 @@
 
 use crate::output::progress::bar::ProgressBar;
 use crate::output::progress::format::format_progress_text;
+use crate::output::terminal_state;
 use crate::style::theme::get_theme;
 use crossterm::{cursor, terminal, terminal::ClearType, QueueableCommand};
 use std::io::{self, Write};
@@ -35,6 +36,12 @@ pub(super) fn start_render_thread(bar: &ProgressBar) {
                 if !*running_guard {
                     break;
                 }
+            }
+
+            // 如果处于暂停状态，跳过渲染
+            if terminal_state::is_suspended() {
+                thread::sleep(interval);
+                continue;
             }
 
             // 获取所有需要的数据（需要克隆 message，因为需要在 guard 释放后使用）

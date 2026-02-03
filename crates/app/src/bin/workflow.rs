@@ -3,7 +3,8 @@
 //! 这里只负责解析顶层命令，将实际逻辑委托给 `commands` 模块。
 
 use clap::Parser;
-use toolkit::{logger, LoggerConfig, Paths};
+use prompt::{terminal_resume, terminal_suspend};
+use toolkit::{logger, register_spinner_handlers, LoggerConfig, Paths};
 
 use app::cli::{
     AliasCommand, AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, CompletionCommand,
@@ -64,6 +65,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // 忽略初始化错误（可能已经初始化过了，或者日志级别为 off）
         let _ = logger::init(command_name, &logger_config);
+
+        // 注册终端处理器，让 tracing 输出时能协调 spinner/progress
+        register_spinner_handlers(terminal_suspend, terminal_resume);
+
         toolkit::log_info!(
             "Logger initialized (console={}, level={})",
             logger_config.enable_console,

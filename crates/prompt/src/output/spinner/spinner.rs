@@ -4,6 +4,7 @@
 
 use crate::output::spinner::builder::SpinnerBuilder;
 use crate::output::spinner::format::format_spinner_text;
+use crate::output::terminal_state::{self, RendererType};
 use crate::style::theme::get_theme;
 use crossterm::{
     cursor::{self, Hide, Show},
@@ -47,6 +48,9 @@ impl Spinner {
         self.enable_raw_mode();
         self.hide_cursor();
 
+        // 注册到全局终端状态（渲染线程会自动重绘，不需要复杂的回调）
+        terminal_state::register_renderer(RendererType::Spinner, || {});
+
         let running = Arc::clone(&self.running);
         let frames = self.frames.clone();
         let message = Arc::clone(&self.message);
@@ -79,6 +83,9 @@ impl Spinner {
                             *running_guard = false;
                         }
 
+                        // 注销全局终端状态
+                        terminal_state::unregister_renderer();
+
                         // Clean up terminal
                         let mut stderr = io::stderr();
                         let _ = stderr.queue(cursor::MoveToColumn(0));
@@ -90,6 +97,12 @@ impl Spinner {
                         // Exit the process with SIGINT status
                         std::process::exit(130); // 128 + SIGINT(2) = 130
                     }
+                }
+
+                // 如果处于暂停状态，跳过渲染
+                if terminal_state::is_suspended() {
+                    thread::sleep(interval);
+                    continue;
                 }
 
                 let frame = &frames[frame_idx % frames.len()];
@@ -109,6 +122,7 @@ impl Spinner {
                 if let Ok(mut guard) = current_frame.lock() {
                     *guard = frame_idx;
                 }
+
                 frame_idx += 1;
 
                 thread::sleep(interval);
@@ -126,6 +140,9 @@ impl Spinner {
         }
         *running = false;
         drop(running);
+
+        // 注销全局终端状态
+        terminal_state::unregister_renderer();
 
         let mut stderr = io::stderr();
         let _ = stderr.queue(cursor::MoveToColumn(0));

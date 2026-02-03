@@ -5,13 +5,16 @@
 //! - 表格渲染（table）：永久输出表格
 //! - 加载指示器（spinner）：临时输出加载状态
 //! - 进度条（progress）：显示有明确进度的操作
+//! - 终端状态（terminal_state）：统一管理终端渲染状态
 
 mod message;
 mod progress;
-mod spinner;
+pub mod spinner;
 mod table;
+pub mod terminal_state;
 
 pub use message::{Message, MessageRef};
 pub use progress::{progress_bar, Progress, ProgressBar, ProgressBarBuilder};
 pub use spinner::{spinner, Spinner, SpinnerBuilder};
 pub use table::{table, Alignment, TableBuilder, TableStyle, Tabled};
+pub use terminal_state::{resume, suspend};
