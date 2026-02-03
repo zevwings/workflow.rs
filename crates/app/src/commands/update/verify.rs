@@ -22,8 +22,8 @@ fn check_executable(path: &Path) -> Result<bool> {
         return Ok(false);
     }
 
-    let metadata =
-        fs::metadata(path).wrap_err_with(|| format!("Failed to get metadata for: {}", path.display()))?;
+    let metadata = fs::metadata(path)
+        .wrap_err_with(|| format!("Failed to get metadata for: {}", path.display()))?;
 
     let permissions = metadata.permissions();
     let mode = permissions.mode();
@@ -41,7 +41,11 @@ fn check_executable(path: &Path) -> Result<bool> {
     // Windows 上通过扩展名判断可执行文件
     if let Some(ext) = path.extension() {
         let ext_str = ext.to_string_lossy().to_lowercase();
-        Ok(ext_str == "exe" || ext_str == "bat" || ext_str == "cmd" || ext_str == "com" || ext_str == "ps1")
+        Ok(ext_str == "exe"
+            || ext_str == "bat"
+            || ext_str == "cmd"
+            || ext_str == "com"
+            || ext_str == "ps1")
     } else {
         // 没有扩展名，假设可执行
         Ok(true)

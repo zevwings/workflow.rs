@@ -41,9 +41,7 @@ impl AliasService for AliasServiceImpl {
     fn add(&self, name: &str, command: &str, force: bool) -> Result<AliasAddResult, ServiceError> {
         // 验证别名名称
         if name.is_empty() {
-            return Err(ServiceError::InvalidInput(
-                "别名名称不能为空".to_string(),
-            ));
+            return Err(ServiceError::InvalidInput("别名名称不能为空".to_string()));
         }
 
         // 验证命令
@@ -86,18 +84,17 @@ impl AliasService for AliasServiceImpl {
     fn remove(&self, name: &str) -> Result<AliasRemoveResult, ServiceError> {
         // 验证别名名称
         if name.is_empty() {
-            return Err(ServiceError::InvalidInput(
-                "别名名称不能为空".to_string(),
-            ));
+            return Err(ServiceError::InvalidInput("别名名称不能为空".to_string()));
         }
 
         // 加载当前配置
         let mut config = self.config_repo.load()?;
 
         // 检查别名是否存在
-        let command = config.aliases.remove(name).ok_or_else(|| {
-            ServiceError::InvalidInput(format!("别名 '{}' 不存在", name))
-        })?;
+        let command = config
+            .aliases
+            .remove(name)
+            .ok_or_else(|| ServiceError::InvalidInput(format!("别名 '{}' 不存在", name)))?;
 
         // 保存配置
         self.config_repo.save(&config)?;

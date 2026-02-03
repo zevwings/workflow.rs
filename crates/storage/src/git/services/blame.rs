@@ -157,9 +157,7 @@ impl BlameService for BlameServiceImpl {
             .find_commit(commit_id)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        let tree = commit
-            .tree()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let tree = commit.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         let entry = tree
             .get_path(Path::new(file_path))
@@ -226,9 +224,7 @@ mod tests {
             setup_repo_with_config(TestRepoConfig::with_content("line 1\nline 2\nline 3\n"));
         let service = BlameServiceImpl::new(ctx);
 
-        let blame = service
-            .get_file_blame_range("test.txt", 2, 3, None)
-            .unwrap();
+        let blame = service.get_file_blame_range("test.txt", 2, 3, None).unwrap();
 
         assert_eq!(blame.len(), 2);
         assert_eq!(blame[0].line_number, 2);

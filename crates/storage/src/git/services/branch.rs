@@ -70,9 +70,7 @@ impl BranchService for BranchServiceImpl {
         let repo = self.ctx.repository();
 
         // 获取 HEAD 指向的提交
-        let head = repo
-            .head()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let commit = head
             .peel_to_commit()
             .map_err(|_| GitError::OperationFailed("无法获取 HEAD 提交，仓库可能为空".into()))?;
@@ -106,29 +104,23 @@ impl BranchService for BranchServiceImpl {
 
         // 检查是否已合并（如果不强制删除）
         if !force {
-            let head = repo
-                .head()
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            let head_commit = head
-                .peel_to_commit()
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            let head_commit =
+                head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
             let branch_commit = branch
                 .get()
                 .peel_to_commit()
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-            let is_merged = repo
-                .graph_descendant_of(head_commit.id(), branch_commit.id())
-                .unwrap_or(false);
+            let is_merged =
+                repo.graph_descendant_of(head_commit.id(), branch_commit.id()).unwrap_or(false);
 
             if !is_merged {
                 return Err(GitError::BranchNotFullyMerged(name.to_string()));
             }
         }
 
-        branch
-            .delete()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        branch.delete().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(())
     }
 
@@ -140,9 +132,7 @@ impl BranchService for BranchServiceImpl {
                 .map_err(|_| GitError::BranchNotFound(name.to_string()))?
         } else {
             // 重命名当前分支
-            let head = repo
-                .head()
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
             if !head.is_branch() {
                 return Err(GitError::OperationFailed("HEAD 处于 detached 状态".into()));
             }
@@ -273,8 +263,7 @@ impl BranchService for BranchServiceImpl {
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
             repo.checkout_tree(&obj, None)
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.set_head(refname)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            repo.set_head(refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
         } else if remote_exists {
             // 从远程分支创建本地分支
             let remote_branch = repo
@@ -296,8 +285,7 @@ impl BranchService for BranchServiceImpl {
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
             repo.checkout_tree(&obj, None)
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.set_head(&refname)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            repo.set_head(&refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
         } else {
             // 创建新分支
             self.create_branch(name)?;
@@ -309,8 +297,7 @@ impl BranchService for BranchServiceImpl {
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
             repo.checkout_tree(&obj, None)
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.set_head(&refname)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            repo.set_head(&refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
         }
 
         Ok(())
@@ -319,9 +306,7 @@ impl BranchService for BranchServiceImpl {
     fn get_current_branch(&self) -> Result<String, GitError> {
         let repo = self.ctx.repository();
 
-        let head = repo
-            .head()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         if !head.is_branch() {
             return Err(GitError::OperationFailed("HEAD 处于 detached 状态".into()));
@@ -358,9 +343,7 @@ impl BranchService for BranchServiceImpl {
         if let Ok(remote) = repo.find_remote("origin") {
             if let Ok(buf) = remote.default_branch() {
                 if let Some(branch_name) = buf.as_str() {
-                    let short_name = branch_name
-                        .strip_prefix("refs/heads/")
-                        .unwrap_or(branch_name);
+                    let short_name = branch_name.strip_prefix("refs/heads/").unwrap_or(branch_name);
                     return Ok(short_name.to_string());
                 }
             }
@@ -478,11 +461,11 @@ impl BranchServiceImpl {
                 };
 
                 // 计算 merge base
-                let merge_base_oid = match repo.merge_base(current_commit.id(), candidate_commit.id())
-                {
-                    Ok(oid) => oid,
-                    Err(_) => continue,
-                };
+                let merge_base_oid =
+                    match repo.merge_base(current_commit.id(), candidate_commit.id()) {
+                        Ok(oid) => oid,
+                        Err(_) => continue,
+                    };
 
                 // 检查 merge base 是否就是候选分支的 HEAD（最理想情况）
                 if merge_base_oid == candidate_commit.id() {

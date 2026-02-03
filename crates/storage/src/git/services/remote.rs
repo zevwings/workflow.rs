@@ -49,9 +49,8 @@ impl RemoteService for RemoteServiceImpl {
 
         // 设置上游跟踪分支
         if set_upstream {
-            let mut branch = repo
-                .find_branch(branch_name, git2::BranchType::Local)
-                .map_err(|e| {
+            let mut branch =
+                repo.find_branch(branch_name, git2::BranchType::Local).map_err(|e| {
                     GitError::OperationFailed(format!("找不到分支 '{}': {}", branch_name, e))
                 })?;
 

@@ -124,12 +124,8 @@ impl OptionListRenderer {
         }
 
         // 渲染可见窗口内的选项
-        for (visible_index, option) in params
-            .options
-            .iter()
-            .enumerate()
-            .skip(start_index)
-            .take(visible_count)
+        for (visible_index, option) in
+            params.options.iter().enumerate().skip(start_index).take(visible_count)
         {
             execute!(stdout, cursor::MoveToColumn(0))?;
             execute!(stdout, ResetColor)?;

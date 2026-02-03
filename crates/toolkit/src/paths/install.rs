@@ -86,10 +86,7 @@ pub fn binary_paths() -> Vec<String> {
         .iter()
         .map(|name| {
             let binary_name = binary_name(name);
-            install_path
-                .join(&binary_name)
-                .to_string_lossy()
-                .to_string()
+            install_path.join(&binary_name).to_string_lossy().to_string()
         })
         .collect()
 }

@@ -60,13 +60,12 @@ impl PullRequestServiceImpl {
             Some(id) => Ok(id.to_string()),
             None => {
                 let current_branch = self.git_repo.get_current_branch()?;
-                self.get_current_branch_pull_request(&current_branch)?
-                    .ok_or_else(|| {
-                        ServiceError::NotFound(format!(
-                            "No PR found for current branch '{}'",
-                            current_branch
-                        ))
-                    })
+                self.get_current_branch_pull_request(&current_branch)?.ok_or_else(|| {
+                    ServiceError::NotFound(format!(
+                        "No PR found for current branch '{}'",
+                        current_branch
+                    ))
+                })
             }
         }
     }
@@ -92,10 +91,7 @@ impl PullRequestService for PullRequestServiceImpl {
         // 使用提供的目标分支或获取默认分支
         let final_target_branch = match target_branch {
             Some(branch) => branch.to_string(),
-            None => self
-                .git_repo
-                .get_default_branch()
-                .unwrap_or_else(|_| "main".to_string()),
+            None => self.git_repo.get_default_branch().unwrap_or_else(|_| "main".to_string()),
         };
 
         // 如果未提供标题，使用 LLM 生成 PR 内容

@@ -154,8 +154,7 @@ impl GitHubRepository for GitHubRepositoryImpl {
         body: Option<&str>,
     ) -> Result<(), GitHubError> {
         self.validate_pr_id(pr_id)?;
-        self.mutation_service
-            .update_pull_request(pr_id, title, body)
+        self.mutation_service.update_pull_request(pr_id, title, body)
     }
 
     fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), GitHubError> {
@@ -223,7 +222,6 @@ impl GitHubRepository for GitHubRepositoryImpl {
                 "Current branch cannot be empty".to_string(),
             ));
         }
-        self.query_service
-            .get_current_branch_pull_request(current_branch)
+        self.query_service.get_current_branch_pull_request(current_branch)
     }
 }

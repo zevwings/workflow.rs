@@ -81,9 +81,7 @@ fn print_main_form_separator(text: &str, separator_char: &str, total_width: usiz
 fn print_nested_form_separator(text: &str, separator_char: &str, total_width: usize) -> Result<()> {
     let mut stdout = std::io::stdout();
     let text_display_width = text.width();
-    let remaining_width = total_width
-        .saturating_sub(text_display_width)
-        .saturating_sub(2);
+    let remaining_width = total_width.saturating_sub(text_display_width).saturating_sub(2);
     let left_dashes = remaining_width / 2;
     let right_dashes = remaining_width - left_dashes;
 

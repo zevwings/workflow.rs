@@ -45,10 +45,7 @@ fn render_border(
     right: &str,
     cross: &str,
 ) -> String {
-    let parts: Vec<String> = col_widths
-        .iter()
-        .map(|width| horizontal.repeat(*width + 2))
-        .collect();
+    let parts: Vec<String> = col_widths.iter().map(|width| horizontal.repeat(*width + 2)).collect();
     format!("{}{}{}", left, parts.join(cross), right)
 }
 

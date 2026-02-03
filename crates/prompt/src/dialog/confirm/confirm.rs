@@ -244,9 +244,7 @@ mod tests {
 
     #[test]
     fn test_confirm_builder_chain() {
-        let builder = ConfirmBuilder::new("Delete file?")
-            .default(false)
-            .result_title("Delete");
+        let builder = ConfirmBuilder::new("Delete file?").default(false).result_title("Delete");
 
         assert_eq!(builder.message, "Delete file?");
         assert_eq!(builder.default, Some(false));

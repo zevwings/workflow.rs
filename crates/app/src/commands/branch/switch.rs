@@ -52,10 +52,7 @@ impl BranchSwitchCommand {
             };
 
             // 找到当前分支的索引作为默认值
-            let default_index = branch_names
-                .iter()
-                .position(|b| b == &current_branch)
-                .unwrap_or(0);
+            let default_index = branch_names.iter().position(|b| b == &current_branch).unwrap_or(0);
 
             select!(prompt, branch_names)
                 .default(default_index)
@@ -126,7 +123,11 @@ impl BranchSwitchCommand {
                         info!("  2. Run 'git add <resolved-files>'");
                         info!("  3. Run 'git commit' to complete the merge");
                         info!("  Or run 'git merge --abort' to cancel the merge");
-                        return Err(format!("Pull failed: merge conflicts detected - {}", error_msg).into());
+                        return Err(format!(
+                            "Pull failed: merge conflicts detected - {}",
+                            error_msg
+                        )
+                        .into());
                     }
                     return Err(format!("Failed to pull: {}", error_msg).into());
                 }

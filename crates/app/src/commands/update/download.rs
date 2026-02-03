@@ -75,16 +75,13 @@ pub fn download_file(url: &str, output_path: &Path) -> Result<()> {
     let mut downloaded_bytes = 0u64;
 
     loop {
-        let bytes_read = response
-            .read(&mut buffer)
-            .wrap_err("Failed to read response data")?;
+        let bytes_read = response.read(&mut buffer).wrap_err("Failed to read response data")?;
 
         if bytes_read == 0 {
             break;
         }
 
-        file.write_all(&buffer[..bytes_read])
-            .wrap_err("Failed to write to file")?;
+        file.write_all(&buffer[..bytes_read]).wrap_err("Failed to write to file")?;
 
         downloaded_bytes += bytes_read as u64;
         progress.set_position(downloaded_bytes);
@@ -125,7 +122,8 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
             if response.status < 200 || response.status >= 300 {
                 warning!(
                     "Failed to download checksum file: HTTP {} {}",
-                    response.status, response.status_text
+                    response.status,
+                    response.status_text
                 );
                 warning!("  Proceeding with update without verification...");
 

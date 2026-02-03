@@ -189,10 +189,8 @@ pub(super) fn render_input(
 
     // 调试信息输出到文件，避免干扰终端显示
     if debug_enabled {
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(debug_log_path())
+        if let Ok(mut file) =
+            std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
             let _ = writeln!(
                 file,
@@ -208,10 +206,8 @@ pub(super) fn render_input(
     // 使用 MoveToColumn(0) 确保光标在当前行的开头，然后清除当前行
     // 注意：MoveToColumn(0) 不会改变行，只改变列，所以不会影响提示行
     if debug_enabled {
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(debug_log_path())
+        if let Ok(mut file) =
+            std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
             let _ = writeln!(file, "[DEBUG] render_input: 清除当前行（应该是输入行）");
         }
@@ -233,9 +229,7 @@ pub(super) fn render_input(
         } else if let Some(placeholder) = editor.placeholder() {
             // 普通模式：显示 placeholder（如果有）
             let mut hint_style = theme.hint.clone();
-            hint_style
-                .attributes
-                .push(crossterm::style::Attribute::Italic);
+            hint_style.attributes.push(crossterm::style::Attribute::Italic);
             hint_style.apply(placeholder, theme.enable_color)
         } else {
             String::new()
@@ -268,10 +262,8 @@ pub(super) fn render_input(
 
     // 使用 MoveToColumn 精确定位光标，避免移动到上一行
     if debug_enabled {
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(debug_log_path())
+        if let Ok(mut file) =
+            std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
             let _ = writeln!(file, "[DEBUG] render_input: 移动光标到列 {}", target_column);
         }
@@ -282,10 +274,8 @@ pub(super) fn render_input(
 
     stdout.flush()?;
     if debug_enabled {
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(debug_log_path())
+        if let Ok(mut file) =
+            std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
             let _ = writeln!(file, "[DEBUG] render_input: 完成渲染");
         }
@@ -306,14 +296,11 @@ pub(super) fn prompt(builder: InputBuilder) -> Result<String> {
     let styled_text = if let Some(ref default) = builder.default {
         if builder.password {
             // 密码模式：显示固定掩码
-            let styled_default = theme
-                .hint
-                .apply(&format!("[{}]", PASSWORD_MASK), theme.enable_color);
+            let styled_default =
+                theme.hint.apply(&format!("[{}]", PASSWORD_MASK), theme.enable_color);
             format!("{} {}", styled_message, styled_default)
         } else {
-            let styled_default = theme
-                .hint
-                .apply(&format!("[{}]", default), theme.enable_color);
+            let styled_default = theme.hint.apply(&format!("[{}]", default), theme.enable_color);
             format!("{} {}", styled_message, styled_default)
         }
     } else {

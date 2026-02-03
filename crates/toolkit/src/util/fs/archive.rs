@@ -252,12 +252,12 @@ impl Archive {
         let mut archive = TarArchive::new(decoder);
 
         let mut contents = Vec::new();
-        for entry in archive.entries().map_err(|e| {
-            FsError::Compression(format!("Failed to read tar.gz entries: {}", e))
-        })? {
-            let entry = entry.map_err(|e| {
-                FsError::Compression(format!("Failed to read tar.gz entry: {}", e))
-            })?;
+        for entry in archive
+            .entries()
+            .map_err(|e| FsError::Compression(format!("Failed to read tar.gz entries: {}", e)))?
+        {
+            let entry = entry
+                .map_err(|e| FsError::Compression(format!("Failed to read tar.gz entry: {}", e)))?;
             if let Ok(path) = entry.path() {
                 contents.push(path.to_string_lossy().to_string());
             }

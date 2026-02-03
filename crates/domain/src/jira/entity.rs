@@ -100,22 +100,16 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<(), JiraError> {
         // 如果是 ticket 格式（PROJ-123），需要：
         // 1. 项目名有效（只包含字母、数字、下划线）
         // 2. ticket 必须包含数字部分（PROJ-123 格式，不能只是 PROJ-）
-        let project_valid = project
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_');
+        let project_valid = project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
 
         // 检查是否有数字部分（ticket 格式应该是 PROJECT-NUMBER）
-        let has_number_part = ticket
-            .split('-')
-            .skip(1)
-            .any(|part| part.chars().any(|c| c.is_ascii_digit()));
+        let has_number_part =
+            ticket.split('-').skip(1).any(|part| part.chars().any(|c| c.is_ascii_digit()));
 
         project_valid && has_number_part
     } else {
         // 如果是项目名格式，检查是否只包含有效字符
-        ticket
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        ticket.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
     };
 
     if !is_valid_format {

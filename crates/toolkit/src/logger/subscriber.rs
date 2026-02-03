@@ -34,12 +34,8 @@ macro_rules! init_with_layer {
 /// 宏：添加 JSON 格式 layer
 macro_rules! add_json_layer {
     ($subscriber:expr, $writer:expr) => {
-        $subscriber.with(
-            tracing_subscriber::fmt::layer()
-                .with_writer($writer)
-                .json()
-                .flatten_event(true),
-        )
+        $subscriber
+            .with(tracing_subscriber::fmt::layer().with_writer($writer).json().flatten_event(true))
     };
 }
 
@@ -88,10 +84,7 @@ macro_rules! add_text_layer {
 pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), LoggerError> {
     let log_level_str = config.level.as_deref().unwrap_or("off");
     let filter = EnvFilter::new(log_level_str);
-    let use_json = config
-        .format
-        .as_deref()
-        .is_some_and(|f| f.eq_ignore_ascii_case("json"));
+    let use_json = config.format.as_deref().is_some_and(|f| f.eq_ignore_ascii_case("json"));
     let enable_console = config.enable_console;
 
     let registry = tracing_subscriber::registry().with(filter);
@@ -108,21 +101,17 @@ pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), Log
 
     // 尝试创建文件输出
     if let Ok(file_path) = path::log_file_path(command_name, config) {
-        if let Ok(file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&file_path)
-        {
+        if let Ok(file) = OpenOptions::new().create(true).append(true).open(&file_path) {
             return if use_json {
                 if enable_console {
-                    add_json_layer!(add_json_layer!(registry, file), io::stderr)
-                        .try_init()
-                        .map_err(|e| {
+                    add_json_layer!(add_json_layer!(registry, file), io::stderr).try_init().map_err(
+                        |e| {
                             LoggerError::InitializationFailed(format!(
                                 "Failed to initialize tracing subscriber with file and console: {}",
                                 e
                             ))
-                        })
+                        },
+                    )
                 } else {
                     add_json_layer!(registry, file).try_init().map_err(|e| {
                         LoggerError::InitializationFailed(format!(
@@ -132,14 +121,14 @@ pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), Log
                     })
                 }
             } else if enable_console {
-                add_text_layer!(add_text_layer!(registry, file), io::stderr)
-                    .try_init()
-                    .map_err(|e| {
+                add_text_layer!(add_text_layer!(registry, file), io::stderr).try_init().map_err(
+                    |e| {
                         LoggerError::InitializationFailed(format!(
                             "Failed to initialize tracing subscriber with file and console: {}",
                             e
                         ))
-                    })
+                    },
+                )
             } else {
                 add_text_layer!(registry, file).try_init().map_err(|e| {
                     LoggerError::InitializationFailed(format!(

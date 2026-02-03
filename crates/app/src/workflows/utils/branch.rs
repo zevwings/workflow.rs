@@ -36,9 +36,8 @@ pub fn generate_branch_name_from_template(
 ) -> Result<String, Box<dyn std::error::Error>> {
     // 获取配置
     let config_repo = registry::get_repo_config_repository();
-    let repo_config = config_repo
-        .load()
-        .map_err(|e| format!("Failed to load repo config: {}", e))?;
+    let repo_config =
+        config_repo.load().map_err(|e| format!("Failed to load repo config: {}", e))?;
 
     // 获取对应类型的模板
     let template = match branch_type {
@@ -115,10 +114,8 @@ pub fn to_slug(summary: &str) -> String {
 
 /// 选择分支类型
 pub fn select_branch_type() -> Result<BranchType, Box<dyn std::error::Error>> {
-    let branch_type_options: Vec<String> = BranchType::all()
-        .iter()
-        .map(|t| t.as_str().to_string())
-        .collect();
+    let branch_type_options: Vec<String> =
+        BranchType::all().iter().map(|t| t.as_str().to_string()).collect();
 
     let selected_type = select!("Select branch type", branch_type_options)
         .prompt()

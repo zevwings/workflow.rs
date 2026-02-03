@@ -70,10 +70,7 @@ impl Message {
 
     /// 输出信息
     pub fn info(&mut self, msg: impl AsRef<str>) -> Result<()> {
-        let styled = self
-            .theme
-            .info
-            .apply(&format!("ℹ {}", msg.as_ref()), self.theme.enable_color);
+        let styled = self.theme.info.apply(&format!("ℹ {}", msg.as_ref()), self.theme.enable_color);
         writeln!(self.writer, "{}", styled).map_err(PromptError::Io)?;
         Ok(())
     }
@@ -100,20 +97,16 @@ impl Message {
 
     /// 输出错误信息
     pub fn error(&mut self, msg: impl AsRef<str>) -> Result<()> {
-        let styled = self
-            .theme
-            .error
-            .apply(&format!("✗ {}", msg.as_ref()), self.theme.enable_color);
+        let styled =
+            self.theme.error.apply(&format!("✗ {}", msg.as_ref()), self.theme.enable_color);
         writeln!(self.writer, "{}", styled).map_err(PromptError::Io)?;
         Ok(())
     }
 
     /// 输出调试信息
     pub fn debug(&mut self, msg: impl AsRef<str>) -> Result<()> {
-        let styled = self
-            .theme
-            .debug
-            .apply(&format!("⚙ {}", msg.as_ref()), self.theme.enable_color);
+        let styled =
+            self.theme.debug.apply(&format!("⚙ {}", msg.as_ref()), self.theme.enable_color);
         writeln!(self.writer, "{}", styled).map_err(PromptError::Io)?;
         Ok(())
     }

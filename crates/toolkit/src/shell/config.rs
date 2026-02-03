@@ -7,8 +7,8 @@ use std::path::PathBuf;
 
 use clap_complete::Shell;
 
-use super::error::ShellError;
 use super::config_file_path;
+use super::error::ShellError;
 
 /// Shell 配置管理器
 ///
@@ -102,10 +102,11 @@ impl ShellConfigManager {
             return Ok(false);
         }
 
-        let content = fs::read_to_string(&config_path).map_err(|e| ShellError::ConfigReadFailed {
-            path: config_path,
-            source: e,
-        })?;
+        let content =
+            fs::read_to_string(&config_path).map_err(|e| ShellError::ConfigReadFailed {
+                path: config_path,
+                source: e,
+            })?;
 
         // 检查是否包含 source 语句
         let patterns = Self::get_source_patterns(shell, source_path);
@@ -129,10 +130,11 @@ impl ShellConfigManager {
             return Ok(false);
         }
 
-        let content = fs::read_to_string(&config_path).map_err(|e| ShellError::ConfigReadFailed {
-            path: config_path.clone(),
-            source: e,
-        })?;
+        let content =
+            fs::read_to_string(&config_path).map_err(|e| ShellError::ConfigReadFailed {
+                path: config_path.clone(),
+                source: e,
+            })?;
 
         // 获取所有可能的 source 模式
         let patterns = Self::get_source_patterns(shell, source_path);
@@ -172,7 +174,7 @@ impl ShellConfigManager {
 
         if removed {
             // 清理末尾多余的空行
-            while new_lines.last().map_or(false, |l| l.trim().is_empty()) {
+            while new_lines.last().is_some_and(|l| l.trim().is_empty()) {
                 new_lines.pop();
             }
 
@@ -200,10 +202,7 @@ impl ShellConfigManager {
     /// # 返回
     ///
     /// 返回 (是否已配置, 配置文件路径)。
-    pub fn is_configured(
-        shell: &Shell,
-        source_path: &str,
-    ) -> Result<(bool, PathBuf), ShellError> {
+    pub fn is_configured(shell: &Shell, source_path: &str) -> Result<(bool, PathBuf), ShellError> {
         let config_path = config_file_path(shell).ok_or(ShellError::HomeNotFound)?;
         let configured = Self::has_source(shell, source_path)?;
         Ok((configured, config_path))

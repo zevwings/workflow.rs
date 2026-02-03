@@ -133,10 +133,9 @@ impl LLMServiceImpl {
         let response = self.client.call(&params).map_err(|e| {
             // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
             let original_msg = match &e {
-                LLMError::ApiError(msg) => msg
-                    .strip_prefix("LLM API 调用失败: ")
-                    .unwrap_or(msg)
-                    .to_string(),
+                LLMError::ApiError(msg) => {
+                    msg.strip_prefix("LLM API 调用失败: ").unwrap_or(msg).to_string()
+                }
                 _ => e.to_string(),
             };
             LLMError::ApiError(format!(
@@ -149,10 +148,9 @@ impl LLMServiceImpl {
         conversation.parse_response(response).map_err(|e| {
             // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
             let original_msg = match &e {
-                LLMError::ApiError(msg) => msg
-                    .strip_prefix("LLM API 调用失败: ")
-                    .unwrap_or(msg)
-                    .to_string(),
+                LLMError::ApiError(msg) => {
+                    msg.strip_prefix("LLM API 调用失败: ").unwrap_or(msg).to_string()
+                }
                 _ => e.to_string(),
             };
             LLMError::ApiError(format!(
@@ -244,7 +242,11 @@ impl LLMService for LLMServiceImpl {
         git_diff: Option<String>,
     ) -> Result<PullRequestContent, LLMError> {
         // 第一步：生成基本信息（分支名、PR 标题、描述、scope）
-        let input = (commit_title.to_string(), exists_branches.clone(), git_diff.clone());
+        let input = (
+            commit_title.to_string(),
+            exists_branches.clone(),
+            git_diff.clone(),
+        );
         let mut content = self
             .execute(
                 CreateConversation::new(input),
@@ -262,10 +264,7 @@ impl LLMService for LLMServiceImpl {
                 let summary_result = self.execute(
                     SummaryConversation::new((content.pr_title.clone(), diff.clone())),
                     self.context.get_language().as_str(),
-                    &format!(
-                        "generating detailed PR summary for: '{}'",
-                        content.pr_title
-                    ),
+                    &format!("generating detailed PR summary for: '{}'", content.pr_title),
                 );
 
                 // 如果生成总结成功，添加到 content 中；失败则只记录错误但不影响主流程

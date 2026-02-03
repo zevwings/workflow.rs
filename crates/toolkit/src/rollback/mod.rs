@@ -10,6 +10,8 @@ mod helpers;
 mod manager;
 mod reload;
 
-pub use helpers::{get_all_completion_files, get_completion_filename, get_completion_files_for_shell};
+pub use helpers::{
+    get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
+};
 pub use manager::{BackupInfo, BackupResult, RollbackManager, RollbackResult};
 pub use reload::{Reload, ReloadResult};

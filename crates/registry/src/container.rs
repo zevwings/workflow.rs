@@ -749,10 +749,7 @@ mod tests {
 
         // 直接使用 Arc 实例绑定
         let instance: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 888, id: 99 });
-        container
-            .bind::<dyn TestService>(instance)
-            .in_scope(Scope::Singleton)
-            .unwrap();
+        container.bind::<dyn TestService>(instance).in_scope(Scope::Singleton).unwrap();
 
         assert!(container.is_bound::<dyn TestService>());
 

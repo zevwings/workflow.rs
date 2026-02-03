@@ -82,15 +82,13 @@ impl JiraRepository for JiraRepositoryImpl {
         &self,
         jira_ticket: &str,
     ) -> Result<Option<String>, JiraError> {
-        self.status_service
-            .read_pull_request_created_status(jira_ticket)
+        self.status_service.read_pull_request_created_status(jira_ticket)
     }
 
     fn read_pull_request_merged_status(
         &self,
         jira_ticket: &str,
     ) -> Result<Option<String>, JiraError> {
-        self.status_service
-            .read_pull_request_merged_status(jira_ticket)
+        self.status_service.read_pull_request_merged_status(jira_ticket)
     }
 }

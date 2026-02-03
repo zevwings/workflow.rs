@@ -43,13 +43,26 @@ impl DiffService for DiffServiceImpl {
         let base_commit = repo
             .revparse_single(base_branch)
             .and_then(|obj| obj.peel_to_commit())
-            .map_err(|e| GitError::OperationFailed(format!("Failed to find base branch '{}': {}", base_branch, e)))?;
-        let base_tree = base_commit.tree().map_err(|e| GitError::OperationFailed(format!("Failed to get base tree: {}", e)))?;
+            .map_err(|e| {
+                GitError::OperationFailed(format!(
+                    "Failed to find base branch '{}': {}",
+                    base_branch, e
+                ))
+            })?;
+        let base_tree = base_commit
+            .tree()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get base tree: {}", e)))?;
 
         // 获取索引（暂存区）的 tree
-        let mut index = repo.index().map_err(|e| GitError::OperationFailed(format!("Failed to get index: {}", e)))?;
-        let index_tree_id = index.write_tree().map_err(|e| GitError::OperationFailed(format!("Failed to write index tree: {}", e)))?;
-        let index_tree = repo.find_tree(index_tree_id).map_err(|e| GitError::OperationFailed(format!("Failed to find index tree: {}", e)))?;
+        let mut index = repo
+            .index()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get index: {}", e)))?;
+        let index_tree_id = index
+            .write_tree()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to write index tree: {}", e)))?;
+        let index_tree = repo
+            .find_tree(index_tree_id)
+            .map_err(|e| GitError::OperationFailed(format!("Failed to find index tree: {}", e)))?;
 
         let mut diff_str = String::new();
         const MAX_DIFF_SIZE: usize = 10 * 1024 * 1024;
@@ -94,9 +107,13 @@ impl DiffService for DiffServiceImpl {
             if diff_str.is_empty() && diff.deltas().len() > 0 {
                 for delta in diff.deltas() {
                     // 检查是否应该被过滤
-                    let should_skip = if let Some(path) = delta.new_file().path().or_else(|| delta.old_file().path()) {
+                    let should_skip = if let Some(path) =
+                        delta.new_file().path().or_else(|| delta.old_file().path())
+                    {
                         if let Some(path_str) = path.to_str() {
-                            ignore_patterns.iter().any(|pattern| path_str.starts_with(pattern.as_str()))
+                            ignore_patterns
+                                .iter()
+                                .any(|pattern| path_str.starts_with(pattern.as_str()))
                         } else {
                             false
                         }
@@ -113,15 +130,21 @@ impl DiffService for DiffServiceImpl {
                         if let Some(path) = delta.new_file().path() {
                             let file_path = repo.workdir().unwrap().join(path);
                             if let Ok(content) = std::fs::read_to_string(&file_path) {
-                                let diff_header = format!("diff --git a/{} b/{}\nnew file\n--- /dev/null\n+++ b/{}\n",
-                                    path.display(), path.display(), path.display());
+                                let diff_header = format!(
+                                    "diff --git a/{} b/{}\nnew file\n--- /dev/null\n+++ b/{}\n",
+                                    path.display(),
+                                    path.display(),
+                                    path.display()
+                                );
                                 diff_str.push_str(&diff_header);
 
                                 for line in content.lines() {
                                     total_size += line.len() + 2; // +2 for "+ " prefix
                                     if total_size > MAX_DIFF_SIZE {
                                         size_limit_reached = true;
-                                        diff_str.push_str("\n... [diff truncated: size limit reached] ...\n");
+                                        diff_str.push_str(
+                                            "\n... [diff truncated: size limit reached] ...\n",
+                                        );
                                         break;
                                     }
                                     diff_str.push_str(&format!("+{}\n", line));
@@ -136,41 +159,57 @@ impl DiffService for DiffServiceImpl {
                 }
             }
 
-            print_result.map_err(|e| GitError::OperationFailed(format!("Failed to print diff: {}", e)))
+            print_result
+                .map_err(|e| GitError::OperationFailed(format!("Failed to print diff: {}", e)))
         };
 
         // 1. 已提交更改（base -> HEAD）
         if let Ok(head_commit) = repo.head().and_then(|r| r.peel_to_commit()) {
-            let head_tree = head_commit.tree().map_err(|e| GitError::OperationFailed(format!("Failed to get head tree: {}", e)))?;
+            let head_tree = head_commit.tree().map_err(|e| {
+                GitError::OperationFailed(format!("Failed to get head tree: {}", e))
+            })?;
             let mut diff_options = DiffOptions::new();
             self.configure_diff_options(&mut diff_options, false);
-            let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), Some(&mut diff_options))
-                .map_err(|e| GitError::OperationFailed(format!("Failed to create committed diff: {}", e)))?;
+            let diff = repo
+                .diff_tree_to_tree(Some(&base_tree), Some(&head_tree), Some(&mut diff_options))
+                .map_err(|e| {
+                    GitError::OperationFailed(format!("Failed to create committed diff: {}", e))
+                })?;
             process_diff(&diff)?;
         }
 
         // 2. 暂存区更改（HEAD -> index）
         if let Ok(head_commit) = repo.head().and_then(|r| r.peel_to_commit()) {
-            let head_tree = head_commit.tree().map_err(|e| GitError::OperationFailed(format!("Failed to get head tree: {}", e)))?;
+            let head_tree = head_commit.tree().map_err(|e| {
+                GitError::OperationFailed(format!("Failed to get head tree: {}", e))
+            })?;
             let mut diff_options = DiffOptions::new();
             self.configure_diff_options(&mut diff_options, false);
-            let diff = repo.diff_tree_to_tree(Some(&head_tree), Some(&index_tree), Some(&mut diff_options))
-                .map_err(|e| GitError::OperationFailed(format!("Failed to create staged diff: {}", e)))?;
+            let diff = repo
+                .diff_tree_to_tree(Some(&head_tree), Some(&index_tree), Some(&mut diff_options))
+                .map_err(|e| {
+                    GitError::OperationFailed(format!("Failed to create staged diff: {}", e))
+                })?;
             process_diff(&diff)?;
         } else {
             // 没有 HEAD（新分支）
             let mut diff_options = DiffOptions::new();
             self.configure_diff_options(&mut diff_options, false);
-            let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&index_tree), Some(&mut diff_options))
-                .map_err(|e| GitError::OperationFailed(format!("Failed to create staged diff: {}", e)))?;
+            let diff = repo
+                .diff_tree_to_tree(Some(&base_tree), Some(&index_tree), Some(&mut diff_options))
+                .map_err(|e| {
+                    GitError::OperationFailed(format!("Failed to create staged diff: {}", e))
+                })?;
             process_diff(&diff)?;
         }
 
         // 3. 工作区未暂存更改（index -> working tree）
         let mut diff_options = DiffOptions::new();
         self.configure_diff_options(&mut diff_options, true);
-        let diff = repo.diff_index_to_workdir(Some(&index), Some(&mut diff_options))
-            .map_err(|e| GitError::OperationFailed(format!("Failed to create working tree diff: {}", e)))?;
+        let diff =
+            repo.diff_index_to_workdir(Some(&index), Some(&mut diff_options)).map_err(|e| {
+                GitError::OperationFailed(format!("Failed to create working tree diff: {}", e))
+            })?;
         process_diff(&diff)?;
 
         if size_limit_reached {
@@ -213,7 +252,10 @@ mod tests {
         let service = DiffServiceImpl::new(ctx);
         let diff = service.get_working_tree_diff("HEAD").unwrap();
 
-        assert!(diff.is_some(), "Diff should not be empty when there are new files");
+        assert!(
+            diff.is_some(),
+            "Diff should not be empty when there are new files"
+        );
         let diff_content = diff.unwrap();
         assert!(diff_content.contains("new_test_file.txt"));
         assert!(diff_content.contains("new file content"));

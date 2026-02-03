@@ -5,6 +5,7 @@ use prompt::{info, success};
 use crate::registry;
 
 /// Branch InferSource 命令
+#[derive(Default)]
 pub struct BranchInferSourceCommand;
 
 impl BranchInferSourceCommand {

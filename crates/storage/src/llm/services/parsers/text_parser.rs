@@ -22,12 +22,7 @@ impl TextParser {
     ///
     /// 返回清理后的文本
     pub fn clean(response: String) -> String {
-        response
-            .trim()
-            .trim_matches('"')
-            .trim_matches('\'')
-            .trim()
-            .to_string()
+        response.trim().trim_matches('"').trim_matches('\'').trim().to_string()
     }
 
     /// 清理并验证文本响应

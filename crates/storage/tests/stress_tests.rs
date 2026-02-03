@@ -13,10 +13,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "test-helpers")]
-use storage::git::{
-    services::*,
-    testing::*,
-};
+use storage::git::{services::*, testing::*};
 
 // ============================================================
 // 并发访问测试
@@ -187,9 +184,7 @@ fn test_large_file_blame_performance() {
         let service = BlameServiceImpl::new(ctx);
 
         let start = Instant::now();
-        let blame = service
-            .get_file_blame("large_file.txt", None)
-            .unwrap();
+        let blame = service.get_file_blame("large_file.txt", None).unwrap();
         let duration = start.elapsed();
 
         println!("  - Blame 耗时: {:?}", duration);

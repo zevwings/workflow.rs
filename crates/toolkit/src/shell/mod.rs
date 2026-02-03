@@ -82,9 +82,7 @@ pub fn config_file_path(shell: &Shell) -> Option<PathBuf> {
             }
         }
         Shell::Fish => home.join(".config/fish/config.fish"),
-        Shell::PowerShell => {
-            home.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
-        }
+        Shell::PowerShell => home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
         Shell::Elvish => home.join(".config/elvish/rc.elv"),
         _ => return None,
     })

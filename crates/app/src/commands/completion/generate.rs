@@ -42,11 +42,7 @@ impl CompletionGenerateCommand {
         // 3. 调用 Service 保存并配置
         let service = get_completion_service();
         let result = service
-            .save_and_configure(
-                shell_str,
-                &script_content,
-                self.output_dir.as_deref(),
-            )
+            .save_and_configure(shell_str, &script_content, self.output_dir.as_deref())
             .wrap_err("保存并配置 completion 失败")?;
 
         // 4. 显示结果

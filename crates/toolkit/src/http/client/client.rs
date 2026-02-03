@@ -250,18 +250,16 @@ impl HttpClient {
             || {
                 let start = Instant::now();
 
-                self.build_request(method, url, request_config.clone())
-                    .send()
-                    .map_err(|e| {
-                        let duration = start.elapsed();
-                        Self::handle_and_log_request_error(
-                            e,
-                            url,
-                            &method_str,
-                            duration,
-                            "HTTP stream request failed",
-                        )
-                    })
+                self.build_request(method, url, request_config.clone()).send().map_err(|e| {
+                    let duration = start.elapsed();
+                    Self::handle_and_log_request_error(
+                        e,
+                        url,
+                        &method_str,
+                        duration,
+                        "HTTP stream request failed",
+                    )
+                })
             },
             retry_config.as_ref(),
             &operation_name,
@@ -320,19 +318,16 @@ impl HttpClient {
 
         let start = Instant::now();
 
-        let response = self
-            .build_multipart_request(url, config)
-            .send()
-            .map_err(|e| {
-                let duration = start.elapsed();
-                Self::handle_and_log_request_error(
-                    e,
-                    url,
-                    "POST multipart",
-                    duration,
-                    "HTTP multipart request failed",
-                )
-            })?;
+        let response = self.build_multipart_request(url, config).send().map_err(|e| {
+            let duration = start.elapsed();
+            Self::handle_and_log_request_error(
+                e,
+                url,
+                "POST multipart",
+                duration,
+                "HTTP multipart request failed",
+            )
+        })?;
 
         let duration = start.elapsed();
         let status = response.status();
@@ -710,9 +705,7 @@ mod tests {
         let url = format!("{}/test", mock_server.url());
         let config = RequestConfig::new();
 
-        let response = client
-            .get(&url, config)
-            .expect("GET request should succeed");
+        let response = client.get(&url, config).expect("GET request should succeed");
         assert!(response.is_success());
         assert_eq!(response.status, 200);
 
@@ -735,9 +728,7 @@ mod tests {
         let body = serde_json::json!({"name": "test"});
         let config = RequestConfig::new().body(&body);
 
-        let response = client
-            .post(&url, config)
-            .expect("POST request should succeed");
+        let response = client.post(&url, config).expect("POST request should succeed");
         assert!(response.is_success());
         assert_eq!(response.status, 201);
 
@@ -761,9 +752,7 @@ mod tests {
         let body = serde_json::json!({"name": "updated"});
         let config = RequestConfig::new().body(&body);
 
-        let response = client
-            .put(&url, config)
-            .expect("PUT request should succeed");
+        let response = client.put(&url, config).expect("PUT request should succeed");
         assert!(response.is_success());
         assert_eq!(response.status, 200);
 
@@ -775,18 +764,13 @@ mod tests {
     #[serial]
     fn test_http_client_delete_request() {
         let mut mock_server = HttpMockServer::new();
-        let _mock = mock_server
-            .mock("DELETE", "/test/123")
-            .with_status(204)
-            .create();
+        let _mock = mock_server.mock("DELETE", "/test/123").with_status(204).create();
 
         let client = HttpClient::global().expect("Should create global client");
         let url = format!("{}/test/123", mock_server.url());
         let config = RequestConfig::new();
 
-        let response = client
-            .delete(&url, config)
-            .expect("DELETE request should succeed");
+        let response = client.delete(&url, config).expect("DELETE request should succeed");
         assert_eq!(response.status, 204);
     }
 
@@ -805,9 +789,7 @@ mod tests {
         let body = serde_json::json!({"field": "value"});
         let config = RequestConfig::new().body(&body);
 
-        let response = client
-            .patch(&url, config)
-            .expect("PATCH request should succeed");
+        let response = client.patch(&url, config).expect("PATCH request should succeed");
         assert!(response.is_success());
         assert_eq!(response.status, 200);
     }
@@ -833,9 +815,7 @@ mod tests {
         let query = serde_json::json!({"page": "1", "limit": "10"});
         let config = RequestConfig::new().query(&query);
 
-        let response = client
-            .get(&url, config)
-            .expect("GET with query should succeed");
+        let response = client.get(&url, config).expect("GET with query should succeed");
         assert!(response.is_success());
     }
 
@@ -858,9 +838,7 @@ mod tests {
         let auth = Authorization::basic("user@example.com", "api_token");
         let config = RequestConfig::new().auth(auth);
 
-        let response = client
-            .get(&url, config)
-            .expect("GET with auth should succeed");
+        let response = client.get(&url, config).expect("GET with auth should succeed");
         assert!(response.is_success());
     }
 
@@ -880,9 +858,7 @@ mod tests {
         headers.insert("x-custom-header", HeaderValue::from_static("custom-value"));
         let config = RequestConfig::new().headers(headers);
 
-        let response = client
-            .get(&url, config)
-            .expect("GET with headers should succeed");
+        let response = client.get(&url, config).expect("GET with headers should succeed");
         assert!(response.is_success());
     }
 
@@ -902,9 +878,7 @@ mod tests {
         let url = format!("{}/notfound", mock_server.url());
         let config = RequestConfig::new();
 
-        let response = client
-            .get(&url, config)
-            .expect("Request should succeed even with 404");
+        let response = client.get(&url, config).expect("Request should succeed even with 404");
         assert!(!response.is_success());
         assert_eq!(response.status, 404);
     }
@@ -923,9 +897,7 @@ mod tests {
         let url = format!("{}/error", mock_server.url());
         let config = RequestConfig::new();
 
-        let response = client
-            .get(&url, config)
-            .expect("Request should succeed even with 500");
+        let response = client.get(&url, config).expect("Request should succeed even with 500");
         assert!(!response.is_success());
         assert_eq!(response.status, 500);
     }
@@ -945,9 +917,7 @@ mod tests {
         let url = format!("{}/ratelimit", mock_server.url());
         let config = RequestConfig::new();
 
-        let response = client
-            .get(&url, config)
-            .expect("Request should succeed even with 429");
+        let response = client.get(&url, config).expect("Request should succeed even with 429");
         assert!(!response.is_success());
         assert_eq!(response.status, 429);
         assert!(response.headers.contains_key("retry-after"));
@@ -992,9 +962,7 @@ mod tests {
         let url = format!("{}/json", mock_server.url());
         let config = RequestConfig::new();
 
-        let response = client
-            .get(&url, config)
-            .expect("GET request should succeed");
+        let response = client.get(&url, config).expect("GET request should succeed");
         let json: serde_json::Value = response.as_json().expect("Should parse JSON");
         assert_eq!(json["name"], "test");
         assert_eq!(json["value"], 42);
@@ -1014,9 +982,7 @@ mod tests {
         let url = format!("{}/text", mock_server.url());
         let config = RequestConfig::new();
 
-        let response = client
-            .get(&url, config)
-            .expect("GET request should succeed");
+        let response = client.get(&url, config).expect("GET request should succeed");
         let text = response.as_text().expect("Should parse text");
         assert_eq!(text, "Plain text response");
     }

@@ -122,15 +122,12 @@ impl Binding {
 
         // 尝试从 Box<dyn Any> 中 downcast 到 Arc<T>
         // Arc<T> 本身是 Sized 的，所以 downcast_ref 可以工作
-        boxed
-            .downcast_ref::<Arc<T>>()
-            .map(Arc::clone)
-            .ok_or_else(|| {
-                crate::error::RegistryError::TypeCast(format!(
-                    "Failed to downcast to Arc<{}>",
-                    std::any::type_name::<T>()
-                ))
-            })
+        boxed.downcast_ref::<Arc<T>>().map(Arc::clone).ok_or_else(|| {
+            crate::error::RegistryError::TypeCast(format!(
+                "Failed to downcast to Arc<{}>",
+                std::any::type_name::<T>()
+            ))
+        })
     }
 }
 

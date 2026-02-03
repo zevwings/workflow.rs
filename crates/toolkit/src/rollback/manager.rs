@@ -224,15 +224,13 @@ impl RollbackManager {
                 }
 
                 // 设置执行权限（仅 Unix）
-                Command::new("chmod")
-                    .arg("+x")
-                    .arg(&backup_path)
-                    .status()
-                    .map_err(|e| RollbackError::BackupBinaryFailed {
+                Command::new("chmod").arg("+x").arg(&backup_path).status().map_err(|e| {
+                    RollbackError::BackupBinaryFailed {
                         src: source.display().to_string(),
                         dest: backup_path.display().to_string(),
                         message: format!("Failed to set executable permission: {}", e),
-                    })?;
+                    }
+                })?;
             }
             #[cfg(windows)]
             {
@@ -449,7 +447,11 @@ impl RollbackManager {
                     restored.push(binary_name.clone());
                 }
                 Err(error_msg) => {
-                    tracing::warn!("Failed to restore binary file {}: {}", binary_name, error_msg);
+                    tracing::warn!(
+                        "Failed to restore binary file {}: {}",
+                        binary_name,
+                        error_msg
+                    );
                     failed.push((binary_name.clone(), error_msg));
                 }
             }
@@ -476,10 +478,7 @@ impl RollbackManager {
             let error_msg = format!("Failed to ensure completion directory exists: {}", e);
             return (
                 Vec::new(),
-                backups
-                    .iter()
-                    .map(|(name, _)| (name.clone(), error_msg.clone()))
-                    .collect(),
+                backups.iter().map(|(name, _)| (name.clone(), error_msg.clone())).collect(),
             );
         }
 
@@ -628,9 +627,11 @@ impl RollbackManager {
                 "Cleaning up backup directory: {}",
                 backup_info.backup_dir.display()
             );
-            fs::remove_dir_all(&backup_info.backup_dir).map_err(|e| RollbackError::CleanupFailed {
-                path: backup_info.backup_dir.display().to_string(),
-                reason: e.to_string(),
+            fs::remove_dir_all(&backup_info.backup_dir).map_err(|e| {
+                RollbackError::CleanupFailed {
+                    path: backup_info.backup_dir.display().to_string(),
+                    reason: e.to_string(),
+                }
             })?;
             tracing::debug!("Backup directory cleaned up");
         }

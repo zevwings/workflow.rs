@@ -37,15 +37,10 @@ fn register_services() -> registry::Result<()> {
 
     // PullRequestService - 依赖 GitRepository、GitHubRepository 和 LLMRepository
     bind!(dyn domain::PullRequestService, |c: &Container| {
-        let git_repo = c
-            .get::<dyn domain::GitRepository>()
-            .expect("GitRepository not found");
-        let github_repo = c
-            .get::<dyn domain::GitHubRepository>()
-            .expect("GitHubRepository not found");
-        let llm_repo = c
-            .get::<dyn domain::LLMRepository>()
-            .expect("LLMRepository not found");
+        let git_repo = c.get::<dyn domain::GitRepository>().expect("GitRepository not found");
+        let github_repo =
+            c.get::<dyn domain::GitHubRepository>().expect("GitHubRepository not found");
+        let llm_repo = c.get::<dyn domain::LLMRepository>().expect("LLMRepository not found");
 
         Arc::new(crate::PullRequestServiceImpl::new(
             git_repo,

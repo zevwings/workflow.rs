@@ -12,13 +12,12 @@ use std::time::Duration;
 #[cfg(feature = "test-helpers")]
 use storage::git::services::*;
 #[cfg(feature = "test-helpers")]
-use storage::git::testing::*;
-#[cfg(feature = "test-helpers")]
 use storage::git::testing::performance::{measure, PerformanceCollector, PerformanceTimer};
+#[cfg(feature = "test-helpers")]
+use storage::git::testing::*;
 
 #[cfg(feature = "test-helpers")]
 fn main() {
-
     println!("=== 性能监控示例 ===\n");
 
     // 1. 使用 PerformanceTimer
@@ -26,8 +25,7 @@ fn main() {
     {
         let (_tmp, ctx) = setup_repo_with_files(10);
 
-        let timer = PerformanceTimer::new("setup_and_query")
-            .with_threshold(Duration::from_secs(2));
+        let timer = PerformanceTimer::new("setup_and_query").with_threshold(Duration::from_secs(2));
 
         let service = CommitServiceImpl::new(ctx);
         let status = service.get_working_tree_status().unwrap();
@@ -76,6 +74,8 @@ fn main() {
 #[cfg(not(feature = "test-helpers"))]
 fn main() {
     eprintln!("此示例需要 test-helpers feature");
-    eprintln!("运行: cargo run -p storage --example performance_monitoring --features test-helpers");
+    eprintln!(
+        "运行: cargo run -p storage --example performance_monitoring --features test-helpers"
+    );
     std::process::exit(1);
 }

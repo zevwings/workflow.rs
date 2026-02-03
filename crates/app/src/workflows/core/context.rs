@@ -27,9 +27,8 @@ impl WorkflowContext {
     /// 从默认路径加载配置，使用指定的模式
     pub fn load(mode: WorkflowMode) -> Result<Self, Box<dyn Error>> {
         let config_service = registry::get_global_config_repository();
-        let settings = config_service
-            .load()
-            .map_err(|e: ServiceError| Box::new(e) as Box<dyn Error>)?;
+        let settings =
+            config_service.load().map_err(|e: ServiceError| Box::new(e) as Box<dyn Error>)?;
 
         Ok(Self { settings, mode })
     }

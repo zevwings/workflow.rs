@@ -61,6 +61,6 @@ pub use util::{
 
 // Rollback 模块 - 导出回滚相关类型和函数
 pub use rollback::{
-    get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
-    BackupInfo, BackupResult, Reload, ReloadResult, RollbackManager, RollbackResult,
+    get_all_completion_files, get_completion_filename, get_completion_files_for_shell, BackupInfo,
+    BackupResult, Reload, ReloadResult, RollbackManager, RollbackResult,
 };

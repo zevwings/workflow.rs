@@ -129,8 +129,7 @@ impl GitRepository for GitRepositoryImpl {
         no_edit: bool,
         no_verify: bool,
     ) -> Result<String, GitError> {
-        self.commit_service
-            .amend_commit(message, no_edit, no_verify)
+        self.commit_service.amend_commit(message, no_edit, no_verify)
     }
 
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
@@ -181,8 +180,7 @@ impl GitRepository for GitRepositoryImpl {
     }
 
     fn is_commit_in_remote_branch(&self, branch: &str, commit_sha: &str) -> Result<bool, GitError> {
-        self.remote_service
-            .is_commit_in_remote_branch(branch, commit_sha)
+        self.remote_service.is_commit_in_remote_branch(branch, commit_sha)
     }
 
     // ========== Stash 操作 ==========
@@ -217,8 +215,7 @@ impl GitRepository for GitRepositoryImpl {
         scope: TagCreateScope,
         force: bool,
     ) -> Result<TagCreateInfo, GitError> {
-        self.tag_service
-            .create_tag(name, target, message, scope, force)
+        self.tag_service.create_tag(name, target, message, scope, force)
     }
 
     fn delete_tag(
@@ -236,8 +233,7 @@ impl GitRepository for GitRepositoryImpl {
         scope: TagDeleteScope,
         force: bool,
     ) -> Result<Vec<TagDeleteInfo>, GitError> {
-        self.tag_service
-            .delete_tags_by_pattern(pattern, scope, force)
+        self.tag_service.delete_tags_by_pattern(pattern, scope, force)
     }
 
     fn list_tags(&self, include_remote: bool) -> Result<Vec<String>, GitError> {

@@ -84,10 +84,8 @@ pub(super) fn calculate_column_widths(builder: &TableBuilder) -> Vec<usize> {
                 let scale = available_width as f64 / current_total as f64;
 
                 // 先按比例分配
-                let mut new_widths: Vec<usize> = col_widths
-                    .iter()
-                    .map(|&w| (w as f64 * scale).floor() as usize)
-                    .collect();
+                let mut new_widths: Vec<usize> =
+                    col_widths.iter().map(|&w| (w as f64 * scale).floor() as usize).collect();
 
                 // 确保每列至少宽度为 1
                 for w in &mut new_widths {

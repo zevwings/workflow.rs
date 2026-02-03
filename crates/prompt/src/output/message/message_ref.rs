@@ -28,9 +28,7 @@ impl MessageRef {
     where
         F: FnOnce(&mut Message) -> Result<T>,
     {
-        let mut guard = Message::global_mutex()
-            .lock()
-            .map_err(|_| PromptError::LockPoisoned)?;
+        let mut guard = Message::global_mutex().lock().map_err(|_| PromptError::LockPoisoned)?;
         f(&mut guard)
     }
 

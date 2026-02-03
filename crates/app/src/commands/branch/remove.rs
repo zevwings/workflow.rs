@@ -107,10 +107,8 @@ impl BranchRemoveCommand {
             }
 
             // 提取显示名称用于选择
-            let display_names: Vec<String> = branches_to_show
-                .iter()
-                .map(|item| item.display_name.clone())
-                .collect();
+            let display_names: Vec<String> =
+                branches_to_show.iter().map(|item| item.display_name.clone()).collect();
 
             let selected_displays = multiselect!("Select branches to remove:", display_names)
                 .prompt()
@@ -278,10 +276,8 @@ impl BranchRemoveCommand {
 
         if !failed_branches.is_empty() {
             // 生成详细的错误信息
-            let branch_names: Vec<String> = failed_branches
-                .iter()
-                .map(|(name, _)| name.clone())
-                .collect();
+            let branch_names: Vec<String> =
+                failed_branches.iter().map(|(name, _)| name.clone()).collect();
             let details: Vec<String> = failed_branches
                 .iter()
                 .map(|(name, reason)| format!("  - {}: {}", name, reason))

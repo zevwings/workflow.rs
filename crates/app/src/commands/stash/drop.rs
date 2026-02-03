@@ -16,9 +16,8 @@ impl StashDropCommand {
         let repo = registry::get_git_repository();
 
         // 获取所有 stash 条目
-        let entries = repo
-            .stash_list()
-            .map_err(|e| format!("Failed to list stash entries: {}", e))?;
+        let entries =
+            repo.stash_list().map_err(|e| format!("Failed to list stash entries: {}", e))?;
 
         if entries.is_empty() {
             info!("No stash entries available");

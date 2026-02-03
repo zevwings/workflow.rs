@@ -18,12 +18,8 @@ pub fn run_setup_workflow() -> Result<(), Box<dyn Error>> {
 
     let mut context = WorkflowContext::load(WorkflowMode::Setup)?;
 
-    let stages: Vec<&dyn WorkflowStage> = vec![
-        jira_stage(),
-        github_stage(),
-        llm_stage(),
-        log_stage(),
-    ];
+    let stages: Vec<&dyn WorkflowStage> =
+        vec![jira_stage(), github_stage(), llm_stage(), log_stage()];
 
     for stage in &stages {
         let executor = WorkflowExecutor::new(*stage);

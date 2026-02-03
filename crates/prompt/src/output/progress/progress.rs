@@ -21,9 +21,7 @@ impl Progress {
     /// * `message` - 要显示的消息文本
     pub fn new(total: u64, message: impl AsRef<str>) -> Self {
         Self {
-            inner: ProgressBarBuilder::new(message.as_ref())
-                .with_total(total)
-                .start(),
+            inner: ProgressBarBuilder::new(message.as_ref()).with_total(total).start(),
         }
     }
 

@@ -54,10 +54,11 @@ impl UninstallCommand {
 
         // 确认删除
         if !self.force {
-            let confirmed = ConfirmBuilder::new("Remove binary files and shell completion scripts?")
-                .default(false)
-                .prompt()
-                .wrap_err("Failed to get confirmation")?;
+            let confirmed =
+                ConfirmBuilder::new("Remove binary files and shell completion scripts?")
+                    .default(false)
+                    .prompt()
+                    .wrap_err("Failed to get confirmation")?;
 
             if !confirmed {
                 print!("Uninstall cancelled.");
@@ -167,18 +168,16 @@ impl UninstallCommand {
             {
                 toolkit::log_debug!("Some files require sudo privileges, using sudo to remove...");
                 for binary_path in &need_sudo {
-                    match Command::new("sudo")
-                        .arg("rm")
-                        .arg("-f")
-                        .arg(binary_path)
-                        .status()
-                    {
+                    match Command::new("sudo").arg("rm").arg("-f").arg(binary_path).status() {
                         Ok(status) if status.success() => {
                             print!("  Removed: {}", binary_path);
                         }
                         Ok(_) | Err(_) => {
                             warning!("Failed to remove {} with sudo", binary_path);
-                            print!("  You may need to manually remove it with: sudo rm {}", binary_path);
+                            print!(
+                                "  You may need to manually remove it with: sudo rm {}",
+                                binary_path
+                            );
                         }
                     }
                 }
@@ -216,7 +215,10 @@ impl UninstallCommand {
                     }
                     Ok(_) | Err(_) => {
                         warning!("Failed to remove {} with sudo", install_binary_str);
-                        print!("  You may need to manually remove it with: sudo rm {}", install_binary_str);
+                        print!(
+                            "  You may need to manually remove it with: sudo rm {}",
+                            install_binary_str
+                        );
                     }
                 }
             }
@@ -229,7 +231,10 @@ impl UninstallCommand {
                     }
                     Err(e) => {
                         warning!("Failed to remove {}: {}", install_binary_str, e);
-                        print!("  You may need to manually remove it: {}", install_binary_str);
+                        print!(
+                            "  You may need to manually remove it: {}",
+                            install_binary_str
+                        );
                     }
                 }
             }
@@ -307,18 +312,16 @@ impl UninstallCommand {
                     Ok(_) => {
                         info!("  Removed: {}", completion_dir.display());
                     }
-                    Err(e) => {
+                    Err(_) => {
                         // 如果文件夹非空，删除整个文件夹
-                        if e.kind() == std::io::ErrorKind::DirectoryNotEmpty {
-                            if let Err(e2) = fs::remove_dir_all(&completion_dir) {
+                        if let Err(e2) = fs::remove_dir_all(&completion_dir) {
                             toolkit::log_debug!(
                                 "Could not remove completions directory: {} ({})",
                                 completion_dir.display(),
                                 e2
                             );
-                            } else {
-                                info!("  Removed: {}", completion_dir.display());
-                            }
+                        } else {
+                            info!("  Removed: {}", completion_dir.display());
                         }
                     }
                 }
@@ -339,7 +342,8 @@ impl UninstallCommand {
         // 删除 workflow.toml
         if let Ok(workflow_config_path) = Paths::workflow_config() {
             if workflow_config_path.exists() {
-                fs::remove_file(&workflow_config_path).wrap_err("Failed to remove workflow.toml")?;
+                fs::remove_file(&workflow_config_path)
+                    .wrap_err("Failed to remove workflow.toml")?;
                 removed.push("workflow.toml".to_string());
             }
         }

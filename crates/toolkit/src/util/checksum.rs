@@ -319,7 +319,10 @@ mod tests {
         file.flush().unwrap();
 
         let result = Checksum::verify(file.path(), "wrong_hash");
-        assert!(matches!(result, Err(ChecksumError::VerificationFailed { .. })));
+        assert!(matches!(
+            result,
+            Err(ChecksumError::VerificationFailed { .. })
+        ));
     }
 
     #[test]

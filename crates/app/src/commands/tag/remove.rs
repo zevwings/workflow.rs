@@ -59,9 +59,8 @@ impl TagRemoveCommand {
             name.clone()
         } else {
             // 交互式选择 tag
-            let tags = tag_repo
-                .list_tags(true)
-                .map_err(|e| format!("Failed to list tags: {}", e))?;
+            let tags =
+                tag_repo.list_tags(true).map_err(|e| format!("Failed to list tags: {}", e))?;
 
             if tags.is_empty() {
                 error!("No tags found");

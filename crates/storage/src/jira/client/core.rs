@@ -99,14 +99,10 @@ impl JiraClientImpl {
         query: Option<&[(String, String)]>,
     ) -> Result<JiraResponse, JiraError> {
         // 构建 URL
-        let url = self
-            .build_url(path, query)
-            .map_err(|e| JiraError::ApiError(e.to_string()))?;
+        let url = self.build_url(path, query).map_err(|e| JiraError::ApiError(e.to_string()))?;
 
         // 构建认证信息
-        let auth = self
-            .build_auth()
-            .map_err(|e| JiraError::ApiError(e.to_string()))?;
+        let auth = self.build_auth().map_err(|e| JiraError::ApiError(e.to_string()))?;
 
         // 获取 HTTP 客户端
         let client = HttpClient::global().map_err(|e| JiraError::ApiError(e.to_string()))?;

@@ -51,4 +51,3 @@ pub struct AmendArgs {
     #[arg(long)]
     pub verify: bool,
 }
-
