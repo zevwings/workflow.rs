@@ -108,6 +108,10 @@ impl GitRepository for GitRepositoryImpl {
         self.branch_service.get_default_branch()
     }
 
+    fn infer_target_branch(&self, current_branch: &str) -> Result<Option<String>, GitError> {
+        self.branch_service.infer_target_branch(current_branch)
+    }
+
     // ========== Commit 操作 ==========
 
     fn get_commit_info(&self, ref_or_sha: &str) -> Result<CommitInfo, GitError> {

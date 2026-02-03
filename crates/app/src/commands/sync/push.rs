@@ -1,9 +1,4 @@
-//! Push 命令实现
-//!
-//! 最简单的 push 实现，直接使用 git2 库。
-
 use prompt::{info, success};
-
 use storage::git::GitContext;
 use toolkit::{log_debug, log_info};
 
@@ -11,12 +6,10 @@ use toolkit::{log_debug, log_info};
 pub struct PushCommand;
 
 impl PushCommand {
-    /// 创建新的 PushCommand
     pub fn new() -> Self {
         Self
     }
 
-    /// 运行 `workflow push` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         log_debug!("push: discovering repository");
         let ctx = GitContext::discover()

@@ -136,7 +136,7 @@ pub fn select_branch_type() -> Result<BranchType, Box<dyn std::error::Error>> {
 pub fn generate_branch_name_by_summary(
     summary: &str,
 ) -> Result<(BranchType, String), Box<dyn std::error::Error>> {
-    // 让用户选择分支类型
+    // 让用户选择分支类型（在 Spinner 之外进行，避免 raw mode 冲突）
     let branch_type = select_branch_type()?;
 
     // 获取所有已存在的分支名（失败则为空）
@@ -148,7 +148,7 @@ pub fn generate_branch_name_by_summary(
 
     // 使用 LLM 生成基础分支名（不包含 branch_type 前缀）
     let llm_repo = registry::get_llm_repository();
-    let base_branch_name = match Spinner::new("Generating branch name with LLM...")
+    let base_branch_name = match Spinner::new("Generating branch name...")
         .with(|| llm_repo.generate_branch_name(Some(summary), exists_branches))
     {
         Ok(name) => name,

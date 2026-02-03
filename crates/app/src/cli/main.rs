@@ -64,8 +64,8 @@ pub enum Command {
     /// Pull Request 管理命令
     #[command(subcommand)]
     Pr(PrSubcommand),
-    /// 推送分支到远程
-    ///
-    /// Push the current branch to remote repository.
+    /// 推送当前分支到远程
     Push,
+    /// 从远程拉取当前分支
+    Pull,
 }
