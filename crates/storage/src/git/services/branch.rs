@@ -11,8 +11,11 @@ pub trait BranchService: Send + Sync {
     /// 创建分支
     fn create_branch(&self, name: &str) -> Result<(), GitError>;
 
-    /// 删除分支
-    fn delete_branch(&self, name: &str, force: bool) -> Result<(), GitError>;
+    /// 删除本地分支
+    fn delete_local_branch(&self, name: &str, force: bool) -> Result<(), GitError>;
+
+    /// 删除远程分支
+    fn delete_remote_branch(&self, name: &str) -> Result<(), GitError>;
 
     /// 重命名分支
     fn rename_branch(&self, old_name: Option<&str>, new_name: &str) -> Result<(), GitError>;
@@ -87,7 +90,7 @@ impl BranchService for BranchServiceImpl {
         Ok(())
     }
 
-    fn delete_branch(&self, name: &str, force: bool) -> Result<(), GitError> {
+    fn delete_local_branch(&self, name: &str, force: bool) -> Result<(), GitError> {
         let repo = self.ctx.repository();
 
         let mut branch = repo
@@ -121,6 +124,37 @@ impl BranchService for BranchServiceImpl {
         }
 
         branch.delete().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        Ok(())
+    }
+
+    fn delete_remote_branch(&self, name: &str) -> Result<(), GitError> {
+        use git2::PushOptions;
+
+        let repo = self.ctx.repository();
+
+        let mut remote = repo
+            .find_remote("origin")
+            .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
+
+        // 使用空引用删除远程分支
+        let refspec = format!(":refs/heads/{}", name);
+
+        let callbacks = GitContext::create_callbacks();
+        let mut opts = PushOptions::new();
+        opts.remote_callbacks(callbacks);
+
+        remote.push(&[&refspec], Some(&mut opts)).map_err(|e| {
+            let error_msg = e.to_string();
+            // 检查是否是因为远程分支不存在
+            if error_msg.contains("remote ref does not exist")
+                || error_msg.contains("cannot lock ref")
+            {
+                GitError::BranchNotFound(format!("远程分支 '{}' 不存在", name))
+            } else {
+                GitError::RemoteError(format!("删除远程分支失败: {}", error_msg))
+            }
+        })?;
+
         Ok(())
     }
 

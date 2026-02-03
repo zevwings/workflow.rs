@@ -77,8 +77,12 @@ impl GitRepository for GitRepositoryImpl {
         self.branch_service.create_branch(name)
     }
 
-    fn delete_branch(&self, name: &str, force: bool) -> Result<(), GitError> {
-        self.branch_service.delete_branch(name, force)
+    fn delete_local_branch(&self, name: &str, force: bool) -> Result<(), GitError> {
+        self.branch_service.delete_local_branch(name, force)
+    }
+
+    fn delete_remote_branch(&self, name: &str) -> Result<(), GitError> {
+        self.branch_service.delete_remote_branch(name)
     }
 
     fn rename_branch(&self, old_name: Option<&str>, new_name: &str) -> Result<(), GitError> {

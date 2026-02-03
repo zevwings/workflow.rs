@@ -106,7 +106,7 @@ impl BranchCleanCommand {
         let mut failed_branches = Vec::new();
 
         for branch in &branches_to_clean {
-            match branch_repo.delete_branch(branch, false) {
+            match branch_repo.delete_local_branch(branch, false) {
                 Ok(()) => {
                     deleted_count += 1;
                     info!("Deleted branch '{}'", branch);
@@ -122,7 +122,7 @@ impl BranchCleanCommand {
                                 .map_err(|e| format!("Failed to get confirmation: {}", e))?;
 
                             if force_delete {
-                                match branch_repo.delete_branch(branch, true) {
+                                match branch_repo.delete_local_branch(branch, true) {
                                     Ok(()) => {
                                         deleted_count += 1;
                                         info!("Force deleted branch '{}'", branch);

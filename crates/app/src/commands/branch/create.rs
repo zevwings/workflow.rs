@@ -187,6 +187,9 @@ impl BranchCreateCommand {
                 let trimmed = input.trim();
                 if trimmed.is_empty() {
                     Err("Branch name cannot be empty".to_string())
+                } else if to_slug(trimmed).is_empty() {
+                    // 使用 to_slug 验证，确保生成的 slug 不为空
+                    Err("Branch name must contain at least one ASCII letter or number (a-z, A-Z, 0-9)".to_string())
                 } else {
                     Ok(())
                 }
