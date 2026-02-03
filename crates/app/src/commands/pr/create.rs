@@ -693,16 +693,13 @@ impl PullRequestCreateCommand {
         success!("Pull Request created successfully!");
         info!("PR ID: {}", pr_id);
 
-        // 尝试获取 PR URL（如果可能）
-        if let Ok(_pr_info) = pr_service.get_pull_request(&pr_id) {
-            // GitHub repository 返回的 PR ID 就是 PR number，可以用来构建 URL
-            let repo_info = branch_repo.get_repo_info();
-            if let Some(ref origin_url) = repo_info.origin_url {
-                // 尝试从 origin_url 提取 owner/repo
-                // 例如: https://github.com/owner/repo.git 或 git@github.com:owner/repo.git
-                if let Some(pr_url) = extract_pr_url(origin_url, &pr_id) {
-                    success!("PR URL: {}", pr_url);
-                }
+        // 获取 PR URL
+        let repo_info = branch_repo.get_repo_info();
+        if let Some(ref origin_url) = repo_info.origin_url {
+            // 从 origin_url 提取 owner/repo 并构建 PR URL
+            // 例如: https://github.com/owner/repo.git 或 git@github.com:owner/repo.git
+            if let Some(pr_url) = extract_pr_url(origin_url, &pr_id) {
+                info!("PR: {}", pr_url);
             }
         }
 

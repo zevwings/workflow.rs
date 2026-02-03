@@ -82,6 +82,20 @@ impl BranchSwitchCommand {
             }
         }
 
+        // 检查是否有未提交的更改
+        let status = branch_repo
+            .get_working_tree_status()
+            .map_err(|e| format!("Failed to get status: {}", e))?;
+
+        let needs_stash = !status.is_clean();
+
+        if needs_stash {
+            info!("Stashing uncommitted changes before switching branch...");
+            branch_repo
+                .stash_push(Some("Auto-stash before switching branch"))
+                .map_err(|e| format!("Failed to stash changes: {}", e))?;
+        }
+
         // 切换分支
         info!("Switching to branch '{}'...", target_branch);
         branch_repo
@@ -89,6 +103,46 @@ impl BranchSwitchCommand {
             .map_err(|e| format!("Failed to switch to branch: {}", e))?;
 
         success!("Switched to branch '{}'", target_branch);
+
+        // 恢复 stash
+        if needs_stash {
+            info!("Restoring stashed changes...");
+            branch_repo
+                .stash_pop(0)
+                .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
+            success!("Stashed changes restored");
+        }
+
+        // 如果远程分支存在，询问是否需要 pull
+        if exists_remote {
+            let should_pull = confirm!("Pull latest changes from remote?")
+                .default(true)
+                .prompt()
+                .map_err(|e| format!("Failed to get confirmation: {}", e))?;
+
+            if should_pull {
+                info!("Pulling latest changes...");
+                if let Err(e) = branch_repo.pull(&target_branch) {
+                    let error_msg = e.to_string();
+                    // 检测是否是冲突错误
+                    if error_msg.contains("conflict")
+                        || error_msg.contains("Conflict")
+                        || error_msg.contains("CONFLICT")
+                    {
+                        error!("Pull failed due to merge conflicts!");
+                        error!("Please resolve the conflicts manually:");
+                        info!("  1. Edit the conflicting files to resolve conflicts");
+                        info!("  2. Run 'git add <resolved-files>'");
+                        info!("  3. Run 'git commit' to complete the merge");
+                        info!("  Or run 'git merge --abort' to cancel the merge");
+                        return Err(format!("Pull failed: merge conflicts detected - {}", error_msg).into());
+                    }
+                    return Err(format!("Failed to pull: {}", error_msg).into());
+                }
+                success!("Pulled latest changes from remote");
+            }
+        }
+
         Ok(())
     }
 }
