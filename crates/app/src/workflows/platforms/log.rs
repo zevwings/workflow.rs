@@ -106,11 +106,7 @@ impl WorkflowStage for LogStage {
     fn configure(&self, context: &mut WorkflowContext) -> Result<(), Box<dyn Error>> {
         let settings = context.settings_mut();
 
-        let current_level = settings
-            .log
-            .level
-            .clone()
-            .unwrap_or_else(|| "info".to_string());
+        let current_level = settings.log.level.clone().unwrap_or_else(|| "info".to_string());
 
         // Build and run the form
         let (enable_logging, selected_level, enable_console) =

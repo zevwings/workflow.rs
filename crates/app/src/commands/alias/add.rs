@@ -34,10 +34,7 @@ impl AliasAddCommand {
         // 获取别名名称和命令
         let (name, command) = if self.name.is_some() && self.command.is_some() {
             // 直接模式
-            (
-                self.name.clone().unwrap(),
-                self.command.clone().unwrap(),
-            )
+            (self.name.clone().unwrap(), self.command.clone().unwrap())
         } else {
             // 交互模式
             self.interactive_input()?
@@ -45,9 +42,7 @@ impl AliasAddCommand {
 
         // 添加别名
         let service = get_alias_service();
-        let result = service
-            .add(&name, &command, self.force)
-            .wrap_err("添加别名失败")?;
+        let result = service.add(&name, &command, self.force).wrap_err("添加别名失败")?;
 
         // 显示结果
         br!();
@@ -104,11 +99,7 @@ impl AliasAddCommand {
                 .wrap_err("选择命令失败")?;
 
             // 从选中的显示文本中提取命令部分
-            selected
-                .split(" - ")
-                .next()
-                .unwrap_or(&selected)
-                .to_string()
+            selected.split(" - ").next().unwrap_or(&selected).to_string()
         };
 
         Ok((name, command))
@@ -140,10 +131,7 @@ fn collect_commands(cmd: &clap::Command, prefix: &str, commands: &mut Vec<(Strin
         };
 
         // 获取命令描述
-        let about = subcmd
-            .get_about()
-            .map(|s| s.to_string())
-            .unwrap_or_default();
+        let about = subcmd.get_about().map(|s| s.to_string()).unwrap_or_default();
 
         // 检查是否有子命令
         let has_subcommands = subcmd.get_subcommands().next().is_some();

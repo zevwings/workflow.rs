@@ -122,12 +122,7 @@ mod tests {
             "Filename should end with .log: {}",
             filename
         );
-        let pid_part = filename
-            .strip_suffix(".log")
-            .unwrap()
-            .split('-')
-            .next_back()
-            .unwrap();
+        let pid_part = filename.strip_suffix(".log").unwrap().split('-').next_back().unwrap();
         assert!(
             pid_part.chars().all(|c| c.is_ascii_digit()),
             "Last part before .log should be PID (digits): {}",

@@ -72,8 +72,7 @@ impl Truncate for str {
 /// 为 `String` 实现 `Truncate` trait
 impl Truncate for String {
     fn truncate(&self, max_length: usize, truncation_suffix_template: &str) -> String {
-        self.as_str()
-            .truncate(max_length, truncation_suffix_template)
+        self.as_str().truncate(max_length, truncation_suffix_template)
     }
 }
 

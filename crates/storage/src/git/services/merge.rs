@@ -58,9 +58,7 @@ impl MergeServiceImpl {
         repo: &git2::Repository,
         annotated_commit: &git2::AnnotatedCommit,
     ) -> Result<(), GitError> {
-        let head = repo
-            .head()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let refname = head
             .name()
             .ok_or_else(|| GitError::OperationFailed("无效的 HEAD 引用".into()))?;
@@ -75,8 +73,7 @@ impl MergeServiceImpl {
             .set_target(annotated_commit.id(), &msg)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        repo.set_head(refname)
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        repo.set_head(refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -96,24 +93,16 @@ impl MergeServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 检查冲突
-        let index = repo
-            .index()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
+        let index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
 
         if index.has_conflicts() {
             return Err(GitError::MergeConflict);
         }
 
         // 创建合并提交
-        let mut index = repo
-            .index()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
-        let tree_id = index
-            .write_tree()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
-        let tree = repo
-            .find_tree(tree_id)
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+        let tree_id = index.write_tree().map_err(|e| GitError::IndexError(e.to_string()))?;
+        let tree = repo.find_tree(tree_id).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 从 repo 获取 signature，避免再次获取锁
         let signature = repo
@@ -121,12 +110,9 @@ impl MergeServiceImpl {
             .or_else(|_| git2::Signature::now("User", "user@example.com"))
             .map_err(|e| GitError::SignatureError(e.to_string()))?;
 
-        let head = repo
-            .head()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-        let head_commit = head
-            .peel_to_commit()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let head_commit =
+            head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         let remote_commit = repo
             .find_commit(annotated_commit.id())
@@ -145,8 +131,7 @@ impl MergeServiceImpl {
         .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 清理状态
-        repo.cleanup_state()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        repo.cleanup_state().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(())
     }
@@ -162,17 +147,14 @@ impl MergeServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 检查冲突
-        let index = repo
-            .index()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
+        let index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
 
         if index.has_conflicts() {
             return Err(GitError::MergeConflict);
         }
 
         // 清理状态（但保留工作区更改，让用户自己提交）
-        repo.cleanup_state()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        repo.cleanup_state().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(())
     }
@@ -312,9 +294,7 @@ impl MergeService for MergeServiceImpl {
     fn has_merge_conflicts(&self) -> Result<bool, GitError> {
         let repo = self.ctx.repository();
 
-        let index = repo
-            .index()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
+        let index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
         Ok(index.has_conflicts())
     }
 
@@ -340,9 +320,7 @@ impl MergeService for MergeServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 检查 branch_commit 是否是 base_commit 的祖先
-        Ok(repo
-            .graph_descendant_of(base_commit.id(), branch_commit.id())
-            .unwrap_or(false))
+        Ok(repo.graph_descendant_of(base_commit.id(), branch_commit.id()).unwrap_or(false))
     }
 
     fn merge_base(&self, branch1: &str, branch2: &str) -> Result<String, GitError> {
@@ -356,12 +334,10 @@ impl MergeService for MergeServiceImpl {
             .revparse_single(branch2)
             .map_err(|_| GitError::BranchNotFound(branch2.to_string()))?;
 
-        let commit1 = obj1
-            .peel_to_commit()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-        let commit2 = obj2
-            .peel_to_commit()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let commit1 =
+            obj1.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let commit2 =
+            obj2.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         let merge_base_oid = repo
             .merge_base(commit1.id(), commit2.id())

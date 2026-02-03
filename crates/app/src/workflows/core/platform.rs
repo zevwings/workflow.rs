@@ -16,30 +16,20 @@ use toolkit::Sensitive;
 #[derive(Clone)]
 pub enum AccountAction {
     /// 保留当前账户 (Setup 模式)
-    KeepCurrent {
-        account_display: String,
-    },
+    KeepCurrent { account_display: String },
     /// 使用已有账户 (Setup 模式)
     UseExisting {
         account_display: String,
         account_name: String,
     },
     /// 添加新账户
-    AddNew {
-        platform_name: String,
-    },
+    AddNew { platform_name: String },
     /// 切换当前账户 (Command 模式)
-    Switch {
-        platform_name: String,
-    },
+    Switch { platform_name: String },
     /// 更新账户信息 (Command 模式)
-    Update {
-        platform_name: String,
-    },
+    Update { platform_name: String },
     /// 删除账户 (Command 模式)
-    Remove {
-        platform_name: String,
-    },
+    Remove { platform_name: String },
 }
 
 impl std::fmt::Display for AccountAction {
@@ -48,7 +38,9 @@ impl std::fmt::Display for AccountAction {
             AccountAction::KeepCurrent { account_display } => {
                 write!(f, "Keep current account {}", account_display)
             }
-            AccountAction::UseExisting { account_display, .. } => {
+            AccountAction::UseExisting {
+                account_display, ..
+            } => {
                 write!(f, "Use exists account {}", account_display)
             }
             AccountAction::AddNew { platform_name } => {
@@ -122,9 +114,7 @@ pub trait PlatformSettings {
     }
 
     fn find_account_mut(&mut self, name: &str) -> Option<&mut Self::Account> {
-        self.accounts_mut()
-            .iter_mut()
-            .find(|acc| acc.name() == name)
+        self.accounts_mut().iter_mut().find(|acc| acc.name() == name)
     }
 
     fn get_current_account(&self) -> Option<&Self::Account> {
@@ -249,7 +239,11 @@ where
     Ok(())
 }
 
-fn build_menu_options<S, A>(settings: &S, mode: WorkflowMode, platform_name: &str) -> Vec<AccountAction>
+fn build_menu_options<S, A>(
+    settings: &S,
+    mode: WorkflowMode,
+    platform_name: &str,
+) -> Vec<AccountAction>
 where
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
@@ -358,9 +352,7 @@ where
     }
 
     if context.mode() == WorkflowMode::Command {
-        context
-            .save()
-            .map_err(|e| format!("Failed to save config: {}", e))?;
+        context.save().map_err(|e| format!("Failed to save config: {}", e))?;
 
         br!();
         success!(
@@ -449,9 +441,7 @@ where
     settings.set_current(account_name.clone());
 
     if context.mode() == WorkflowMode::Command {
-        context
-            .save()
-            .map_err(|e| format!("Failed to save config: {}", e))?;
+        context.save().map_err(|e| format!("Failed to save config: {}", e))?;
 
         br!();
         success!(
@@ -562,11 +552,8 @@ where
             info!("The current account was removed. Please select a new current account:");
             br!();
 
-            let account_options: Vec<String> = settings
-                .accounts()
-                .iter()
-                .map(|acc| acc.display())
-                .collect();
+            let account_options: Vec<String> =
+                settings.accounts().iter().map(|acc| acc.display()).collect();
 
             let selected_account = SelectBuilder::new(
                 "Please select the account to set as current",

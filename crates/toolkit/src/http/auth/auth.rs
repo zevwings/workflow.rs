@@ -157,12 +157,9 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let auth_header = headers
-            .get(AUTHORIZATION)
-            .expect("Authorization header should be present");
-        let auth_value = auth_header
-            .to_str()
-            .expect("Authorization header should be valid UTF-8");
+        let auth_header =
+            headers.get(AUTHORIZATION).expect("Authorization header should be present");
+        let auth_value = auth_header.to_str().expect("Authorization header should be valid UTF-8");
         assert!(auth_value.starts_with("Basic "));
         // 验证 Base64 编码（user@example.com:api_token 的 Base64）
         let encoded = auth_value
@@ -184,12 +181,9 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let auth_header = headers
-            .get(AUTHORIZATION)
-            .expect("Authorization header should be present");
-        let auth_value = auth_header
-            .to_str()
-            .expect("Authorization header should be valid UTF-8");
+        let auth_header =
+            headers.get(AUTHORIZATION).expect("Authorization header should be present");
+        let auth_value = auth_header.to_str().expect("Authorization header should be valid UTF-8");
         assert!(auth_value.starts_with("Basic "));
     }
 
@@ -203,12 +197,9 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let auth_header = headers
-            .get(AUTHORIZATION)
-            .expect("Authorization header should be present");
-        let auth_value = auth_header
-            .to_str()
-            .expect("Authorization header should be valid UTF-8");
+        let auth_header =
+            headers.get(AUTHORIZATION).expect("Authorization header should be present");
+        let auth_value = auth_header.to_str().expect("Authorization header should be valid UTF-8");
         assert_eq!(auth_value, "Bearer your_api_token");
     }
 
@@ -220,12 +211,9 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let auth_header = headers
-            .get(AUTHORIZATION)
-            .expect("Authorization header should be present");
-        let auth_value = auth_header
-            .to_str()
-            .expect("Authorization header should be valid UTF-8");
+        let auth_header =
+            headers.get(AUTHORIZATION).expect("Authorization header should be present");
+        let auth_value = auth_header.to_str().expect("Authorization header should be valid UTF-8");
         assert_eq!(auth_value, "Bearer token-with-special-chars!@#$%");
     }
 
@@ -239,12 +227,8 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let custom_header = headers
-            .get("X-Api-Key")
-            .expect("X-Api-Key header should be present");
-        let header_value = custom_header
-            .to_str()
-            .expect("X-Api-Key header should be valid UTF-8");
+        let custom_header = headers.get("X-Api-Key").expect("X-Api-Key header should be present");
+        let header_value = custom_header.to_str().expect("X-Api-Key header should be valid UTF-8");
         assert_eq!(header_value, "api_key_value");
     }
 
@@ -256,12 +240,10 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let custom_header = headers
-            .get("X-Custom-Auth")
-            .expect("X-Custom-Auth header should be present");
-        let header_value = custom_header
-            .to_str()
-            .expect("X-Custom-Auth header should be valid UTF-8");
+        let custom_header =
+            headers.get("X-Custom-Auth").expect("X-Custom-Auth header should be present");
+        let header_value =
+            custom_header.to_str().expect("X-Custom-Auth header should be valid UTF-8");
         assert_eq!(header_value, "custom_value");
     }
 
@@ -333,12 +315,9 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let auth_header = headers
-            .get(AUTHORIZATION)
-            .expect("Authorization header should be present");
-        let auth_value = auth_header
-            .to_str()
-            .expect("Authorization header should be valid UTF-8");
+        let auth_header =
+            headers.get(AUTHORIZATION).expect("Authorization header should be present");
+        let auth_value = auth_header.to_str().expect("Authorization header should be valid UTF-8");
         assert_eq!(auth_value, "Bearer ");
     }
 
@@ -350,12 +329,8 @@ mod tests {
         let result = auth.apply_to_headers(&mut headers);
 
         assert!(result.is_ok());
-        let custom_header = headers
-            .get("X-Api-Key")
-            .expect("X-Api-Key header should be present");
-        let header_value = custom_header
-            .to_str()
-            .expect("X-Api-Key header should be valid UTF-8");
+        let custom_header = headers.get("X-Api-Key").expect("X-Api-Key header should be present");
+        let header_value = custom_header.to_str().expect("X-Api-Key header should be valid UTF-8");
         assert_eq!(header_value, "");
     }
 

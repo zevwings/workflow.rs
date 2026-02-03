@@ -21,23 +21,14 @@ impl JiraConfigContextImpl {
 
 impl JiraConfigContext for JiraConfigContextImpl {
     fn get_jira_email(&self) -> String {
-        self.config
-            .load()
-            .map(|c| c.jira.email.clone())
-            .unwrap_or_default()
+        self.config.load().map(|c| c.jira.email.clone()).unwrap_or_default()
     }
 
     fn get_jira_api_token(&self) -> String {
-        self.config
-            .load()
-            .map(|c| c.jira.api_token.clone())
-            .unwrap_or_default()
+        self.config.load().map(|c| c.jira.api_token.clone()).unwrap_or_default()
     }
 
     fn get_jira_service_address(&self) -> String {
-        self.config
-            .load()
-            .map(|c| c.jira.service_address.clone())
-            .unwrap_or_default()
+        self.config.load().map(|c| c.jira.service_address.clone()).unwrap_or_default()
     }
 }

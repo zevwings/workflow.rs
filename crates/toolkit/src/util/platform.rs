@@ -136,9 +136,7 @@ impl Platform {
 
         // 方法2: 尝试检测当前二进制是否静态链接
         // 如果 ldd 命令失败或没有输出，可能是静态链接
-        if let Ok(output) = Command::new("ldd")
-            .arg(env::current_exe().unwrap_or_default())
-            .output()
+        if let Ok(output) = Command::new("ldd").arg(env::current_exe().unwrap_or_default()).output()
         {
             let output_str = String::from_utf8_lossy(&output.stdout);
             // 如果 ldd 输出 "not a dynamic executable" 或 "statically linked"
@@ -222,9 +220,7 @@ mod tests {
     #[test]
     fn test_platform_detect_release_identifier_returns_valid_format() {
         // 测试平台检测返回有效的格式
-        let platform = Platform::detect()
-            .release_identifier()
-            .expect("Should detect platform");
+        let platform = Platform::detect().release_identifier().expect("Should detect platform");
 
         // 验证返回的字符串不为空
         assert!(!platform.is_empty());
@@ -238,9 +234,8 @@ mod tests {
         // 测试 macOS 平台检测
         // 注意：这个测试只在 macOS 上会通过
         if env::consts::OS == "macos" {
-            let platform = Platform::detect()
-                .release_identifier()
-                .expect("Should detect macOS platform");
+            let platform =
+                Platform::detect().release_identifier().expect("Should detect macOS platform");
 
             // macOS 应该是 macOS-Intel 或 macOS-AppleSilicon
             assert!(
@@ -263,9 +258,8 @@ mod tests {
         // 测试 Linux 平台检测
         // 注意：这个测试只在 Linux 上会通过
         if env::consts::OS == "linux" {
-            let platform = Platform::detect()
-                .release_identifier()
-                .expect("Should detect Linux platform");
+            let platform =
+                Platform::detect().release_identifier().expect("Should detect Linux platform");
 
             // Linux 应该是 Linux-x86_64, Linux-x86_64-static, 或 Linux-ARM64
             assert!(
@@ -293,9 +287,8 @@ mod tests {
         // 测试 Windows 平台检测
         // 注意：这个测试只在 Windows 上会通过
         if env::consts::OS == "windows" {
-            let platform = Platform::detect()
-                .release_identifier()
-                .expect("Should detect Windows platform");
+            let platform =
+                Platform::detect().release_identifier().expect("Should detect Windows platform");
 
             // Windows 应该是 Windows-x86_64 或 Windows-ARM64
             assert!(
@@ -317,15 +310,9 @@ mod tests {
     fn test_platform_detect_release_identifier_consistency() {
         // 测试平台检测的一致性
         // 多次调用应该返回相同的结果
-        let platform1 = Platform::detect()
-            .release_identifier()
-            .expect("Should detect platform");
-        let platform2 = Platform::detect()
-            .release_identifier()
-            .expect("Should detect platform");
-        let platform3 = Platform::detect()
-            .release_identifier()
-            .expect("Should detect platform");
+        let platform1 = Platform::detect().release_identifier().expect("Should detect platform");
+        let platform2 = Platform::detect().release_identifier().expect("Should detect platform");
+        let platform3 = Platform::detect().release_identifier().expect("Should detect platform");
 
         assert_eq!(platform1, platform2);
         assert_eq!(platform2, platform3);
@@ -334,9 +321,7 @@ mod tests {
     #[test]
     fn test_platform_detect_release_identifier_format_structure() {
         // 测试平台标识符的格式结构
-        let platform = Platform::detect()
-            .release_identifier()
-            .expect("Should detect platform");
+        let platform = Platform::detect().release_identifier().expect("Should detect platform");
 
         // 格式应该是：OS-ARCH 或 OS-ARCH-variant
         let parts: Vec<&str> = platform.split('-').collect();
@@ -358,9 +343,7 @@ mod tests {
     #[test]
     fn test_platform_detect_release_identifier_architecture_consistency() {
         // 测试平台检测的架构一致性
-        let platform = Platform::detect()
-            .release_identifier()
-            .expect("Should detect platform");
+        let platform = Platform::detect().release_identifier().expect("Should detect platform");
         let arch = env::consts::ARCH;
 
         // 验证平台标识符中的架构与系统架构一致
@@ -408,9 +391,7 @@ mod tests {
     #[test]
     fn test_platform_identifier_case() {
         // 测试平台标识符的大小写格式
-        let platform = Platform::detect()
-            .release_identifier()
-            .expect("Should detect platform");
+        let platform = Platform::detect().release_identifier().expect("Should detect platform");
 
         // macOS 应该是 "macOS"（特定大小写）
         if platform.starts_with("macOS") {
@@ -436,9 +417,7 @@ mod tests {
         // 注意：Linux x86_64 可能是 "Linux-x86_64" 或 "Linux-x86_64-static"
         // 取决于 is_static_required() 的结果
         let platform = Platform::new("linux", "x86_64");
-        let identifier = platform
-            .release_identifier()
-            .expect("Should return identifier");
+        let identifier = platform.release_identifier().expect("Should return identifier");
 
         assert!(
             identifier == "Linux-x86_64" || identifier == "Linux-x86_64-static",
@@ -499,15 +478,9 @@ mod tests {
         // 测试相同平台多次调用的一致性
         let platform = Platform::new("macos", "aarch64");
 
-        let id1 = platform
-            .release_identifier()
-            .expect("Should return identifier");
-        let id2 = platform
-            .release_identifier()
-            .expect("Should return identifier");
-        let id3 = platform
-            .release_identifier()
-            .expect("Should return identifier");
+        let id1 = platform.release_identifier().expect("Should return identifier");
+        let id2 = platform.release_identifier().expect("Should return identifier");
+        let id3 = platform.release_identifier().expect("Should return identifier");
 
         assert_eq!(id1, id2);
         assert_eq!(id2, id3);

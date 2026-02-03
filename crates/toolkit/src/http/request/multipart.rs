@@ -184,10 +184,7 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert("X-Custom-Header", "value".parse().unwrap());
 
-        let config = MultipartRequestConfig::new()
-            .multipart(form)
-            .auth(auth)
-            .headers(&headers);
+        let config = MultipartRequestConfig::new().multipart(form).auth(auth).headers(&headers);
 
         assert!(config.multipart.is_some());
         assert!(config.auth.is_some());

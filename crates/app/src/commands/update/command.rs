@@ -9,7 +9,9 @@ use toolkit::{BackupResult, Platform, RollbackManager};
 use super::download::{build_download_url, download_file, extract_archive, verify_checksum};
 use super::types::TempDirManager;
 use super::verify::{run_installer, verify_installation};
-use super::version::{compare_versions, get_current_version, get_target_version, VersionComparison};
+use super::version::{
+    compare_versions, get_current_version, get_target_version, VersionComparison,
+};
 
 /// 更新命令
 pub struct UpdateCommand {
@@ -23,11 +25,7 @@ pub struct UpdateCommand {
 
 impl UpdateCommand {
     /// 创建新的 UpdateCommand 实例
-    pub fn new(
-        target_version: Option<String>,
-        force: bool,
-        github_token: Option<String>,
-    ) -> Self {
+    pub fn new(target_version: Option<String>, force: bool, github_token: Option<String>) -> Self {
         Self {
             target_version,
             force,

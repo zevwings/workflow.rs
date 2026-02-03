@@ -75,9 +75,8 @@ impl InstallCommand {
 
         // 获取当前可执行文件所在目录
         let current_exe = env::current_exe().wrap_err("Failed to get current executable path")?;
-        let current_dir = current_exe
-            .parent()
-            .wrap_err("Failed to get parent directory of executable")?;
+        let current_dir =
+            current_exe.parent().wrap_err("Failed to get parent directory of executable")?;
 
         toolkit::log_debug!("Current directory: {}", current_dir.display());
         toolkit::log_debug!("Install directory: {}", install_dir);
@@ -149,7 +148,10 @@ impl InstallCommand {
         }
 
         if installed_count > 0 {
-            success!("Binary files installation complete ({} installed)", installed_count);
+            success!(
+                "Binary files installation complete ({} installed)",
+                installed_count
+            );
             info!("Installed commands:");
             info!("  - workflow (main command with subcommands: pr, log, jira, etc.)");
         } else {
@@ -181,10 +183,16 @@ impl InstallCommand {
             .wrap_err("Failed to save and configure completion")?;
 
         // 显示结果
-        success!("  Generated completion script: {}", result.script_path.display());
+        success!(
+            "  Generated completion script: {}",
+            result.script_path.display()
+        );
 
         if let Some(config_file) = &result.config_file {
-            success!("  Created completion config file: {}", config_file.display());
+            success!(
+                "  Created completion config file: {}",
+                config_file.display()
+            );
         }
 
         if result.config_added {

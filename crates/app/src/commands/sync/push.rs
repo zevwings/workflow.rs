@@ -5,6 +5,12 @@ use toolkit::{log_debug, log_info};
 /// Push 命令
 pub struct PushCommand;
 
+impl Default for PushCommand {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PushCommand {
     pub fn new() -> Self {
         Self
@@ -12,19 +18,15 @@ impl PushCommand {
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         log_debug!("push: discovering repository");
-        let ctx = GitContext::discover()
-            .map_err(|e| format!("Failed to open repository: {}", e))?;
+        let ctx =
+            GitContext::discover().map_err(|e| format!("Failed to open repository: {}", e))?;
         log_debug!("push: repository discovered");
 
         let repo = ctx.repository();
 
         log_debug!("push: resolving HEAD");
-        let head = repo
-            .head()
-            .map_err(|e| format!("Failed to get HEAD: {}", e))?;
-        let branch_name = head
-            .shorthand()
-            .ok_or("Failed to get branch name")?;
+        let head = repo.head().map_err(|e| format!("Failed to get HEAD: {}", e))?;
+        let branch_name = head.shorthand().ok_or("Failed to get branch name")?;
         log_debug!("push: branch = {}", branch_name);
 
         log_debug!("push: finding remote origin");

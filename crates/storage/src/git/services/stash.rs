@@ -104,9 +104,7 @@ impl StashServiceImpl {
         let stash_tree = stash_commit.tree().ok()?;
 
         // 计算 diff
-        let diff = repo
-            .diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None)
-            .ok()?;
+        let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None).ok()?;
 
         let stats = diff.stats().ok()?;
 
@@ -121,9 +119,9 @@ impl StashServiceImpl {
 impl StashService for StashServiceImpl {
     fn stash_push(&self, message: Option<&str>) -> Result<usize, GitError> {
         let mut repo = self.ctx.repository_mut();
-        let signature = repo.signature().map_err(|e| {
-            GitError::OperationFailed(format!("无法获取 Git 签名: {}", e))
-        })?;
+        let signature = repo
+            .signature()
+            .map_err(|e| GitError::OperationFailed(format!("无法获取 Git 签名: {}", e)))?;
 
         let stash_message = message.unwrap_or("Stashed changes");
         let flags = git2::StashFlags::INCLUDE_UNTRACKED;
@@ -154,7 +152,10 @@ impl StashService for StashServiceImpl {
                 restored: false,
                 message: None,
                 warnings: vec![
-                    format!("Merge conflicts detected when applying stash stash@{{{}}}", index),
+                    format!(
+                        "Merge conflicts detected when applying stash stash@{{{}}}",
+                        index
+                    ),
                     "The stash entry is kept in case you need it again.".to_string(),
                     "Please resolve the conflicts manually and then:".to_string(),
                     "  1. Resolve conflicts in the affected files".to_string(),
@@ -242,10 +243,8 @@ impl StashService for StashServiceImpl {
 
             // 获取时间戳
             let time = commit.time();
-            let timestamp = Local
-                .timestamp_opt(time.seconds(), 0)
-                .single()
-                .map(|dt: DateTime<Local>| dt);
+            let timestamp =
+                Local.timestamp_opt(time.seconds(), 0).single().map(|dt: DateTime<Local>| dt);
 
             // 从消息中提取分支名和消息
             let (branch, msg) = Self::extract_branch_and_message(message);
@@ -344,8 +343,7 @@ mod tests {
         assert_eq!(message, "another message");
 
         // 测试无法解析的格式
-        let (branch, message) =
-            StashServiceImpl::extract_branch_and_message("some random message");
+        let (branch, message) = StashServiceImpl::extract_branch_and_message("some random message");
         assert_eq!(branch, "unknown");
         assert_eq!(message, "some random message");
     }

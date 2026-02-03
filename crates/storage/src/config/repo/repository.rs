@@ -183,11 +183,9 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         }
 
         // 写入文件
-        FileWriter::new(&config_path)
-            .write_toml(&existing_value)
-            .map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to write project config: {}", e))
-            })?;
+        FileWriter::new(&config_path).write_toml(&existing_value).map_err(|e| {
+            ServiceError::OperationFailed(format!("Failed to write project config: {}", e))
+        })?;
 
         Ok(())
     }
@@ -238,11 +236,9 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
             })?;
 
         // 直接序列化 UserConfig 并写入文件
-        FileWriter::new(&config_path)
-            .write_toml(config)
-            .map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to write user config: {}", e))
-            })?;
+        FileWriter::new(&config_path).write_toml(config).map_err(|e| {
+            ServiceError::OperationFailed(format!("Failed to write user config: {}", e))
+        })?;
 
         Ok(())
     }
@@ -284,11 +280,9 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         // 保存 MCP 配置（只有当有配置时才保存）
         if !config.mcp.mcp_servers.is_empty() {
             let mcp_config_path = repo_path.join(".cursor").join("mcp.json");
-            FileWriter::new(&mcp_config_path)
-                .write_json_secure(&config.mcp)
-                .map_err(|e| {
-                    ServiceError::OperationFailed(format!("Failed to save MCP config: {}", e))
-                })?;
+            FileWriter::new(&mcp_config_path).write_json_secure(&config.mcp).map_err(|e| {
+                ServiceError::OperationFailed(format!("Failed to save MCP config: {}", e))
+            })?;
         }
 
         Ok(())

@@ -85,10 +85,7 @@ where
         let filter = FuzzyFilter::new();
 
         // 验证并调整默认索引
-        let mut current_index = self
-            .default
-            .filter(|&idx| idx < self.options.len())
-            .unwrap_or(0);
+        let mut current_index = self.default.filter(|&idx| idx < self.options.len()).unwrap_or(0);
 
         // 搜索查询
         let mut search_query = String::new();
@@ -116,9 +113,7 @@ where
                 // 如果格式不对，保持原样
                 current_part.to_string()
             };
-            let styled_message = theme
-                .title
-                .apply(base_message.trim_end(), theme.enable_color);
+            let styled_message = theme.title.apply(base_message.trim_end(), theme.enable_color);
             let styled_default = theme.hint.apply(&default_value, theme.enable_color);
             format!("{} {}", styled_message, styled_default)
         } else {
@@ -456,9 +451,7 @@ mod tests {
     #[test]
     fn test_select_builder_chain() {
         let options = vec!["A", "B", "C"];
-        let builder = SelectBuilder::new("Select", options)
-            .default(0)
-            .result_title("Choice");
+        let builder = SelectBuilder::new("Select", options).default(0).result_title("Choice");
 
         assert_eq!(builder.message, "Select");
         assert_eq!(builder.default, Some(0));

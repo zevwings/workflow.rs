@@ -6,10 +6,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use domain::{
-    errors::ServiceError,
-    get_all_completion_filenames, get_completion_filename, get_shell_source_path,
-    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
-    ShellCompletionStatus, COMPLETIONS_FILE, COMPLETIONS_SOURCE_PATH,
+    errors::ServiceError, get_all_completion_filenames, get_completion_filename,
+    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
+    CompletionService, ShellCompletionStatus, COMPLETIONS_FILE, COMPLETIONS_SOURCE_PATH,
 };
 use toolkit::{
     config_file_path, detect_shell, reload_hint, shell_from_string, shell_to_string,
@@ -27,9 +26,8 @@ impl CompletionServiceImpl {
 
     /// 创建 workflow completion 配置文件（用于 zsh/bash）
     fn create_completion_config_file(&self, shell_str: &str) -> Result<PathBuf, ServiceError> {
-        let workflow_dir = Paths::workflow_dir().map_err(|e| {
-            ServiceError::Other(format!("获取 workflow 目录失败: {}", e))
-        })?;
+        let workflow_dir = Paths::workflow_dir()
+            .map_err(|e| ServiceError::Other(format!("获取 workflow 目录失败: {}", e)))?;
         let config_file = workflow_dir.join(COMPLETIONS_FILE);
 
         let config_content = match shell_str.to_lowercase().as_str() {
@@ -52,24 +50,21 @@ impl CompletionServiceImpl {
             _ => return Ok(config_file),
         };
 
-        FileWriter::new(&config_file)
-            .write_str(config_content)
-            .map_err(|e| {
-                ServiceError::Other(format!(
-                    "写入 completion 配置文件失败: {}: {}",
-                    config_file.display(),
-                    e
-                ))
-            })?;
+        FileWriter::new(&config_file).write_str(config_content).map_err(|e| {
+            ServiceError::Other(format!(
+                "写入 completion 配置文件失败: {}: {}",
+                config_file.display(),
+                e
+            ))
+        })?;
 
         Ok(config_file)
     }
 
     /// 配置 shell 配置文件
     fn configure_shell(&self, shell_str: &str) -> Result<bool, ServiceError> {
-        let shell = shell_from_string(shell_str).map_err(|e| {
-            ServiceError::InvalidInput(format!("无效的 shell 类型: {}", e))
-        })?;
+        let shell = shell_from_string(shell_str)
+            .map_err(|e| ServiceError::InvalidInput(format!("无效的 shell 类型: {}", e)))?;
 
         match shell_str.to_lowercase().as_str() {
             "zsh" | "bash" => {
@@ -131,39 +126,33 @@ impl CompletionService for CompletionServiceImpl {
         output_dir: Option<&str>,
     ) -> Result<CompletionGenerateResult, ServiceError> {
         // 1. 解析 shell 类型
-        let shell_enum = shell_from_string(shell).map_err(|e| {
-            ServiceError::InvalidInput(format!("无效的 shell 类型: {}", e))
-        })?;
+        let shell_enum = shell_from_string(shell)
+            .map_err(|e| ServiceError::InvalidInput(format!("无效的 shell 类型: {}", e)))?;
         let shell_str = shell_to_string(&shell_enum);
 
         // 2. 确定输出目录
         let output_path = match output_dir {
             Some(dir) => PathBuf::from(dir),
-            None => Paths::completion_dir().map_err(|e| {
-                ServiceError::Other(format!("获取 completion 目录失败: {}", e))
-            })?,
+            None => Paths::completion_dir()
+                .map_err(|e| ServiceError::Other(format!("获取 completion 目录失败: {}", e)))?,
         };
 
         // 3. 确保输出目录存在
         DirectoryWalker::new(&output_path)
             .ensure_exists()
-            .map_err(|e| {
-                ServiceError::Other(format!("创建输出目录失败: {}", e))
-            })?;
+            .map_err(|e| ServiceError::Other(format!("创建输出目录失败: {}", e)))?;
 
         // 4. 写入脚本文件
         let filename = get_completion_filename(shell_str);
         let script_path = output_path.join(&filename);
 
-        FileWriter::new(&script_path)
-            .write_bytes(script_content)
-            .map_err(|e| {
-                ServiceError::Other(format!(
-                    "写入 completion 脚本失败: {}: {}",
-                    script_path.display(),
-                    e
-                ))
-            })?;
+        FileWriter::new(&script_path).write_bytes(script_content).map_err(|e| {
+            ServiceError::Other(format!(
+                "写入 completion 脚本失败: {}: {}",
+                script_path.display(),
+                e
+            ))
+        })?;
 
         // 5. 创建配置文件（仅 zsh/bash）
         let config_file = match shell_str {
@@ -202,7 +191,8 @@ impl CompletionService for CompletionServiceImpl {
             let source_path = get_shell_source_path(shell_str);
 
             // 检查是否已配置
-            let is_configured = ShellConfigManager::has_source(&shell, &source_path).unwrap_or(false);
+            let is_configured =
+                ShellConfigManager::has_source(&shell, &source_path).unwrap_or(false);
 
             // 检查脚本文件是否存在
             let script_exists = if let Some(ref dir) = completion_dir {
@@ -216,9 +206,7 @@ impl CompletionService for CompletionServiceImpl {
             let config_path = config_file_path(&shell);
 
             // 是否为当前 shell
-            let is_current = current_shell_str
-                .as_ref()
-                .map_or(false, |c| c == shell_str);
+            let is_current = current_shell_str.as_ref().is_some_and(|c| c == shell_str);
 
             shell_statuses.push(ShellCompletionStatus {
                 shell: shell_str.to_string(),
@@ -254,9 +242,8 @@ impl CompletionService for CompletionServiceImpl {
             }
         } else {
             // 只移除当前 shell 的配置
-            let shell = detect_shell().map_err(|e| {
-                ServiceError::Other(format!("自动检测 shell 类型失败: {}", e))
-            })?;
+            let shell = detect_shell()
+                .map_err(|e| ServiceError::Other(format!("自动检测 shell 类型失败: {}", e)))?;
             let shell_str = shell_to_string(&shell);
 
             match self.remove_shell_config(shell_str) {

@@ -95,9 +95,7 @@ impl PullRequestMergeCommand {
         success!("Pulled latest changes from '{}'", target_branch);
 
         // 5. 删除本地源分支（如果存在且不是当前分支）
-        let (local_exists, _) = git_repo
-            .has_branch(&source_branch)
-            .unwrap_or((false, false));
+        let (local_exists, _) = git_repo.has_branch(&source_branch).unwrap_or((false, false));
 
         if local_exists {
             info!("Cleaning up local branch '{}'...", source_branch);
@@ -110,11 +108,10 @@ impl PullRequestMergeCommand {
                     match e {
                         GitError::BranchNotFullyMerged(_) => {
                             warning!("Branch '{}' is not fully merged", source_branch);
-                            let force_delete =
-                                confirm!("Force delete branch '{}'?", source_branch)
-                                    .default(false)
-                                    .prompt()
-                                    .unwrap_or(false);
+                            let force_delete = confirm!("Force delete branch '{}'?", source_branch)
+                                .default(false)
+                                .prompt()
+                                .unwrap_or(false);
 
                             if force_delete {
                                 match git_repo.delete_branch(&source_branch, true) {
@@ -124,7 +121,8 @@ impl PullRequestMergeCommand {
                                     Err(e) => {
                                         warning!(
                                             "Failed to force delete local branch '{}': {}",
-                                            source_branch, e
+                                            source_branch,
+                                            e
                                         );
                                     }
                                 }
@@ -133,10 +131,7 @@ impl PullRequestMergeCommand {
                             }
                         }
                         _ => {
-                            warning!(
-                                "Failed to delete local branch '{}': {}",
-                                source_branch, e
-                            );
+                            warning!("Failed to delete local branch '{}': {}", source_branch, e);
                         }
                     }
                 }

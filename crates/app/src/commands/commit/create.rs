@@ -21,20 +21,18 @@ impl CommitCreateCommand {
     /// 运行 `workflow commit create` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 打开仓库
-        let ctx = GitContext::discover()
-            .map_err(|e| format!("Failed to open repository: {}", e))?;
+        let ctx =
+            GitContext::discover().map_err(|e| format!("Failed to open repository: {}", e))?;
 
         info!("Repository opened successfully");
 
         // 先获取签名（需要临时获取锁）
-        let signature = ctx.get_signature()
-            .map_err(|e| format!("Failed to get signature: {}", e))?;
+        let signature =
+            ctx.get_signature().map_err(|e| format!("Failed to get signature: {}", e))?;
 
         // 获取 repository 和 index（可以持有锁）
         let repo = ctx.repository();
-        let mut index = repo
-            .index()
-            .map_err(|e| format!("Failed to get index: {}", e))?;
+        let mut index = repo.index().map_err(|e| format!("Failed to get index: {}", e))?;
 
         // 只在 all=true 时添加所有文件到暂存区
         if self.all {
@@ -65,27 +63,18 @@ impl CommitCreateCommand {
                 )
                 .map_err(|e| format!("Failed to add files to index: {}", e))?;
 
-            index
-                .write()
-                .map_err(|e| format!("Failed to write index: {}", e))?;
+            index.write().map_err(|e| format!("Failed to write index: {}", e))?;
 
             info!("Added all files to staging area");
         }
 
         // 创建 tree
-        let tree_id = index
-            .write_tree()
-            .map_err(|e| format!("Failed to create tree: {}", e))?;
+        let tree_id = index.write_tree().map_err(|e| format!("Failed to create tree: {}", e))?;
 
-        let tree = repo
-            .find_tree(tree_id)
-            .map_err(|e| format!("Failed to find tree: {}", e))?;
+        let tree = repo.find_tree(tree_id).map_err(|e| format!("Failed to find tree: {}", e))?;
 
         // 获取 HEAD commit（如果有）
-        let parent_commit = repo
-            .head()
-            .and_then(|head| head.peel_to_commit())
-            .ok();
+        let parent_commit = repo.head().and_then(|head| head.peel_to_commit()).ok();
 
         // 创建提交
         let oid = if let Some(parent) = parent_commit {

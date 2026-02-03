@@ -86,10 +86,8 @@ impl GroupBuilder {
         G: Fn(&FormResult) -> bool + Send + Sync + 'static,
     {
         type ConditionFn = Box<dyn Fn(&FormResult) -> bool + Send + Sync>;
-        let conditions: Vec<ConditionFn> = conditions
-            .into_iter()
-            .map(|c| Box::new(c) as ConditionFn)
-            .collect();
+        let conditions: Vec<ConditionFn> =
+            conditions.into_iter().map(|c| Box::new(c) as ConditionFn).collect();
 
         self.build_step(builder, StepType::ConditionalAll(conditions));
         self
@@ -103,10 +101,8 @@ impl GroupBuilder {
         G: Fn(&FormResult) -> bool + Send + Sync + 'static,
     {
         type ConditionFn = Box<dyn Fn(&FormResult) -> bool + Send + Sync>;
-        let conditions: Vec<ConditionFn> = conditions
-            .into_iter()
-            .map(|c| Box::new(c) as ConditionFn)
-            .collect();
+        let conditions: Vec<ConditionFn> =
+            conditions.into_iter().map(|c| Box::new(c) as ConditionFn).collect();
 
         self.build_step(builder, StepType::ConditionalAny(conditions));
         self

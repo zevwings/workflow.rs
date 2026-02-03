@@ -98,11 +98,11 @@ pub fn get_completion_filename(shell: &str) -> String {
 /// 获取所有 shell 类型的 completion 文件名
 pub fn get_all_completion_filenames() -> Vec<String> {
     vec![
-        "_workflow".to_string(),        // zsh
-        "workflow.bash".to_string(),    // bash
-        "workflow.fish".to_string(),    // fish
-        "_workflow.ps1".to_string(),    // powershell
-        "workflow.elv".to_string(),     // elvish
+        "_workflow".to_string(),     // zsh
+        "workflow.bash".to_string(), // bash
+        "workflow.fish".to_string(), // fish
+        "_workflow.ps1".to_string(), // powershell
+        "workflow.elv".to_string(),  // elvish
     ]
 }
 

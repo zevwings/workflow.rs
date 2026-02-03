@@ -55,8 +55,7 @@ impl LLMRepository for LLMRepositoryImpl {
         exists_branches: Option<Vec<String>>,
         git_diff: Option<String>,
     ) -> Result<PullRequestContent, LLMError> {
-        self.service
-            .create_pr_content(commit_title, exists_branches, git_diff)
+        self.service.create_pr_content(commit_title, exists_branches, git_diff)
     }
 
     fn reword_pr(

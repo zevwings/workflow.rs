@@ -290,11 +290,7 @@ mod tests {
         assert!(config.headers.is_some());
         let config_headers = config.headers.unwrap();
         assert_eq!(
-            config_headers
-                .get("X-Custom-Header")
-                .unwrap()
-                .to_str()
-                .unwrap(),
+            config_headers.get("X-Custom-Header").unwrap().to_str().unwrap(),
             "value"
         );
     }

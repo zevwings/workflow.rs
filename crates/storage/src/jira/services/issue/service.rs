@@ -66,11 +66,7 @@ impl IssueService for IssueServiceImpl {
             key: issue.key,
             summary: issue.fields.summary,
             status: issue.fields.status.name,
-            assignee: issue
-                .fields
-                .assignee
-                .as_ref()
-                .map(|u| u.display_name.clone()),
+            assignee: issue.fields.assignee.as_ref().map(|u| u.display_name.clone()),
             description: issue.fields.description.clone(),
             attachments: attachments
                 .iter()
@@ -156,14 +152,12 @@ impl IssueService for IssueServiceImpl {
             JiraError::ApiError(format!("Failed to serialize transition request: {}", e))
         })?;
         let path = format!("issue/{}/transitions", issue_id);
-        self.jira_client
-            .post(&path, &body_value, None)
-            .map_err(|e| {
-                JiraError::ApiError(format!(
-                    "Failed to transition issue {} to status {}: {}",
-                    issue_id, status, e
-                ))
-            })?;
+        self.jira_client.post(&path, &body_value, None).map_err(|e| {
+            JiraError::ApiError(format!(
+                "Failed to transition issue {} to status {}: {}",
+                issue_id, status, e
+            ))
+        })?;
 
         Ok(())
     }
@@ -176,14 +170,12 @@ impl IssueService for IssueServiceImpl {
             JiraError::ApiError(format!("Failed to serialize comment request: {}", e))
         })?;
         let path = format!("issue/{}/comment", issue_id);
-        self.jira_client
-            .post(&path, &body_value, None)
-            .map_err(|e| {
-                JiraError::ApiError(format!(
-                    "Failed to add comment to issue {}: {}",
-                    issue_id, e
-                ))
-            })?;
+        self.jira_client.post(&path, &body_value, None).map_err(|e| {
+            JiraError::ApiError(format!(
+                "Failed to add comment to issue {}: {}",
+                issue_id, e
+            ))
+        })?;
 
         Ok(())
     }

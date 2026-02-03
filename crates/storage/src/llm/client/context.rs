@@ -21,10 +21,7 @@ impl LLMConfigContextImpl {
 
 impl LLMConfigContext for LLMConfigContextImpl {
     fn get_provider(&self) -> String {
-        self.config
-            .load()
-            .map(|c| c.llm.provider.clone())
-            .unwrap_or_default()
+        self.config.load().map(|c| c.llm.provider.clone()).unwrap_or_default()
     }
 
     fn get_current_provider_url(&self) -> String {

@@ -140,10 +140,7 @@ impl CommitService for CommitServiceImpl {
                     path: path.clone(),
                     status_type: FileStatusType::Renamed,
                     old_path: entry.head_to_index().and_then(|diff| {
-                        diff.old_file()
-                            .path()
-                            .and_then(|p| p.to_str())
-                            .map(String::from)
+                        diff.old_file().path().and_then(|p| p.to_str()).map(String::from)
                     }),
                 });
             } else if status.is_index_typechange() {
@@ -205,41 +202,26 @@ impl CommitService for CommitServiceImpl {
         let repo = self.ctx.repository();
 
         // 获取 HEAD 提交
-        let head = repo
-            .head()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         if !head.is_branch() {
             return Err(GitError::OperationFailed("HEAD 不指向分支".into()));
         }
 
-        let parent_commit = head
-            .peel_to_commit()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let parent_commit =
+            head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 获取新的 tree
-        let mut index = repo
-            .index()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
-        let tree_id = index
-            .write_tree()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
-        let tree = repo
-            .find_tree(tree_id)
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+        let tree_id = index.write_tree().map_err(|e| GitError::IndexError(e.to_string()))?;
+        let tree = repo.find_tree(tree_id).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 确定新消息
         let new_message = if no_edit {
-            parent_commit
-                .message()
-                .unwrap_or("(no message)")
-                .to_string()
+            parent_commit.message().unwrap_or("(no message)").to_string()
         } else if let Some(msg) = message {
             msg.to_string()
         } else {
-            parent_commit
-                .message()
-                .unwrap_or("(no message)")
-                .to_string()
+            parent_commit.message().unwrap_or("(no message)").to_string()
         };
 
         if new_message.trim().is_empty() {
@@ -274,9 +256,7 @@ impl CommitService for CommitServiceImpl {
 
         let repo = self.ctx.repository();
 
-        let mut index = repo
-            .index()
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
 
         // 添加更改到暂存区
         if all {
@@ -299,22 +279,18 @@ impl CommitService for CommitServiceImpl {
             .map_err(|e| GitError::IndexError(format!("Failed to write index to disk: {}", e)))?;
 
         // 检查是否有更改需要提交
-        let tree_id = index
-            .write_tree()
-            .map_err(|e| GitError::IndexError(format!("Failed to create tree from index: {}", e)))?;
-        let tree = repo
-            .find_tree(tree_id)
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let tree_id = index.write_tree().map_err(|e| {
+            GitError::IndexError(format!("Failed to create tree from index: {}", e))
+        })?;
+        let tree = repo.find_tree(tree_id).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 检查是否有实际更改（比较 tree 和 HEAD）
-        let parent_commit = repo
-            .head()
-            .and_then(|head| head.peel_to_commit())
-            .ok();
+        let parent_commit = repo.head().and_then(|head| head.peel_to_commit()).ok();
 
         // 如果有父提交，检查 tree 是否与父提交的 tree 相同
         if let Some(ref parent) = parent_commit {
-            let parent_tree = parent.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            let parent_tree =
+                parent.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
             if tree_id == parent_tree.id() {
                 return Err(GitError::OperationFailed("没有更改需要提交".into()));
             }
@@ -333,15 +309,8 @@ impl CommitService for CommitServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?
         } else {
             // 首次提交，没有父提交
-            repo.commit(
-                Some("HEAD"),
-                &signature,
-                &signature,
-                message,
-                &tree,
-                &[],
-            )
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?
+            repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[])
+                .map_err(|e| GitError::OperationFailed(e.to_string()))?
         };
 
         Ok(oid.to_string())

@@ -62,7 +62,9 @@ fn bench_commit_create_without_all(c: &mut Criterion) {
                         {
                             let repo = ctx.repository();
                             let mut index = repo.index().unwrap();
-                            index.add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None).unwrap();
+                            index
+                                .add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None)
+                                .unwrap();
                             index.write().unwrap();
                         }
                         (tmp, ctx)
@@ -205,9 +207,7 @@ fn bench_blame_get_file_blame(c: &mut Criterion) {
             &line_count,
             |b, _| {
                 b.iter(|| {
-                    service
-                        .get_file_blame(black_box("large_file.txt"), None)
-                        .unwrap();
+                    service.get_file_blame(black_box("large_file.txt"), None).unwrap();
                 });
             },
         );
@@ -229,9 +229,7 @@ fn bench_blame_get_file_content(c: &mut Criterion) {
             &line_count,
             |b, _| {
                 b.iter(|| {
-                    service
-                        .get_file_content(black_box("large_file.txt"), None)
-                        .unwrap();
+                    service.get_file_content(black_box("large_file.txt"), None).unwrap();
                 });
             },
         );

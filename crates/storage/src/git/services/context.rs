@@ -127,11 +127,7 @@ impl GitContext {
 
     /// 检查是否为 bare 仓库
     pub fn is_bare(&self) -> bool {
-        self.inner
-            .repo
-            .lock()
-            .expect("Failed to lock repository")
-            .is_bare()
+        self.inner.repo.lock().expect("Failed to lock repository").is_bare()
     }
 
     /// 获取仓库信息
@@ -147,16 +143,10 @@ impl GitContext {
         let kind = origin_url.as_ref().map(|url| Self::parse_repo_kind(url));
 
         // 获取 Git 目录
-        let directory = repo
-            .path()
-            .canonicalize()
-            .ok()
-            .and_then(|p| p.to_str().map(String::from));
+        let directory = repo.path().canonicalize().ok().and_then(|p| p.to_str().map(String::from));
 
         // 提取仓库名称
-        let name = origin_url
-            .as_ref()
-            .and_then(|url| Self::extract_repo_name(url));
+        let name = origin_url.as_ref().and_then(|url| Self::extract_repo_name(url));
 
         // 提取 owner
         let owner = name.as_ref().and_then(|n| {
@@ -227,7 +217,10 @@ impl GitContext {
         let mut callbacks = git2::RemoteCallbacks::new();
         // libgit2 使用 libssh2，不读 OpenSSH 的 known_hosts，必须显式接受主机密钥
         callbacks.certificate_check(|_cert, host| {
-            toolkit::log_info!("create_callbacks: certificate_check invoked, host = {}", host);
+            toolkit::log_info!(
+                "create_callbacks: certificate_check invoked, host = {}",
+                host
+            );
             Ok(CertificateCheckStatus::CertificateOk)
         });
 
@@ -309,21 +302,15 @@ impl GitContext {
         let obj = repo
             .revparse_single(reference)
             .map_err(|_| GitError::InvalidReference(format!("无法解析引用: {}", reference)))?;
-        let commit = obj
-            .peel_to_commit()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let commit = obj.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(commit.id())
     }
 
     /// 获取 HEAD 指向的 commit
     pub fn head_commit(&self) -> Result<git2::Oid, GitError> {
         let repo = self.inner.repo.lock().expect("Failed to lock repository");
-        let head = repo
-            .head()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-        let commit = head
-            .peel_to_commit()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let commit = head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(commit.id())
     }
 
@@ -376,17 +363,17 @@ impl GitContext {
         // 添加一些常见的大型目录（如果 .gitignore 中没有）
         // 这些目录通常会导致性能问题
         let common_large_dirs = [
-            "target",      // Rust
+            "target",       // Rust
             "node_modules", // Node.js
-            "dist",        // Build output
-            "build",       // Build output
-            ".next",       // Next.js
-            ".nuxt",       // Nuxt.js
-            "coverage",    // Test coverage
-            ".cache",      // Cache
-            "tmp",         // Temporary files
-            "vendor",      // Go/PHP dependencies
-            ".git",        // Git internal
+            "dist",         // Build output
+            "build",        // Build output
+            ".next",        // Next.js
+            ".nuxt",        // Nuxt.js
+            "coverage",     // Test coverage
+            ".cache",       // Cache
+            "tmp",          // Temporary files
+            "vendor",       // Go/PHP dependencies
+            ".git",         // Git internal
         ];
 
         for dir in &common_large_dirs {

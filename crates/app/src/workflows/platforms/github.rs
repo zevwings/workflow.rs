@@ -321,9 +321,7 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     }
 
     if context.mode() == WorkflowMode::Command {
-        context
-            .save()
-            .map_err(|e| format!("Failed to save config: {}", e))?;
+        context.save().map_err(|e| format!("Failed to save config: {}", e))?;
 
         br!();
         success!("GitHub account '{}' updated successfully.", updated_name);

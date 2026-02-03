@@ -27,9 +27,7 @@ impl CompletionRemoveCommand {
 
         // 调用 Service 移除配置
         let service = get_completion_service();
-        let result = service
-            .remove(self.remove_all)
-            .wrap_err("移除 completion 配置失败")?;
+        let result = service.remove(self.remove_all).wrap_err("移除 completion 配置失败")?;
 
         // 显示移除的配置
         for shell in &result.removed_configs {

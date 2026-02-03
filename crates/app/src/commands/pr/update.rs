@@ -45,10 +45,7 @@ impl PullRequestUpdateCommand {
         info!("Found PR #{}: {}", pr_status.id, pr_status.title);
 
         // 2. 确定 commit message
-        let commit_message = self
-            .message
-            .clone()
-            .unwrap_or_else(|| pr_status.title.clone());
+        let commit_message = self.message.clone().unwrap_or_else(|| pr_status.title.clone());
 
         // 3. 检查是否有更改需要提交
         let status = git_repo
@@ -92,7 +89,10 @@ impl PullRequestUpdateCommand {
                 format!("Failed to commit changes: {}", e)
             })?;
 
-        success!("Committed changes: {}", &commit_sha[..7.min(commit_sha.len())]);
+        success!(
+            "Committed changes: {}",
+            &commit_sha[..7.min(commit_sha.len())]
+        );
 
         Ok(())
     }

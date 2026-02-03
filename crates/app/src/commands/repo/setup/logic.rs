@@ -60,9 +60,7 @@ pub fn ensure() -> Result<()> {
         info!("Running repository setup...");
         br!();
 
-        RepoSetupCommand::new()
-            .run()
-            .wrap_err("Failed to run repository setup")?;
+        RepoSetupCommand::new().run().wrap_err("Failed to run repository setup")?;
 
         br!();
         success!("Repository configuration completed!");
@@ -163,10 +161,7 @@ impl RepoSetupCommand {
                 Some(c.branch.prefix.clone())
             }
         });
-        let current_use_scope = existing_project
-            .as_ref()
-            .map(|c| c.use_scope)
-            .unwrap_or(false);
+        let current_use_scope = existing_project.as_ref().map(|c| c.use_scope).unwrap_or(false);
 
         // 检查模板配置是否存在
         let has_commit_template = existing_project
@@ -378,10 +373,7 @@ impl RepoSetupCommand {
         let user_config = UserConfig {
             branch: BranchConfig {
                 prefix: branch_prefix.unwrap_or_default(),
-                ignore: existing_user
-                    .as_ref()
-                    .map(|c| c.branch.ignore.clone())
-                    .unwrap_or_default(),
+                ignore: existing_user.as_ref().map(|c| c.branch.ignore.clone()).unwrap_or_default(),
             },
         };
 
@@ -392,10 +384,8 @@ impl RepoSetupCommand {
 
         // 构建模板配置
         // 从现有配置开始，如果不存在则创建空的（不包含默认值）
-        let mut template = existing_project
-            .as_ref()
-            .map(|c| c.template.clone())
-            .unwrap_or_else(|| {
+        let mut template =
+            existing_project.as_ref().map(|c| c.template.clone()).unwrap_or_else(|| {
                 // 创建空的模板配置，不包含默认值
                 TemplateConfig {
                     engine: "handlebars".to_string(),

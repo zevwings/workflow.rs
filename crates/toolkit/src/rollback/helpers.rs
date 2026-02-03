@@ -8,7 +8,9 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum CompletionHelperError {
     /// 不支持的 Shell 类型
-    #[error("Unsupported shell type: {0}. Supported shell types: zsh, bash, fish, powershell, elvish")]
+    #[error(
+        "Unsupported shell type: {0}. Supported shell types: zsh, bash, fish, powershell, elvish"
+    )]
     UnsupportedShell(String),
 }
 
@@ -42,7 +44,9 @@ pub fn get_completion_filename(
         "fish" => Ok(format!("{}.fish", command)),
         "powershell" => Ok(format!("_{}.ps1", command)),
         "elvish" => Ok(format!("{}.elv", command)),
-        _ => Err(CompletionHelperError::UnsupportedShell(shell_type.to_string())),
+        _ => Err(CompletionHelperError::UnsupportedShell(
+            shell_type.to_string(),
+        )),
     }
 }
 
@@ -69,10 +73,7 @@ pub fn get_completion_files_for_shell(
     shell_type: &str,
     commands: &[&str],
 ) -> Result<Vec<String>, CompletionHelperError> {
-    commands
-        .iter()
-        .map(|cmd| get_completion_filename(shell_type, cmd))
-        .collect()
+    commands.iter().map(|cmd| get_completion_filename(shell_type, cmd)).collect()
 }
 
 /// 获取所有 shell 类型的所有补全脚本文件名
@@ -117,7 +118,10 @@ mod tests {
 
     #[test]
     fn test_get_completion_filename() {
-        assert_eq!(get_completion_filename("zsh", "workflow").unwrap(), "_workflow");
+        assert_eq!(
+            get_completion_filename("zsh", "workflow").unwrap(),
+            "_workflow"
+        );
         assert_eq!(
             get_completion_filename("bash", "workflow").unwrap(),
             "workflow.bash"

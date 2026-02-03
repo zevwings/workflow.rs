@@ -34,10 +34,7 @@ pub(crate) fn format_progress_text(params: &ProgressFormatParams<'_>) -> String 
         // 如果字符不足，使用默认字符
         return format!(
             "{} {}",
-            params
-                .theme
-                .progress
-                .apply(params.message, params.theme.enable_color),
+            params.theme.progress.apply(params.message, params.theme.enable_color),
             params.current
         );
     }
@@ -73,10 +70,7 @@ pub(crate) fn format_progress_text(params: &ProgressFormatParams<'_>) -> String 
             empty_char.to_string().repeat(empty_width)
         );
 
-        let bar_styled = params
-            .theme
-            .progress
-            .apply(&bar_str, params.theme.enable_color);
+        let bar_styled = params.theme.progress.apply(&bar_str, params.theme.enable_color);
         parts.push(bar_styled);
 
         // 根据模式显示不同的统计信息
@@ -118,35 +112,24 @@ pub(crate) fn format_progress_text(params: &ProgressFormatParams<'_>) -> String 
                     bytes_str, total_bytes_str, percent, speed_str, eta_str
                 )
             };
-            let stats_styled = params
-                .theme
-                .progress
-                .apply(&stats_str, params.theme.enable_color);
+            let stats_styled = params.theme.progress.apply(&stats_str, params.theme.enable_color);
             parts.push(stats_styled);
         } else {
             // 普通模式：显示数量
             let stats_str = format!("{}/{} ({:.0}%)", params.current, total_val, percent);
-            let stats_styled = params
-                .theme
-                .progress
-                .apply(&stats_str, params.theme.enable_color);
+            let stats_styled = params.theme.progress.apply(&stats_str, params.theme.enable_color);
             parts.push(stats_styled);
         }
     } else {
         // 未知总数：显示 spinner 和当前值
         // 使用 spinner 字符序列
         let spinner_frames = vec!["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-        let elapsed = params
-            .start_time
-            .map(|s| s.elapsed())
-            .unwrap_or_else(|| Duration::from_secs(0));
+        let elapsed =
+            params.start_time.map(|s| s.elapsed()).unwrap_or_else(|| Duration::from_secs(0));
         let frame_idx = (elapsed.as_millis() / 100) as usize % spinner_frames.len();
         let spinner_char = spinner_frames[frame_idx];
 
-        let spinner_styled = params
-            .theme
-            .progress
-            .apply(spinner_char, params.theme.enable_color);
+        let spinner_styled = params.theme.progress.apply(spinner_char, params.theme.enable_color);
         parts.push(spinner_styled);
 
         // 显示当前值
@@ -156,29 +139,21 @@ pub(crate) fn format_progress_text(params: &ProgressFormatParams<'_>) -> String 
             } else {
                 format!("{}", params.current)
             };
-            let current_styled = params
-                .theme
-                .progress
-                .apply(&current_str, params.theme.enable_color);
+            let current_styled =
+                params.theme.progress.apply(&current_str, params.theme.enable_color);
             parts.push(current_styled);
         }
     }
 
     // 时间信息
     if !time_info.is_empty() {
-        let time_styled = params
-            .theme
-            .progress
-            .apply(&time_info, params.theme.enable_color);
+        let time_styled = params.theme.progress.apply(&time_info, params.theme.enable_color);
         parts.push(time_styled);
     }
 
     // 消息
     if !params.message.is_empty() {
-        let msg_styled = params
-            .theme
-            .progress
-            .apply(params.message, params.theme.enable_color);
+        let msg_styled = params.theme.progress.apply(params.message, params.theme.enable_color);
         parts.push(msg_styled);
     }
 

@@ -15,9 +15,8 @@ impl StashListCommand {
     pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         let repo = registry::get_git_repository();
 
-        let entries = repo
-            .stash_list()
-            .map_err(|e| format!("Failed to list stash entries: {}", e))?;
+        let entries =
+            repo.stash_list().map_err(|e| format!("Failed to list stash entries: {}", e))?;
 
         if entries.is_empty() {
             info!("No stash entries found");

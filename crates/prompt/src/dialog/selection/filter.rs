@@ -79,9 +79,7 @@ impl FuzzyFilter {
             .enumerate()
             .filter_map(|(idx, option)| {
                 let option_str = option.to_string();
-                self.matcher
-                    .fuzzy_match(&option_str, query)
-                    .map(|score| (idx, score, option))
+                self.matcher.fuzzy_match(&option_str, query).map(|score| (idx, score, option))
             })
             .collect();
 
@@ -89,10 +87,7 @@ impl FuzzyFilter {
         scored_options.sort_by(|a, b| b.1.cmp(&a.1));
 
         let indices: Vec<usize> = scored_options.iter().map(|(idx, _, _)| *idx).collect();
-        let filtered: Vec<&T> = scored_options
-            .iter()
-            .map(|(_, _, option)| *option)
-            .collect();
+        let filtered: Vec<&T> = scored_options.iter().map(|(_, _, option)| *option).collect();
 
         (indices, filtered)
     }

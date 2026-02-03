@@ -47,10 +47,7 @@ pub(crate) fn try_icloud_base_dir() -> Option<PathBuf> {
 
     // 构建 iCloud Drive 基础路径
     // ~/Library/Mobile Documents/com~apple~CloudDocs
-    let icloud_base = home
-        .join("Library")
-        .join("Mobile Documents")
-        .join("com~apple~CloudDocs");
+    let icloud_base = home.join("Library").join("Mobile Documents").join("com~apple~CloudDocs");
 
     // 检查 iCloud Drive 是否可用
     if !icloud_base.exists() || !icloud_base.is_dir() {

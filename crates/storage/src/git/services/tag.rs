@@ -98,10 +98,7 @@ impl TagService for TagServiceImpl {
 
         // 连接到远程
         let callbacks = GitContext::create_callbacks();
-        if remote
-            .connect_auth(git2::Direction::Fetch, Some(callbacks), None)
-            .is_err()
-        {
+        if remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None).is_err() {
             return Ok(Vec::new());
         }
 
@@ -142,9 +139,7 @@ impl TagService for TagServiceImpl {
             .find_reference(&tag_ref)
             .map_err(|_| GitError::OperationFailed(format!("Tag '{}' 不存在", name)))?;
 
-        reference
-            .delete()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        reference.delete().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(())
     }
@@ -224,9 +219,7 @@ impl TagService for TagServiceImpl {
             })?;
             obj.id()
         } else {
-            let head = repo
-                .head()
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
             head.peel_to_commit()
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?
                 .id()
@@ -328,11 +321,8 @@ impl TagService for TagServiceImpl {
         }
 
         // 过滤匹配的 tag
-        let matched: Vec<String> = all_tags
-            .iter()
-            .filter(|tag| glob_pattern.matches(tag))
-            .cloned()
-            .collect();
+        let matched: Vec<String> =
+            all_tags.iter().filter(|tag| glob_pattern.matches(tag)).cloned().collect();
 
         let mut results = Vec::new();
         for tag_name in matched {
@@ -348,9 +338,8 @@ impl TagService for TagServiceImpl {
         let mut tags = Vec::new();
 
         // 获取本地 tags
-        let tag_names = repo
-            .tag_names(None)
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let tag_names =
+            repo.tag_names(None).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         for i in 0..tag_names.len() {
             if let Some(name) = tag_names.get(i) {
@@ -400,11 +389,7 @@ impl TagService for TagServiceImpl {
                 }
             }
 
-            all_tags
-                .iter()
-                .filter(|tag| glob_pattern.matches(tag))
-                .cloned()
-                .collect()
+            all_tags.iter().filter(|tag| glob_pattern.matches(tag)).cloned().collect()
         } else {
             return Err(GitError::OperationFailed("必须提供 name 或 pattern".into()));
         };
@@ -444,9 +429,8 @@ mod tests {
         let (_tmp, ctx) = setup_repo_with_file();
         let service = TagServiceImpl::new(ctx);
 
-        let result = service
-            .create_tag("v1.0.0", None, None, TagCreateScope::Local, false)
-            .unwrap();
+        let result =
+            service.create_tag("v1.0.0", None, None, TagCreateScope::Local, false).unwrap();
 
         assert!(result.created_local);
         assert!(!result.created_remote);

@@ -52,11 +52,7 @@ impl HttpResponse {
         );
         let _guard = span.enter();
 
-        let status_text = response
-            .status()
-            .canonical_reason()
-            .unwrap_or("Unknown")
-            .to_string();
+        let status_text = response.status().canonical_reason().unwrap_or("Unknown").to_string();
         let headers = response.headers().clone();
 
         let body_bytes = response.bytes().map_err(|e| {
@@ -219,9 +215,8 @@ impl HttpResponse {
     /// ```
     pub fn ensure_success(self) -> Result<Self, HttpError> {
         if !self.is_success() {
-            let body = self
-                .as_text()
-                .unwrap_or_else(|_| "Unable to read response body".to_string());
+            let body =
+                self.as_text().unwrap_or_else(|_| "Unable to read response body".to_string());
             return Err(HttpError::ResponseFailed {
                 status: self.status,
                 body,
@@ -564,9 +559,7 @@ mod tests {
             .with_body(r#"{"key": "value", "number": 42}"#)
             .create();
 
-        let response = mock_server
-            .create_http_response("GET", "/test", 1024)
-            .unwrap();
+        let response = mock_server.create_http_response("GET", "/test", 1024).unwrap();
 
         assert!(response.is_success());
         assert_eq!(response.status, 200);
@@ -586,9 +579,7 @@ mod tests {
             .with_body("Not Found")
             .create();
 
-        let response = mock_server
-            .create_http_response("GET", "/not-found", 1024)
-            .unwrap();
+        let response = mock_server.create_http_response("GET", "/not-found", 1024).unwrap();
 
         assert!(!response.is_success());
         assert_eq!(response.status, 404);
@@ -609,9 +600,7 @@ mod tests {
             .create();
 
         // 测试正常大小限制
-        let response = mock_server
-            .create_http_response("GET", "/large", 1024)
-            .unwrap();
+        let response = mock_server.create_http_response("GET", "/large", 1024).unwrap();
         assert!(response.is_success());
         assert_eq!(response.as_bytes().len(), 500);
 
@@ -625,15 +614,9 @@ mod tests {
     #[test]
     fn test_from_reqwest_response_empty_body() {
         let mut mock_server = HttpMockServer::new();
-        let _mock = mock_server
-            .mock("GET", "/empty")
-            .with_status(204)
-            .with_body("")
-            .create();
+        let _mock = mock_server.mock("GET", "/empty").with_status(204).with_body("").create();
 
-        let response = mock_server
-            .create_http_response("GET", "/empty", 1024)
-            .unwrap();
+        let response = mock_server.create_http_response("GET", "/empty", 1024).unwrap();
 
         assert!(response.is_success());
         assert_eq!(response.status, 204);

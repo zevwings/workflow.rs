@@ -317,7 +317,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             PrSubcommand::Comment { pr_id, comment } => {
-                let cmd = commands::pr::PullRequestCommentCommand::new(pr_id.clone(), comment.clone());
+                let cmd =
+                    commands::pr::PullRequestCommentCommand::new(pr_id.clone(), comment.clone());
                 cmd.run()?;
             }
             PrSubcommand::Update { pr_id, message } => {
@@ -326,7 +327,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             PrSubcommand::Merge { pr_id, force } => {
-                let cmd = commands::pr::PullRequestMergeCommand::new(pr_id.clone(), force.is_force());
+                let cmd =
+                    commands::pr::PullRequestMergeCommand::new(pr_id.clone(), force.is_force());
                 cmd.run()?;
             }
             PrSubcommand::Close { pr_id } => {
@@ -344,8 +346,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         Command::Completion(completion_cmd) => match completion_cmd {
             CompletionCommand::Generate { shell, output } => {
-                let cmd =
-                    commands::completion::CompletionGenerateCommand::new(shell.clone(), output.clone());
+                let cmd = commands::completion::CompletionGenerateCommand::new(
+                    shell.clone(),
+                    output.clone(),
+                );
                 cmd.run()?;
             }
             CompletionCommand::Check => {

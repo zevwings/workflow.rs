@@ -70,12 +70,7 @@ impl CheckCommand {
 
     /// 获取所有需要验证的 stage 列表
     fn get_all_stages(&self) -> Vec<&dyn crate::workflows::core::stage::WorkflowStage> {
-        vec![
-            jira_stage(),
-            github_stage(),
-            llm_stage(),
-            log_stage(),
-        ]
+        vec![jira_stage(), github_stage(), llm_stage(), log_stage()]
     }
 
     /// 逐个验证并展示结果

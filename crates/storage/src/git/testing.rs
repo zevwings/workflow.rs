@@ -80,8 +80,7 @@ pub fn setup_repo_with_config(config: TestRepoConfig) -> (TempDir, GitContext) {
         let sig = git2::Signature::now("Test", "test@example.com").unwrap();
         let tree_id = repo.index().unwrap().write_tree().unwrap();
         let tree = repo.find_tree(tree_id).unwrap();
-        repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[])
-            .unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[]).unwrap();
     }
 
     (tmp, ctx)
@@ -233,9 +232,7 @@ pub fn setup_repo_with_commits(commit_count: usize) -> (TempDir, GitContext) {
                 vec![]
             };
 
-            let oid = repo
-                .commit(Some("HEAD"), &sig, &sig, &message, &tree, &parents)
-                .unwrap();
+            let oid = repo.commit(Some("HEAD"), &sig, &sig, &message, &tree, &parents).unwrap();
 
             parent_commit = Some(repo.find_commit(oid).unwrap());
         }

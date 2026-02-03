@@ -65,10 +65,8 @@ impl AliasRemoveCommand {
         let names: Vec<String> = aliases.iter().map(|a| a.name.clone()).collect();
 
         // 构建显示选项（名称 -> 命令）
-        let display_options: Vec<String> = aliases
-            .iter()
-            .map(|a| format!("{} -> {}", a.name, a.command))
-            .collect();
+        let display_options: Vec<String> =
+            aliases.iter().map(|a| format!("{} -> {}", a.name, a.command)).collect();
 
         // 显示选择器，使用索引方式
         let selected_display = SelectBuilder::new("请选择要移除的别名", display_options)

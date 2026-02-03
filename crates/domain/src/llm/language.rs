@@ -153,9 +153,7 @@ impl SupportedLanguage {
         }
 
         // 精确匹配
-        Self::get()
-            .iter()
-            .find(|lang| lang.code.to_lowercase() == code_lower)
+        Self::get().iter().find(|lang| lang.code.to_lowercase() == code_lower)
     }
 
     /// 获取语言的 instruction
@@ -214,9 +212,8 @@ impl SupportedLanguage {
     /// ```
     pub fn get_requirement(system_prompt: &str, language_code: &str) -> String {
         let language_instruction = Self::get_instruction(language_code);
-        let language_info = Self::find(language_code)
-            .map(|lang| lang.native_name)
-            .unwrap_or("English");
+        let language_info =
+            Self::find(language_code).map(|lang| lang.native_name).unwrap_or("English");
 
         format!(
             r#"## CRITICAL LANGUAGE REQUIREMENT

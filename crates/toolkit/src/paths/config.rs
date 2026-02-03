@@ -116,9 +116,7 @@ pub fn repo_root() -> Result<PathBuf, PathError> {
 ///
 /// 如果无法获取当前工作目录，返回相应的错误信息。
 pub fn project_config() -> Result<PathBuf, PathError> {
-    Ok(repo_root()?
-        .join(super::constants::WORKFLOW_DIR)
-        .join("config.toml"))
+    Ok(repo_root()?.join(super::constants::WORKFLOW_DIR).join("config.toml"))
 }
 
 /// 获取个人偏好配置文件路径

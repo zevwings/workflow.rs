@@ -28,10 +28,8 @@ impl LlmStage {
         let (language_prompt, default_language_index) =
             build_language_prompt(&llm.language, language_codes.as_slice());
 
-        let provider_options: Vec<String> = LlmProvider::options()
-            .iter()
-            .map(|option| option.to_string())
-            .collect();
+        let provider_options: Vec<String> =
+            LlmProvider::options().iter().map(|option| option.to_string()).collect();
         let default_provider = LlmProvider::from_str(&llm.provider).unwrap_or_default();
         let provider_prompt = if has_llm {
             format!(
@@ -243,10 +241,7 @@ impl LlmProvider {
     }
 
     fn from_str(value: &str) -> Option<Self> {
-        Self::VARIANTS
-            .iter()
-            .find(|(_, s)| *s == value)
-            .map(|(variant, _)| *variant)
+        Self::VARIANTS.iter().find(|(_, s)| *s == value).map(|(variant, _)| *variant)
     }
 }
 
@@ -377,10 +372,8 @@ fn build_language_prompt(
     current_language: &str,
     language_codes: &[&'static str],
 ) -> (String, usize) {
-    let default_language_index = language_codes
-        .iter()
-        .position(|code| code == &current_language)
-        .unwrap_or(0);
+    let default_language_index =
+        language_codes.iter().position(|code| code == &current_language).unwrap_or(0);
 
     let prompt = if current_language.is_empty() {
         "Please select your output language".to_string()
@@ -401,13 +394,10 @@ fn extract_language(
 ) -> String {
     let selected = result.get_int("language");
     let index = selected;
-    language_codes
-        .get(index)
-        .map(|code| code.to_string())
-        .unwrap_or_else(|| {
-            language_codes
-                .get(default_index)
-                .map(|code| code.to_string())
-                .unwrap_or_else(LLMSettings::default_language)
-        })
+    language_codes.get(index).map(|code| code.to_string()).unwrap_or_else(|| {
+        language_codes
+            .get(default_index)
+            .map(|code| code.to_string())
+            .unwrap_or_else(LLMSettings::default_language)
+    })
 }

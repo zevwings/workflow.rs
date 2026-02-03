@@ -103,12 +103,8 @@ where
         let filter = FuzzyFilter::new();
 
         // 验证并清理默认选中项（使用原始索引）
-        let mut selected: HashSet<usize> = self
-            .default
-            .iter()
-            .copied()
-            .filter(|&idx| idx < self.options.len())
-            .collect();
+        let mut selected: HashSet<usize> =
+            self.default.iter().copied().filter(|&idx| idx < self.options.len()).collect();
 
         // 搜索查询
         let mut search_query = String::new();
@@ -136,9 +132,7 @@ where
                 // 如果格式不对，保持原样
                 current_part.to_string()
             };
-            let styled_message = theme
-                .title
-                .apply(base_message.trim_end(), theme.enable_color);
+            let styled_message = theme.title.apply(base_message.trim_end(), theme.enable_color);
             let styled_default = theme.hint.apply(&default_value, theme.enable_color);
             format!("{} {}", styled_message, styled_default)
         } else {
@@ -166,10 +160,7 @@ where
         let mut current_index = if !filtered_options.is_empty() {
             if !selected.is_empty() {
                 // 尝试找到第一个已选中项在过滤后列表中的位置
-                filtered_indices
-                    .iter()
-                    .position(|&idx| selected.contains(&idx))
-                    .unwrap_or(0)
+                filtered_indices.iter().position(|&idx| selected.contains(&idx)).unwrap_or(0)
             } else {
                 0
             }
