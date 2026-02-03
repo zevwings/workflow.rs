@@ -60,7 +60,9 @@ pub use branch::{
 };
 pub use commit::{AmendPreview, CommitAmend, CommitReword, CommitService, CommitSquash};
 pub use completion::{
-    Completion, CompletionConfigResult, CompletionRemovalResult, CompletionService,
+    get_all_completion_filenames, get_completion_filename, get_shell_source_path,
+    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
+    ShellCompletionStatus, COMPLETIONS_FILE, COMPLETIONS_SOURCE_PATH,
 };
 pub use pr::{
     get_all_change_types, get_change_type_by_index, get_change_type_by_name, ChangeType, PrContent,

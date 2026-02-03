@@ -13,6 +13,8 @@
 pub mod http;
 pub mod logger;
 pub mod paths;
+pub mod rollback;
+pub mod shell;
 pub mod template;
 pub mod util;
 
@@ -44,8 +46,21 @@ pub use paths::{PathError, Paths};
 // Template 模块
 pub use template::{TemplateEngine, TemplateEngineType, TemplateError};
 
+// Shell 模块
+pub use shell::{
+    config_file_path, detect_shell, reload_hint, shell_from_string, shell_to_string,
+    supported_shells, ShellConfigManager, ShellError,
+};
+
 // Util 模块 - 导出所有工具类型和函数
 pub use util::{
-    Browser, BrowserError, BrowserExt, ClipboardError, ClipboardExt, DirectoryWalker, FileReader,
-    FileWriter, PathExt, Platform, PlatformError, Sensitive, SizeExt, Truncate,
+    Archive, Browser, BrowserError, BrowserExt, Checksum, ChecksumError, ChecksumVerifyResult,
+    ClipboardError, ClipboardExt, DirectoryWalker, FileReader, FileWriter, FsError, PathExt,
+    Platform, PlatformError, Sensitive, SizeExt, Truncate,
+};
+
+// Rollback 模块 - 导出回滚相关类型和函数
+pub use rollback::{
+    get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
+    BackupInfo, BackupResult, Reload, ReloadResult, RollbackManager, RollbackResult,
 };

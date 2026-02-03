@@ -6,8 +6,9 @@ use clap::Parser;
 use toolkit::{logger, LoggerConfig, Paths};
 
 use app::cli::{
-    AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, GithubCommand, IgnoreSubcommand,
-    JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand, StashSubcommand, TagSubcommand,
+    AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, CompletionCommand, GithubCommand,
+    IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
+    StashSubcommand, TagSubcommand,
 };
 use app::commands;
 use app::registry;
@@ -30,6 +31,7 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Pr(_) => Some("pr"),
         Command::Push => Some("push"),
         Command::Pull => Some("pull"),
+        Command::Completion(_) => Some("completion"),
     }
 }
 
@@ -336,6 +338,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             PrSubcommand::Summarize { pr_id } => {
                 let cmd = commands::pr::PullRequestSummarizeCommand::new(pr_id.clone());
+                cmd.run()?;
+            }
+        },
+        Command::Completion(completion_cmd) => match completion_cmd {
+            CompletionCommand::Generate { shell, output } => {
+                let cmd =
+                    commands::completion::CompletionGenerateCommand::new(shell.clone(), output.clone());
+                cmd.run()?;
+            }
+            CompletionCommand::Check => {
+                let cmd = commands::completion::CompletionCheckCommand::new();
+                cmd.run()?;
+            }
+            CompletionCommand::Remove { all } => {
+                let cmd = commands::completion::CompletionRemoveCommand::new(all);
                 cmd.run()?;
             }
         },

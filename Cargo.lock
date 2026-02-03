@@ -107,6 +107,7 @@ name = "app"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "clap_complete",
  "color-eyre",
  "domain",
  "git2",
@@ -1713,6 +1714,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ntapi"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c70f219e21142367c70c0b30c6a9e3a14d55b4d12a204d897fbec83a0363f081"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2876,6 +2886,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "sysinfo"
+version = "0.29.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd727fc423c2060f6c92d9534cef765c65a6ed3f428a03d7def74a8c4348e666"
+dependencies = [
+ "cfg-if",
+ "core-foundation-sys",
+ "libc",
+ "ntapi",
+ "once_cell",
+ "rayon",
+ "winapi",
+]
+
+[[package]]
 name = "system-configuration"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3109,6 +3134,7 @@ dependencies = [
  "clap_complete",
  "clipboard",
  "dirs 5.0.1",
+ "duct",
  "flate2",
  "handlebars",
  "mockito",
@@ -3130,6 +3156,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "walkdir",
+ "whattheshell",
  "zip",
 ]
 
@@ -3421,6 +3448,16 @@ name = "webpki-roots"
 version = "0.25.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
+
+[[package]]
+name = "whattheshell"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c94d2698698cb1322e20292460fd158373af5fb2802afb6bea9ee17628efddb"
+dependencies = [
+ "sysinfo",
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "winapi"
