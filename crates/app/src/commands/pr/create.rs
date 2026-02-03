@@ -979,18 +979,24 @@ impl PullRequestCreateCommand {
 ///
 /// 支持以下格式：
 /// - https://github.com/owner/repo.git
+/// - https://github.com/owner/repo
 /// - git@github.com:owner/repo.git
+/// - git@github.com:owner/repo
 fn extract_pr_url(remote_url: &str, pr_id: &str) -> Option<String> {
     // 处理 https:// 格式
     if let Some(stripped) = remote_url.strip_prefix("https://github.com/") {
-        if let Some(repo) = stripped.strip_suffix(".git") {
+        // 移除可能的 .git 后缀
+        let repo = stripped.strip_suffix(".git").unwrap_or(stripped);
+        if !repo.is_empty() {
             return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
         }
     }
 
     // 处理 git@ 格式
     if let Some(stripped) = remote_url.strip_prefix("git@github.com:") {
-        if let Some(repo) = stripped.strip_suffix(".git") {
+        // 移除可能的 .git 后缀
+        let repo = stripped.strip_suffix(".git").unwrap_or(stripped);
+        if !repo.is_empty() {
             return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
         }
     }
