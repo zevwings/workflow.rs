@@ -373,10 +373,74 @@ impl PullRequestCreateCommand {
             }
         } else if selected.starts_with("基于当前分支创建新分支") {
             // 1.2 基于当前分支创建新分支
-            // 目标分支就是当前分支
+            // 推断当前分支的源分支，让用户选择目标分支
+            let target_branch = if current_branch != default_branch {
+                // 当前分支不是默认分支，推断其源分支
+                let inferred_source = branch_repo
+                    .infer_target_branch(current_branch)
+                    .map_err(|e| format!("Failed to infer source branch: {}", e))?;
+
+                // 根据推断结果，让用户选择目标分支
+                if let Some(source) = inferred_source {
+                    // 成功推断出源分支
+                    if source == default_branch {
+                        // 源分支就是默认分支，提供 current_branch 或 默认分支 两个选项
+                        let options = vec![
+                            format!("合并到当前分支: {}", current_branch),
+                            format!("合并到默认分支: {}", default_branch),
+                        ];
+                        let selected = select!("请选择 PR 的目标分支:", options)
+                            .prompt()
+                            .map_err(|e| format!("Failed to select target branch: {}", e))?;
+
+                        if selected.starts_with("合并到当前分支") {
+                            current_branch.to_string()
+                        } else {
+                            default_branch.to_string()
+                        }
+                    } else {
+                        // 源分支不是默认分支，提供三个选项
+                        let options = vec![
+                            format!("合并到当前分支: {}", current_branch),
+                            format!("合并到推断的源分支: {}", source),
+                            format!("合并到默认分支: {}", default_branch),
+                        ];
+                        let selected = select!("请选择 PR 的目标分支:", options)
+                            .prompt()
+                            .map_err(|e| format!("Failed to select target branch: {}", e))?;
+
+                        if selected.starts_with("合并到当前分支") {
+                            current_branch.to_string()
+                        } else if selected.starts_with("合并到推断的源分支") {
+                            source
+                        } else {
+                            default_branch.to_string()
+                        }
+                    }
+                } else {
+                    // 无法推断源分支，只提供 current_branch 或 默认分支 两个选项
+                    let options = vec![
+                        format!("合并到当前分支: {}", current_branch),
+                        format!("合并到默认分支: {}", default_branch),
+                    ];
+                    let selected = select!("请选择 PR 的目标分支:", options)
+                        .prompt()
+                        .map_err(|e| format!("Failed to select target branch: {}", e))?;
+
+                    if selected.starts_with("合并到当前分支") {
+                        current_branch.to_string()
+                    } else {
+                        default_branch.to_string()
+                    }
+                }
+            } else {
+                // 当前分支是默认分支，直接使用默认分支作为目标
+                default_branch.to_string()
+            };
+
             Ok((
                 Some(generated_branch_name.to_string()),
-                Some(current_branch.to_string()),
+                Some(target_branch),
             ))
         } else {
             // 1.3 切换到默认分支，创建新分支
