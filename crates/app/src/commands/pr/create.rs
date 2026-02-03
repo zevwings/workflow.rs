@@ -1,6 +1,7 @@
 //! 创建 Pull Request 命令
 
 use color_eyre::Result;
+use domain::git::CodePlatform;
 use domain::{GitRepository, PullRequestContent};
 use prompt::{error, info, input, select, spinner, success, warning};
 use toolkit::BrowserExt;
@@ -735,30 +736,34 @@ impl PullRequestCreateCommand {
 
         // 获取 PR URL 并打开浏览器
         let repo_info = branch_repo.get_repo_info();
-        if let Some(ref origin_url) = repo_info.origin_url {
-            // 从 origin_url 提取 owner/repo 并构建 PR URL
-            // 例如: https://github.com/owner/repo.git 或 git@github.com:owner/repo.git
-            if let Some(pr_url) = extract_pr_url(origin_url, &pr_id) {
-                info!("PR URL: {}", pr_url);
+        // 使用 repo_info.name（owner/repo 格式）直接构建 PR URL
+        let pr_url = match (&repo_info.name, repo_info.kind) {
+            (Some(repo_name), Some(CodePlatform::GitHub)) => {
+                Some(format!("https://github.com/{}/pull/{}", repo_name, pr_id))
+            }
+            // 将来可以添加其他平台支持
+            _ => None,
+        };
 
-                // 使用默认浏览器打开 PR 页面
-                match pr_url.open_in_browser() {
-                    Ok(()) => {
-                        success!("Opened PR in browser");
-                    }
-                    Err(e) => {
-                        // 打开浏览器失败不应该阻止整个流程
-                        error!("Failed to open PR in browser: {}", e);
-                    }
+        if let Some(url) = pr_url {
+            info!("PR URL: {}", url);
+
+            // 使用默认浏览器打开 PR 页面
+            match url.open_in_browser() {
+                Ok(()) => {
+                    success!("Opened PR in browser");
                 }
-            } else {
-                warning!(
-                    "Could not extract PR URL from origin: {}. Only GitHub URLs are supported.",
-                    origin_url
-                );
+                Err(e) => {
+                    // 打开浏览器失败不应该阻止整个流程
+                    error!("Failed to open PR in browser: {}", e);
+                }
             }
         } else {
-            warning!("No origin URL found, cannot generate PR URL");
+            warning!(
+                "Could not generate PR URL. Platform: {:?}, Repo: {:?}",
+                repo_info.kind,
+                repo_info.name
+            );
         }
 
         Ok(())
@@ -988,33 +993,4 @@ impl PullRequestCreateCommand {
 
         Ok(Some(pr_content))
     }
-}
-
-/// 从远程 URL 提取 PR URL
-///
-/// 支持以下格式：
-/// - https://github.com/owner/repo.git
-/// - https://github.com/owner/repo
-/// - git@github.com:owner/repo.git
-/// - git@github.com:owner/repo
-fn extract_pr_url(remote_url: &str, pr_id: &str) -> Option<String> {
-    // 处理 https:// 格式
-    if let Some(stripped) = remote_url.strip_prefix("https://github.com/") {
-        // 移除可能的 .git 后缀
-        let repo = stripped.strip_suffix(".git").unwrap_or(stripped);
-        if !repo.is_empty() {
-            return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
-        }
-    }
-
-    // 处理 git@ 格式
-    if let Some(stripped) = remote_url.strip_prefix("git@github.com:") {
-        // 移除可能的 .git 后缀
-        let repo = stripped.strip_suffix(".git").unwrap_or(stripped);
-        if !repo.is_empty() {
-            return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
-        }
-    }
-
-    None
 }
