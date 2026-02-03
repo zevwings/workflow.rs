@@ -2,7 +2,7 @@
 
 use color_eyre::Result;
 use domain::{GitRepository, PullRequestContent};
-use prompt::{error, info, input, select, spinner, success};
+use prompt::{error, info, input, select, spinner, success, warning};
 use toolkit::BrowserExt;
 
 use crate::registry;
@@ -739,7 +739,14 @@ impl PullRequestCreateCommand {
                         error!("Failed to open PR in browser: {}", e);
                     }
                 }
+            } else {
+                warning!(
+                    "Could not extract PR URL from origin: {}. Only GitHub URLs are supported.",
+                    origin_url
+                );
             }
+        } else {
+            warning!("No origin URL found, cannot generate PR URL");
         }
 
         Ok(())
