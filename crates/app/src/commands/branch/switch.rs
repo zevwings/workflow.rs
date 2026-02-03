@@ -104,18 +104,6 @@ impl BranchSwitchCommand {
 
         success!("Switched to branch '{}'", target_branch);
 
-<<<<<<< HEAD
-        // 恢复 stash
-        if needs_stash {
-            info!("Restoring stashed changes...");
-            branch_repo
-                .stash_pop(0)
-                .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
-            success!("Stashed changes restored");
-        }
-
-=======
->>>>>>> f7b652fb4c2f362a3748a90402b3e98060d4f4f6
         // 如果远程分支存在，询问是否需要 pull
         if exists_remote {
             let should_pull = confirm!("Pull latest changes from remote?")
@@ -125,7 +113,6 @@ impl BranchSwitchCommand {
 
             if should_pull {
                 info!("Pulling latest changes...");
-<<<<<<< HEAD
                 if let Err(e) = branch_repo.pull(&target_branch) {
                     let error_msg = e.to_string();
                     // 检测是否是冲突错误
@@ -143,13 +130,17 @@ impl BranchSwitchCommand {
                     }
                     return Err(format!("Failed to pull: {}", error_msg).into());
                 }
-=======
-                branch_repo
-                    .pull(&target_branch)
-                    .map_err(|e| format!("Failed to pull: {}", e))?;
->>>>>>> f7b652fb4c2f362a3748a90402b3e98060d4f4f6
                 success!("Pulled latest changes from remote");
             }
+        }
+
+        // 恢复 stash
+        if needs_stash {
+            info!("Restoring stashed changes...");
+            branch_repo
+                .stash_pop(0)
+                .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
+            success!("Stashed changes restored");
         }
 
         Ok(())
