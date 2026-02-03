@@ -5,7 +5,6 @@
 use clap::{Parser, Subcommand};
 
 use super::branch::BranchSubcommand;
-use super::cnb::CNBCommand;
 use super::commit::CommitCommand;
 use super::github::GithubCommand;
 use super::jira::JiraCommand;
@@ -54,9 +53,6 @@ pub enum Command {
     /// Jira 配置管理命令
     #[command(subcommand)]
     Jira(JiraCommand),
-    /// CNB 账号管理命令
-    #[command(subcommand)]
-    Cnb(CNBCommand),
     /// 分支管理命令
     #[command(subcommand)]
     Branch(BranchSubcommand),

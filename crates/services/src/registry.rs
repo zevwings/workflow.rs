@@ -23,18 +23,14 @@ pub fn build_services_module() -> ServicesModule {
 fn register_services() -> registry::Result<()> {
     use std::sync::Arc;
 
-    // PullRequestService - 依赖 GitRepository、GitHubRepository、CNBRepository 和 LLMRepository
+    // PullRequestService - 依赖 GitRepository、GitHubRepository 和 LLMRepository
     bind!(dyn domain::PullRequestService, |c: &Container| {
-        // 获取依赖
         let git_repo = c
             .get::<dyn domain::GitRepository>()
             .expect("GitRepository not found");
         let github_repo = c
             .get::<dyn domain::GitHubRepository>()
             .expect("GitHubRepository not found");
-        let cnb_repo = c
-            .get::<dyn domain::CNBRepository>()
-            .expect("CNBRepository not found");
         let llm_repo = c
             .get::<dyn domain::LLMRepository>()
             .expect("LLMRepository not found");
@@ -42,7 +38,6 @@ fn register_services() -> registry::Result<()> {
         Arc::new(crate::PullRequestServiceImpl::new(
             git_repo,
             github_repo,
-            cnb_repo,
             llm_repo,
         ))
     })

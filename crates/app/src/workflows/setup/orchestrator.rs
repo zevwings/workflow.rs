@@ -5,7 +5,7 @@
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
 use crate::workflows::core::stage::{WorkflowExecutor, WorkflowStage};
 use crate::workflows::platforms::{
-    cnb::cnb_stage, github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage,
+    github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage,
 };
 use prompt::{br, info, is_user_cancelled, separator, success, warning};
 use std::error::Error;
@@ -21,7 +21,6 @@ pub fn run_setup_workflow() -> Result<(), Box<dyn Error>> {
     let stages: Vec<&dyn WorkflowStage> = vec![
         jira_stage(),
         github_stage(),
-        cnb_stage(),
         llm_stage(),
         log_stage(),
     ];

@@ -4,7 +4,6 @@
 
 use crate::errors::ServiceError;
 
-use super::cnb::verification::CNBVerificationResult;
 use super::github::verification::GitHubVerificationResult;
 use super::jira::verification::JiraVerificationResult;
 use super::llm::verification::LLMVerificationResult;
@@ -17,9 +16,6 @@ pub trait VerificationService: Send + Sync {
 
     /// 验证 GitHub 配置
     fn verify_github_config(&self) -> Result<GitHubVerificationResult, ServiceError>;
-
-    /// 验证 CNB 配置
-    fn verify_cnb_config(&self) -> Result<CNBVerificationResult, ServiceError>;
 
     /// 验证 LLM 配置
     fn verify_llm_config(&self) -> Result<LLMVerificationResult, ServiceError>;

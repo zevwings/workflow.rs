@@ -2,7 +2,6 @@
 //!
 //! 服务注册模块，按依赖顺序组织各个服务的注册逻辑。
 
-mod cnb;
 mod config;
 mod git;
 mod github;
@@ -18,7 +17,6 @@ pub fn register_storage() -> registry::Result<()> {
     llm::register_llm()?;
     jira::register_jira()?;
     github::register_github()?;
-    cnb::register_cnb()?;
     verify::register_verify()?;
 
     Ok(())

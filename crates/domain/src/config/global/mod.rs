@@ -2,7 +2,6 @@
 //!
 //! 从 workflow.toml 配置文件读取全局应用配置
 
-pub mod cnb;
 pub mod config;
 pub mod github;
 pub mod jira;
@@ -12,9 +11,6 @@ pub mod repository;
 pub mod verification_service;
 
 // Re-export public types
-pub use cnb::{
-    CNBAccount, CNBAccountInfo, CNBSettings, CNBVerificationResult, CNBVerificationSummary,
-};
 pub use config::GlobalConfig;
 pub use github::{
     GitHubAccount, GitHubAccountInfo, GitHubSettings, GitHubVerificationResult,

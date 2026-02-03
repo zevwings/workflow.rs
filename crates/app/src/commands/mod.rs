@@ -6,7 +6,6 @@
 pub mod alias;
 pub mod branch;
 pub mod check;
-pub mod cnb;
 pub mod commit;
 pub mod github;
 pub mod jira;

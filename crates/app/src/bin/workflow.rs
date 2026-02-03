@@ -6,9 +6,8 @@ use clap::Parser;
 use toolkit::{logger, LoggerConfig, Paths};
 
 use app::cli::{
-    AmendArgs, BranchSubcommand, CNBCommand, Cli, Command, CommitSubcommand,
-    GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
-    RepoCommand, TagSubcommand,
+    AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, GithubCommand, IgnoreSubcommand,
+    JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand, TagSubcommand,
 };
 use app::commands;
 use app::registry;
@@ -24,7 +23,6 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Llm(_) => Some("llm"),
         Command::Github(_) => Some("github"),
         Command::Jira(_) => Some("jira"),
-        Command::Cnb(_) => Some("cnb"),
         Command::Branch(_) => Some("branch"),
         Command::Commit(_) => Some("commit"),
         Command::Tag(_) => Some("tag"),
@@ -148,16 +146,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             JiraCommand::Clean(args) => {
                 let cmd =
                     commands::jira::JiraCleanCommand::new(args.jira_id.into_option(), args.all);
-                cmd.run()?;
-            }
-        },
-        Command::Cnb(cnb_cmd) => match cnb_cmd {
-            CNBCommand::Check => {
-                let cmd = commands::cnb::CNBCheckCommand::new();
-                cmd.run()?;
-            }
-            CNBCommand::Setup => {
-                let cmd = commands::cnb::CNBSetupCommand::new();
                 cmd.run()?;
             }
         },

@@ -65,11 +65,6 @@ pub fn get_github_repository() -> Arc<dyn domain::GitHubRepository> {
     get_service::<dyn domain::GitHubRepository>()
 }
 
-/// 获取 CNBRepository
-pub fn get_cnb_repository() -> Arc<dyn domain::CNBRepository> {
-    get_service::<dyn domain::CNBRepository>()
-}
-
 /// 获取 JiraRepository
 pub fn get_jira_repository() -> Arc<dyn domain::JiraRepository> {
     get_service::<dyn domain::JiraRepository>()

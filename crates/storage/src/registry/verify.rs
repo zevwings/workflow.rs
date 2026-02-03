@@ -6,8 +6,7 @@ use registry::{bind, Container, Scope};
 
 use crate::config::VerificationServiceImpl;
 use domain::{
-    CNBRepository, GitHubRepository, GlobalConfigRepository, JiraRepository, LLMRepository,
-    VerificationService,
+    GitHubRepository, GlobalConfigRepository, JiraRepository, LLMRepository, VerificationService,
 };
 
 /// 注册 VerificationService
@@ -25,16 +24,12 @@ pub fn register_verify() -> registry::Result<()> {
         let github_repository = c
             .get::<dyn GitHubRepository>()
             .expect("GitHubRepository must be registered before VerificationService");
-        let cnb_repository = c
-            .get::<dyn CNBRepository>()
-            .expect("CNBRepository must be registered before VerificationService");
 
         Arc::new(VerificationServiceImpl::new(
             config_repository,
             llm_repository,
             jira_repository,
             github_repository,
-            cnb_repository,
         ))
     })
     .in_scope(Scope::Singleton)?;

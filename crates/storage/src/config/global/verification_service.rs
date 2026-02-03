@@ -18,11 +18,10 @@
 use std::sync::Arc;
 
 use domain::{
-    CNBAccountInfo, CNBRepository, CNBVerificationResult, GitHubAccountInfo, GitHubRepository,
-    GitHubVerificationResult, GitHubVerificationSummary, GlobalConfigRepository, JiraConfigInfo,
-    JiraRepository, JiraVerificationResult, JiraVerificationStatus, LLMConfig, LLMRepository,
-    LLMSettings, LLMVerificationResult, LLMVerificationStatus, LogConfigInfo,
-    LogVerificationResult, ServiceError, VerificationService,
+    GitHubAccountInfo, GitHubRepository, GitHubVerificationResult, GitHubVerificationSummary,
+    GlobalConfigRepository, JiraConfigInfo, JiraRepository, JiraVerificationResult,
+    JiraVerificationStatus, LLMConfig, LLMRepository, LLMSettings, LLMVerificationResult,
+    LLMVerificationStatus, LogConfigInfo, LogVerificationResult, ServiceError, VerificationService,
 };
 use toolkit::Sensitive;
 
@@ -32,7 +31,6 @@ pub struct VerificationServiceImpl {
     llm_repository: Arc<dyn LLMRepository>,
     jira_repository: Arc<dyn JiraRepository>,
     github_repository: Arc<dyn GitHubRepository>,
-    cnb_repository: Arc<dyn CNBRepository>,
 }
 
 impl VerificationServiceImpl {
@@ -41,14 +39,12 @@ impl VerificationServiceImpl {
         llm_repository: Arc<dyn LLMRepository>,
         jira_repository: Arc<dyn JiraRepository>,
         github_repository: Arc<dyn GitHubRepository>,
-        cnb_repository: Arc<dyn CNBRepository>,
     ) -> Self {
         Self {
             config_repository,
             llm_repository,
             jira_repository,
             github_repository,
-            cnb_repository,
         }
     }
 }
@@ -154,53 +150,6 @@ impl VerificationService for VerificationServiceImpl {
             accounts,
             summary,
         })
-    }
-
-    /// 验证 CNB 配置
-    fn verify_cnb_config(&self) -> Result<CNBVerificationResult, ServiceError> {
-        let global_config = self.config_repository.load()?;
-        let cnb_settings = &global_config.cnb;
-
-        if cnb_settings.accounts.is_empty() {
-            return Ok(CNBVerificationResult::not_configured());
-        }
-
-        // 验证 CNB 认证（使用当前账号）
-        let cnb_valid = self.cnb_repository.get_user_info().is_ok();
-
-        let mut accounts = Vec::new();
-        for account in &cnb_settings.accounts {
-            let is_current = cnb_settings.current == account.name;
-            accounts.push(CNBAccountInfo {
-                name: account.name.clone(),
-                login: account.login.clone(),
-                email: account.email.clone(),
-                is_token_valid: is_current && cnb_valid,
-            });
-        }
-
-        let current_account = cnb_settings
-            .get_current_account()
-            .map(|account| CNBAccountInfo {
-                name: account.name.clone(),
-                login: account.login.clone(),
-                email: account.email.clone(),
-                is_token_valid: cnb_valid,
-            });
-
-        if cnb_valid {
-            Ok(CNBVerificationResult::success(
-                current_account.unwrap(),
-                accounts,
-            ))
-        } else {
-            Ok(CNBVerificationResult {
-                is_configured: true,
-                current_account,
-                accounts,
-                error: Some("Failed to verify CNB API token".to_string()),
-            })
-        }
     }
 
     /// 验证 LLM 配置

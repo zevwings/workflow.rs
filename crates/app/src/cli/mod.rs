@@ -5,7 +5,6 @@
 
 mod args;
 mod branch;
-mod cnb;
 mod commit;
 mod github;
 mod jira;
@@ -19,7 +18,6 @@ mod tag;
 // 重新导出所有子命令枚举和参数结构
 pub use args::{DryRunArgs, ForceArgs, JiraIdArg};
 pub use branch::{BranchSubcommand, IgnoreSubcommand};
-pub use cnb::CNBCommand;
 pub use commit::{AmendArgs, CommitCommand, CommitSubcommand};
 pub use github::GithubCommand;
 pub use jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand};

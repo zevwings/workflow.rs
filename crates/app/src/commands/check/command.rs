@@ -9,7 +9,7 @@ use prompt::{br, error, info, separator, success, warning, Spinner};
 use crate::registry;
 use crate::workflows::core::stage::WorkflowExecutor;
 use crate::workflows::platforms::{
-    cnb::cnb_stage, github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage,
+    github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage,
 };
 
 /// Check 命令
@@ -73,7 +73,6 @@ impl CheckCommand {
         vec![
             jira_stage(),
             github_stage(),
-            cnb_stage(),
             llm_stage(),
             log_stage(),
         ]

@@ -1,6 +1,6 @@
 //! 通用平台逻辑模块
 //!
-//! 提供用于管理平台账号（GitHub、CNB 等）的 trait 和通用函数。
+//! 提供用于管理平台账号（GitHub 等）的 trait 和通用函数。
 
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
 use prompt::{
@@ -23,7 +23,7 @@ pub trait PlatformAccount: Clone + Sized {
 
     /// 获取账号的唯一标识符（用于显示）
     ///
-    /// 默认返回 email，子类可以覆盖（如 CNB 使用 login）
+    /// 默认返回 email，子类可覆盖
     fn identifier(&self) -> &str {
         self.email()
     }
