@@ -110,6 +110,22 @@ pub trait GitRepository: Send + Sync {
     /// 获取默认分支
     fn get_default_branch(&self) -> Result<String, GitError>;
 
+    /// 推断当前分支的目标合并分支
+    ///
+    /// 使用组合策略推断当前分支应该合并到哪个分支：
+    /// 1. 优先从 reflog 查找分支创建来源（最准确但可能不存在）
+    /// 2. 使用 merge base 分析找到最近的候选分支
+    /// 3. 如果都失败，返回 None
+    ///
+    /// # 参数
+    /// - `current_branch`: 当前分支名称
+    ///
+    /// # 返回
+    /// - `Ok(Some(branch_name))`: 推断出的目标分支
+    /// - `Ok(None)`: 无法推断
+    /// - `Err`: 操作失败
+    fn infer_target_branch(&self, current_branch: &str) -> Result<Option<String>, GitError>;
+
     // ========== Commit 操作 ==========
 
     /// 获取提交信息

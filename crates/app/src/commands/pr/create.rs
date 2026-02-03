@@ -6,8 +6,7 @@ use prompt::{error, info, input, select, success, Spinner};
 
 use crate::registry;
 use crate::workflows::utils::branch::{
-    generate_branch_name_by_summary, generate_branch_name_from_jira,
-    generate_branch_name_from_template,
+    generate_branch_name_from_jira, generate_branch_name_from_template,
 };
 use crate::workflows::utils::jira::get_jira_id_interactive_optional;
 
@@ -69,10 +68,30 @@ impl PullRequestCreateCommand {
             // 保存 description 用于后续提交
             description_for_commit = Some(description.clone());
 
-            // 使用核心逻辑生成分支类型和基础分支名
-            let (branch_type, base_branch_name) = Spinner::new("Generating branch name...")
-                .with(|| generate_branch_name_by_summary(description.as_str()))
-                .map_err(|e| format!("Failed to generate branch name: {}", e))?;
+            // 先让用户选择分支类型（在 Spinner 之外，避免 raw mode 冲突）
+            let branch_type = crate::workflows::utils::branch::select_branch_type()
+                .map_err(|e| format!("Failed to select branch type: {}", e))?;
+
+            // 然后使用 Spinner 生成分支名称
+            let base_branch_name = {
+                let branch_repo = registry::get_git_repository();
+                let exists_branches: Option<Vec<String>> = branch_repo
+                    .list_branches(false, true)
+                    .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
+                    .ok();
+
+                let llm_repo = registry::get_llm_repository();
+                match Spinner::new("Generating branch name...")
+                    .with(|| {
+                        llm_repo.generate_branch_name(Some(description.as_str()), exists_branches)
+                    }) {
+                    Ok(name) => name,
+                    Err(e) => {
+                        info!("LLM generation failed: {}, using fallback method", e);
+                        crate::workflows::utils::branch::to_slug(description.as_str())
+                    }
+                }
+            };
 
             // 使用模板将基础分支名与 branch_type 组合成完整分支名（不包含 JIRA ID）
             let branch_name =
@@ -91,7 +110,8 @@ impl PullRequestCreateCommand {
             .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
         // 根据当前分支和默认分支的关系，处理不同的逻辑
-        let final_branch_name = if default_branch != current_branch {
+        // 返回: (新分支名, 目标分支)
+        let (final_branch_name, target_branch) = if default_branch != current_branch {
             // 情况1: 不是默认分支，询问用户如何处理
             self.handle_non_default_branch(
                 branch_repo.as_ref(),
@@ -196,7 +216,12 @@ impl PullRequestCreateCommand {
 
             // 创建 PR（如果有 PR 内容）
             if let Some(pr_content) = pr_content {
-                self.create_pull_request(branch_repo.as_ref(), &new_branch_name, &pr_content)?;
+                self.create_pull_request(
+                    branch_repo.as_ref(),
+                    &new_branch_name,
+                    &pr_content,
+                    target_branch.as_deref(),
+                )?;
             }
         }
 
@@ -205,9 +230,9 @@ impl PullRequestCreateCommand {
 
     /// 处理非默认分支的情况
     ///
-    /// 返回 Option<String>：
-    /// - None: 使用当前分支，不需要创建新分支
-    /// - Some(branch_name): 需要创建的新分支名
+    /// 返回 (Option<String>, Option<String>)：
+    /// - (None, None): 使用当前分支，不需要创建新分支，PR 已处理
+    /// - (Some(branch_name), Some(target)): 需要创建的新分支名和目标分支
     fn handle_non_default_branch(
         &self,
         branch_repo: &dyn GitRepository,
@@ -216,7 +241,7 @@ impl PullRequestCreateCommand {
         generated_branch_name: &str,
         jira_id: &Option<String>,
         description: Option<&str>,
-    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    ) -> Result<(Option<String>, Option<String>), Box<dyn std::error::Error>> {
         let options = vec![
             format!("直接使用当前分支 ({})", current_branch),
             format!("基于当前分支创建新分支 ({})", generated_branch_name),
@@ -290,7 +315,7 @@ impl PullRequestCreateCommand {
                 } else {
                     info!("Operation cancelled");
                 }
-                return Ok(None);
+                return Ok((None, None));
             } else {
                 // 没有 PR，创建新 PR
                 // 先提交代码
@@ -317,13 +342,42 @@ impl PullRequestCreateCommand {
                 )?;
 
                 if let Some(pr_content) = pr_content {
-                    self.create_pull_request(branch_repo, current_branch, &pr_content)?;
+                    // 在 dry-run 模式下，简化目标分支推断逻辑
+                    let target_branch = if self.dry_run {
+                        // 直接使用默认分支，跳过耗时的推断和交互
+                        let default_branch = branch_repo
+                            .get_default_branch()
+                            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+                        info!("[DRY RUN] Target branch: {}", default_branch);
+                        default_branch
+                    } else {
+                        // 非 dry-run 模式：推断目标分支并询问用户确认
+                        let inferred_target = branch_repo
+                            .infer_target_branch(current_branch)
+                            .map_err(|e| format!("Failed to infer target branch: {}", e))?;
+
+                        self.confirm_target_branch(
+                            branch_repo,
+                            inferred_target.as_deref(),
+                        )?
+                    };
+
+                    self.create_pull_request(
+                        branch_repo,
+                        current_branch,
+                        &pr_content,
+                        Some(&target_branch),
+                    )?;
                 }
-                return Ok(None);
+                return Ok((None, None));
             }
         } else if selected.starts_with("基于当前分支创建新分支") {
             // 1.2 基于当前分支创建新分支
-            Ok(Some(generated_branch_name.to_string()))
+            // 目标分支就是当前分支
+            Ok((
+                Some(generated_branch_name.to_string()),
+                Some(current_branch.to_string()),
+            ))
         } else {
             // 1.3 切换到默认分支，创建新分支
             if self.dry_run {
@@ -337,25 +391,30 @@ impl PullRequestCreateCommand {
             } else {
                 self.prepare_default_branch(branch_repo, current_branch, default_branch)?;
             }
-            Ok(Some(generated_branch_name.to_string()))
+            // 目标分支就是默认分支
+            Ok((
+                Some(generated_branch_name.to_string()),
+                Some(default_branch.to_string()),
+            ))
         }
     }
 
     /// 处理默认分支的情况
     ///
-    /// 返回 Option<String>：
-    /// - Some(branch_name): 需要创建的新分支名（默认分支需要创建新分支）
+    /// 返回 (Option<String>, Option<String>)：
+    /// - (Some(branch_name), Some(target)): 需要创建的新分支名和目标分支
     fn handle_default_branch(
         &self,
         _branch_repo: &dyn GitRepository,
-        _default_branch: &str,
+        default_branch: &str,
         generated_branch_name: &str,
         _jira_id: &Option<String>,
         _description: Option<&str>,
-    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    ) -> Result<(Option<String>, Option<String>), Box<dyn std::error::Error>> {
         // 情况2: 是默认分支，需要创建新分支
+        // 目标分支就是默认分支
         // 分支创建和后续操作在主逻辑中统一处理
-        Ok(Some(generated_branch_name.to_string()))
+        Ok((Some(generated_branch_name.to_string()), Some(default_branch.to_string())))
     }
 
     /// 提交代码更改
@@ -440,16 +499,22 @@ impl PullRequestCreateCommand {
     /// 创建 Pull Request
     ///
     /// 使用生成的 PR 内容创建 Pull Request
+    ///
+    /// # 参数
+    /// - `target_branch`: 可选的目标分支，如果为 None 则使用默认分支
     fn create_pull_request(
         &self,
         branch_repo: &dyn GitRepository,
         branch_name: &str,
         pr_content: &PullRequestContent,
+        target_branch: Option<&str>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // 获取默认分支作为目标分支
+        // 使用提供的目标分支或默认分支
         let default_branch = branch_repo
             .get_default_branch()
             .map_err(|e| format!("Failed to get default branch: {}", e))?;
+
+        let target = target_branch.unwrap_or(&default_branch);
 
         // 构建 PR 描述
         let mut pr_body = String::new();
@@ -468,7 +533,7 @@ impl PullRequestCreateCommand {
             info!("[DRY RUN] Would create Pull Request:");
             info!("  Title: {}", pr_content.pr_title);
             info!("  Source branch: {}", branch_name);
-            info!("  Target branch: {}", default_branch);
+            info!("  Target branch: {}", target);
             if !pr_body.is_empty() {
                 info!("  Description:\n{}", pr_body);
             }
@@ -569,6 +634,46 @@ impl PullRequestCreateCommand {
 
         // 返回是否需要恢复 stash（将在新分支上恢复）
         Ok(needs_stash)
+    }
+
+    /// 询问用户确认目标分支
+    ///
+    /// # 参数
+    /// - `branch_repo`: Git 仓库
+    /// - `inferred_target`: 推断出的目标分支（可能为 None）
+    ///
+    /// # 返回
+    /// 用户选择的目标分支名称
+    fn confirm_target_branch(
+        &self,
+        branch_repo: &dyn GitRepository,
+        inferred_target: Option<&str>,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let default_branch = branch_repo
+            .get_default_branch()
+            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+
+        // 如果推断出了目标分支，询问用户确认
+        if let Some(inferred) = inferred_target {
+            let options = vec![
+                format!("合并到推断的分支: {}", inferred),
+                format!("合并到默认分支: {}", default_branch),
+            ];
+
+            let selected = select!("请选择 PR 的目标分支:", options)
+                .prompt()
+                .map_err(|e| format!("Failed to select target branch: {}", e))?;
+
+            if selected.starts_with("合并到推断的分支") {
+                Ok(inferred.to_string())
+            } else {
+                Ok(default_branch)
+            }
+        } else {
+            // 无法推断，直接使用默认分支
+            info!("无法推断目标分支，将使用默认分支: {}", default_branch);
+            Ok(default_branch)
+        }
     }
 
     /// 生成 PR 详细总结

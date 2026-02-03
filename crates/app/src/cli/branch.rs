@@ -44,6 +44,10 @@ pub enum BranchSubcommand {
         #[command(flatten)]
         dry_run: DryRunArgs,
     },
+    /// 推断当前分支的源分支
+    ///
+    /// Infer the source branch of the current branch (from reflog or merge base).
+    InferSource,
     /// 管理分支忽略列表
     ///
     /// Manage branch ignore list.

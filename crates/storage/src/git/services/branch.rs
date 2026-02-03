@@ -35,6 +35,22 @@ pub trait BranchService: Send + Sync {
 
     /// 获取默认分支
     fn get_default_branch(&self) -> Result<String, GitError>;
+
+    /// 推断当前分支的目标合并分支
+    ///
+    /// 使用组合策略推断当前分支应该合并到哪个分支：
+    /// 1. 优先从 reflog 查找分支创建来源（最准确但可能不存在）
+    /// 2. 使用 merge base 分析找到最近的候选分支
+    /// 3. 如果都失败，返回 None
+    ///
+    /// # 参数
+    /// - `current_branch`: 当前分支名称
+    ///
+    /// # 返回
+    /// - `Ok(Some(branch_name))`: 推断出的目标分支
+    /// - `Ok(None)`: 无法推断
+    /// - `Err`: 操作失败
+    fn infer_target_branch(&self, current_branch: &str) -> Result<Option<String>, GitError>;
 }
 
 /// 分支服务实现
@@ -361,6 +377,21 @@ impl BranchService for BranchServiceImpl {
 
         Err(GitError::OperationFailed("无法确定默认分支".into()))
     }
+
+    fn infer_target_branch(&self, current_branch: &str) -> Result<Option<String>, GitError> {
+        // 策略1: 尝试从 reflog 推断（最准确）
+        if let Some(target) = self.infer_from_reflog(current_branch)? {
+            return Ok(Some(target));
+        }
+
+        // 策略2: 使用 merge base 分析（可靠）
+        if let Some(target) = self.infer_from_merge_base(current_branch)? {
+            return Ok(Some(target));
+        }
+
+        // 无法推断
+        Ok(None)
+    }
 }
 
 impl BranchServiceImpl {
@@ -387,6 +418,133 @@ impl BranchServiceImpl {
         } else {
             name.to_string()
         }
+    }
+
+    /// 从 reflog 推断目标分支
+    ///
+    /// 读取分支的 reflog，从最早的记录中提取分支创建来源。
+    fn infer_from_reflog(&self, branch_name: &str) -> Result<Option<String>, GitError> {
+        let repo = self.ctx.repository();
+        let ref_name = format!("refs/heads/{}", branch_name);
+
+        // 尝试读取 reflog
+        let reflog = match repo.reflog(&ref_name) {
+            Ok(log) => log,
+            Err(_) => return Ok(None), // reflog 不存在
+        };
+
+        // 从最早的记录开始查找（reflog.iter() 从新到旧，使用 rev() 反转）
+        for entry in reflog.iter().rev().take(5) {
+            // 只查看前5条记录
+            if let Some(message) = entry.message() {
+                if let Some(source) = Self::extract_source_branch(message) {
+                    // 验证源分支是否存在
+                    if self.branch_exists(&source)? {
+                        return Ok(Some(source));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// 从 merge base 推断目标分支
+    ///
+    /// 计算当前分支与候选分支的 merge base，选择最"近"的分支。
+    fn infer_from_merge_base(&self, current_branch: &str) -> Result<Option<String>, GitError> {
+        let repo = self.ctx.repository();
+
+        // 获取当前分支的 commit
+        let current_ref = repo
+            .find_branch(current_branch, BranchType::Local)
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let current_commit = current_ref
+            .get()
+            .peel_to_commit()
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        // 候选目标分支列表（优先级从高到低）
+        let candidates = vec!["develop", "master", "main"];
+
+        let mut best_candidate: Option<(String, i64)> = None;
+
+        for candidate_name in candidates {
+            // 检查候选分支是否存在
+            if let Ok(candidate_branch) = repo.find_branch(candidate_name, BranchType::Local) {
+                let candidate_commit = match candidate_branch.get().peel_to_commit() {
+                    Ok(c) => c,
+                    Err(_) => continue,
+                };
+
+                // 计算 merge base
+                let merge_base_oid = match repo.merge_base(current_commit.id(), candidate_commit.id())
+                {
+                    Ok(oid) => oid,
+                    Err(_) => continue,
+                };
+
+                // 检查 merge base 是否就是候选分支的 HEAD（最理想情况）
+                if merge_base_oid == candidate_commit.id() {
+                    return Ok(Some(candidate_name.to_string()));
+                }
+
+                // 否则，记录 merge base 的时间，选择最新的
+                if let Ok(merge_base_commit) = repo.find_commit(merge_base_oid) {
+                    let timestamp = merge_base_commit.time().seconds();
+
+                    if let Some((_, best_time)) = best_candidate {
+                        if timestamp > best_time {
+                            best_candidate = Some((candidate_name.to_string(), timestamp));
+                        }
+                    } else {
+                        best_candidate = Some((candidate_name.to_string(), timestamp));
+                    }
+                }
+            }
+        }
+
+        Ok(best_candidate.map(|(name, _)| name))
+    }
+
+    /// 从 reflog 消息中提取源分支名
+    fn extract_source_branch(message: &str) -> Option<String> {
+        // 格式1: "branch: Created from refs/heads/develop"
+        if let Some(stripped) = message.strip_prefix("branch: Created from ") {
+            let source = stripped.strip_prefix("refs/heads/").unwrap_or(stripped);
+            let source = source.trim();
+
+            // 跳过 commit hash（40个十六进制字符）
+            if source.len() == 40 && source.chars().all(|c| c.is_ascii_hexdigit()) {
+                return None;
+            }
+
+            return Some(source.to_string());
+        }
+
+        // 格式2: "checkout: moving from develop to feature/new"
+        if message.starts_with("checkout: moving from ") {
+            if let Some(start) = message.find("from ") {
+                if let Some(end) = message.find(" to ") {
+                    let from = &message[start + 5..end];
+                    return Some(from.trim().to_string());
+                }
+            }
+        }
+
+        // 格式3: "branch: Reset to develop"
+        if let Some(stripped) = message.strip_prefix("branch: Reset to ") {
+            return Some(stripped.trim().to_string());
+        }
+
+        None
+    }
+
+    /// 检查分支是否存在（本地）
+    fn branch_exists(&self, branch_name: &str) -> Result<bool, GitError> {
+        let repo = self.ctx.repository();
+        let exists = repo.find_branch(branch_name, BranchType::Local).is_ok();
+        Ok(exists)
     }
 }
 

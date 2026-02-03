@@ -28,6 +28,7 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Tag(_) => Some("tag"),
         Command::Pr(_) => Some("pr"),
         Command::Push => Some("push"),
+        Command::Pull => Some("pull"),
     }
 }
 
@@ -174,6 +175,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let cmd = commands::branch::clean::BranchCleanCommand::new(dry_run.is_dry_run());
                 cmd.run()?;
             }
+            BranchSubcommand::InferSource => {
+                let cmd = commands::branch::infer_source::BranchInferSourceCommand::new();
+                cmd.run()?;
+            }
             BranchSubcommand::Ignore(ignore_cmd) => match ignore_cmd {
                 IgnoreSubcommand::Add { branch_name } => {
                     let cmd =
@@ -228,7 +233,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Command::Push => {
-            let cmd = commands::push::PushCommand::new();
+            let cmd = commands::sync::push::PushCommand::new();
+            cmd.run()?;
+        }
+        Command::Pull => {
+            let cmd = commands::sync::pull::PullCommand::new();
             cmd.run()?;
         }
         Command::Tag(tag_cmd) => match tag_cmd {

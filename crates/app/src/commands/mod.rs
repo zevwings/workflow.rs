@@ -12,7 +12,7 @@ pub mod jira;
 pub mod llm;
 pub mod log;
 pub mod pr;
-pub mod push;
+pub mod sync;
 pub mod repo;
 pub mod setup;
 pub mod stash;
