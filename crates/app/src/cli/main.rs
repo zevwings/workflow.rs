@@ -4,6 +4,7 @@
 
 use clap::{Parser, Subcommand};
 
+use super::alias::AliasCommand;
 use super::branch::BranchSubcommand;
 use super::commit::CommitCommand;
 use super::completion::CompletionCommand;
@@ -76,4 +77,7 @@ pub enum Command {
     /// Shell Completion 管理命令
     #[command(subcommand)]
     Completion(CompletionCommand),
+    /// 别名管理命令
+    #[command(subcommand)]
+    Alias(AliasCommand),
 }

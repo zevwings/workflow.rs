@@ -3,6 +3,7 @@
 //! 这个模块定义了 Workflow CLI 的命令结构，供 `bin/workflow.rs` 使用。
 //! 这样可以确保命令结构定义与命令处理逻辑分离，提高代码可维护性。
 
+mod alias;
 mod args;
 mod branch;
 mod commit;
@@ -18,6 +19,7 @@ mod stash;
 mod tag;
 
 // 重新导出所有子命令枚举和参数结构
+pub use alias::AliasCommand;
 pub use args::{DryRunArgs, ForceArgs, JiraIdArg};
 pub use branch::{BranchSubcommand, IgnoreSubcommand};
 pub use commit::{AmendArgs, CommitCommand, CommitSubcommand};
