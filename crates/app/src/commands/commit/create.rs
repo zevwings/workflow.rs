@@ -5,6 +5,20 @@
 use prompt::{info, success};
 use storage::git::GitContext;
 
+/// 需要跳过的大型目录列表
+///
+/// 即使这些目录在 .gitignore 中，扫描它们仍然很慢，
+/// 所以显式跳过以提高性能。
+const SKIP_DIRECTORIES: &[&str] = &[
+    "target",       // Rust 构建目录
+    ".rs",          // 自定义缓存目录
+    ".rs2",         // 自定义缓存目录
+    ".go",          // Go 缓存目录
+    "coverage",     // 测试覆盖率目录
+    "node_modules", // Node.js 依赖目录
+    ".git",         // Git 目录
+];
+
 /// Commit Create 命令
 pub struct CommitCreateCommand {
     message: String,
@@ -42,18 +56,9 @@ impl CommitCreateCommand {
                     ["."].iter(),
                     git2::IndexAddOption::DEFAULT,
                     Some(&mut |path, _| {
-                        // 显式跳过大型目录，即使它们在 .gitignore 中
-                        // 这样可以避免扫描大量文件，提高性能
+                        // 跳过大型目录以提高性能
                         if let Some(path_str) = path.to_str() {
-                            // 跳过常见的构建和缓存目录
-                            if path_str.starts_with("target")
-                                || path_str.starts_with(".rs")
-                                || path_str.starts_with(".rs2")
-                                || path_str.starts_with(".go")
-                                || path_str.starts_with("coverage")
-                                || path_str.starts_with("node_modules")
-                                || path_str.starts_with(".git")
-                            {
+                            if SKIP_DIRECTORIES.iter().any(|dir| path_str.starts_with(dir)) {
                                 return 1; // Skip this path
                             }
                         }

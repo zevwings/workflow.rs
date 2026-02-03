@@ -305,7 +305,7 @@ impl GitContext {
         let repo = self.inner.repo.lock().expect("Failed to lock repository");
         let obj = repo
             .revparse_single(reference)
-            .map_err(|_| GitError::InvalidReference(format!("无法解析引用: {}", reference)))?;
+            .map_err(|_| GitError::InvalidReference(reference.to_string()))?;
         let commit = obj.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(commit.id())
     }

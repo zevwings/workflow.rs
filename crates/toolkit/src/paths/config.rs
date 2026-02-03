@@ -3,9 +3,10 @@
 //! 提供所有配置相关的路径获取功能。
 
 use std::fs;
+use std::path::{Path, PathBuf};
+
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
 
 use crate::paths::base::{config_base_dir, local_base_dir};
 use crate::paths::constants::{
@@ -13,6 +14,31 @@ use crate::paths::constants::{
 };
 use crate::paths::PathError;
 use crate::util::fs::DirectoryWalker;
+
+/// 创建目录并设置权限（700，仅用户可访问）
+///
+/// 这是一个辅助函数，用于统一处理目录创建和权限设置。
+fn create_dir_with_permissions(dir: &Path, name: &str) -> Result<(), PathError> {
+    // 确保目录存在
+    DirectoryWalker::new(dir).ensure_exists()?;
+
+    // 设置目录权限为 700（仅用户可访问，仅 Unix）
+    #[cfg(unix)]
+    {
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700)).map_err(|e| {
+            PathError::Permission(format!(
+                "Failed to set {} directory permissions: {}",
+                name, e
+            ))
+        })?;
+    }
+
+    // Windows 不需要显式设置权限
+    #[cfg(not(unix))]
+    let _ = name;
+
+    Ok(())
+}
 
 /// 获取配置目录路径（支持 iCloud 同步）
 ///
@@ -34,18 +60,7 @@ use crate::util::fs::DirectoryWalker;
 pub fn config_dir() -> Result<PathBuf, PathError> {
     // 使用支持 iCloud 的配置基础目录
     let config_dir = config_base_dir()?.join(CONFIG_DIR);
-
-    // 确保配置目录存在
-    _ = DirectoryWalker::new(&config_dir).ensure_exists();
-
-    // 设置目录权限为 700（仅用户可访问，仅 Unix）
-    #[cfg(unix)]
-    {
-        fs::set_permissions(&config_dir, fs::Permissions::from_mode(0o700)).map_err(|e| {
-            PathError::Permission(format!("Failed to set config directory permissions: {}", e))
-        })?;
-    }
-
+    create_dir_with_permissions(&config_dir, "config")?;
     Ok(config_dir)
 }
 
@@ -179,21 +194,7 @@ pub fn workflow_dir() -> Result<PathBuf, PathError> {
 pub fn work_history_dir() -> Result<PathBuf, PathError> {
     // 强制使用本地路径，不使用 iCloud
     let history_dir = local_base_dir()?.join("work-history");
-
-    // 确保目录存在
-    _ = DirectoryWalker::new(&history_dir).ensure_exists();
-
-    // 设置目录权限为 700（仅用户可访问，仅 Unix）
-    #[cfg(unix)]
-    {
-        fs::set_permissions(&history_dir, fs::Permissions::from_mode(0o700)).map_err(|e| {
-            PathError::Permission(format!(
-                "Failed to set work-history directory permissions: {}",
-                e
-            ))
-        })?;
-    }
-
+    create_dir_with_permissions(&history_dir, "work-history")?;
     Ok(history_dir)
 }
 
@@ -220,17 +221,6 @@ pub fn work_history_dir() -> Result<PathBuf, PathError> {
 pub fn logs_dir() -> Result<PathBuf, PathError> {
     // 强制使用本地路径，不使用 iCloud
     let logs_dir = local_base_dir()?.join("logs");
-
-    // 确保目录存在
-    _ = DirectoryWalker::new(&logs_dir).ensure_exists();
-
-    // 设置目录权限为 700（仅用户可访问，仅 Unix）
-    #[cfg(unix)]
-    {
-        fs::set_permissions(&logs_dir, fs::Permissions::from_mode(0o700)).map_err(|e| {
-            PathError::Permission(format!("Failed to set logs directory permissions: {}", e))
-        })?;
-    }
-
+    create_dir_with_permissions(&logs_dir, "logs")?;
     Ok(logs_dir)
 }

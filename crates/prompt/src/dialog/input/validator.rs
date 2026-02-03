@@ -39,7 +39,7 @@ pub mod validators {
     pub fn required() -> impl Validator {
         move |input: &str| {
             if input.trim().is_empty() {
-                Err("此字段为必填项".to_string())
+                Err("This field is required".to_string())
             } else {
                 Ok(())
             }
@@ -67,7 +67,7 @@ pub mod validators {
             if input.is_empty() || input.len() >= min {
                 Ok(())
             } else {
-                Err(format!("长度至少为 {} 个字符", min))
+                Err(format!("Length must be at least {} characters", min))
             }
         }
     }
@@ -88,7 +88,7 @@ pub mod validators {
             if input.len() <= max {
                 Ok(())
             } else {
-                Err(format!("长度不能超过 {} 个字符", max))
+                Err(format!("Length must not exceed {} characters", max))
             }
         }
     }
@@ -115,7 +115,10 @@ pub mod validators {
             if len >= min && len <= max {
                 Ok(())
             } else {
-                Err(format!("长度必须在 {} 到 {} 个字符之间", min, max))
+                Err(format!(
+                    "Length must be between {} and {} characters",
+                    min, max
+                ))
             }
         }
     }
@@ -157,12 +160,11 @@ pub mod validators {
         pattern: &'static str,
         error_msg: Option<&'static str>,
     ) -> Result<impl Validator, String> {
-        let re =
-            Regex::new(pattern).map_err(|e| format!("无效的正则表达式 '{}': {}", pattern, e))?;
+        let re = Regex::new(pattern).map_err(|e| format!("Invalid regex '{}': {}", pattern, e))?;
 
         let error_msg = error_msg
             .map(String::from)
-            .unwrap_or_else(|| format!("输入格式不正确，必须匹配: {}", pattern));
+            .unwrap_or_else(|| format!("Invalid format, must match: {}", pattern));
 
         Ok(move |input: &str| {
             if re.is_match(input) {
@@ -187,13 +189,13 @@ mod tests {
             if input.len() > 5 {
                 Ok(())
             } else {
-                Err("太短".to_string())
+                Err("Too short".to_string())
             }
         };
 
         assert!(validator.validate("123456").is_ok());
         assert!(validator.validate("123").is_err());
-        assert_eq!(validator.validate("123").unwrap_err(), "太短");
+        assert_eq!(validator.validate("123").unwrap_err(), "Too short");
     }
 
     // ==================== required() 验证器测试 ====================
@@ -214,7 +216,7 @@ mod tests {
 
         // 验证错误消息
         let result = validator.validate("");
-        assert_eq!(result.unwrap_err(), "此字段为必填项");
+        assert_eq!(result.unwrap_err(), "This field is required");
     }
 
     // ==================== min_length() 验证器测试 ====================
@@ -239,7 +241,7 @@ mod tests {
     fn test_min_length_error_message() {
         let validator = validators::min_length(5);
         let result = validator.validate("123");
-        assert_eq!(result.unwrap_err(), "长度至少为 5 个字符");
+        assert_eq!(result.unwrap_err(), "Length must be at least 5 characters");
     }
 
     // ==================== max_length() 验证器测试 ====================
@@ -263,7 +265,7 @@ mod tests {
     fn test_max_length_error_message() {
         let validator = validators::max_length(5);
         let result = validator.validate("123456");
-        assert_eq!(result.unwrap_err(), "长度不能超过 5 个字符");
+        assert_eq!(result.unwrap_err(), "Length must not exceed 5 characters");
     }
 
     // ==================== length() 验证器测试 ====================
@@ -289,10 +291,16 @@ mod tests {
     fn test_length_error_message() {
         let validator = validators::length(3, 5);
         let short_result = validator.validate("12");
-        assert_eq!(short_result.unwrap_err(), "长度必须在 3 到 5 个字符之间");
+        assert_eq!(
+            short_result.unwrap_err(),
+            "Length must be between 3 and 5 characters"
+        );
 
         let long_result = validator.validate("123456");
-        assert_eq!(long_result.unwrap_err(), "长度必须在 3 到 5 个字符之间");
+        assert_eq!(
+            long_result.unwrap_err(),
+            "Length must be between 3 and 5 characters"
+        );
     }
 
     // ==================== regex() 验证器测试 ====================
@@ -300,24 +308,31 @@ mod tests {
     #[test]
     fn test_regex_validator() {
         // 测试数字验证
-        let validator = validators::regex(r"^\d+$", Some("请输入数字")).unwrap();
+        let validator = validators::regex(r"^\d+$", Some("Please enter a number")).unwrap();
 
         assert!(validator.validate("123").is_ok());
         assert!(validator.validate("0").is_ok());
         assert!(validator.validate("abc").is_err());
-        assert_eq!(validator.validate("abc").unwrap_err(), "请输入数字");
+        assert_eq!(
+            validator.validate("abc").unwrap_err(),
+            "Please enter a number"
+        );
 
         // 测试自定义错误消息
-        let validator = validators::regex(r"^[a-z]+$", Some("只能是小写字母")).unwrap();
+        let validator =
+            validators::regex(r"^[a-z]+$", Some("Only lowercase letters allowed")).unwrap();
         assert!(validator.validate("hello").is_ok());
         assert!(validator.validate("Hello").is_err());
-        assert_eq!(validator.validate("Hello").unwrap_err(), "只能是小写字母");
+        assert_eq!(
+            validator.validate("Hello").unwrap_err(),
+            "Only lowercase letters allowed"
+        );
 
         // 测试默认错误消息
         let validator = validators::regex(r"^\d+$", None).unwrap();
         assert!(validator.validate("123").is_ok());
         let err = validator.validate("abc").unwrap_err();
-        assert!(err.contains("输入格式不正确"));
+        assert!(err.contains("Invalid format"));
         assert!(err.contains(r"^\d+$"));
     }
 
@@ -328,7 +343,7 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(err) => {
-                assert!(err.contains("无效的正则表达式"));
+                assert!(err.contains("Invalid regex"));
                 assert!(err.contains("[invalid"));
             }
             Ok(_) => panic!("Expected error for invalid regex pattern"),
@@ -340,7 +355,7 @@ mod tests {
         // 测试更严格的邮箱验证
         let validator = validators::regex(
             r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-            Some("请输入有效的邮箱地址"),
+            Some("Please enter a valid email address"),
         )
         .unwrap();
 

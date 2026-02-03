@@ -13,7 +13,15 @@ use color_eyre::{eyre::WrapErr, Result};
 use prompt::{success, warning, Spinner};
 use toolkit::{detect_shell, get_completion_files_for_shell, shell_to_string, Paths};
 
-use super::types::{BinaryStatus, VerificationResult};
+use super::types::VerificationResult;
+
+/// 二进制文件状态（内部使用）
+struct BinaryStatus {
+    name: String,
+    path: String,
+    exists: bool,
+    executable: bool,
+}
 
 /// 检查文件是否可执行
 #[cfg(unix)]
@@ -183,11 +191,7 @@ pub fn verify_installation() -> Result<VerificationResult> {
         warning!("Some verifications failed, please check the above warning messages");
     }
 
-    Ok(VerificationResult {
-        binaries,
-        completions_installed,
-        all_checks_passed,
-    })
+    Ok(VerificationResult { all_checks_passed })
 }
 
 /// 运行安装程序

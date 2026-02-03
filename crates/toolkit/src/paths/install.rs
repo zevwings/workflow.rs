@@ -137,7 +137,7 @@ pub fn completion_dir() -> Result<PathBuf, PathError> {
     let completion_dir = local_base_dir()?.join("completions");
 
     // 确保目录存在
-    _ = DirectoryWalker::new(&completion_dir).ensure_exists();
+    DirectoryWalker::new(&completion_dir).ensure_exists()?;
 
     Ok(completion_dir)
 }

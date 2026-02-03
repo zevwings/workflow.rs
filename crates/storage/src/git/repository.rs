@@ -127,15 +127,6 @@ impl GitRepository for GitRepositoryImpl {
         self.commit_service.get_working_tree_status()
     }
 
-    fn amend_commit(
-        &self,
-        message: Option<&str>,
-        no_edit: bool,
-        no_verify: bool,
-    ) -> Result<String, GitError> {
-        self.commit_service.amend_commit(message, no_edit, no_verify)
-    }
-
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
         self.commit_service.commit(message, all)
     }
@@ -161,7 +152,7 @@ impl GitRepository for GitRepositoryImpl {
     // ========== Rebase 操作 ==========
 
     fn rebase_onto(&self, _target_branch: &str) -> Result<(), GitError> {
-        todo!("rebase_onto 待实现")
+        todo!("rebase_onto not implemented")
     }
 
     fn rebase_onto_with_upstream(
@@ -170,7 +161,7 @@ impl GitRepository for GitRepositoryImpl {
         _upstream: &str,
         _branch: &str,
     ) -> Result<(), GitError> {
-        todo!("rebase_onto_with_upstream 待实现")
+        todo!("rebase_onto_with_upstream not implemented")
     }
 
     // ========== Remote 操作 ==========

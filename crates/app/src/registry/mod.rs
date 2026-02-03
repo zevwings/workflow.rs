@@ -11,7 +11,7 @@ use std::sync::Arc;
 static APP_INITIALIZED: Lazy<()> = Lazy::new(|| {
     // 按依赖顺序初始化模块
     storage::register_storage().expect("Failed to register storage module");
-    let _services = services::build_services_module();
+    services::register_services().expect("Failed to register services module");
 });
 
 /// 确保应用已初始化

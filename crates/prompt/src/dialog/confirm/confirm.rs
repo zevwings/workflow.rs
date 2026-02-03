@@ -65,8 +65,7 @@ fn clear_and_display_result(builder: &ConfirmBuilder, value: bool, theme: &Theme
     // 使用 result_title（如果存在），否则使用 message 的第一行（避免多行消息导致输出错乱）
     let title_text = builder
         .result_title
-        .as_ref()
-        .map(|s| s.as_str())
+        .as_deref()
         .unwrap_or_else(|| builder.message.lines().next().unwrap_or(&builder.message));
     let title = theme.title.apply(title_text, theme.enable_color);
     let result_text = if value {

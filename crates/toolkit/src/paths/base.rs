@@ -60,7 +60,7 @@ pub(crate) fn try_icloud_base_dir() -> Option<PathBuf> {
         return None;
     }
 
-    // 设置目录权限为 700（仅用户可访问）
+    // 设置目录权限为 700（尽力而为，iCloud 目录权限设置可能不被支持）
     #[cfg(unix)]
     {
         let _ = fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700));
@@ -96,7 +96,7 @@ pub(crate) fn local_base_dir() -> Result<PathBuf, PathError> {
     let workflow_dir = home.join(WORKFLOW_DIR);
 
     // 确保目录存在
-    _ = DirectoryWalker::new(&workflow_dir).ensure_exists();
+    DirectoryWalker::new(&workflow_dir).ensure_exists()?;
 
     // 设置目录权限为 700（仅用户可访问）
     #[cfg(unix)]

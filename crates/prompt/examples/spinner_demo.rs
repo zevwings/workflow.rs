@@ -119,22 +119,20 @@ fn demo_with_method() {
     println!("\n=== Demo 4: with 便捷方法 ===\n");
 
     // 使用 with 方法包装一个操作
-    let result: Result<i32, &str> = spinner("正在计算...")
-        .with(|| {
-            // 模拟计算
-            thread::sleep(Duration::from_secs(1));
-            Ok(42)
-        });
+    let result: Result<i32, &str> = spinner("正在计算...").with(|| {
+        // 模拟计算
+        thread::sleep(Duration::from_secs(1));
+        Ok(42)
+    });
 
     println!("计算结果: {:?}", result);
 
     // 使用 with_output 方法（适用于会产生输出的操作）
-    let result: Result<String, &str> = spinner("正在处理...")
-        .with_output(|| {
-            // 模拟处理
-            thread::sleep(Duration::from_millis(500));
-            Ok("处理完成".to_string())
-        });
+    let result: Result<String, &str> = spinner("正在处理...").with_output(|| {
+        // 模拟处理
+        thread::sleep(Duration::from_millis(500));
+        Ok("处理完成".to_string())
+    });
 
     println!("处理结果: {:?}", result);
 }

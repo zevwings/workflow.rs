@@ -43,38 +43,38 @@ impl AliasAddCommand {
 
         // 添加别名
         let service = get_alias_service();
-        let result = service.add(&name, &command, self.force).wrap_err("添加别名失败")?;
+        let result = service.add(&name, &command, self.force).wrap_err("Failed to add alias")?;
 
         // 显示结果
         br!();
         if result.overwritten {
-            warning!("别名 '{}' 已更新", result.name);
+            warning!("Alias '{}' updated", result.name);
         } else {
-            success!("别名 '{}' 已添加", result.name);
+            success!("Alias '{}' added", result.name);
         }
         info!("  {} -> {}", result.name, result.command);
         br!();
-        info!("使用 'workflow {}' 执行此别名", result.name);
+        info!("Use 'workflow {}' to run this alias", result.name);
 
         Ok(())
     }
 
     /// 交互式输入
     fn interactive_input(&self) -> Result<(String, String)> {
-        info!("添加新别名（交互模式）");
+        info!("Add new alias (interactive mode)");
         br!();
 
         // 获取别名名称
         let name = if let Some(ref n) = self.name {
             n.clone()
         } else {
-            let input = InputBuilder::new("请输入别名名称")
-                .placeholder("例如: ci")
+            let input = InputBuilder::new("Enter alias name")
+                .placeholder("e.g.: ci")
                 .prompt()
-                .wrap_err("获取别名名称失败")?;
+                .wrap_err("Failed to get alias name")?;
 
             if input.is_empty() {
-                color_eyre::eyre::bail!("别名名称不能为空");
+                color_eyre::eyre::bail!("Alias name cannot be empty");
             }
             input
         };
@@ -95,9 +95,9 @@ impl AliasAddCommand {
                 })
                 .collect();
 
-            let selected = SelectBuilder::new("请选择要关联的命令", display_options)
+            let selected = SelectBuilder::new("Select the command to associate", display_options)
                 .prompt()
-                .wrap_err("选择命令失败")?;
+                .wrap_err("Failed to select command")?;
 
             // 从选中的显示文本中提取命令部分
             selected.split(" - ").next().unwrap_or(&selected).to_string()

@@ -9,7 +9,9 @@
 //!
 //! 注意：此示例需要交互式终端，不能在非 TTY 环境下运行。
 
-use prompt::{confirm, input, is_user_cancelled, multiselect, select, validators, Message, PromptError};
+use prompt::{
+    confirm, input, is_user_cancelled, multiselect, select, validators, Message, PromptError,
+};
 
 fn main() {
     println!("对话框功能演示");
@@ -89,7 +91,10 @@ fn demo_confirm(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Merge")
         .prompt()?;
 
-    let _ = msg.info(&format!("合并选择: {}", if confirmed { "是" } else { "否" }));
+    let _ = msg.info(&format!(
+        "合并选择: {}",
+        if confirmed { "是" } else { "否" }
+    ));
 
     Ok(())
 }
@@ -112,7 +117,8 @@ fn demo_input(msg: &prompt::MessageRef) -> prompt::Result<()> {
     let email_validator = validators::regex(
         r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
         Some("请输入有效的邮箱地址"),
-    ).expect("Invalid regex");
+    )
+    .expect("Invalid regex");
 
     let email = input!("请输入您的邮箱")
         .placeholder("example@email.com")
@@ -203,15 +209,7 @@ fn demo_multiselect(msg: &prompt::MessageRef) -> prompt::Result<()> {
 
     // 带分页的多选
     let frameworks = vec![
-        "React",
-        "Vue",
-        "Angular",
-        "Svelte",
-        "Next.js",
-        "Nuxt.js",
-        "Remix",
-        "Astro",
-        "SolidJS",
+        "React", "Vue", "Angular", "Svelte", "Next.js", "Nuxt.js", "Remix", "Astro", "SolidJS",
         "Qwik",
     ];
 

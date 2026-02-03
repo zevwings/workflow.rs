@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use git2::{BranchType, PushOptions};
 
-use domain::git::GitError;
 use super::GitContext;
+use domain::git::GitError;
 
 /// 分支服务接口
 pub trait BranchService: Send + Sync {
@@ -77,14 +77,14 @@ impl BranchService for BranchServiceImpl {
 
         // 获取 HEAD 指向的提交
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
-        let commit = head
-            .peel_to_commit()
-            .map_err(|_| GitError::OperationFailed("无法获取 HEAD 提交，仓库可能为空".into()))?;
+        let commit = head.peel_to_commit().map_err(|_| {
+            GitError::OperationFailed("Cannot get HEAD commit, repository may be empty".into())
+        })?;
 
         // 创建分支
         repo.branch(name, &commit, false).map_err(|e| {
             if e.code() == git2::ErrorCode::Exists {
-                GitError::OperationFailed(format!("分支 '{}' 已存在", name))
+                GitError::OperationFailed(format!("Branch '{}' already exists", name))
             } else {
                 GitError::OperationFailed(e.to_string())
             }
@@ -103,7 +103,7 @@ impl BranchService for BranchServiceImpl {
         // 检查是否为当前分支
         if branch.is_head() {
             return Err(GitError::OperationFailed(format!(
-                "无法删除当前所在的分支: {}",
+                "Cannot delete the current branch: {}",
                 name
             )));
         }
@@ -133,9 +133,8 @@ impl BranchService for BranchServiceImpl {
     fn delete_remote_branch(&self, name: &str) -> Result<(), GitError> {
         let repo = self.ctx.repository();
 
-        let mut remote = repo
-            .find_remote("origin")
-            .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
+        let mut remote =
+            repo.find_remote("origin").map_err(|e| GitError::RemoteError(e.to_string()))?;
 
         // 使用空引用删除远程分支
         let refspec = format!(":refs/heads/{}", name);
@@ -150,9 +149,9 @@ impl BranchService for BranchServiceImpl {
             if error_msg.contains("remote ref does not exist")
                 || error_msg.contains("cannot lock ref")
             {
-                GitError::BranchNotFound(format!("远程分支 '{}' 不存在", name))
+                GitError::BranchNotFound(format!("origin/{}", name))
             } else {
-                GitError::RemoteError(format!("删除远程分支失败: {}", error_msg))
+                GitError::RemoteError(error_msg)
             }
         })?;
 
@@ -169,18 +168,20 @@ impl BranchService for BranchServiceImpl {
             // 重命名当前分支
             let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
             if !head.is_branch() {
-                return Err(GitError::OperationFailed("HEAD 处于 detached 状态".into()));
+                return Err(GitError::OperationFailed(
+                    "HEAD is in detached state".into(),
+                ));
             }
             let branch_name = head
                 .shorthand()
-                .ok_or_else(|| GitError::OperationFailed("无效的分支名称".into()))?;
+                .ok_or_else(|| GitError::OperationFailed("Invalid branch name".into()))?;
             repo.find_branch(branch_name, BranchType::Local)
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?
         };
 
         branch.rename(new_name, false).map_err(|e| {
             if e.code() == git2::ErrorCode::Exists {
-                GitError::OperationFailed(format!("分支 '{}' 已存在", new_name))
+                GitError::OperationFailed(format!("Branch '{}' already exists", new_name))
             } else {
                 GitError::OperationFailed(e.to_string())
             }
@@ -239,7 +240,7 @@ impl BranchService for BranchServiceImpl {
         // 构建结果列表
         let mut result: Vec<domain::BranchInfo> = branches
             .into_iter()
-            .map(|(name, (_has_local, has_remote))| {
+            .map(|(name, (has_local, has_remote))| {
                 let display_name = if has_remote {
                     // 有远程分支，用 * 标记
                     format!("* {}", name)
@@ -248,12 +249,18 @@ impl BranchService for BranchServiceImpl {
                     format!("  {}", name)
                 };
 
+                // 根据本地/远程状态创建分支信息
                 // name 字段保存不带 origin/ 前缀的短名称
                 // 这样 has_branch 可以正确检查本地和远程
-                let mut info = domain::BranchInfo::local(name.clone());
-                info.display_name = display_name;
-                info.is_remote = has_remote;
-                info
+                if has_local {
+                    let mut info = domain::BranchInfo::local(name.clone());
+                    info.display_name = display_name;
+                    info.is_remote = has_remote;
+                    info
+                } else {
+                    // 仅存在于远程的分支
+                    domain::BranchInfo::remote(name.clone(), display_name)
+                }
             })
             .collect();
 
@@ -290,7 +297,7 @@ impl BranchService for BranchServiceImpl {
             let reference = branch.get();
             let refname = reference
                 .name()
-                .ok_or_else(|| GitError::OperationFailed("无效的引用名称".into()))?;
+                .ok_or_else(|| GitError::OperationFailed("Invalid reference name".into()))?;
 
             let obj = repo
                 .revparse_single(refname)
@@ -343,12 +350,14 @@ impl BranchService for BranchServiceImpl {
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         if !head.is_branch() {
-            return Err(GitError::OperationFailed("HEAD 处于 detached 状态".into()));
+            return Err(GitError::OperationFailed(
+                "HEAD is in detached state".into(),
+            ));
         }
 
         head.shorthand()
             .map(String::from)
-            .ok_or_else(|| GitError::OperationFailed("无法获取分支名称".into()))
+            .ok_or_else(|| GitError::OperationFailed("Cannot get branch name".into()))
     }
 
     fn has_branch(&self, name: &str) -> Result<(bool, bool), GitError> {
@@ -392,7 +401,9 @@ impl BranchService for BranchServiceImpl {
             }
         }
 
-        Err(GitError::OperationFailed("无法确定默认分支".into()))
+        Err(GitError::OperationFailed(
+            "Cannot determine default branch".into(),
+        ))
     }
 
     fn infer_target_branch(&self, current_branch: &str) -> Result<Option<String>, GitError> {

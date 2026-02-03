@@ -4,8 +4,8 @@
 
 use std::path::Path;
 
-use domain::git::{BlameLineInfo, GitError};
 use super::GitContext;
+use domain::git::{BlameLineInfo, GitError};
 
 /// Blame 服务接口
 pub trait BlameService: Send + Sync {
@@ -67,7 +67,7 @@ impl BlameServiceImpl {
         // 执行 blame
         let blame = repo
             .blame_file(Path::new(file_path), Some(&mut opts))
-            .map_err(|e| GitError::OperationFailed(format!("Blame 失败: {}", e)))?;
+            .map_err(|e| GitError::OperationFailed(format!("Blame failed: {}", e)))?;
 
         // 读取文件内容以获取行内容
         let file_content = self.get_file_content(file_path, revision)?;
@@ -160,16 +160,16 @@ impl BlameService for BlameServiceImpl {
 
         let tree = commit.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        let entry = tree
-            .get_path(Path::new(file_path))
-            .map_err(|_| GitError::ObjectNotFound(format!("文件 '{}' 不存在", file_path)))?;
+        let entry = tree.get_path(Path::new(file_path)).map_err(|_| {
+            GitError::ObjectNotFound(format!("File '{}' does not exist", file_path))
+        })?;
 
         let blob = repo
             .find_blob(entry.id())
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         let content = std::str::from_utf8(blob.content())
-            .map_err(|_| GitError::OperationFailed("文件内容不是有效的 UTF-8".into()))?;
+            .map_err(|_| GitError::OperationFailed("File content is not valid UTF-8".into()))?;
 
         Ok(content.to_string())
     }
@@ -190,10 +190,12 @@ impl BlameService for BlameServiceImpl {
         revision: Option<&str>,
     ) -> Result<Vec<BlameLineInfo>, GitError> {
         if start_line < 1 {
-            return Err(GitError::OperationFailed("起始行号必须 >= 1".into()));
+            return Err(GitError::OperationFailed("Start line must be >= 1".into()));
         }
         if end_line < start_line {
-            return Err(GitError::OperationFailed("结束行号必须 >= 起始行号".into()));
+            return Err(GitError::OperationFailed(
+                "End line must be >= start line".into(),
+            ));
         }
 
         self.get_blame_internal(file_path, revision, Some(start_line), Some(end_line))

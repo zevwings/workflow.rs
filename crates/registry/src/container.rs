@@ -9,6 +9,7 @@
 //! 循环依赖检测使用线程局部变量，每个线程独立跟踪解析栈。
 
 // 标准库
+use std::any::TypeId;
 use std::sync::Arc;
 
 // 第三方库
@@ -16,8 +17,6 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
 // 内部导入
-use std::any::TypeId;
-
 use crate::binding::{Binding, BindingBuilder, FallibleBinding, FallibleBindingBuilder};
 use crate::error::{RegistryError, Result};
 
@@ -93,7 +92,7 @@ impl Container {
         factory: impl crate::binding::IntoFactory<T>,
     ) -> BindingBuilder<'_> {
         // 使用 Arc<T> 的 TypeId 作为标识符
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         BindingBuilder::new(identifier, factory, self)
     }
 
@@ -121,7 +120,7 @@ impl Container {
         &self,
         factory: impl crate::binding::IntoFactory<T>,
     ) -> BindingBuilder<'_> {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         BindingBuilder::new(identifier, factory, self)
     }
 
@@ -143,13 +142,13 @@ impl Container {
         &self,
         factory: impl crate::binding::IntoFallibleFactory<T>,
     ) -> FallibleBindingBuilder<'_> {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         FallibleBindingBuilder::new(identifier, factory, self)
     }
 
     /// 获取服务，Singleton 作用域返回同一个 Arc 的克隆
     pub fn get<T: 'static + Send + Sync + ?Sized>(&self) -> Result<Arc<T>> {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
 
         // 先检查循环依赖并压栈
         RESOLUTION_STACK.with(|stack| {
@@ -196,7 +195,8 @@ impl Container {
     pub(crate) fn add_binding(&self, binding: Binding) -> Result<()> {
         let identifier = binding.identifier;
         // 检查是否已在任一 map 中绑定
-        if self.bindings.contains_key(&identifier) || self.fallible_bindings.contains_key(&identifier)
+        if self.bindings.contains_key(&identifier)
+            || self.fallible_bindings.contains_key(&identifier)
         {
             return Err(RegistryError::AlreadyBound(
                 "Service already bound".to_string(),
@@ -210,7 +210,8 @@ impl Container {
     pub(crate) fn add_fallible_binding(&self, binding: FallibleBinding) -> Result<()> {
         let identifier = binding.identifier;
         // 检查是否已在任一 map 中绑定
-        if self.bindings.contains_key(&identifier) || self.fallible_bindings.contains_key(&identifier)
+        if self.bindings.contains_key(&identifier)
+            || self.fallible_bindings.contains_key(&identifier)
         {
             return Err(RegistryError::AlreadyBound(
                 "Service already bound".to_string(),
@@ -222,13 +223,13 @@ impl Container {
 
     /// 检查服务是否已绑定
     pub fn is_bound<T: 'static + ?Sized>(&self) -> bool {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         self.bindings.contains_key(&identifier) || self.fallible_bindings.contains_key(&identifier)
     }
 
     /// 解绑服务
     pub fn unbind<T: 'static + ?Sized>(&self) {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         self.bindings.remove(&identifier);
         self.fallible_bindings.remove(&identifier);
     }
@@ -471,7 +472,7 @@ mod tests {
     #[test]
     fn test_add_binding_scenarios() {
         let container = Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
 
         // 测试添加绑定成功

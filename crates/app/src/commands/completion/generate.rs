@@ -5,7 +5,7 @@
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use color_eyre::{eyre::WrapErr, Result};
-
+use prompt::{info, success};
 use toolkit::{detect_shell, shell_from_string, shell_to_string};
 
 use crate::cli::Cli;
@@ -30,12 +30,12 @@ impl CompletionGenerateCommand {
     pub fn run(&self) -> Result<()> {
         // 1. 确定 shell 类型
         let shell = match &self.shell_type {
-            Some(s) => shell_from_string(s).wrap_err("解析 shell 类型失败")?,
-            None => detect_shell().wrap_err("自动检测 shell 类型失败")?,
+            Some(s) => shell_from_string(s).wrap_err("Failed to parse shell type")?,
+            None => detect_shell().wrap_err("Failed to auto-detect shell type")?,
         };
 
         let shell_str = shell_to_string(&shell);
-        println!("检测到 Shell 类型: {}", shell);
+        info!("Detected shell type: {}", shell);
 
         // 2. 生成 completion 脚本内容
         let script_content = self.generate_completion_script(&shell)?;
@@ -44,25 +44,28 @@ impl CompletionGenerateCommand {
         let service = get_completion_service();
         let result = service
             .save_and_configure(shell_str, &script_content, self.output_dir.as_deref())
-            .wrap_err("保存并配置 completion 失败")?;
+            .wrap_err("Failed to save and configure completion")?;
 
         // 4. 显示结果
-        println!("📝 生成 completion 脚本: {}", result.script_path.display());
+        info!(
+            "Generated completion script: {}",
+            result.script_path.display()
+        );
 
         if let Some(config_file) = &result.config_file {
-            println!("📝 创建 completion 配置文件: {}", config_file.display());
+            info!("Created completion config file: {}", config_file.display());
         }
 
         if result.config_added {
-            println!("✏️  已添加 completion 配置到 shell 配置文件");
+            success!("Added completion config to shell config file");
         } else {
-            println!("ℹ️  Completion 配置已存在，跳过添加");
+            info!("Completion config already exists, skipping");
         }
 
-        println!("\n✅ Completion 脚本已生成并配置完成！");
-        println!("📁 脚本位置: {}", result.script_path.display());
-        println!("\n💡 请执行以下命令使配置生效:");
-        println!("   {}", result.reload_hint);
+        success!("Completion script generated and configured!");
+        info!("Script location: {}", result.script_path.display());
+        info!("Run the following command to apply the config:");
+        info!("   {}", result.reload_hint);
 
         Ok(())
     }

@@ -102,12 +102,7 @@ pub struct PullRequestCreateCommand {
 
 impl PullRequestCreateCommand {
     /// 创建新的 PullRequestCreateCommand
-    pub fn new(
-        jira_id: Option<String>,
-        _title: Option<String>,
-        _description: Option<String>,
-        dry_run: bool,
-    ) -> Self {
+    pub fn new(jira_id: Option<String>, dry_run: bool) -> Self {
         Self { jira_id, dry_run }
     }
 
@@ -645,9 +640,8 @@ impl PullRequestCreateCommand {
             Ok(sha) => sha,
             Err(e) => {
                 let err_msg = e.to_string();
-                // 检查是否是"没有更改需要提交"的错误（支持中英文）
-                if err_msg.contains("nothing to commit") || err_msg.contains("没有更改需要提交")
-                {
+                // Check if the error is "nothing to commit"
+                if err_msg.contains("nothing to commit") || err_msg.contains("Nothing to commit") {
                     info!("No changes to commit");
                     return Ok(None);
                 }

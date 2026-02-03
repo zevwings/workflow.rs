@@ -201,7 +201,7 @@ impl FormExecutor {
         let nested_form = field
             .nested_form
             .as_ref()
-            .ok_or_else(|| PromptError::InvalidInput("嵌套表单不能为空".to_string()))?;
+            .ok_or_else(|| PromptError::InvalidInput("Nested form cannot be empty".to_string()))?;
 
         let nested_result = self.execute_with_level(nested_form, level + 1)?;
         Ok(Box::new(nested_result))

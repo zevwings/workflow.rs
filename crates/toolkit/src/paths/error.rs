@@ -2,12 +2,18 @@
 
 use thiserror::Error;
 
+use crate::util::fs::FsError;
+
 /// 路径操作错误
 #[derive(Debug, Error)]
 pub enum PathError {
     /// I/O 错误
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+
+    /// 文件系统操作错误
+    #[error("Filesystem error: {0}")]
+    Fs(#[from] FsError),
 
     /// 环境变量错误
     #[error("Environment variable error: {0}")]

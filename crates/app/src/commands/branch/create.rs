@@ -109,11 +109,8 @@ impl BranchCreateCommand {
         let (final_source_branch, needs_stash_restore) = if self.from_default {
             // 如果指定了 from_default，强制从默认分支创建
             if default_branch != current_branch {
-                let needs_stash = self.prepare_default_branch(
-                    branch_repo.as_ref(),
-                    &current_branch,
-                    &default_branch,
-                )?;
+                let needs_stash =
+                    self.prepare_default_branch(branch_repo.as_ref(), &default_branch)?;
                 (default_branch.clone(), needs_stash)
             } else {
                 (default_branch.clone(), false)
@@ -136,11 +133,8 @@ impl BranchCreateCommand {
                 }
                 SourceBranchOption::FromDefault(_) => {
                     // 从默认分支创建，需要 stash、切换、拉取
-                    let needs_stash = self.prepare_default_branch(
-                        branch_repo.as_ref(),
-                        &current_branch,
-                        &default_branch,
-                    )?;
+                    let needs_stash =
+                        self.prepare_default_branch(branch_repo.as_ref(), &default_branch)?;
                     (default_branch.clone(), needs_stash)
                 }
             }
@@ -215,7 +209,6 @@ impl BranchCreateCommand {
     fn prepare_default_branch(
         &self,
         branch_repo: &dyn GitRepository,
-        _current_branch: &str,
         default_branch: &str,
     ) -> Result<bool, Box<dyn std::error::Error>> {
         // 检查工作区状态

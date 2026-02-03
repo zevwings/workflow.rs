@@ -6,6 +6,6 @@ mod coordinator;
 mod layer;
 
 pub use coordinator::{
-    register_spinner_handlers, suspend_spinner, resume_spinner, SpinnerHandlers,
+    register_spinner_handlers, resume_spinner, suspend_spinner, SpinnerHandlers,
 };
 pub use layer::{SpinnerAwareLayer, SpinnerAwareMakeWriter};

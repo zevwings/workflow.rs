@@ -5,8 +5,8 @@
 use git2::PushOptions;
 use glob::Pattern;
 
-use domain::git::{GitError, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope};
 use super::GitContext;
+use domain::git::{GitError, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope};
 
 /// Tag 服务接口
 pub trait TagService: Send + Sync {
@@ -138,7 +138,7 @@ impl TagService for TagServiceImpl {
 
         let mut reference = repo
             .find_reference(&tag_ref)
-            .map_err(|_| GitError::OperationFailed(format!("Tag '{}' 不存在", name)))?;
+            .map_err(|_| GitError::OperationFailed(format!("Tag '{}' does not exist", name)))?;
 
         reference.delete().map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
@@ -148,9 +148,8 @@ impl TagService for TagServiceImpl {
     fn delete_remote_tag(&self, name: &str) -> Result<(), GitError> {
         let repo = self.ctx.repository();
 
-        let mut remote = repo
-            .find_remote("origin")
-            .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
+        let mut remote =
+            repo.find_remote("origin").map_err(|e| GitError::RemoteError(e.to_string()))?;
 
         // 使用空引用删除远程 tag
         let refspec = format!(":refs/tags/{}", name);
@@ -161,7 +160,7 @@ impl TagService for TagServiceImpl {
 
         remote
             .push(&[&refspec], Some(&mut opts))
-            .map_err(|e| GitError::RemoteError(format!("删除远程 tag 失败: {}", e)))?;
+            .map_err(|e| GitError::RemoteError(e.to_string()))?;
 
         Ok(())
     }
@@ -169,9 +168,8 @@ impl TagService for TagServiceImpl {
     fn push_tag(&self, name: &str, force: bool) -> Result<(), GitError> {
         let repo = self.ctx.repository();
 
-        let mut remote = repo
-            .find_remote("origin")
-            .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
+        let mut remote =
+            repo.find_remote("origin").map_err(|e| GitError::RemoteError(e.to_string()))?;
 
         let refspec = if force {
             format!("+refs/tags/{}:refs/tags/{}", name, name)
@@ -185,7 +183,7 @@ impl TagService for TagServiceImpl {
 
         remote
             .push(&[&refspec], Some(&mut opts))
-            .map_err(|e| GitError::RemoteError(format!("推送 tag 失败: {}", e)))?;
+            .map_err(|e| GitError::RemoteError(e.to_string()))?;
 
         Ok(())
     }
@@ -203,7 +201,7 @@ impl TagService for TagServiceImpl {
         // 检查 tag 是否已存在
         if self.tag_exists_local(name) && !force {
             return Err(GitError::OperationFailed(format!(
-                "Tag '{}' 已存在，使用 --force 覆盖",
+                "Tag '{}' already exists, use --force to overwrite",
                 name
             )));
         }
@@ -215,9 +213,9 @@ impl TagService for TagServiceImpl {
 
         // 解析目标
         let target_oid = if let Some(target_ref) = target {
-            let obj = repo.revparse_single(target_ref).map_err(|e| {
-                GitError::OperationFailed(format!("无法解析目标 '{}': {}", target_ref, e))
-            })?;
+            let obj = repo
+                .revparse_single(target_ref)
+                .map_err(|e| GitError::InvalidReference(e.to_string()))?;
             obj.id()
         } else {
             let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -226,40 +224,27 @@ impl TagService for TagServiceImpl {
                 .id()
         };
 
-        let created_local;
+        // 获取目标对象（提取公共逻辑）
+        let obj = repo
+            .find_object(target_oid, None)
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        // 创建 tag
+        // 创建 tag（annotated 或 lightweight）
         if let Some(msg) = message {
-            // 创建 annotated tag
             let tagger = self.ctx.get_signature()?;
-
-            let obj = repo
-                .find_object(target_oid, None)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-
             repo.tag(name, &obj, &tagger, msg, force)
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            created_local = true;
         } else {
-            // 创建轻量级 tag
-            let obj = repo
-                .find_object(target_oid, None)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-
             repo.tag_lightweight(name, &obj, force)
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            created_local = true;
         }
 
         // 推送到远程
-        let mut created_remote = false;
-        if scope == TagCreateScope::Both && self.push_tag(name, force).is_ok() {
-            created_remote = true;
-        }
+        let created_remote = scope == TagCreateScope::Both && self.push_tag(name, force).is_ok();
 
         Ok(TagCreateInfo {
             name: name.to_string(),
-            created_local,
+            created_local: true,
             created_remote,
         })
     }
@@ -268,10 +253,35 @@ impl TagService for TagServiceImpl {
         &self,
         name: &str,
         scope: TagDeleteScope,
-        _force: bool,
+        force: bool,
     ) -> Result<TagDeleteInfo, GitError> {
         let exists_local = self.tag_exists_local(name);
         let exists_remote = self.tag_exists_remote(name)?;
+
+        // 非强制模式下，检查 tag 是否存在
+        if !force {
+            match scope {
+                TagDeleteScope::Local if !exists_local => {
+                    return Err(GitError::OperationFailed(format!(
+                        "Local tag '{}' does not exist",
+                        name
+                    )));
+                }
+                TagDeleteScope::Remote if !exists_remote => {
+                    return Err(GitError::OperationFailed(format!(
+                        "Remote tag '{}' does not exist",
+                        name
+                    )));
+                }
+                TagDeleteScope::Both if !exists_local && !exists_remote => {
+                    return Err(GitError::OperationFailed(format!(
+                        "Tag '{}' does not exist",
+                        name
+                    )));
+                }
+                _ => {}
+            }
+        }
 
         match scope {
             TagDeleteScope::Local => {
@@ -307,8 +317,8 @@ impl TagService for TagServiceImpl {
         scope: TagDeleteScope,
         force: bool,
     ) -> Result<Vec<TagDeleteInfo>, GitError> {
-        let glob_pattern = Pattern::new(pattern)
-            .map_err(|e| GitError::OperationFailed(format!("无效的模式 '{}': {}", pattern, e)))?;
+        let glob_pattern =
+            Pattern::new(pattern).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         let local_tags = self.list_tags(false)?;
         let remote_tags = self.get_remote_tags()?;
@@ -380,8 +390,8 @@ impl TagService for TagServiceImpl {
         let matched_tags: Vec<String> = if let Some(tag_name) = name {
             vec![tag_name.to_string()]
         } else if let Some(pat) = pattern {
-            let glob_pattern = Pattern::new(pat)
-                .map_err(|e| GitError::OperationFailed(format!("无效的模式 '{}': {}", pat, e)))?;
+            let glob_pattern =
+                Pattern::new(pat).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
             let mut all_tags: Vec<String> = local_tags.clone();
             for tag in &remote_tags {
@@ -392,7 +402,9 @@ impl TagService for TagServiceImpl {
 
             all_tags.iter().filter(|tag| glob_pattern.matches(tag)).cloned().collect()
         } else {
-            return Err(GitError::OperationFailed("必须提供 name 或 pattern".into()));
+            return Err(GitError::OperationFailed(
+                "Must provide name or pattern".into(),
+            ));
         };
 
         let results: Vec<TagDeleteInfo> = matched_tags
@@ -471,5 +483,45 @@ mod tests {
         let service = TagServiceImpl::new(ctx);
         assert!(service.tag_exists_local("v1.0.0"));
         assert!(!service.tag_exists_local("v2.0.0"));
+    }
+
+    #[test]
+    fn test_delete_tag_force() {
+        let (_tmp, ctx) = setup_repo_with_file();
+
+        // 创建测试 tag
+        {
+            let repo = ctx.repository();
+            let obj = repo.revparse_single("HEAD").unwrap();
+            repo.tag_lightweight("v1.0.0", &obj, false).unwrap();
+        }
+
+        let service = TagServiceImpl::new(ctx);
+
+        // 删除存在的 tag（非强制模式）
+        let result = service.delete_tag("v1.0.0", TagDeleteScope::Local, false);
+        assert!(result.is_ok());
+
+        // 删除不存在的 tag（非强制模式）应该报错
+        let result = service.delete_tag("v1.0.0", TagDeleteScope::Local, false);
+        assert!(result.is_err());
+
+        // 删除不存在的 tag（强制模式）应该成功
+        let result = service.delete_tag("v1.0.0", TagDeleteScope::Local, true);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_delete_nonexistent_tag_without_force() {
+        let (_tmp, ctx) = setup_repo_with_file();
+        let service = TagServiceImpl::new(ctx);
+
+        // 删除不存在的 tag（非强制模式）应该报错
+        let result = service.delete_tag("nonexistent", TagDeleteScope::Local, false);
+        assert!(result.is_err());
+
+        // 强制模式下删除不存在的 tag 应该成功
+        let result = service.delete_tag("nonexistent", TagDeleteScope::Local, true);
+        assert!(result.is_ok());
     }
 }

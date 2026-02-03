@@ -26,8 +26,7 @@ impl CompletionServiceImpl {
 
     /// 创建 workflow completion 配置文件（用于 zsh/bash）
     fn create_completion_config_file(&self, shell_str: &str) -> Result<PathBuf, ServiceError> {
-        let workflow_dir = Paths::workflow_dir()
-            .map_err(|e| ServiceError::Other(format!("获取 workflow 目录失败: {}", e)))?;
+        let workflow_dir = Paths::workflow_dir().map_err(|e| ServiceError::Other(e.to_string()))?;
         let config_file = workflow_dir.join(COMPLETIONS_FILE);
 
         let config_content = match shell_str.to_lowercase().as_str() {
@@ -52,7 +51,7 @@ impl CompletionServiceImpl {
 
         FileWriter::new(&config_file).write_str(config_content).map_err(|e| {
             ServiceError::Other(format!(
-                "写入 completion 配置文件失败: {}: {}",
+                "Failed to write completion config file: {}: {}",
                 config_file.display(),
                 e
             ))
@@ -64,7 +63,7 @@ impl CompletionServiceImpl {
     /// 配置 shell 配置文件
     fn configure_shell(&self, shell_str: &str) -> Result<bool, ServiceError> {
         let shell = shell_from_string(shell_str)
-            .map_err(|e| ServiceError::InvalidInput(format!("无效的 shell 类型: {}", e)))?;
+            .map_err(|e| ServiceError::InvalidInput(format!("Invalid shell type: {}", e)))?;
 
         match shell_str.to_lowercase().as_str() {
             "zsh" | "bash" => {
@@ -74,7 +73,7 @@ impl CompletionServiceImpl {
                     COMPLETIONS_SOURCE_PATH,
                     Some("Workflow CLI completions"),
                 )
-                .map_err(|e| ServiceError::Other(format!("添加 completion source 失败: {}", e)))?;
+                .map_err(|e| ServiceError::Other(e.to_string()))?;
 
                 Ok(added)
             }
@@ -88,7 +87,7 @@ impl CompletionServiceImpl {
                     &source_path,
                     Some("Workflow CLI completions"),
                 )
-                .map_err(|e| ServiceError::Other(format!("添加 completion source 失败: {}", e)))?;
+                .map_err(|e| ServiceError::Other(e.to_string()))?;
 
                 Ok(added)
             }
@@ -106,7 +105,7 @@ impl CompletionServiceImpl {
         let source_path = get_shell_source_path(shell_str);
 
         let removed = ShellConfigManager::remove_source(&shell, &source_path)
-            .map_err(|e| ServiceError::Other(format!("移除 {} 配置失败: {}", shell_str, e)))?;
+            .map_err(|e| ServiceError::Other(e.to_string()))?;
 
         Ok(removed)
     }
@@ -127,20 +126,19 @@ impl CompletionService for CompletionServiceImpl {
     ) -> Result<CompletionGenerateResult, ServiceError> {
         // 1. 解析 shell 类型
         let shell_enum = shell_from_string(shell)
-            .map_err(|e| ServiceError::InvalidInput(format!("无效的 shell 类型: {}", e)))?;
+            .map_err(|e| ServiceError::InvalidInput(format!("Invalid shell type: {}", e)))?;
         let shell_str = shell_to_string(&shell_enum);
 
         // 2. 确定输出目录
         let output_path = match output_dir {
             Some(dir) => PathBuf::from(dir),
-            None => Paths::completion_dir()
-                .map_err(|e| ServiceError::Other(format!("获取 completion 目录失败: {}", e)))?,
+            None => Paths::completion_dir().map_err(|e| ServiceError::Other(e.to_string()))?,
         };
 
         // 3. 确保输出目录存在
         DirectoryWalker::new(&output_path)
             .ensure_exists()
-            .map_err(|e| ServiceError::Other(format!("创建输出目录失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(e.to_string()))?;
 
         // 4. 写入脚本文件
         let filename = get_completion_filename(shell_str);
@@ -148,7 +146,7 @@ impl CompletionService for CompletionServiceImpl {
 
         FileWriter::new(&script_path).write_bytes(script_content).map_err(|e| {
             ServiceError::Other(format!(
-                "写入 completion 脚本失败: {}: {}",
+                "Failed to write completion script: {}: {}",
                 script_path.display(),
                 e
             ))
@@ -242,8 +240,7 @@ impl CompletionService for CompletionServiceImpl {
             }
         } else {
             // 只移除当前 shell 的配置
-            let shell = detect_shell()
-                .map_err(|e| ServiceError::Other(format!("自动检测 shell 类型失败: {}", e)))?;
+            let shell = detect_shell().map_err(|e| ServiceError::Other(e.to_string()))?;
             let shell_str = shell_to_string(&shell);
 
             match self.remove_shell_config(shell_str) {

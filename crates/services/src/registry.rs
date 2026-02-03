@@ -18,13 +18,11 @@ pub struct ServicesModule;
 /// - AliasService
 /// - PullRequestService
 /// - CompletionService
-pub fn build_services_module() -> ServicesModule {
-    register_services().expect("Failed to register services");
-    ServicesModule
-}
-
-/// 注册所有 services 服务
-fn register_services() -> registry::Result<()> {
+///
+/// # 错误
+///
+/// 如果服务注册失败，返回 `registry::Error`。
+pub fn register_services() -> registry::Result<ServicesModule> {
     // AliasService - 依赖 GlobalConfigRepository
     try_bind!(dyn domain::AliasService, |c: &Container| {
         let config_repo = c.get::<dyn domain::GlobalConfigRepository>()?;
@@ -46,11 +44,11 @@ fn register_services() -> registry::Result<()> {
     })
     .in_scope(Scope::Singleton)?;
 
-    // CompletionService - 无外部依赖（使用普通 bind! 因为没有依赖）
+    // CompletionService - 无外部依赖
     bind!(dyn domain::CompletionService, |_c: &Container| {
         Arc::new(crate::CompletionServiceImpl::new())
     })
     .in_scope(Scope::Singleton)?;
 
-    Ok(())
+    Ok(ServicesModule)
 }

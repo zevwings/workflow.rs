@@ -1,9 +1,11 @@
 //! Jira 实体类型和辅助函数
 
+use serde::Serialize;
+
 use crate::jira::error::JiraError;
 
 /// Jira Issue 信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct JiraIssue {
     pub id: String,
     pub key: String,
@@ -22,14 +24,14 @@ pub struct JiraIssue {
 }
 
 /// Jira 用户信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct JiraUser {
     pub display_name: String,
     pub account_id: String,
 }
 
 /// Jira 评论信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct JiraComment {
     pub id: String,
     pub body: String,
@@ -38,7 +40,7 @@ pub struct JiraComment {
 }
 
 /// Jira 附件信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct JiraAttachment {
     pub id: String,
     pub filename: String,

@@ -4,8 +4,8 @@
 
 use git2::BranchType;
 
-use domain::git::{GitError, MergeStrategy};
 use super::GitContext;
+use domain::git::{GitError, MergeStrategy};
 
 /// Merge 服务接口
 pub trait MergeService: Send + Sync {
@@ -62,7 +62,7 @@ impl MergeServiceImpl {
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let refname = head
             .name()
-            .ok_or_else(|| GitError::OperationFailed("无效的 HEAD 引用".into()))?;
+            .ok_or_else(|| GitError::OperationFailed("Invalid HEAD reference".into()))?;
 
         let msg = format!("Fast-Forward: {} to {}", refname, annotated_commit.id());
 
@@ -159,7 +159,6 @@ impl MergeServiceImpl {
 
         Ok(())
     }
-
 }
 
 impl MergeService for MergeServiceImpl {
@@ -208,7 +207,7 @@ impl MergeService for MergeServiceImpl {
             MergeStrategy::FastForwardOnly => {
                 if !analysis.is_fast_forward() {
                     return Err(GitError::OperationFailed(
-                        "无法执行 fast-forward 合并".into(),
+                        "Cannot perform fast-forward merge".into(),
                     ));
                 }
                 self.do_fast_forward_with_repo(&repo, annotated_commit)?;
@@ -237,7 +236,7 @@ impl MergeService for MergeServiceImpl {
         let repo = self.ctx.repository();
         let annotated_commit = repo
             .find_annotated_commit(commit_id)
-            .map_err(|e| GitError::OperationFailed(format!("无法获取注释提交: {}", e)))?;
+            .map_err(|e| GitError::CommitNotFound(e.to_string()))?;
 
         // 执行合并分析
         let (analysis, _) = repo
@@ -253,7 +252,7 @@ impl MergeService for MergeServiceImpl {
             MergeStrategy::FastForwardOnly => {
                 if !analysis.is_fast_forward() {
                     return Err(GitError::OperationFailed(
-                        "无法执行 fast-forward 合并".into(),
+                        "Cannot perform fast-forward merge".into(),
                     ));
                 }
                 self.do_fast_forward_with_repo(&repo, &annotated_commit)?;
@@ -323,7 +322,7 @@ impl MergeService for MergeServiceImpl {
 
         let merge_base_oid = repo
             .merge_base(commit1.id(), commit2.id())
-            .map_err(|e| GitError::OperationFailed(format!("无法找到共同祖先: {}", e)))?;
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(merge_base_oid.to_string())
     }

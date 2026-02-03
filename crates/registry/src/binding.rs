@@ -1,12 +1,10 @@
 //! 服务绑定
 
 // 标准库
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::sync::{Arc, OnceLock};
 
 // 内部导入
-use std::any::TypeId;
-
 use crate::error::Result;
 use crate::scope::Scope;
 
@@ -141,7 +139,7 @@ impl Binding {
         expected_type_id: TypeId,
     ) -> Result<Arc<T>> {
         // 运行时类型验证：检查期望的 TypeId 是否匹配
-        let actual_type_id = std::any::TypeId::of::<Arc<T>>();
+        let actual_type_id = TypeId::of::<Arc<T>>();
         if actual_type_id != expected_type_id {
             return Err(crate::error::RegistryError::TypeCast(format!(
                 "Type mismatch: expected {:?}, got {:?}. Expected type: {}",
@@ -345,7 +343,7 @@ mod tests {
     #[case(Scope::Transient, false)]
     fn test_binding_resolve_scope(#[case] scope: Scope, #[case] should_be_same: bool) {
         let container = crate::container::Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
         let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(1));
         let counter_clone = counter.clone();
@@ -375,7 +373,7 @@ mod tests {
     #[test]
     fn test_binding_builder_in_scope() {
         let container = crate::container::Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
 
         let factory = |_c: &crate::container::Container| -> Arc<dyn TestService> {
             Arc::new(TestServiceImpl { value: 42, id: 1 })
@@ -397,7 +395,7 @@ mod tests {
     #[test]
     fn test_binding_builder_singleton() {
         let container = crate::container::Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
 
         let factory = |_c: &crate::container::Container| -> Arc<dyn TestService> {
             Arc::new(TestServiceImpl { value: 42, id: 1 })
@@ -419,7 +417,7 @@ mod tests {
     #[test]
     fn test_into_factory_with_arc_instance() {
         let container = crate::container::Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
 
         // 直接传递 Arc 实例
         let instance: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 99, id: 42 });
@@ -439,7 +437,7 @@ mod tests {
     #[test]
     fn test_into_factory_arc_singleton_behavior() {
         let container = crate::container::Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
 
         // 使用 Arc 实例绑定
         let instance: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 100, id: 1 });
@@ -460,7 +458,7 @@ mod tests {
     #[test]
     fn test_into_factory_with_closure_still_works() {
         let container = crate::container::Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
 
         // 使用闭包绑定
         let factory = |_c: &crate::container::Container| -> Arc<dyn TestService> {

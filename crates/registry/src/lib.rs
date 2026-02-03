@@ -164,7 +164,8 @@ macro_rules! try_bind {
         let wrapped: ::std::boxed::Box<
             dyn for<'a> ::std::ops::Fn(
                     &'a $crate::Container,
-                ) -> $crate::Result<::std::sync::Arc<$trait_type>>
+                )
+                    -> $crate::Result<::std::sync::Arc<$trait_type>>
                 + ::std::marker::Send
                 + ::std::marker::Sync,
         > = ::std::boxed::Box::new(
