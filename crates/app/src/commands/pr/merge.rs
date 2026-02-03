@@ -2,7 +2,8 @@
 
 use crate::registry;
 use color_eyre::Result;
-use prompt::{error, info, spinner, success, warning};
+use domain::GitError;
+use prompt::{confirm, error, info, spinner, success, warning};
 
 /// Pull Request Merge 命令
 pub struct PullRequestMergeCommand {
@@ -105,10 +106,39 @@ impl PullRequestMergeCommand {
                     success!("Deleted local branch '{}'", source_branch);
                 }
                 Err(e) => {
-                    warning!(
-                        "Failed to delete local branch '{}': {}",
-                        source_branch, e
-                    );
+                    // 使用模式匹配精确判断错误类型
+                    match e {
+                        GitError::BranchNotFullyMerged(_) => {
+                            warning!("Branch '{}' is not fully merged", source_branch);
+                            let force_delete =
+                                confirm!("Force delete branch '{}'?", source_branch)
+                                    .default(false)
+                                    .prompt()
+                                    .unwrap_or(false);
+
+                            if force_delete {
+                                match git_repo.delete_branch(&source_branch, true) {
+                                    Ok(()) => {
+                                        success!("Force deleted local branch '{}'", source_branch);
+                                    }
+                                    Err(e) => {
+                                        warning!(
+                                            "Failed to force delete local branch '{}': {}",
+                                            source_branch, e
+                                        );
+                                    }
+                                }
+                            } else {
+                                info!("Skipped deleting branch '{}'", source_branch);
+                            }
+                        }
+                        _ => {
+                            warning!(
+                                "Failed to delete local branch '{}': {}",
+                                source_branch, e
+                            );
+                        }
+                    }
                 }
             }
         }
