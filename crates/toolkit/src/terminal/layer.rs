@@ -21,9 +21,12 @@ pub struct SpinnerAwareWriter<W> {
 impl<W: Write> Write for SpinnerAwareWriter<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         suspend_spinner();
-        let result = self.inner.write(buf);
-        // 注意：不在这里恢复，因为可能有多次 write 调用
-        result
+        // 在 raw mode 下，\n 只是 LF 不会回车，需要转换为 \r\n
+        // 这确保日志在终端中正确换行
+        let converted = convert_lf_to_crlf(buf);
+        let result = self.inner.write(&converted);
+        // 返回原始 buf 的长度，因为调用者期望的是原始数据的写入量
+        result.map(|_| buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -31,6 +34,18 @@ impl<W: Write> Write for SpinnerAwareWriter<W> {
         resume_spinner();
         result
     }
+}
+
+/// 将 LF (\n) 转换为 CRLF (\r\n)，用于 raw mode 终端
+fn convert_lf_to_crlf(buf: &[u8]) -> Vec<u8> {
+    let mut result = Vec::with_capacity(buf.len() + buf.iter().filter(|&&b| b == b'\n').count());
+    for &byte in buf {
+        if byte == b'\n' {
+            result.push(b'\r');
+        }
+        result.push(byte);
+    }
+    result
 }
 
 /// Spinner 感知的 MakeWriter
