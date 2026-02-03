@@ -402,10 +402,28 @@ impl PullRequestCreateCommand {
                     }
                     Ok((None, None))
                 } else {
-                    // 没有 PR，创建新 PR
-                    // 先提交代码
+                    // 没有 PR，根据分支状态处理：
+                    // 1. 如果有未提交的代码 -> 提交，push，创建 PR
+                    // 2. 如果有提交但未 push -> push，创建 PR
+                    // 3. 如果已 push -> 直接创建 PR
+
                     if !self.dry_run {
-                        self.commit_changes(branch_repo, jira_id, description)?;
+                        // 检查是否有未提交的更改
+                        let status = branch_repo
+                            .get_working_tree_status()
+                            .map_err(|e| format!("Failed to check working tree status: {}", e))?;
+
+                        if !status.is_clean() {
+                            // 有未提交的更改，执行提交
+                            self.commit_changes(branch_repo, jira_id, description)?;
+                        } else {
+                            // 没有未提交的更改，检查是否需要 push
+                            let needs_push =
+                                self.check_needs_push(branch_repo, current_branch)?;
+                            if needs_push {
+                                self.push_branch(branch_repo)?;
+                            }
+                        }
                     } else {
                         let status = branch_repo
                             .get_working_tree_status()
@@ -413,8 +431,15 @@ impl PullRequestCreateCommand {
 
                         if !status.is_clean() {
                             info!("[DRY RUN] Would commit changes");
+                            info!("[DRY RUN] Would push branch to remote");
                         } else {
-                            info!("[DRY RUN] No changes to commit");
+                            let needs_push =
+                                self.check_needs_push(branch_repo, current_branch)?;
+                            if needs_push {
+                                info!("[DRY RUN] Would push branch to remote");
+                            } else {
+                                info!("[DRY RUN] Branch is up to date with remote");
+                            }
                         }
                     }
 
@@ -618,7 +643,8 @@ impl PullRequestCreateCommand {
             Ok(sha) => sha,
             Err(e) => {
                 let err_msg = e.to_string();
-                if err_msg.contains("nothing to commit") {
+                // 检查是否是"没有更改需要提交"的错误（支持中英文）
+                if err_msg.contains("nothing to commit") || err_msg.contains("没有更改需要提交") {
                     info!("No changes to commit");
                     return Ok(None);
                 }
@@ -738,6 +764,39 @@ impl PullRequestCreateCommand {
         success!("Pushed branch '{}' to remote", current_branch);
 
         Ok(())
+    }
+
+    /// 检查是否需要推送分支到远端
+    ///
+    /// 返回 true 如果：
+    /// - 远程分支不存在
+    /// - 本地有未推送到远程的提交
+    fn check_needs_push(
+        &self,
+        branch_repo: &dyn GitRepository,
+        branch_name: &str,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        // 检查远程分支是否存在
+        let (_, remote_exists) = branch_repo
+            .has_branch(branch_name)
+            .map_err(|e| format!("Failed to check branch existence: {}", e))?;
+
+        if !remote_exists {
+            // 远程分支不存在，需要 push
+            return Ok(true);
+        }
+
+        // 远程分支存在，检查本地 HEAD 是否已在远程
+        let head_commit = branch_repo
+            .get_commit_info("HEAD")
+            .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
+
+        let is_in_remote = branch_repo
+            .is_commit_in_remote_branch(branch_name, &head_commit.sha)
+            .map_err(|e| format!("Failed to check commit in remote: {}", e))?;
+
+        // 如果本地 HEAD 不在远程，需要 push
+        Ok(!is_in_remote)
     }
 
     /// 准备默认分支的辅助方法
@@ -920,18 +979,24 @@ impl PullRequestCreateCommand {
 ///
 /// 支持以下格式：
 /// - https://github.com/owner/repo.git
+/// - https://github.com/owner/repo
 /// - git@github.com:owner/repo.git
+/// - git@github.com:owner/repo
 fn extract_pr_url(remote_url: &str, pr_id: &str) -> Option<String> {
     // 处理 https:// 格式
     if let Some(stripped) = remote_url.strip_prefix("https://github.com/") {
-        if let Some(repo) = stripped.strip_suffix(".git") {
+        // 移除可能的 .git 后缀
+        let repo = stripped.strip_suffix(".git").unwrap_or(stripped);
+        if !repo.is_empty() {
             return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
         }
     }
 
     // 处理 git@ 格式
     if let Some(stripped) = remote_url.strip_prefix("git@github.com:") {
-        if let Some(repo) = stripped.strip_suffix(".git") {
+        // 移除可能的 .git 后缀
+        let repo = stripped.strip_suffix(".git").unwrap_or(stripped);
+        if !repo.is_empty() {
             return Some(format!("https://github.com/{}/pull/{}", repo, pr_id));
         }
     }

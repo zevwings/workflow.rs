@@ -65,32 +65,38 @@ impl RemoteService for RemoteServiceImpl {
     }
 
     fn pull(&self, branch_name: &str) -> Result<(), GitError> {
-        let repo = self.ctx.repository();
-        let mut remote = repo
-            .find_remote("origin")
-            .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
+        // 获取 commit id，然后释放 repo 锁，避免死锁
+        let commit_id = {
+            let repo = self.ctx.repository();
+            let mut remote = repo
+                .find_remote("origin")
+                .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
 
-        // Fetch
-        let callbacks = GitContext::create_callbacks();
-        let mut fetch_opts = git2::FetchOptions::new();
-        fetch_opts.remote_callbacks(callbacks);
+            // Fetch
+            let callbacks = GitContext::create_callbacks();
+            let mut fetch_opts = git2::FetchOptions::new();
+            fetch_opts.remote_callbacks(callbacks);
 
-        remote
-            .fetch(&[branch_name], Some(&mut fetch_opts), None)
-            .map_err(|e| GitError::RemoteError(format!("拉取失败: {}", e)))?;
+            remote
+                .fetch(&[branch_name], Some(&mut fetch_opts), None)
+                .map_err(|e| GitError::RemoteError(format!("拉取失败: {}", e)))?;
 
-        // 获取 FETCH_HEAD
-        let fetch_head = repo
-            .find_reference("FETCH_HEAD")
-            .map_err(|e| GitError::OperationFailed(format!("找不到 FETCH_HEAD: {}", e)))?;
+            // 获取 FETCH_HEAD
+            let fetch_head = repo
+                .find_reference("FETCH_HEAD")
+                .map_err(|e| GitError::OperationFailed(format!("找不到 FETCH_HEAD: {}", e)))?;
 
-        let annotated = repo
-            .reference_to_annotated_commit(&fetch_head)
-            .map_err(|e| GitError::OperationFailed(format!("无法获取注释提交: {}", e)))?;
+            let annotated = repo
+                .reference_to_annotated_commit(&fetch_head)
+                .map_err(|e| GitError::OperationFailed(format!("无法获取注释提交: {}", e)))?;
 
-        // 使用 MergeService 执行合并
+            annotated.id()
+            // repo 的 MutexGuard 在这里释放
+        };
+
+        // 使用 MergeService 执行合并（现在可以安全地获取锁了）
         let merge_service = MergeServiceImpl::new(self.ctx.clone());
-        merge_service.merge_from_annotated(&annotated, branch_name, MergeStrategy::Merge)
+        merge_service.merge_from_commit_id(commit_id, branch_name, MergeStrategy::Merge)
     }
 
     fn is_commit_in_remote_branch(&self, branch: &str, commit_sha: &str) -> Result<bool, GitError> {

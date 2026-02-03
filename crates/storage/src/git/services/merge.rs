@@ -21,6 +21,16 @@ pub trait MergeService: Send + Sync {
         strategy: MergeStrategy,
     ) -> Result<(), GitError>;
 
+    /// 从 commit id 执行合并
+    ///
+    /// 用于需要避免借用冲突的场景（如 pull 操作）。
+    fn merge_from_commit_id(
+        &self,
+        commit_id: git2::Oid,
+        source_name: &str,
+        strategy: MergeStrategy,
+    ) -> Result<(), GitError>;
+
     /// 检查是否有合并冲突
     fn has_merge_conflicts(&self) -> Result<bool, GitError>;
 
@@ -42,10 +52,12 @@ impl MergeServiceImpl {
         Self { ctx }
     }
 
-    /// 执行 fast-forward 合并
-    fn do_fast_forward(&self, annotated_commit: &git2::AnnotatedCommit) -> Result<(), GitError> {
-        let repo = self.ctx.repository();
-
+    /// 执行 fast-forward 合并（内部使用，接受 repo 引用避免死锁）
+    fn do_fast_forward_with_repo(
+        &self,
+        repo: &git2::Repository,
+        annotated_commit: &git2::AnnotatedCommit,
+    ) -> Result<(), GitError> {
         let head = repo
             .head()
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -72,14 +84,13 @@ impl MergeServiceImpl {
         Ok(())
     }
 
-    /// 执行普通合并
-    fn do_normal_merge(
+    /// 执行普通合并（内部使用，接受 repo 引用避免死锁）
+    fn do_normal_merge_with_repo(
         &self,
+        repo: &git2::Repository,
         annotated_commit: &git2::AnnotatedCommit,
         source_branch: &str,
     ) -> Result<(), GitError> {
-        let repo = self.ctx.repository();
-
         // 执行合并
         repo.merge(&[annotated_commit], None, None)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -104,7 +115,11 @@ impl MergeServiceImpl {
             .find_tree(tree_id)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        let signature = self.ctx.get_signature()?;
+        // 从 repo 获取 signature，避免再次获取锁
+        let signature = repo
+            .signature()
+            .or_else(|_| git2::Signature::now("User", "user@example.com"))
+            .map_err(|e| GitError::SignatureError(e.to_string()))?;
 
         let head = repo
             .head()
@@ -136,10 +151,12 @@ impl MergeServiceImpl {
         Ok(())
     }
 
-    /// 执行 squash 合并
-    fn do_squash_merge(&self, annotated_commit: &git2::AnnotatedCommit) -> Result<(), GitError> {
-        let repo = self.ctx.repository();
-
+    /// 执行 squash 合并（内部使用，接受 repo 引用避免死锁）
+    fn do_squash_merge_with_repo(
+        &self,
+        repo: &git2::Repository,
+        annotated_commit: &git2::AnnotatedCommit,
+    ) -> Result<(), GitError> {
         // 执行合并但不创建提交
         repo.merge(&[annotated_commit], None, None)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -158,6 +175,26 @@ impl MergeServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(())
+    }
+
+    // 保留旧方法供 merge_from_annotated 使用
+    fn do_fast_forward(&self, annotated_commit: &git2::AnnotatedCommit) -> Result<(), GitError> {
+        let repo = self.ctx.repository();
+        self.do_fast_forward_with_repo(&repo, annotated_commit)
+    }
+
+    fn do_normal_merge(
+        &self,
+        annotated_commit: &git2::AnnotatedCommit,
+        source_branch: &str,
+    ) -> Result<(), GitError> {
+        let repo = self.ctx.repository();
+        self.do_normal_merge_with_repo(&repo, annotated_commit, source_branch)
+    }
+
+    fn do_squash_merge(&self, annotated_commit: &git2::AnnotatedCommit) -> Result<(), GitError> {
+        let repo = self.ctx.repository();
+        self.do_squash_merge_with_repo(&repo, annotated_commit)
     }
 }
 
@@ -221,6 +258,51 @@ impl MergeService for MergeServiceImpl {
             }
             MergeStrategy::Squash => {
                 self.do_squash_merge(annotated_commit)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn merge_from_commit_id(
+        &self,
+        commit_id: git2::Oid,
+        source_name: &str,
+        strategy: MergeStrategy,
+    ) -> Result<(), GitError> {
+        let repo = self.ctx.repository();
+        let annotated_commit = repo
+            .find_annotated_commit(commit_id)
+            .map_err(|e| GitError::OperationFailed(format!("无法获取注释提交: {}", e)))?;
+
+        // 执行合并分析
+        let (analysis, _) = repo
+            .merge_analysis(&[&annotated_commit])
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        if analysis.is_up_to_date() {
+            return Ok(());
+        }
+
+        // 使用 _with_repo 版本避免再次获取锁
+        match strategy {
+            MergeStrategy::FastForwardOnly => {
+                if !analysis.is_fast_forward() {
+                    return Err(GitError::OperationFailed(
+                        "无法执行 fast-forward 合并".into(),
+                    ));
+                }
+                self.do_fast_forward_with_repo(&repo, &annotated_commit)?;
+            }
+            MergeStrategy::Merge => {
+                if analysis.is_fast_forward() {
+                    self.do_fast_forward_with_repo(&repo, &annotated_commit)?;
+                } else {
+                    self.do_normal_merge_with_repo(&repo, &annotated_commit, source_name)?;
+                }
+            }
+            MergeStrategy::Squash => {
+                self.do_squash_merge_with_repo(&repo, &annotated_commit)?;
             }
         }
 
