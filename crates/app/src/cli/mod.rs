@@ -28,7 +28,7 @@ pub use github::GithubCommand;
 pub use jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand};
 pub use llm::LlmCommand;
 pub use log::LogCommand;
-pub use main::{Cli, Command};
+pub use main::{Cli, Command, UninstallArgs, UpdateArgs};
 pub use pr::PrSubcommand;
 pub use repo::RepoCommand;
 pub use stash::StashSubcommand;

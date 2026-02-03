@@ -8,7 +8,7 @@ use toolkit::{logger, LoggerConfig, Paths};
 use app::cli::{
     AliasCommand, AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, CompletionCommand,
     GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
-    RepoCommand, StashSubcommand, TagSubcommand,
+    RepoCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
 };
 use app::commands;
 use app::registry;
@@ -19,6 +19,8 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Version => Some("version"),
         Command::Check => Some("check"),
         Command::Setup => Some("setup"),
+        Command::Update(_) => Some("update"),
+        Command::Uninstall(_) => Some("uninstall"),
         Command::Repo(_) => Some("repo"),
         Command::Log(_) => Some("log"),
         Command::Llm(_) => Some("llm"),
@@ -85,6 +87,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::Setup => {
             let cmd = commands::setup::SetupCommand::new();
+            cmd.run()?;
+        }
+        Command::Update(UpdateArgs {
+            target_version,
+            force,
+            github_token,
+        }) => {
+            // 优先使用命令行参数，其次使用环境变量
+            let token = github_token.or_else(|| std::env::var("GITHUB_TOKEN").ok());
+            let cmd = commands::update::UpdateCommand::new(target_version, force, token);
+            cmd.run()?;
+        }
+        Command::Uninstall(UninstallArgs { force, keep_config }) => {
+            let cmd = commands::uninstall::UninstallCommand::new(force, keep_config);
             cmd.run()?;
         }
         Command::Repo(repo_cmd) => match repo_cmd {
