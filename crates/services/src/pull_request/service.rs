@@ -82,17 +82,21 @@ impl PullRequestService for PullRequestServiceImpl {
         jira_id: Option<&str>,
         title: Option<&str>,
         description: Option<&str>,
+        target_branch: Option<&str>,
     ) -> Result<String, ServiceError> {
         self.check_pr_support()?;
 
         // 获取当前分支信息
         let current_branch = self.git_repo.get_current_branch()?;
 
-        // 获取默认目标分支（通常是 main 或 master）
-        let default_branch = self
-            .git_repo
-            .get_default_branch()
-            .unwrap_or_else(|_| "main".to_string());
+        // 使用提供的目标分支或获取默认分支
+        let final_target_branch = match target_branch {
+            Some(branch) => branch.to_string(),
+            None => self
+                .git_repo
+                .get_default_branch()
+                .unwrap_or_else(|_| "main".to_string()),
+        };
 
         // 如果未提供标题，使用 LLM 生成 PR 内容
         let (final_title, final_description) = if title.is_none() {
@@ -133,7 +137,7 @@ impl PullRequestService for PullRequestServiceImpl {
             &final_title,
             &final_description,
             &current_branch,
-            &default_branch,
+            &final_target_branch,
         ))?;
 
         Ok(pr_id)

@@ -48,16 +48,16 @@ pub struct BranchTemplates {
 impl Default for BranchTemplates {
     fn default() -> Self {
         Self {
-            feature: "{{#if prefix}}{{prefix}}/{{/if}}feature/{{jira_key}}-{{summary_slug}}"
+            feature: "{{#if prefix}}{{prefix}}/{{/if}}feature/{{#if jira_key}}{{jira_key}}-{{/if}}{{summary_slug}}"
                 .to_string(),
-            bugfix: "{{#if prefix}}{{prefix}}/{{/if}}bugfix/{{jira_key}}-{{summary_slug}}"
+            bugfix: "{{#if prefix}}{{prefix}}/{{/if}}bugfix/{{#if jira_key}}{{jira_key}}-{{/if}}{{summary_slug}}"
                 .to_string(),
-            hotfix: "{{#if prefix}}{{prefix}}/{{/if}}hotfix/{{jira_key}}-{{summary_slug}}"
+            hotfix: "{{#if prefix}}{{prefix}}/{{/if}}hotfix/{{#if jira_key}}{{jira_key}}-{{/if}}{{summary_slug}}"
                 .to_string(),
             refactoring:
-                "{{#if prefix}}{{prefix}}/{{/if}}refactoring/{{jira_key}}-{{summary_slug}}"
+                "{{#if prefix}}{{prefix}}/{{/if}}refactoring/{{#if jira_key}}{{jira_key}}-{{/if}}{{summary_slug}}"
                     .to_string(),
-            chore: "{{#if prefix}}{{prefix}}/{{/if}}chore/{{jira_key}}-{{summary_slug}}"
+            chore: "{{#if prefix}}{{prefix}}/{{/if}}chore/{{#if jira_key}}{{jira_key}}-{{/if}}{{summary_slug}}"
                 .to_string(),
         }
     }

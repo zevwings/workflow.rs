@@ -2,7 +2,7 @@
 
 use crate::registry;
 use color_eyre::Result;
-use prompt::{success, Spinner};
+use prompt::{spinner, success};
 
 /// Pull Request Approve 命令
 pub struct PullRequestApproveCommand {
@@ -20,7 +20,7 @@ impl PullRequestApproveCommand {
         let pr_service = registry::get_pull_request_service();
 
         // 批准 PR
-        Spinner::new(format!("Approving PR #{}...", self.pr_id))
+        spinner!("Approving PR #{}...", self.pr_id)
             .with(|| pr_service.approve_pull_request(&self.pr_id))
             .map_err(|e| format!("Failed to approve Pull Request: {}", e))?;
 

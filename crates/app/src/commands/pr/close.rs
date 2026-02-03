@@ -2,7 +2,7 @@
 
 use crate::registry;
 use color_eyre::Result;
-use prompt::{success, Spinner};
+use prompt::{spinner, success};
 
 /// Pull Request Close 命令
 pub struct PullRequestCloseCommand {
@@ -20,7 +20,7 @@ impl PullRequestCloseCommand {
         let pr_service = registry::get_pull_request_service();
 
         // 关闭 PR
-        Spinner::new(format!("Closing PR #{}...", self.pr_id))
+        spinner!("Closing PR #{}...", self.pr_id)
             .with(|| pr_service.close_pull_request(&self.pr_id))
             .map_err(|e| format!("Failed to close Pull Request: {}", e))?;
 

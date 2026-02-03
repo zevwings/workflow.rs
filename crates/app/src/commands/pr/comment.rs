@@ -1,7 +1,7 @@
 //! 添加 Pull Request 评论命令
 
 use color_eyre::Result;
-use prompt::{error, input, success, Spinner};
+use prompt::{error, input, spinner, success};
 
 use crate::registry;
 
@@ -36,7 +36,7 @@ impl PullRequestCommentCommand {
         }
 
         // 添加评论
-        Spinner::new(format!("Adding comment to PR #{}...", self.pr_id))
+        spinner!("Adding comment to PR #{}...", self.pr_id)
             .with(|| pr_service.add_comment(&self.pr_id, &comment))
             .map_err(|e| format!("Failed to add comment: {}", e))?;
 
