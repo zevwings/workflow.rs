@@ -9,6 +9,65 @@ use prompt::{
 use toolkit::Sensitive;
 
 // =================================================================================
+// Enums
+// =================================================================================
+
+/// 账户操作选项
+#[derive(Clone)]
+pub enum AccountAction {
+    /// 保留当前账户 (Setup 模式)
+    KeepCurrent {
+        account_display: String,
+    },
+    /// 使用已有账户 (Setup 模式)
+    UseExisting {
+        account_display: String,
+        account_name: String,
+    },
+    /// 添加新账户
+    AddNew {
+        platform_name: String,
+    },
+    /// 切换当前账户 (Command 模式)
+    Switch {
+        platform_name: String,
+    },
+    /// 更新账户信息 (Command 模式)
+    Update {
+        platform_name: String,
+    },
+    /// 删除账户 (Command 模式)
+    Remove {
+        platform_name: String,
+    },
+}
+
+impl std::fmt::Display for AccountAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AccountAction::KeepCurrent { account_display } => {
+                write!(f, "Keep current account {}", account_display)
+            }
+            AccountAction::UseExisting { account_display, .. } => {
+                write!(f, "Use exists account {}", account_display)
+            }
+            AccountAction::AddNew { platform_name } => {
+                write!(f, "Add new {} account", platform_name)
+            }
+            AccountAction::Switch { platform_name } => {
+                write!(f, "Switch current {} account", platform_name)
+            }
+            AccountAction::Update { platform_name } => {
+                write!(f, "Update {} account information", platform_name)
+            }
+            AccountAction::Remove { platform_name } => {
+                write!(f, "Remove {} account", platform_name)
+            }
+        }
+    }
+}
+
+// =================================================================================
 // Traits
 // =================================================================================
 
@@ -190,7 +249,7 @@ where
     Ok(())
 }
 
-fn build_menu_options<S, A>(settings: &S, mode: WorkflowMode, platform_name: &str) -> Vec<String>
+fn build_menu_options<S, A>(settings: &S, mode: WorkflowMode, platform_name: &str) -> Vec<AccountAction>
 where
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
@@ -200,26 +259,38 @@ where
             let mut options = vec![];
 
             if let Some(current_account) = settings.get_current_account() {
-                options.push(format!(
-                    "Keep current account {}",
-                    current_account.display()
-                ));
+                options.push(AccountAction::KeepCurrent {
+                    account_display: current_account.display(),
+                });
             }
 
             for account in settings.accounts().iter() {
                 if account.name() != settings.current() {
-                    options.push(format!("Use exists account {}", account.display()));
+                    options.push(AccountAction::UseExisting {
+                        account_display: account.display(),
+                        account_name: account.name().to_string(),
+                    });
                 }
             }
 
-            options.push(format!("Add new {} account", platform_name));
+            options.push(AccountAction::AddNew {
+                platform_name: platform_name.to_string(),
+            });
             options
         }
         WorkflowMode::Command => vec![
-            format!("Add new {} account", platform_name),
-            format!("Switch current {} account", platform_name),
-            format!("Update {} account information", platform_name),
-            format!("Remove {} account", platform_name),
+            AccountAction::AddNew {
+                platform_name: platform_name.to_string(),
+            },
+            AccountAction::Switch {
+                platform_name: platform_name.to_string(),
+            },
+            AccountAction::Update {
+                platform_name: platform_name.to_string(),
+            },
+            AccountAction::Remove {
+                platform_name: platform_name.to_string(),
+            },
         ],
     }
 }
@@ -227,7 +298,7 @@ where
 fn handle_action<S, A, U>(
     context: &mut WorkflowContext,
     configurator: &impl PlatformConfigurator,
-    selected_action: &str,
+    selected_action: &AccountAction,
     platform_name: &str,
     update_account_fn: U,
 ) -> Result<(), String>
@@ -237,45 +308,22 @@ where
     A: PlatformAccount,
     U: Fn(&mut WorkflowContext) -> Result<(), String>,
 {
-    match context.mode() {
-        WorkflowMode::Setup => {
-            if selected_action.starts_with("Keep current account") {
-                br!();
-                info!("Keeping current {} account.", platform_name);
-                Ok(())
-            } else if selected_action.starts_with("Use exists account") {
-                let account_name =
-                    extract_account_name_from_option(selected_action, "Use exists account")?;
-                switch_to_account(context.settings_mut(), &account_name, platform_name)
-            } else if selected_action.starts_with(&format!("Add new {} account", platform_name)) {
-                Err(format!(
-                    "Add new account for {} should be called from platform-specific module",
-                    platform_name
-                ))
-            } else {
-                Err("Invalid action selected".to_string())
-            }
+    match selected_action {
+        AccountAction::KeepCurrent { .. } => {
+            br!();
+            info!("Keeping current {} account.", platform_name);
+            Ok(())
         }
-        WorkflowMode::Command => {
-            if selected_action.starts_with(&format!("Add new {} account", platform_name)) {
-                Err(format!(
-                    "Add new account for {} should be called from platform-specific module",
-                    platform_name
-                ))
-            } else if selected_action
-                .starts_with(&format!("Switch current {} account", platform_name))
-            {
-                switch_account_generic(context, configurator)
-            } else if selected_action
-                .starts_with(&format!("Update {} account information", platform_name))
-            {
-                update_account_fn(context)
-            } else if selected_action.starts_with(&format!("Remove {} account", platform_name)) {
-                remove_account_generic(context, platform_name)
-            } else {
-                Err("Invalid action selected".to_string())
-            }
+        AccountAction::UseExisting { account_name, .. } => {
+            switch_to_account(context.settings_mut(), account_name, platform_name)
         }
+        AccountAction::AddNew { .. } => Err(format!(
+            "Add new account for {} should be called from platform-specific module",
+            platform_name
+        )),
+        AccountAction::Switch { .. } => switch_account_generic(context, configurator),
+        AccountAction::Update { .. } => update_account_fn(context),
+        AccountAction::Remove { .. } => remove_account_generic(context, platform_name),
     }
 }
 
@@ -573,15 +621,4 @@ where
     br!();
     success!("Switched to {} account: {}", platform_name, account_name);
     Ok(())
-}
-
-pub fn extract_account_name_from_option(option: &str, prefix: &str) -> Result<String, String> {
-    let parts: Vec<&str> = option.split_whitespace().collect();
-    // Expected format: "Use exists account <name> (<email>)"
-    // prefix parts length + name
-    let prefix_len = prefix.split_whitespace().count();
-    if parts.len() <= prefix_len {
-        return Err("Invalid option format".to_string());
-    }
-    Ok(parts[prefix_len].to_string())
 }

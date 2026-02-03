@@ -10,6 +10,89 @@ use crate::workflows::utils::branch::{
 };
 use crate::workflows::utils::jira::get_jira_id_interactive_optional;
 
+/// 分支处理方式选项
+#[derive(Clone)]
+enum BranchHandleOption {
+    /// 直接使用当前分支
+    UseCurrentBranch(String),
+    /// 基于当前分支创建新分支
+    CreateFromCurrent(String),
+    /// 切换到默认分支，创建新分支
+    SwitchToDefault(String),
+}
+
+impl std::fmt::Display for BranchHandleOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BranchHandleOption::UseCurrentBranch(branch) => {
+                write!(f, "Use current branch directly ({})", branch)
+            }
+            BranchHandleOption::CreateFromCurrent(branch) => {
+                write!(f, "Create new branch from current ({})", branch)
+            }
+            BranchHandleOption::SwitchToDefault(branch) => {
+                write!(f, "Switch to default branch and create new ({})", branch)
+            }
+        }
+    }
+}
+
+/// 目标分支选项
+#[derive(Clone)]
+enum TargetBranchOption {
+    /// 合并到当前分支
+    CurrentBranch(String),
+    /// 合并到推断的分支
+    InferredBranch(String),
+    /// 合并到默认分支
+    DefaultBranch(String),
+}
+
+impl std::fmt::Display for TargetBranchOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetBranchOption::CurrentBranch(branch) => {
+                write!(f, "Merge to current branch: {}", branch)
+            }
+            TargetBranchOption::InferredBranch(branch) => {
+                write!(f, "Merge to inferred branch: {}", branch)
+            }
+            TargetBranchOption::DefaultBranch(branch) => {
+                write!(f, "Merge to default branch: {}", branch)
+            }
+        }
+    }
+}
+
+impl TargetBranchOption {
+    /// 获取分支名
+    fn branch_name(&self) -> &str {
+        match self {
+            TargetBranchOption::CurrentBranch(branch)
+            | TargetBranchOption::InferredBranch(branch)
+            | TargetBranchOption::DefaultBranch(branch) => branch,
+        }
+    }
+}
+
+/// 确认操作选项
+#[derive(Clone, PartialEq)]
+enum ConfirmOption {
+    /// 确认执行
+    Yes,
+    /// 取消操作
+    No,
+}
+
+impl std::fmt::Display for ConfirmOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConfirmOption::Yes => write!(f, "Yes, update PR"),
+            ConfirmOption::No => write!(f, "No, cancel"),
+        }
+    }
+}
+
 /// Pull Request Create 命令
 pub struct PullRequestCreateCommand {
     jira_id: Option<String>,
@@ -243,36 +326,98 @@ impl PullRequestCreateCommand {
         description: Option<&str>,
     ) -> Result<(Option<String>, Option<String>), Box<dyn std::error::Error>> {
         let options = vec![
-            format!("直接使用当前分支 ({})", current_branch),
-            format!("基于当前分支创建新分支 ({})", generated_branch_name),
-            format!("切换到默认分支，创建新分支 ({})", generated_branch_name),
+            BranchHandleOption::UseCurrentBranch(current_branch.to_string()),
+            BranchHandleOption::CreateFromCurrent(generated_branch_name.to_string()),
+            BranchHandleOption::SwitchToDefault(generated_branch_name.to_string()),
         ];
 
-        let selected = select!("请选择分支处理方式:", options)
+        let selected = select!("Please select how to handle branches:", options)
             .prompt()
             .map_err(|e| format!("Failed to select branch option: {}", e))?;
 
-        if selected.starts_with("直接使用当前分支") {
-            // 1.1 直接使用当前分支
-            let pr_service = registry::get_pull_request_service();
+        match selected {
+            BranchHandleOption::UseCurrentBranch(_) => {
+                // 1.1 直接使用当前分支
+                let pr_service = registry::get_pull_request_service();
 
-            // 检查当前分支是否已有 PR
-            let existing_pr_id = pr_service
-                .get_current_branch_pull_request(current_branch)
-                .map_err(|e| format!("Failed to check existing PR: {}", e))?;
+                // 检查当前分支是否已有 PR
+                let existing_pr_id = pr_service
+                    .get_current_branch_pull_request(current_branch)
+                    .map_err(|e| format!("Failed to check existing PR: {}", e))?;
 
-            if let Some(pr_id) = existing_pr_id {
-                // 已有 PR，询问是否更新
-                let update_options = vec!["是，更新 PR", "否，取消操作"];
-                let update_selected = select!(
-                    format!("当前分支 '{}' 已有 PR #{}，是否更新?", current_branch, pr_id),
-                    update_options
-                )
-                .prompt()
-                .map_err(|e| format!("Failed to select update option: {}", e))?;
+                if let Some(pr_id) = existing_pr_id {
+                    // 已有 PR，询问是否更新
+                    let update_options = vec![ConfirmOption::Yes, ConfirmOption::No];
+                    let update_selected = select!(
+                        format!("Branch '{}' already has PR #{}. Update it?", current_branch, pr_id),
+                        update_options
+                    )
+                    .prompt()
+                    .map_err(|e| format!("Failed to select update option: {}", e))?;
 
-                if update_selected == "是，更新 PR" {
-                    // 生成 PR 内容
+                    if update_selected == ConfirmOption::Yes {
+                        // 生成 PR 内容
+                        let pr_content = self.generate_pr_summary(
+                            branch_repo,
+                            current_branch,
+                            jira_id,
+                            description,
+                        )?;
+
+                        if let Some(pr_content) = pr_content {
+                            // 更新 PR
+                            if self.dry_run {
+                                info!("[DRY RUN] Would update PR #{}", pr_id);
+                                info!("  Title: {}", pr_content.pr_title);
+                                if let Some(ref desc) = pr_content.description {
+                                    info!("  Description:\n{}", desc);
+                                }
+                            } else {
+                                let mut pr_body = String::new();
+                                if let Some(ref description) = pr_content.description {
+                                    pr_body.push_str(description);
+                                }
+                                if let Some(ref summary) = pr_content.summary {
+                                    if !pr_body.is_empty() {
+                                        pr_body.push_str("\n\n");
+                                    }
+                                    pr_body.push_str("## Summary\n\n");
+                                    pr_body.push_str(summary);
+                                }
+
+                                info!("Updating PR #{}...", pr_id);
+                                pr_service
+                                    .update_pull_request(
+                                        &pr_id,
+                                        Some(&pr_content.pr_title),
+                                        Some(&pr_body),
+                                    )
+                                    .map_err(|e| format!("Failed to update PR: {}", e))?;
+                                success!("PR #{} updated successfully!", pr_id);
+                            }
+                        }
+                    } else {
+                        info!("Operation cancelled");
+                    }
+                    Ok((None, None))
+                } else {
+                    // 没有 PR，创建新 PR
+                    // 先提交代码
+                    if !self.dry_run {
+                        self.commit_changes(branch_repo, jira_id, description)?;
+                    } else {
+                        let status = branch_repo
+                            .get_working_tree_status()
+                            .map_err(|e| format!("Failed to check working tree status: {}", e))?;
+
+                        if !status.is_clean() {
+                            info!("[DRY RUN] Would commit changes");
+                        } else {
+                            info!("[DRY RUN] No changes to commit");
+                        }
+                    }
+
+                    // 生成 PR 内容并创建 PR
                     let pr_content = self.generate_pr_summary(
                         branch_repo,
                         current_branch,
@@ -281,185 +426,113 @@ impl PullRequestCreateCommand {
                     )?;
 
                     if let Some(pr_content) = pr_content {
-                        // 更新 PR
-                        if self.dry_run {
-                            info!("[DRY RUN] Would update PR #{}", pr_id);
-                            info!("  Title: {}", pr_content.pr_title);
-                            if let Some(ref desc) = pr_content.description {
-                                info!("  Description:\n{}", desc);
-                            }
+                        // 在 dry-run 模式下，简化目标分支推断逻辑
+                        let target_branch = if self.dry_run {
+                            // 直接使用默认分支，跳过耗时的推断和交互
+                            let default_branch = branch_repo
+                                .get_default_branch()
+                                .map_err(|e| format!("Failed to get default branch: {}", e))?;
+                            info!("[DRY RUN] Target branch: {}", default_branch);
+                            default_branch
                         } else {
-                            let mut pr_body = String::new();
-                            if let Some(ref description) = pr_content.description {
-                                pr_body.push_str(description);
-                            }
-                            if let Some(ref summary) = pr_content.summary {
-                                if !pr_body.is_empty() {
-                                    pr_body.push_str("\n\n");
-                                }
-                                pr_body.push_str("## Summary\n\n");
-                                pr_body.push_str(summary);
-                            }
+                            // 非 dry-run 模式：推断目标分支并询问用户确认
+                            let inferred_target = branch_repo
+                                .infer_target_branch(current_branch)
+                                .map_err(|e| format!("Failed to infer target branch: {}", e))?;
 
-                            info!("Updating PR #{}...", pr_id);
-                            pr_service
-                                .update_pull_request(
-                                    &pr_id,
-                                    Some(&pr_content.pr_title),
-                                    Some(&pr_body),
-                                )
-                                .map_err(|e| format!("Failed to update PR: {}", e))?;
-                            success!("PR #{} updated successfully!", pr_id);
+                            self.confirm_target_branch(
+                                branch_repo,
+                                inferred_target.as_deref(),
+                            )?
+                        };
+
+                        self.create_pull_request(
+                            branch_repo,
+                            current_branch,
+                            &pr_content,
+                            Some(&target_branch),
+                        )?;
+                    }
+                    Ok((None, None))
+                }
+            }
+            BranchHandleOption::CreateFromCurrent(_) => {
+                // 1.2 基于当前分支创建新分支
+                // 推断当前分支的源分支，让用户选择目标分支
+                let target_branch = if current_branch != default_branch {
+                    // 当前分支不是默认分支，推断其源分支
+                    let inferred_source = branch_repo
+                        .infer_target_branch(current_branch)
+                        .map_err(|e| format!("Failed to infer source branch: {}", e))?;
+
+                    // 根据推断结果，让用户选择目标分支
+                    if let Some(source) = inferred_source {
+                        // 成功推断出源分支
+                        if source == default_branch {
+                            // 源分支就是默认分支，提供 current_branch 或 默认分支 两个选项
+                            let options = vec![
+                                TargetBranchOption::CurrentBranch(current_branch.to_string()),
+                                TargetBranchOption::DefaultBranch(default_branch.to_string()),
+                            ];
+                            let selected = select!("Please select the target branch for PR:", options)
+                                .prompt()
+                                .map_err(|e| format!("Failed to select target branch: {}", e))?;
+
+                            selected.branch_name().to_string()
+                        } else {
+                            // 源分支不是默认分支，提供三个选项
+                            let options = vec![
+                                TargetBranchOption::CurrentBranch(current_branch.to_string()),
+                                TargetBranchOption::InferredBranch(source),
+                                TargetBranchOption::DefaultBranch(default_branch.to_string()),
+                            ];
+                            let selected = select!("Please select the target branch for PR:", options)
+                                .prompt()
+                                .map_err(|e| format!("Failed to select target branch: {}", e))?;
+
+                            selected.branch_name().to_string()
                         }
+                    } else {
+                        // 无法推断源分支，只提供 current_branch 或 默认分支 两个选项
+                        let options = vec![
+                            TargetBranchOption::CurrentBranch(current_branch.to_string()),
+                            TargetBranchOption::DefaultBranch(default_branch.to_string()),
+                        ];
+                        let selected = select!("Please select the target branch for PR:", options)
+                            .prompt()
+                            .map_err(|e| format!("Failed to select target branch: {}", e))?;
+
+                        selected.branch_name().to_string()
                     }
                 } else {
-                    info!("Operation cancelled");
-                }
-                return Ok((None, None));
-            } else {
-                // 没有 PR，创建新 PR
-                // 先提交代码
-                if !self.dry_run {
-                    self.commit_changes(branch_repo, jira_id, description)?;
-                } else {
+                    // 当前分支是默认分支，直接使用默认分支作为目标
+                    default_branch.to_string()
+                };
+
+                Ok((
+                    Some(generated_branch_name.to_string()),
+                    Some(target_branch),
+                ))
+            }
+            BranchHandleOption::SwitchToDefault(_) => {
+                // 1.3 切换到默认分支，创建新分支
+                if self.dry_run {
+                    info!("[DRY RUN] Would stash changes, switch to '{}', and pull latest", default_branch);
                     let status = branch_repo
                         .get_working_tree_status()
                         .map_err(|e| format!("Failed to check working tree status: {}", e))?;
-
                     if !status.is_clean() {
-                        info!("[DRY RUN] Would commit changes");
-                    } else {
-                        info!("[DRY RUN] No changes to commit");
-                    }
-                }
-
-                // 生成 PR 内容并创建 PR
-                let pr_content = self.generate_pr_summary(
-                    branch_repo,
-                    current_branch,
-                    jira_id,
-                    description,
-                )?;
-
-                if let Some(pr_content) = pr_content {
-                    // 在 dry-run 模式下，简化目标分支推断逻辑
-                    let target_branch = if self.dry_run {
-                        // 直接使用默认分支，跳过耗时的推断和交互
-                        let default_branch = branch_repo
-                            .get_default_branch()
-                            .map_err(|e| format!("Failed to get default branch: {}", e))?;
-                        info!("[DRY RUN] Target branch: {}", default_branch);
-                        default_branch
-                    } else {
-                        // 非 dry-run 模式：推断目标分支并询问用户确认
-                        let inferred_target = branch_repo
-                            .infer_target_branch(current_branch)
-                            .map_err(|e| format!("Failed to infer target branch: {}", e))?;
-
-                        self.confirm_target_branch(
-                            branch_repo,
-                            inferred_target.as_deref(),
-                        )?
-                    };
-
-                    self.create_pull_request(
-                        branch_repo,
-                        current_branch,
-                        &pr_content,
-                        Some(&target_branch),
-                    )?;
-                }
-                return Ok((None, None));
-            }
-        } else if selected.starts_with("基于当前分支创建新分支") {
-            // 1.2 基于当前分支创建新分支
-            // 推断当前分支的源分支，让用户选择目标分支
-            let target_branch = if current_branch != default_branch {
-                // 当前分支不是默认分支，推断其源分支
-                let inferred_source = branch_repo
-                    .infer_target_branch(current_branch)
-                    .map_err(|e| format!("Failed to infer source branch: {}", e))?;
-
-                // 根据推断结果，让用户选择目标分支
-                if let Some(source) = inferred_source {
-                    // 成功推断出源分支
-                    if source == default_branch {
-                        // 源分支就是默认分支，提供 current_branch 或 默认分支 两个选项
-                        let options = vec![
-                            format!("合并到当前分支: {}", current_branch),
-                            format!("合并到默认分支: {}", default_branch),
-                        ];
-                        let selected = select!("请选择 PR 的目标分支:", options)
-                            .prompt()
-                            .map_err(|e| format!("Failed to select target branch: {}", e))?;
-
-                        if selected.starts_with("合并到当前分支") {
-                            current_branch.to_string()
-                        } else {
-                            default_branch.to_string()
-                        }
-                    } else {
-                        // 源分支不是默认分支，提供三个选项
-                        let options = vec![
-                            format!("合并到当前分支: {}", current_branch),
-                            format!("合并到推断的源分支: {}", source),
-                            format!("合并到默认分支: {}", default_branch),
-                        ];
-                        let selected = select!("请选择 PR 的目标分支:", options)
-                            .prompt()
-                            .map_err(|e| format!("Failed to select target branch: {}", e))?;
-
-                        if selected.starts_with("合并到当前分支") {
-                            current_branch.to_string()
-                        } else if selected.starts_with("合并到推断的源分支") {
-                            source
-                        } else {
-                            default_branch.to_string()
-                        }
+                        info!("[DRY RUN] Would stash changes before switching");
                     }
                 } else {
-                    // 无法推断源分支，只提供 current_branch 或 默认分支 两个选项
-                    let options = vec![
-                        format!("合并到当前分支: {}", current_branch),
-                        format!("合并到默认分支: {}", default_branch),
-                    ];
-                    let selected = select!("请选择 PR 的目标分支:", options)
-                        .prompt()
-                        .map_err(|e| format!("Failed to select target branch: {}", e))?;
-
-                    if selected.starts_with("合并到当前分支") {
-                        current_branch.to_string()
-                    } else {
-                        default_branch.to_string()
-                    }
+                    self.prepare_default_branch(branch_repo, current_branch, default_branch)?;
                 }
-            } else {
-                // 当前分支是默认分支，直接使用默认分支作为目标
-                default_branch.to_string()
-            };
-
-            Ok((
-                Some(generated_branch_name.to_string()),
-                Some(target_branch),
-            ))
-        } else {
-            // 1.3 切换到默认分支，创建新分支
-            if self.dry_run {
-                info!("[DRY RUN] Would stash changes, switch to '{}', and pull latest", default_branch);
-                let status = branch_repo
-                    .get_working_tree_status()
-                    .map_err(|e| format!("Failed to check working tree status: {}", e))?;
-                if !status.is_clean() {
-                    info!("[DRY RUN] Would stash changes before switching");
-                }
-            } else {
-                self.prepare_default_branch(branch_repo, current_branch, default_branch)?;
+                // 目标分支就是默认分支
+                Ok((
+                    Some(generated_branch_name.to_string()),
+                    Some(default_branch.to_string()),
+                ))
             }
-            // 目标分支就是默认分支
-            Ok((
-                Some(generated_branch_name.to_string()),
-                Some(default_branch.to_string()),
-            ))
         }
     }
 
@@ -544,7 +617,7 @@ impl PullRequestCreateCommand {
             Ok(sha) => sha,
             Err(e) => {
                 let err_msg = e.to_string();
-                if err_msg.contains("没有更改需要提交") || err_msg.contains("nothing to commit") {
+                if err_msg.contains("nothing to commit") {
                     info!("No changes to commit");
                     return Ok(None);
                 }
@@ -719,23 +792,25 @@ impl PullRequestCreateCommand {
 
         // 如果推断出了目标分支，询问用户确认
         if let Some(inferred) = inferred_target {
+            // 如果推断的分支和默认分支相同，直接使用，无需询问
+            if inferred == default_branch {
+                info!("Target branch: {}", inferred);
+                return Ok(inferred.to_string());
+            }
+
             let options = vec![
-                format!("合并到推断的分支: {}", inferred),
-                format!("合并到默认分支: {}", default_branch),
+                TargetBranchOption::InferredBranch(inferred.to_string()),
+                TargetBranchOption::DefaultBranch(default_branch.clone()),
             ];
 
-            let selected = select!("请选择 PR 的目标分支:", options)
+            let selected = select!("Please select the target branch for PR:", options)
                 .prompt()
                 .map_err(|e| format!("Failed to select target branch: {}", e))?;
 
-            if selected.starts_with("合并到推断的分支") {
-                Ok(inferred.to_string())
-            } else {
-                Ok(default_branch)
-            }
+            Ok(selected.branch_name().to_string())
         } else {
             // 无法推断，直接使用默认分支
-            info!("无法推断目标分支，将使用默认分支: {}", default_branch);
+            info!("Cannot infer target branch, using default: {}", default_branch);
             Ok(default_branch)
         }
     }
