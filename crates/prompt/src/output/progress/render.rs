@@ -3,10 +3,15 @@
 use crate::output::progress::bar::ProgressBar;
 use crate::output::progress::format::format_progress_text;
 use crate::style::theme::get_theme;
-use crossterm::{cursor, terminal::ClearType, QueueableCommand};
+use crossterm::{cursor, terminal, terminal::ClearType, QueueableCommand};
 use std::io::{self, Write};
 use std::sync::Arc;
 use std::thread;
+
+/// 获取终端宽度
+fn get_terminal_width() -> Option<usize> {
+    terminal::size().ok().map(|(cols, _)| cols as usize)
+}
 
 /// 启动渲染线程
 pub(super) fn start_render_thread(bar: &ProgressBar) {
@@ -51,6 +56,7 @@ pub(super) fn start_render_thread(bar: &ProgressBar) {
             };
 
             let theme = get_theme();
+            let terminal_width = get_terminal_width();
             let params = super::format::ProgressFormatParams {
                 message: &msg,
                 total: total_val,
@@ -60,6 +66,7 @@ pub(super) fn start_render_thread(bar: &ProgressBar) {
                 bar_width,
                 progress_chars: &progress_chars,
                 theme: &theme,
+                terminal_width,
             };
             let styled = format_progress_text(&params);
 

@@ -49,18 +49,25 @@ impl ConfirmBuilder {
 fn clear_and_display_result(builder: &ConfirmBuilder, value: bool, theme: &Theme) -> Result<()> {
     let mut stdout = std::io::stdout();
 
-    // 当前光标在提示行的下一行（因为 write_flush 输出了换行符）
-    // 先向上移动一行回到提示行
-    execute!(stdout, cursor::MoveUp(1))?;
+    // 计算消息占用的行数（包含换行符的数量 + 1）
+    let line_count = builder.message.chars().filter(|&c| c == '\n').count() + 1;
 
-    // 清除提示行
-    execute!(stdout, cursor::MoveToColumn(0))?;
-    execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
+    // 当前光标在提示行的下一行（因为 writeln! 输出了换行符）
+    // 需要向上移动 line_count 行回到提示行的第一行
+    for _ in 0..line_count {
+        execute!(stdout, cursor::MoveUp(1))?;
+        execute!(stdout, cursor::MoveToColumn(0))?;
+        execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
+    }
 
     // 显示格式化的结果："> [title] yes" 或 "> [title] no"
     let prefix = theme.prefix.apply(RESULT_PREFIX, theme.enable_color);
-    // 使用 result_title（如果存在），否则使用 message
-    let title_text = builder.result_title.as_ref().unwrap_or(&builder.message);
+    // 使用 result_title（如果存在），否则使用 message 的第一行（避免多行消息导致输出错乱）
+    let title_text = builder
+        .result_title
+        .as_ref()
+        .map(|s| s.as_str())
+        .unwrap_or_else(|| builder.message.lines().next().unwrap_or(&builder.message));
     let title = theme.title.apply(title_text, theme.enable_color);
     let result_text = if value {
         theme.answer.apply("yes", theme.enable_color)
