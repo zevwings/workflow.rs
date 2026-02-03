@@ -56,7 +56,7 @@ impl CodePlatform {
 
     /// 检查平台是否已完全实现（支持完整的 PR 功能）
     pub fn is_fully_implemented(&self) -> bool {
-        matches!(self, CodePlatform::GitHub | CodePlatform::CNB)
+        matches!(self, CodePlatform::GitHub)
     }
 
     /// 从字符串解析平台类型（不包括 Unknown）
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_code_platform_is_fully_implemented() {
         assert!(CodePlatform::GitHub.is_fully_implemented());
-        assert!(CodePlatform::CNB.is_fully_implemented());
+        assert!(!CodePlatform::CNB.is_fully_implemented());
         assert!(!CodePlatform::Codeup.is_fully_implemented());
         assert!(!CodePlatform::Unknown.is_fully_implemented());
     }

@@ -3,7 +3,7 @@
 //! 提供 git2::Repository 的管理和访问。
 
 use domain::git::{CodePlatform, GitError, RepoInfo};
-use git2::Repository;
+use git2::{CertificateCheckStatus, Repository};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -12,9 +12,11 @@ use std::sync::{Arc, Mutex};
 /// URL 解析器模式
 static URL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
+        // GitHub SSH over 443: git@ssh.github.com:443/owner/repo.git
+        Regex::new(r"git@ssh\.github\.com:\d+/(.+?)(?:\.git)?/?$").unwrap(),
         // GitHub SSH 协议格式: ssh://git@github.com/owner/repo.git
         Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$").unwrap(),
-        // GitHub SSH 格式: git@github.com:owner/repo.git
+        // GitHub SSH 格式: git@github.com:owner/repo.git (需在 ssh.github.com 之后，避免误匹配)
         Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").unwrap(),
         // GitHub HTTPS 格式: https://github.com/owner/repo.git
         Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$").unwrap(),
@@ -202,6 +204,7 @@ impl GitContext {
     pub fn parse_repo_kind(url: &str) -> CodePlatform {
         if url.contains("github.com")
             || url.starts_with("git@github")
+            || url.starts_with("git@ssh.github")
             || url.starts_with("ssh://git@github")
         {
             CodePlatform::GitHub
@@ -222,19 +225,65 @@ impl GitContext {
     /// 优先使用 SSH agent，然后尝试默认凭据。
     pub fn create_callbacks<'a>() -> git2::RemoteCallbacks<'a> {
         let mut callbacks = git2::RemoteCallbacks::new();
-        callbacks.credentials(|_url, username_from_url, allowed_types| {
-            // 优先使用 SSH agent
+        // libgit2 使用 libssh2，不读 OpenSSH 的 known_hosts，必须显式接受主机密钥
+        callbacks.certificate_check(|_cert, host| {
+            toolkit::log_info!("create_callbacks: certificate_check invoked, host = {}", host);
+            Ok(CertificateCheckStatus::CertificateOk)
+        });
+
+        // 使用 Arc<Mutex> 来跟踪重试次数，避免无限循环
+        let retry_count = Arc::new(Mutex::new(0u32));
+
+        callbacks.credentials(move |url, username_from_url, allowed_types| {
+            // 检查重试次数，防止无限循环
+            let mut count = retry_count.lock().unwrap();
+            *count += 1;
+
+            const MAX_RETRIES: u32 = 3;
+            if *count > MAX_RETRIES {
+                toolkit::log_info!(
+                    "create_callbacks: max retries ({}) exceeded, failing authentication",
+                    MAX_RETRIES
+                );
+                return Err(git2::Error::from_str(
+                    "Authentication failed after maximum retry attempts"
+                ));
+            }
+
+            toolkit::log_info!(
+                "create_callbacks: credentials invoked (attempt {}), url = {}, allowed_types = {:?}",
+                *count,
+                url,
+                allowed_types
+            );
+
             if allowed_types.contains(git2::CredentialType::SSH_KEY) {
                 let username = username_from_url.unwrap_or("git");
-                if let Ok(cred) = git2::Cred::ssh_key_from_agent(username) {
-                    return Ok(cred);
+                toolkit::log_info!("create_callbacks: trying ssh_key_from_agent(username = {})", username);
+                match git2::Cred::ssh_key_from_agent(username) {
+                    Ok(cred) => {
+                        toolkit::log_info!("create_callbacks: ssh_key_from_agent ok");
+                        return Ok(cred);
+                    }
+                    Err(e) => {
+                        toolkit::log_info!("create_callbacks: ssh_key_from_agent failed: {}", e);
+                    }
                 }
             }
-            // 尝试默认凭据
             if allowed_types.contains(git2::CredentialType::DEFAULT) {
+                toolkit::log_info!("create_callbacks: trying Cred::default()");
                 return git2::Cred::default();
             }
+            toolkit::log_info!("create_callbacks: no authentication available");
             Err(git2::Error::from_str("no authentication available"))
+        });
+        callbacks.push_transfer_progress(|current, total, bytes| {
+            toolkit::log_info!(
+                "create_callbacks: push_transfer_progress current={} total={} bytes={}",
+                current,
+                total,
+                bytes
+            );
         });
         callbacks
     }
@@ -394,6 +443,13 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_github_ssh_over_443_url() {
+        let url = "git@ssh.github.com:443/owner/repo.git";
+        let result = GitContext::extract_repo_name(url);
+        assert_eq!(result, Some("owner/repo".to_string()));
+    }
+
+    #[test]
     fn test_parse_github_kind() {
         assert_eq!(
             GitContext::parse_repo_kind("git@github.com:owner/repo.git"),
@@ -414,6 +470,10 @@ mod tests {
         assert_eq!(
             GitContext::parse_repo_kind("https://gitlab.com/owner/repo.git"),
             CodePlatform::Unknown
+        );
+        assert_eq!(
+            GitContext::parse_repo_kind("git@ssh.github.com:443/owner/repo.git"),
+            CodePlatform::GitHub
         );
     }
 

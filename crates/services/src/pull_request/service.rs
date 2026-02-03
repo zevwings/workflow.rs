@@ -6,17 +6,16 @@
 use std::sync::Arc;
 
 use domain::{
-    errors::ServiceError, CodePlatform, CNBRepository, GitHubRepository, GitRepository,
-    LLMRepository, PrStatus, PullRequestInfo, PullRequestService,
+    errors::ServiceError, CodePlatform, GitHubRepository, GitRepository, LLMRepository, PrStatus,
+    PullRequestInfo, PullRequestService,
 };
 
 /// Pull Request 服务实现
 ///
-/// 组合 GitHub/CNB 仓储、LLM 服务和 Git 仓储，实现完整的 PR 业务用例。
+/// 组合 GitHub 仓储、LLM 服务和 Git 仓储，实现完整的 PR 业务用例。
 pub struct PullRequestServiceImpl {
     git_repo: Arc<dyn GitRepository>,
     github_repo: Arc<dyn GitHubRepository>,
-    cnb_repo: Arc<dyn CNBRepository>,
     llm_repo: Arc<dyn LLMRepository>,
 }
 
@@ -24,13 +23,11 @@ impl PullRequestServiceImpl {
     pub fn new(
         git_repo: Arc<dyn GitRepository>,
         github_repo: Arc<dyn GitHubRepository>,
-        cnb_repo: Arc<dyn CNBRepository>,
         llm_repo: Arc<dyn LLMRepository>,
     ) -> Self {
         Self {
             git_repo,
             github_repo,
-            cnb_repo,
             llm_repo,
         }
     }
@@ -38,22 +35,19 @@ impl PullRequestServiceImpl {
     /// 检查仓库类型是否支持 PR 操作
     fn check_pr_support(&self) -> Result<(), ServiceError> {
         let repo_info = self.git_repo.get_repo_info();
-
         match repo_info.kind.unwrap_or(CodePlatform::Unknown) {
             CodePlatform::GitHub => Ok(()),
-            CodePlatform::CNB => Ok(()),
             _ => Err(ServiceError::UnsupportedOperation(
                 "PR operations are not supported for this repository".to_string(),
             )),
         }
     }
 
-    /// 根据仓库类型获取正确的 PR repository
-    fn get_pr_repository(&self) -> Result<PrRepository, ServiceError> {
+    /// 根据仓库类型获取 PR repository（当前仅支持 GitHub）
+    fn get_pr_repository(&self) -> Result<Arc<dyn GitHubRepository>, ServiceError> {
         let repo_info = self.git_repo.get_repo_info();
         match repo_info.kind.unwrap_or(CodePlatform::Unknown) {
-            CodePlatform::GitHub => Ok(PrRepository::GitHub(self.github_repo.clone())),
-            CodePlatform::CNB => Ok(PrRepository::CNB(self.cnb_repo.clone())),
+            CodePlatform::GitHub => Ok(self.github_repo.clone()),
             _ => Err(ServiceError::UnsupportedOperation(
                 "PR operations are not supported for this repository".to_string(),
             )),
@@ -78,124 +72,8 @@ impl PullRequestServiceImpl {
     }
 }
 
-/// PR Repository 枚举，用于统一处理 GitHub 和 CNB repository
-enum PrRepository {
-    GitHub(Arc<dyn GitHubRepository>),
-    CNB(Arc<dyn CNBRepository>),
-}
-
-impl PrRepository {
-    fn get_current_branch_pull_request(
-        &self,
-        current_branch: &str,
-    ) -> Result<Option<String>, ServiceError> {
-        match self {
-            PrRepository::GitHub(repo) => {
-                repo.get_current_branch_pull_request(current_branch)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-            }
-            PrRepository::CNB(repo) => {
-                repo.get_current_branch_pull_request(current_branch)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))
-            }
-        }
-    }
-
-    fn create_pull_request(
-        &self,
-        title: &str,
-        body: &str,
-        source_branch: &str,
-        target_branch: &str,
-    ) -> Result<String, ServiceError> {
-        match self {
-            PrRepository::GitHub(repo) => {
-                repo.create_pull_request(title, body, source_branch, target_branch)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-            }
-            PrRepository::CNB(repo) => {
-                repo.create_pull_request(title, body, source_branch, target_branch)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))
-            }
-        }
-    }
-
-    fn update_pull_request(
-        &self,
-        pr_id: &str,
-        title: Option<&str>,
-        body: Option<&str>,
-    ) -> Result<(), ServiceError> {
-        match self {
-            PrRepository::GitHub(repo) => {
-                repo.update_pull_request(pr_id, title, body)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-            }
-            PrRepository::CNB(repo) => {
-                repo.update_pull_request(pr_id, title, body)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))
-            }
-        }
-    }
-
-    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, ServiceError> {
-        match self {
-            PrRepository::GitHub(repo) => {
-                repo.get_pull_request(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-            }
-            PrRepository::CNB(repo) => {
-                repo.get_pull_request(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))
-            }
-        }
-    }
-
-    fn get_pull_request_status(
-        &self,
-        pr_id: &str,
-    ) -> Result<(String, bool, Option<String>), ServiceError> {
-        match self {
-            PrRepository::GitHub(repo) => {
-                repo.get_pull_request_status(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-            }
-            PrRepository::CNB(repo) => {
-                repo.get_pull_request_status(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))
-            }
-        }
-    }
-
-    fn get_pr_diff(&self, pr_id: &str) -> Result<String, ServiceError> {
-        match self {
-            PrRepository::GitHub(repo) => {
-                repo.get_pr_diff(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-            }
-            PrRepository::CNB(repo) => {
-                repo.get_pr_diff(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))
-            }
-        }
-    }
-
-    fn list_pull_requests(
-        &self,
-        state: Option<&str>,
-        limit: Option<usize>,
-    ) -> Result<Vec<PullRequestInfo>, ServiceError> {
-        match self {
-            PrRepository::GitHub(repo) => {
-                repo.list_pull_requests(state, limit)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-            }
-            PrRepository::CNB(repo) => {
-                repo.list_pull_requests(state, limit)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))
-            }
-        }
-    }
+fn map_github_err<T, E: std::fmt::Display>(r: Result<T, E>) -> Result<T, ServiceError> {
+    r.map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
 }
 
 impl PullRequestService for PullRequestServiceImpl {
@@ -250,41 +128,30 @@ impl PullRequestService for PullRequestServiceImpl {
             (title, desc)
         };
 
-        // 调用 PR repository 创建 PR
-        let pr_repo = self.get_pr_repository()?;
-        let pr_id = pr_repo.create_pull_request(
+        let repo = self.get_pr_repository()?;
+        let pr_id = map_github_err(repo.create_pull_request(
             &final_title,
             &final_description,
             &current_branch,
             &default_branch,
-        )?;
+        ))?;
 
         Ok(pr_id)
     }
 
     fn merge_pull_request(&self, pr_id: &str, force: bool) -> Result<(), ServiceError> {
         self.check_pr_support()?;
-        let pr_repo = self.get_pr_repository()?;
-        match pr_repo {
-            PrRepository::GitHub(repo) => {
-                Ok(repo.merge_pull_request(pr_id, force)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))?)
-            }
-            PrRepository::CNB(repo) => {
-                Ok(repo.merge_pull_request(pr_id, force)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))?)
-            }
-        }
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.merge_pull_request(pr_id, force))
     }
 
     fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, ServiceError> {
         self.check_pr_support()?;
 
         let pr_id = self.resolve_pr_id(pr_id_or_branch)?;
-        let pr_repo = self.get_pr_repository()?;
-        let (state, merged, _merged_at) = pr_repo.get_pull_request_status(&pr_id)?;
-
-        let pr_info = pr_repo.get_pull_request(&pr_id)?;
+        let repo = self.get_pr_repository()?;
+        let (state, merged, _merged_at) = map_github_err(repo.get_pull_request_status(&pr_id))?;
+        let pr_info = map_github_err(repo.get_pull_request(&pr_id))?;
 
         Ok(PrStatus {
             id: pr_id,
@@ -296,17 +163,8 @@ impl PullRequestService for PullRequestServiceImpl {
 
     fn close_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
         self.check_pr_support()?;
-        let pr_repo = self.get_pr_repository()?;
-        match pr_repo {
-            PrRepository::GitHub(repo) => {
-                Ok(repo.close_pull_request(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))?)
-            }
-            PrRepository::CNB(repo) => {
-                Ok(repo.close_pull_request(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))?)
-            }
-        }
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.close_pull_request(pr_id))
     }
 
     fn list_pull_requests(
@@ -316,8 +174,8 @@ impl PullRequestService for PullRequestServiceImpl {
     ) -> Result<Vec<PrStatus>, ServiceError> {
         self.check_pr_support()?;
 
-        let pr_repo = self.get_pr_repository()?;
-        let prs = pr_repo.list_pull_requests(state, limit)?;
+        let repo = self.get_pr_repository()?;
+        let prs = map_github_err(repo.list_pull_requests(state, limit))?;
 
         Ok(prs
             .into_iter()
@@ -337,57 +195,37 @@ impl PullRequestService for PullRequestServiceImpl {
         body: Option<&str>,
     ) -> Result<(), ServiceError> {
         self.check_pr_support()?;
-        let pr_repo = self.get_pr_repository()?;
-        pr_repo.update_pull_request(pr_id, title, body)
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.update_pull_request(pr_id, title, body))
     }
 
     fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), ServiceError> {
         self.check_pr_support()?;
-
         if comment.is_empty() {
             return Err(ServiceError::InvalidInput(
                 "Comment cannot be empty".to_string(),
             ));
         }
-
-        let pr_repo = self.get_pr_repository()?;
-        match pr_repo {
-            PrRepository::GitHub(repo) => {
-                Ok(repo.add_comment(pr_id, comment)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))?)
-            }
-            PrRepository::CNB(repo) => {
-                Ok(repo.add_comment(pr_id, comment)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))?)
-            }
-        }
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.add_comment(pr_id, comment))
     }
 
     fn approve_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
         self.check_pr_support()?;
-        let pr_repo = self.get_pr_repository()?;
-        match pr_repo {
-            PrRepository::GitHub(repo) => {
-                Ok(repo.approve_pull_request(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))?)
-            }
-            PrRepository::CNB(repo) => {
-                Ok(repo.approve_pull_request(pr_id)
-                    .map_err(|e| ServiceError::Other(format!("CNB API error: {}", e)))?)
-            }
-        }
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.approve_pull_request(pr_id))
     }
 
     fn get_pr_diff(&self, pr_id: &str) -> Result<String, ServiceError> {
         self.check_pr_support()?;
-        let pr_repo = self.get_pr_repository()?;
-        pr_repo.get_pr_diff(pr_id)
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.get_pr_diff(pr_id))
     }
 
     fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, ServiceError> {
         self.check_pr_support()?;
-        let pr_repo = self.get_pr_repository()?;
-        pr_repo.get_pull_request(pr_id)
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.get_pull_request(pr_id))
     }
 
     fn summarize_pull_request(
@@ -395,18 +233,10 @@ impl PullRequestService for PullRequestServiceImpl {
         pr_id: Option<&str>,
     ) -> Result<domain::llm::entity::PullRequestSummary, ServiceError> {
         self.check_pr_support()?;
-
-        // 解析 PR ID
         let pr_id = self.resolve_pr_id(pr_id)?;
-
-        // 获取 PR repository
-        let pr_repo = self.get_pr_repository()?;
-
-        // 获取 PR 信息
-        let pr_info = pr_repo.get_pull_request(&pr_id)?;
-
-        // 获取 PR Diff
-        let pr_diff = pr_repo.get_pr_diff(&pr_id)?;
+        let repo = self.get_pr_repository()?;
+        let pr_info = map_github_err(repo.get_pull_request(&pr_id))?;
+        let pr_diff = map_github_err(repo.get_pr_diff(&pr_id))?;
 
         // 调用 LLM 生成总结
         let summary = self.llm_repo.summarize_pr(&pr_info.title, &pr_diff)?;
@@ -419,18 +249,10 @@ impl PullRequestService for PullRequestServiceImpl {
         pr_id: Option<&str>,
     ) -> Result<domain::llm::entity::PullRequestReword, ServiceError> {
         self.check_pr_support()?;
-
-        // 解析 PR ID
         let pr_id = self.resolve_pr_id(pr_id)?;
-
-        // 获取 PR repository
-        let pr_repo = self.get_pr_repository()?;
-
-        // 获取 PR 信息
-        let pr_info = pr_repo.get_pull_request(&pr_id)?;
-
-        // 获取 PR Diff
-        let pr_diff = pr_repo.get_pr_diff(&pr_id)?;
+        let repo = self.get_pr_repository()?;
+        let pr_info = map_github_err(repo.get_pull_request(&pr_id))?;
+        let pr_diff = map_github_err(repo.get_pr_diff(&pr_id))?;
 
         // 调用 LLM 重写 PR
         let reword = self.llm_repo.reword_pr(&pr_diff, Some(&pr_info.title))?;
@@ -443,7 +265,7 @@ impl PullRequestService for PullRequestServiceImpl {
         current_branch: &str,
     ) -> Result<Option<String>, ServiceError> {
         self.check_pr_support()?;
-        let pr_repo = self.get_pr_repository()?;
-        pr_repo.get_current_branch_pull_request(current_branch)
+        let repo = self.get_pr_repository()?;
+        map_github_err(repo.get_current_branch_pull_request(current_branch))
     }
 }

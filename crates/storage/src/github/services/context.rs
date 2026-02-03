@@ -39,7 +39,15 @@ impl ServiceContext for ServiceContextImpl {
         let repo_info = self.repo_repository.get_repo_info();
 
         let owner = repo_info.owner.ok_or_else(|| {
-            GitHubError::ApiError("Failed to get repository owner from repo info".to_string())
+            let hint = repo_info
+                .origin_url
+                .as_ref()
+                .map(|u| format!(" (origin URL: {})", u))
+                .unwrap_or_else(|| " (未配置 origin 远程或 origin URL 无法解析)".to_string());
+            GitHubError::ApiError(format!(
+                "Failed to get repository owner from repo info{}",
+                hint
+            ))
         })?;
 
         let repo_name = repo_info

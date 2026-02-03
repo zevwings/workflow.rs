@@ -2,7 +2,6 @@
 //!
 //! 实现各种仓储接口，提供数据持久化和外部服务调用
 
-pub(crate) mod cnb;
 pub(crate) mod config;
 pub mod git;
 pub(crate) mod github;

@@ -7,11 +7,6 @@ pub mod repo;
 
 // Re-export public types
 pub use global::{
-    CNBAccount,
-    CNBAccountInfo,
-    CNBSettings,
-    CNBVerificationResult,
-    CNBVerificationSummary,
     GitHubAccount,
     // Verification types
     GitHubAccountInfo,

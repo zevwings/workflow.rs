@@ -5,7 +5,6 @@
 //! 按业务域组织，每个业务域包含相关的实体、服务接口、仓储接口和错误类型。
 
 pub mod branch;
-pub mod cnb;
 pub mod commit;
 pub mod completion;
 pub mod config;
@@ -23,11 +22,6 @@ pub mod template;
 pub use config::{
     BranchConfig,
     BranchTemplates,
-    CNBAccount,
-    CNBAccountInfo,
-    CNBSettings,
-    CNBVerificationResult,
-    CNBVerificationSummary,
     CommitTemplates,
     GitHubAccount,
     // Verification types
@@ -89,7 +83,6 @@ pub use git::{
 };
 
 // Re-export external service types
-pub use cnb::{CNBContext, CNBError, CNBRepository, CNBUser};
 pub use github::{GitHubContext, GitHubError, GitHubRepository, GitHubUser};
 pub use jira::{
     extract_jira_project, validate_jira_ticket_format, AttachmentDownloadResult, JiraAttachment,

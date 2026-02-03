@@ -1,6 +1,5 @@
 //! 全局配置类型定义
 
-use crate::config::global::cnb::config::CNBSettings;
 use crate::config::global::github::config::GitHubSettings;
 use crate::config::global::jira::config::JiraSettings;
 use crate::config::global::llm::config::LLMSettings;
@@ -18,9 +17,6 @@ pub struct GlobalConfig {
     /// GitHub 配置
     #[serde(default, skip_serializing_if = "GitHubSettings::is_empty")]
     pub github: GitHubSettings,
-    /// CNB 配置
-    #[serde(default, skip_serializing_if = "CNBSettings::is_empty")]
-    pub cnb: CNBSettings,
     /// 日志配置
     #[serde(default, skip_serializing_if = "LogSettings::is_empty")]
     pub log: LogSettings,

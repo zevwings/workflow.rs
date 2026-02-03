@@ -4,7 +4,7 @@
 //! - 显示当前配置文件路径
 //! - 调用配置服务执行基础检查（如权限）
 //! - 环境检查（Git、网络、配置文件权限）
-//! - 配置验证（Log、LLM、Jira、GitHub、CNB）
+//! - 配置验证（Log、LLM、Jira、GitHub）
 
 mod command;
 
