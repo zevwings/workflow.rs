@@ -118,9 +118,7 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
 
         let state = match state {
             Some("open") => "open",
-            Some("closed") => "closed",
-            Some("merged") => "closed",
-            Some("all") | None => "all",
+            Some("closed") | Some("merged") => "closed",
             _ => "all",
         };
         let per_page = limit.unwrap_or(30).min(100);

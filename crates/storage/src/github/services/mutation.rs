@@ -115,17 +115,13 @@ impl PullRequestMutationService for PullRequestMutationServiceImpl {
     ) -> Result<String, GitHubError> {
         let (owner, repo_name) = self.context.get_owner_and_repo()?;
 
-        let base_branch = target_branch.to_string();
-
         let url = format!("/repos/{}/{}/pulls", owner, repo_name);
-
-        let head_branch = format!("{}:{}", owner, source_branch);
 
         let request = CreatePullRequestRequest {
             title: title.to_string(),
             body: body.to_string(),
-            head: head_branch,
-            base: base_branch,
+            head: format!("{}:{}", owner, source_branch),
+            base: target_branch.to_string(),
         };
 
         let body = serde_json::to_value(&request)
