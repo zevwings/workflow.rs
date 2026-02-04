@@ -32,10 +32,12 @@ pub mod __tracing {
 
 // HTTP 客户端模块
 pub use http::{
-    Authorization, HttpClient, HttpClientConfig, HttpError, HttpMethod, HttpMethodError,
-    HttpResponse, HttpRetry, HttpRetryConfig, HttpRetryError, IntoHeaderMap,
-    MultipartRequestConfig, RequestConfig, RetryResult,
+    Authorization, ErrorContext, HttpClient, HttpClientConfig, HttpError, HttpMethod,
+    IntoHeaderMap, MultipartRequest, Request, Response, RetryConfig, RetryResult,
 };
+
+// HTTP 模块类型别名（向后兼容）
+pub type HttpResponse = http::Response;
 
 // Logger 模块
 pub use logger::init as logger_init;

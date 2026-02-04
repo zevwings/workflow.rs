@@ -8,17 +8,14 @@
 //! 通过 `LLMClient::new()` 方法传入配置上下文来创建客户端实例。
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use domain::LLMError;
-use reqwest::{
-    blocking::Client,
-    header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
-};
 use serde::Serialize;
 use serde_json::{json, Value};
 
 use domain::LLMConfigContext;
-use toolkit::{HttpClientConfig, HttpResponse};
+use toolkit::{Authorization, HttpClient, HttpClientConfig};
 
 use crate::llm::client::response::ChatCompletionResponse;
 
@@ -95,23 +92,15 @@ impl LLMClientImpl {
         }
     }
 
-    /// 构建请求头
-    fn build_headers(&self) -> Result<HeaderMap, LLMError> {
-        let mut headers = HeaderMap::new();
+    /// 构建认证信息
+    fn build_auth(&self) -> Result<Authorization, LLMError> {
         let llm_key = self.context.get_current_provider_key();
         if llm_key.is_empty() {
             return Err(LLMError::ApiError(
                 "LLM key is empty in settings".to_string(),
             ));
         }
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", llm_key)).map_err(|e| {
-                LLMError::ApiError(format!("Failed to create Authorization header: {}", e))
-            })?,
-        );
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        Ok(headers)
+        Ok(Authorization::bearer(llm_key))
     }
 
     /// 构建模型名称
@@ -211,18 +200,16 @@ impl LLMClient for LLMClientImpl {
     /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
     fn call(&self, params: &LLMRequestParameters) -> Result<String, LLMError> {
         // 创建带超时的 HTTP 客户端（60秒）
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| {
-                LLMError::ApiError(format!("Failed to create HTTP client with timeout: {}", e))
-            })?;
+        let config = HttpClientConfig::new().timeout(Duration::from_secs(60));
+        let client = HttpClient::with_config(config).map_err(|e| {
+            LLMError::ApiError(format!("Failed to create HTTP client with timeout: {}", e))
+        })?;
 
         // 构建请求体（统一格式）
         let payload = self.build_payload(params)?;
 
-        // 构建请求头（统一格式）
-        let headers = self.build_headers()?;
+        // 构建认证信息
+        let auth = self.build_auth()?;
 
         // 构建 URL（统一格式）
         let url = self.build_url()?;
@@ -232,39 +219,25 @@ impl LLMClient for LLMClientImpl {
 
         toolkit::log_debug!("LLM url: {}", url);
         toolkit::log_debug!("LLM payload: {}", payload);
-        toolkit::log_debug!("LLM headers: {:?}", headers);
         toolkit::log_debug!("LLM provider: {}", provider);
 
         // 发送请求
-        let mut request = client.post(&url);
-
-        // 添加 headers
-        for (key, value) in headers.iter() {
-            request = request.header(key, value);
-        }
-
-        let response = request.json(&payload).send().map_err(|e| {
+        let response = client.post(&url).auth(auth).body(&payload).send().map_err(|e| {
             LLMError::ApiError(format!("Failed to send LLM request to {}: {}", provider, e))
         })?;
 
-        // 转换为 HttpResponse（使用默认的最大响应体大小 100MB）
-        let max_response_body_size = HttpClientConfig::default().max_response_body_size;
-        let http_response =
-            HttpResponse::from_reqwest_response(response, max_response_body_size)
-                .map_err(|e| LLMError::ApiError(format!("Failed to parse HTTP response: {}", e)))?;
-
         // 检查 HTTP 状态码
-        if !http_response.is_success() {
-            let error_message = http_response.extract_error_message();
+        if !response.is_success() {
+            let error_message = response.extract_error_message();
             return Err(LLMError::ApiError(format!(
                 "LLM API request failed ({}): {} - {}",
-                provider, http_response.status, error_message
+                provider, response.status, error_message
             )));
         }
 
         // 解析 JSON 响应
-        let data: Value = http_response
-            .as_json()
+        let data: Value = response
+            .json()
             .map_err(|e| LLMError::ApiError(format!("Failed to parse JSON response: {}", e)))?;
 
         // 根据配置的响应格式提取内容

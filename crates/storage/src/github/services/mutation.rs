@@ -71,7 +71,7 @@ impl PullRequestMutationServiceImpl {
     ) -> Result<RepositoryInfo, GitHubError> {
         let url = format!("/repos/{}/{}", owner, repo_name);
         let response = self.client.get(&url)?;
-        let json_value = response.as_json().map_err(|e| {
+        let json_value = response.json().map_err(|e| {
             GitHubError::ApiError(format!("Failed to parse repository info JSON: {}", e))
         })?;
         serde_json::from_value(json_value).map_err(|e| {
@@ -132,7 +132,7 @@ impl PullRequestMutationService for PullRequestMutationServiceImpl {
             .map_err(|e| GitHubError::ApiError(format!("Failed to serialize request: {}", e)))?;
         let response = self.client.post(&url, &body)?;
         let json_value = response
-            .as_json()
+            .json()
             .map_err(|e| GitHubError::ApiError(format!("Failed to parse response JSON: {}", e)))?;
         let response_data: CreatePullRequestResponse = serde_json::from_value(json_value)
             .map_err(|e| GitHubError::ApiError(format!("Failed to deserialize response: {}", e)))?;

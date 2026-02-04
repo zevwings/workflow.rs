@@ -3,19 +3,19 @@
 //! 提供 GitHub API 响应封装和错误类型定义
 
 use serde::Deserialize;
-use toolkit::{HttpError, HttpResponse};
+use toolkit::{HttpError, Response};
 
 /// HTTP 响应格式
 ///
 /// 封装 HTTP 响应的状态码、状态文本、响应数据和 Headers。
-/// 响应体延迟解析，通过方法（as_json, as_text 等）来解析。
+/// 响应体延迟解析，通过方法（json, text 等）来解析。
 #[derive(Debug)]
 pub struct GitHubResponse {
-    response: HttpResponse,
+    response: Response,
 }
 
 impl GitHubResponse {
-    pub fn new(response: HttpResponse) -> Self {
+    pub fn new(response: Response) -> Self {
         Self { response }
     }
 
@@ -34,11 +34,11 @@ impl GitHubResponse {
     /// # 错误
     ///
     /// 如果 JSON 解析失败，返回相应的错误信息。
-    pub fn as_json<T>(&self) -> Result<T, HttpError>
+    pub fn json<T>(&self) -> Result<T, HttpError>
     where
         T: for<'de> Deserialize<'de>,
     {
-        self.response.as_json()
+        self.response.json()
     }
 
     /// 解析为文本（便捷方法）
@@ -52,8 +52,8 @@ impl GitHubResponse {
     /// # 错误
     ///
     /// 如果读取响应体失败或不是有效的 UTF-8，返回相应的错误信息。
-    pub fn as_text(&self) -> Result<String, HttpError> {
-        self.response.as_text()
+    pub fn text(&self) -> Result<&str, HttpError> {
+        self.response.text()
     }
 
     pub fn status_code(&self) -> u16 {

@@ -28,6 +28,7 @@ whattheshell = "1.1"    # Shell 检测（通过进程树推断当前 shell）
 duct = "0.13"
 
 # 工具
+rand = "0.9"
 base64 = "0.22"
 regex = "1.10"
 open = "5.0"
