@@ -33,3 +33,35 @@ impl MCPConfig {
         self.mcp_servers.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_mcp_config_is_empty() {
+        let config = MCPConfig::default();
+        assert!(config.is_empty());
+    }
+
+    #[test]
+    fn test_mcp_config_serialize_rename_and_roundtrip() {
+        let mut servers = HashMap::new();
+        servers.insert(
+            "example".to_string(),
+            MCPServerConfig {
+                command: "npx".to_string(),
+                args: vec!["server".to_string()],
+                env: HashMap::new(),
+            },
+        );
+
+        let config = MCPConfig { mcp_servers: servers };
+        let toml = toml::to_string(&config).unwrap();
+        assert!(toml.contains("mcpServers"));
+
+        let deserialized: MCPConfig = toml::from_str(&toml).unwrap();
+        assert!(deserialized.mcp_servers.contains_key("example"));
+    }
+}

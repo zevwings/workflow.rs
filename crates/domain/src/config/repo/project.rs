@@ -34,3 +34,27 @@ impl ProjectConfig {
         !self.use_scope && self.template == TemplateConfig::default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_project_config_is_empty() {
+        let config = ProjectConfig::default();
+        assert!(config.is_empty());
+
+        let config = ProjectConfig {
+            use_scope: true,
+            template: TemplateConfig::default(),
+        };
+        assert!(!config.is_empty());
+    }
+
+    #[test]
+    fn test_project_config_serialize_skip_empty() {
+        let config = ProjectConfig::default();
+        let toml = toml::to_string(&config).unwrap();
+        assert!(toml.trim().is_empty());
+    }
+}

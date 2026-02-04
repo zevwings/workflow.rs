@@ -71,3 +71,36 @@ impl Default for LogSettings {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_settings_default_is_empty() {
+        let settings = LogSettings::default();
+        assert!(settings.is_empty());
+        assert_eq!(settings.get_output_folder_name(), "logs");
+    }
+
+    #[test]
+    fn test_log_settings_is_empty_false_when_customized() {
+        let settings = LogSettings {
+            output_folder_name: Some("custom".to_string()),
+            download_base_dir: None,
+            level: None,
+            enable_trace_console: None,
+            format: None,
+        };
+        assert!(!settings.is_empty());
+        assert_eq!(settings.get_output_folder_name(), "custom");
+    }
+
+    #[test]
+    fn test_log_settings_serialize_skip_default_fields() {
+        let settings = LogSettings::default();
+        let toml = toml::to_string(&settings).unwrap();
+        assert!(!toml.contains("output_folder_name"));
+        assert!(!toml.contains("download_base_dir"));
+    }
+}

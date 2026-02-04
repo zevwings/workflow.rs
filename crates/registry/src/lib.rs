@@ -186,6 +186,368 @@ pub use container::Container;
 pub use error::{RegistryError, Result};
 pub use scope::Scope;
 
+#[cfg(test)]
+mod tests {
+    // 标准库
+    use std::sync::Arc;
+
+    // 第三方库
+    use pretty_assertions::assert_eq;
+    use serial_test::serial;
+
+    // 内部导入
+    use super::*;
+
+    // 测试工具
+    trait TestService: Send + Sync {
+        fn value(&self) -> i32;
+    }
+
+    struct TestServiceImpl {
+        value: i32,
+    }
+
+    impl TestService for TestServiceImpl {
+        fn value(&self) -> i32 {
+            self.value
+        }
+    }
+
+    // ============================================================================
+    // resolve() 函数测试
+    // ============================================================================
+
+    #[test]
+    #[serial]
+    fn test_resolve_success() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 注册服务
+        Container::global()
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 42 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 使用 resolve 获取服务
+        let service: Arc<dyn TestService> = resolve::<dyn TestService>().unwrap();
+        assert_eq!(service.value(), 42);
+    }
+
+    #[test]
+    #[serial]
+    fn test_resolve_not_bound() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 尝试获取未绑定的服务
+        trait NonExistent: Send + Sync {}
+        let result: Result<Arc<dyn NonExistent>> = resolve();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::NotBound(_))));
+    }
+
+    // ============================================================================
+    // bind! 宏测试
+    // ============================================================================
+
+    #[test]
+    #[serial]
+    fn test_bind_macro_basic() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 使用 bind! 宏绑定服务
+        bind!(dyn TestService, |_: &Container| {
+            Arc::new(TestServiceImpl { value: 100 })
+        })
+        .in_scope(Scope::Singleton)
+        .unwrap();
+
+        let service: Arc<dyn TestService> = Container::global().get().unwrap();
+        assert_eq!(service.value(), 100);
+    }
+
+    #[test]
+    #[serial]
+    fn test_bind_macro_with_dependency() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        trait ConfigService: Send + Sync {
+            fn get_multiplier(&self) -> i32;
+        }
+
+        struct ConfigServiceImpl {
+            multiplier: i32,
+        }
+
+        impl ConfigService for ConfigServiceImpl {
+            fn get_multiplier(&self) -> i32 {
+                self.multiplier
+            }
+        }
+
+        // 先绑定依赖
+        Container::global()
+            .bind::<dyn ConfigService>(|_: &Container| {
+                Arc::new(ConfigServiceImpl { multiplier: 10 }) as Arc<dyn ConfigService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 使用 bind! 宏绑定依赖于其他服务的服务
+        bind!(dyn TestService, |c: &Container| {
+            let config = c.get::<dyn ConfigService>().expect("ConfigService not found");
+            Arc::new(TestServiceImpl {
+                value: config.get_multiplier() * 5,
+            })
+        })
+        .in_scope(Scope::Singleton)
+        .unwrap();
+
+        let service: Arc<dyn TestService> = Container::global().get().unwrap();
+        assert_eq!(service.value(), 50);
+    }
+
+    // ============================================================================
+    // bind_instance! 宏测试
+    // ============================================================================
+
+    #[test]
+    #[serial]
+    fn test_bind_instance_macro_basic() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 使用 bind_instance! 宏绑定具体类型
+        bind_instance!(|_: &Container| { Arc::new(TestServiceImpl { value: 200 }) })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        let service: Arc<TestServiceImpl> = Container::global().get().unwrap();
+        assert_eq!(service.value, 200);
+    }
+
+    // ============================================================================
+    // try_bind! 宏测试
+    // ============================================================================
+
+    #[test]
+    #[serial]
+    fn test_try_bind_macro_success() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 使用 try_bind! 宏绑定服务（成功场景）
+        try_bind!(dyn TestService, |_: &Container| {
+            Ok(Arc::new(TestServiceImpl { value: 300 }))
+        })
+        .in_scope(Scope::Singleton)
+        .unwrap();
+
+        let service: Arc<dyn TestService> = Container::global().get().unwrap();
+        assert_eq!(service.value(), 300);
+    }
+
+    #[test]
+    #[serial]
+    fn test_try_bind_macro_with_dependency() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        trait ConfigService: Send + Sync {
+            fn get_value(&self) -> i32;
+        }
+
+        struct ConfigServiceImpl {
+            value: i32,
+        }
+
+        impl ConfigService for ConfigServiceImpl {
+            fn get_value(&self) -> i32 {
+                self.value
+            }
+        }
+
+        // 先绑定依赖
+        Container::global()
+            .bind::<dyn ConfigService>(|_: &Container| {
+                Arc::new(ConfigServiceImpl { value: 42 }) as Arc<dyn ConfigService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 使用 try_bind! 宏，依赖获取可能失败
+        try_bind!(dyn TestService, |c: &Container| {
+            let config = c.get::<dyn ConfigService>()?;
+            Ok(Arc::new(TestServiceImpl {
+                value: config.get_value() * 2,
+            }))
+        })
+        .in_scope(Scope::Singleton)
+        .unwrap();
+
+        let service: Arc<dyn TestService> = Container::global().get().unwrap();
+        assert_eq!(service.value(), 84);
+    }
+
+    #[test]
+    #[serial]
+    fn test_try_bind_macro_error() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 使用 try_bind! 宏绑定服务（工厂返回错误）
+        try_bind!(dyn TestService, |_: &Container| {
+            Err::<Arc<TestServiceImpl>, _>(RegistryError::NotBound(
+                "Simulated error".to_string(),
+            ))
+        })
+        .in_scope(Scope::Singleton)
+        .unwrap();
+
+        let result: Result<Arc<dyn TestService>> = Container::global().get();
+        assert!(result.is_err());
+    }
+
+    // ============================================================================
+    // get_it! 宏测试
+    // ============================================================================
+
+    #[test]
+    #[serial]
+    fn test_get_it_macro_success() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 注册服务
+        Container::global()
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 400 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 使用 get_it! 宏获取服务
+        let service: Arc<dyn TestService> = get_it!(dyn TestService).unwrap();
+        assert_eq!(service.value(), 400);
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_it_macro_not_bound() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 使用 get_it! 宏获取未绑定的服务
+        trait NonExistent: Send + Sync {}
+        let result = get_it!(dyn NonExistent);
+        assert!(result.is_err());
+    }
+
+    // ============================================================================
+    // registry! 宏测试
+    // ============================================================================
+
+    #[test]
+    #[serial]
+    fn test_registry_macro_basic() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 使用 registry! 宏注册服务
+        let result = registry!(|_container| {
+            Container::global()
+                .bind::<dyn TestService>(|_: &Container| {
+                    Arc::new(TestServiceImpl { value: 500 }) as Arc<dyn TestService>
+                })
+                .in_scope(Scope::Singleton)?;
+        });
+
+        assert!(result.is_ok());
+
+        let service: Arc<dyn TestService> = Container::global().get().unwrap();
+        assert_eq!(service.value(), 500);
+    }
+
+    #[test]
+    #[serial]
+    fn test_registry_macro_multiple_services() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        trait ServiceA: Send + Sync {
+            fn value(&self) -> i32;
+        }
+        trait ServiceB: Send + Sync {
+            fn value(&self) -> i32;
+        }
+
+        struct ServiceAImpl;
+        struct ServiceBImpl;
+
+        impl ServiceA for ServiceAImpl {
+            fn value(&self) -> i32 {
+                1
+            }
+        }
+        impl ServiceB for ServiceBImpl {
+            fn value(&self) -> i32 {
+                2
+            }
+        }
+
+        // 使用 registry! 宏注册多个服务
+        let result = registry!(|_container| {
+            Container::global()
+                .bind::<dyn ServiceA>(|_: &Container| Arc::new(ServiceAImpl) as Arc<dyn ServiceA>)
+                .in_scope(Scope::Singleton)?;
+
+            Container::global()
+                .bind::<dyn ServiceB>(|_: &Container| Arc::new(ServiceBImpl) as Arc<dyn ServiceB>)
+                .in_scope(Scope::Singleton)?;
+        });
+
+        assert!(result.is_ok());
+
+        let service_a: Arc<dyn ServiceA> = Container::global().get().unwrap();
+        let service_b: Arc<dyn ServiceB> = Container::global().get().unwrap();
+
+        assert_eq!(service_a.value(), 1);
+        assert_eq!(service_b.value(), 2);
+    }
+
+    #[test]
+    #[serial]
+    fn test_registry_macro_error_propagation() {
+        // 清理全局容器
+        Container::global().unbind_all();
+
+        // 先注册一个服务
+        Container::global()
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 使用 registry! 宏尝试重复注册（应该失败）
+        let result = registry!(|_container| {
+            Container::global()
+                .bind::<dyn TestService>(|_: &Container| {
+                    Arc::new(TestServiceImpl { value: 2 }) as Arc<dyn TestService>
+                })
+                .in_scope(Scope::Singleton)?;
+        });
+
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::AlreadyBound(_))));
+    }
+}
+
 // ============================================================================
 // 从全局容器获取服务
 // ============================================================================

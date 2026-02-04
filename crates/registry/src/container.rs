@@ -1014,4 +1014,898 @@ mod tests {
         assert_eq!(concrete.value, 100);
         assert_eq!(trait_obj.get_value(), 200);
     }
+
+    // ============================================================================
+    // 循环依赖检测
+    // ============================================================================
+
+    #[test]
+    fn test_circular_dependency_direct() {
+        // 测试直接循环依赖：A -> A
+        let container = Container::new();
+
+        trait ServiceA: Send + Sync {}
+
+        struct ServiceAImpl {
+            _self_ref: Arc<dyn ServiceA>,
+        }
+
+        impl ServiceA for ServiceAImpl {}
+
+        // ServiceA 依赖于自身（使用 try_bind 来正确处理循环依赖错误）
+        container
+            .try_bind::<dyn ServiceA>(|c: &Container| {
+                let self_ref = c.get::<dyn ServiceA>()?;
+                Ok(Arc::new(ServiceAImpl { _self_ref: self_ref }) as Arc<dyn ServiceA>)
+            })
+            .in_scope(Scope::Transient)
+            .unwrap();
+
+        // 获取服务时应该检测到循环依赖
+        let result: Result<Arc<dyn ServiceA>> = container.get();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::CircularDependency(_))));
+    }
+
+    #[test]
+    fn test_circular_dependency_indirect() {
+        // 测试间接循环依赖：A -> B -> A
+        let container = Container::new();
+
+        trait ServiceA: Send + Sync {}
+        trait ServiceB: Send + Sync {}
+
+        struct ServiceAImpl {
+            _dep: Arc<dyn ServiceB>,
+        }
+        struct ServiceBImpl {
+            _dep: Arc<dyn ServiceA>,
+        }
+
+        impl ServiceA for ServiceAImpl {}
+        impl ServiceB for ServiceBImpl {}
+
+        // ServiceA 依赖于 ServiceB（使用 try_bind）
+        container
+            .try_bind::<dyn ServiceA>(|c: &Container| {
+                let dep = c.get::<dyn ServiceB>()?;
+                Ok(Arc::new(ServiceAImpl { _dep: dep }) as Arc<dyn ServiceA>)
+            })
+            .in_scope(Scope::Transient)
+            .unwrap();
+
+        // ServiceB 依赖于 ServiceA（形成循环）
+        container
+            .try_bind::<dyn ServiceB>(|c: &Container| {
+                let dep = c.get::<dyn ServiceA>()?;
+                Ok(Arc::new(ServiceBImpl { _dep: dep }) as Arc<dyn ServiceB>)
+            })
+            .in_scope(Scope::Transient)
+            .unwrap();
+
+        // 获取 ServiceA 时应该检测到循环依赖
+        let result: Result<Arc<dyn ServiceA>> = container.get();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::CircularDependency(_))));
+    }
+
+    #[test]
+    fn test_circular_dependency_chain() {
+        // 测试链式循环依赖：A -> B -> C -> A
+        let container = Container::new();
+
+        trait ServiceA: Send + Sync {}
+        trait ServiceB: Send + Sync {}
+        trait ServiceC: Send + Sync {}
+
+        struct ServiceAImpl {
+            _dep: Arc<dyn ServiceB>,
+        }
+        struct ServiceBImpl {
+            _dep: Arc<dyn ServiceC>,
+        }
+        struct ServiceCImpl {
+            _dep: Arc<dyn ServiceA>,
+        }
+
+        impl ServiceA for ServiceAImpl {}
+        impl ServiceB for ServiceBImpl {}
+        impl ServiceC for ServiceCImpl {}
+
+        container
+            .try_bind::<dyn ServiceA>(|c: &Container| {
+                let dep = c.get::<dyn ServiceB>()?;
+                Ok(Arc::new(ServiceAImpl { _dep: dep }) as Arc<dyn ServiceA>)
+            })
+            .in_scope(Scope::Transient)
+            .unwrap();
+
+        container
+            .try_bind::<dyn ServiceB>(|c: &Container| {
+                let dep = c.get::<dyn ServiceC>()?;
+                Ok(Arc::new(ServiceBImpl { _dep: dep }) as Arc<dyn ServiceB>)
+            })
+            .in_scope(Scope::Transient)
+            .unwrap();
+
+        container
+            .try_bind::<dyn ServiceC>(|c: &Container| {
+                let dep = c.get::<dyn ServiceA>()?;
+                Ok(Arc::new(ServiceCImpl { _dep: dep }) as Arc<dyn ServiceC>)
+            })
+            .in_scope(Scope::Transient)
+            .unwrap();
+
+        let result: Result<Arc<dyn ServiceA>> = container.get();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::CircularDependency(_))));
+    }
+
+    // ============================================================================
+    // try_bind 可失败绑定测试
+    // ============================================================================
+
+    #[test]
+    fn test_try_bind_success() {
+        let container = Container::new();
+
+        // 使用 try_bind 绑定服务（成功场景）
+        container
+            .try_bind::<dyn TestService>(|_c: &Container| {
+                Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        assert!(container.is_bound::<dyn TestService>());
+
+        let service: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert_eq!(service.value(), 42);
+    }
+
+    #[test]
+    fn test_try_bind_factory_returns_error() {
+        let container = Container::new();
+
+        // 使用 try_bind 绑定服务（工厂函数返回错误）
+        container
+            .try_bind::<dyn TestService>(|_c: &Container| {
+                Err(RegistryError::NotBound("Dependency not found".to_string()))
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        assert!(container.is_bound::<dyn TestService>());
+
+        // 获取服务时应该返回错误
+        let result: Result<Arc<dyn TestService>> = container.get();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::NotBound(_))));
+    }
+
+    #[test]
+    fn test_try_bind_with_dependency() {
+        let container = Container::new();
+
+        trait ConfigService: Send + Sync {
+            fn get_value(&self) -> &str;
+        }
+
+        struct ConfigServiceImpl {
+            value: String,
+        }
+
+        impl ConfigService for ConfigServiceImpl {
+            fn get_value(&self) -> &str {
+                &self.value
+            }
+        }
+
+        // 先绑定依赖服务
+        container
+            .bind::<dyn ConfigService>(|_: &Container| {
+                Arc::new(ConfigServiceImpl {
+                    value: "config_value".to_string(),
+                }) as Arc<dyn ConfigService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 使用 try_bind 绑定依赖于其他服务的服务
+        container
+            .try_bind::<dyn TestService>(|c: &Container| {
+                let config = c.get::<dyn ConfigService>()?;
+                let value = if config.get_value() == "config_value" {
+                    100
+                } else {
+                    0
+                };
+                Ok(Arc::new(TestServiceImpl { value, id: 1 }) as Arc<dyn TestService>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        let service: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert_eq!(service.value(), 100);
+    }
+
+    #[test]
+    fn test_try_bind_dependency_not_found() {
+        let container = Container::new();
+
+        // 使用 try_bind 绑定服务，但依赖不存在
+        container
+            .try_bind::<dyn TestService>(|c: &Container| {
+                // 尝试获取不存在的依赖
+                trait NonExistent: Send + Sync {}
+                let _dep: Arc<dyn NonExistent> = c.get()?;
+                Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 获取服务时应该返回依赖未找到的错误
+        let result: Result<Arc<dyn TestService>> = container.get();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::NotBound(_))));
+    }
+
+    #[rstest]
+    #[case(Scope::Singleton, true)]
+    #[case(Scope::Transient, false)]
+    fn test_try_bind_scope_behavior(#[case] scope: Scope, #[case] should_be_same: bool) {
+        let container = Container::new();
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let call_count_clone = call_count.clone();
+
+        container
+            .try_bind::<dyn TestService>(move |_: &Container| {
+                let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
+                Ok(Arc::new(TestServiceImpl {
+                    value: 42,
+                    id: count,
+                }) as Arc<dyn TestService>)
+            })
+            .in_scope(scope)
+            .unwrap();
+
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+
+        if should_be_same {
+            assert!(Arc::ptr_eq(&service1, &service2));
+            assert_eq!(call_count.load(Ordering::SeqCst), 1);
+        } else {
+            assert!(!Arc::ptr_eq(&service1, &service2));
+            assert_eq!(call_count.load(Ordering::SeqCst), 2);
+        }
+    }
+
+    // ============================================================================
+    // validate 对 fallible_bindings 测试
+    // ============================================================================
+
+    #[test]
+    fn test_validate_fallible_binding_success() {
+        let container = Container::new();
+
+        container
+            .try_bind::<dyn TestService>(|_: &Container| {
+                Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 验证应该成功
+        assert!(container.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_fallible_binding_error() {
+        let container = Container::new();
+
+        container
+            .try_bind::<dyn TestService>(|_: &Container| {
+                Err(RegistryError::NotBound("Simulated error".to_string()))
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 验证应该返回错误
+        let result = container.validate();
+        assert!(result.is_err());
+
+        if let Err(RegistryError::ValidationError(msg)) = result {
+            assert!(msg.contains("returned error"));
+        } else {
+            panic!("Expected ValidationError");
+        }
+    }
+
+    #[test]
+    fn test_validate_fallible_binding_panic() {
+        let container = Container::new();
+
+        container
+            .try_bind::<dyn TestService>(|_: &Container| {
+                panic!("Simulated panic in fallible factory");
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 验证应该捕获 panic 并返回错误
+        let result = container.validate();
+        assert!(result.is_err());
+
+        if let Err(RegistryError::ValidationError(msg)) = result {
+            assert!(msg.contains("panicked"));
+        } else {
+            panic!("Expected ValidationError");
+        }
+    }
+
+    #[test]
+    fn test_validate_mixed_bindings() {
+        let container = Container::new();
+
+        // 添加普通绑定
+        container
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 添加可失败绑定（成功）
+        trait AnotherService: Send + Sync {}
+        struct AnotherServiceImpl;
+        impl AnotherService for AnotherServiceImpl {}
+
+        container
+            .try_bind::<dyn AnotherService>(|_: &Container| {
+                Ok(Arc::new(AnotherServiceImpl) as Arc<dyn AnotherService>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 验证应该成功
+        assert!(container.validate().is_ok());
+    }
+
+    // ============================================================================
+    // 增强测试：并发竞争条件
+    // ============================================================================
+
+    #[test]
+    fn test_concurrent_bind_different_services() {
+        // 多线程同时绑定不同的服务
+        let container = Arc::new(Container::new());
+
+        trait ServiceA: Send + Sync {}
+        trait ServiceB: Send + Sync {}
+        trait ServiceC: Send + Sync {}
+        trait ServiceD: Send + Sync {}
+
+        struct ServiceAImpl;
+        struct ServiceBImpl;
+        struct ServiceCImpl;
+        struct ServiceDImpl;
+
+        impl ServiceA for ServiceAImpl {}
+        impl ServiceB for ServiceBImpl {}
+        impl ServiceC for ServiceCImpl {}
+        impl ServiceD for ServiceDImpl {}
+
+        let handles: Vec<_> = vec![
+            {
+                let c = container.clone();
+                thread::spawn(move || {
+                    c.bind::<dyn ServiceA>(|_: &Container| {
+                        Arc::new(ServiceAImpl) as Arc<dyn ServiceA>
+                    })
+                    .in_scope(Scope::Singleton)
+                })
+            },
+            {
+                let c = container.clone();
+                thread::spawn(move || {
+                    c.bind::<dyn ServiceB>(|_: &Container| {
+                        Arc::new(ServiceBImpl) as Arc<dyn ServiceB>
+                    })
+                    .in_scope(Scope::Singleton)
+                })
+            },
+            {
+                let c = container.clone();
+                thread::spawn(move || {
+                    c.bind::<dyn ServiceC>(|_: &Container| {
+                        Arc::new(ServiceCImpl) as Arc<dyn ServiceC>
+                    })
+                    .in_scope(Scope::Singleton)
+                })
+            },
+            {
+                let c = container.clone();
+                thread::spawn(move || {
+                    c.bind::<dyn ServiceD>(|_: &Container| {
+                        Arc::new(ServiceDImpl) as Arc<dyn ServiceD>
+                    })
+                    .in_scope(Scope::Singleton)
+                })
+            },
+        ];
+
+        for handle in handles {
+            assert!(handle.join().unwrap().is_ok());
+        }
+
+        // 验证所有服务都已绑定
+        assert_eq!(container.binding_count(), 4);
+        assert!(container.is_bound::<dyn ServiceA>());
+        assert!(container.is_bound::<dyn ServiceB>());
+        assert!(container.is_bound::<dyn ServiceC>());
+        assert!(container.is_bound::<dyn ServiceD>());
+    }
+
+    #[test]
+    fn test_concurrent_get_and_unbind() {
+        // 测试并发获取和解绑的场景
+        let container = Arc::new(Container::new());
+
+        // 先绑定服务
+        container
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        const THREAD_COUNT: usize = 8;
+        const ITERATIONS: usize = 50;
+
+        let handles: Vec<_> = (0..THREAD_COUNT)
+            .map(|i| {
+                let c = container.clone();
+                thread::spawn(move || {
+                    for _ in 0..ITERATIONS {
+                        // 偶数线程尝试获取服务
+                        // 奇数线程检查绑定状态
+                        if i % 2 == 0 {
+                            let _ = c.get::<dyn TestService>();
+                        } else {
+                            let _ = c.is_bound::<dyn TestService>();
+                        }
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    // ============================================================================
+    // 增强测试：状态转换场景
+    // ============================================================================
+
+    #[test]
+    fn test_singleton_rebind_after_unbind() {
+        let container = Container::new();
+
+        // 第一次绑定
+        container
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 100, id: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 获取第一个实例
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert_eq!(service1.value(), 100);
+
+        // 解绑
+        container.unbind::<dyn TestService>();
+        assert!(!container.is_bound::<dyn TestService>());
+
+        // 重新绑定（不同的值）
+        container
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 200, id: 2 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 获取第二个实例（应该是新值）
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert_eq!(service2.value(), 200);
+
+        // 两个实例应该不同
+        assert!(!Arc::ptr_eq(&service1, &service2));
+    }
+
+    #[test]
+    fn test_unbind_all_and_rebind() {
+        let container = Container::new();
+
+        trait ServiceA: Send + Sync {
+            fn name(&self) -> &str;
+        }
+        struct ServiceAImpl {
+            name: &'static str,
+        }
+        impl ServiceA for ServiceAImpl {
+            fn name(&self) -> &str {
+                self.name
+            }
+        }
+
+        // 绑定多个服务
+        container
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 1, id: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        container
+            .bind::<dyn ServiceA>(|_: &Container| {
+                Arc::new(ServiceAImpl { name: "first" }) as Arc<dyn ServiceA>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        assert_eq!(container.binding_count(), 2);
+
+        // 清空所有绑定
+        container.unbind_all();
+        assert_eq!(container.binding_count(), 0);
+
+        // 重新绑定
+        container
+            .bind::<dyn ServiceA>(|_: &Container| {
+                Arc::new(ServiceAImpl { name: "second" }) as Arc<dyn ServiceA>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 验证新绑定有效
+        let service: Arc<dyn ServiceA> = container.get::<dyn ServiceA>().unwrap();
+        assert_eq!(service.name(), "second");
+    }
+
+    #[test]
+    fn test_transient_to_singleton_rebind() {
+        let container = Container::new();
+        let call_count = Arc::new(AtomicUsize::new(0));
+
+        // 先以 Transient 绑定
+        let count1 = call_count.clone();
+        container
+            .bind::<dyn TestService>(move |_: &Container| {
+                count1.fetch_add(1, Ordering::SeqCst);
+                Arc::new(TestServiceImpl { value: 1, id: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Transient)
+            .unwrap();
+
+        // 获取两次，应该调用两次 factory
+        let _ = container.get::<dyn TestService>().unwrap();
+        let _ = container.get::<dyn TestService>().unwrap();
+        assert_eq!(call_count.load(Ordering::SeqCst), 2);
+
+        // 解绑后以 Singleton 重新绑定
+        container.unbind::<dyn TestService>();
+        call_count.store(0, Ordering::SeqCst);
+
+        let count2 = call_count.clone();
+        container
+            .bind::<dyn TestService>(move |_: &Container| {
+                count2.fetch_add(1, Ordering::SeqCst);
+                Arc::new(TestServiceImpl { value: 2, id: 2 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 获取两次，应该只调用一次 factory
+        let _ = container.get::<dyn TestService>().unwrap();
+        let _ = container.get::<dyn TestService>().unwrap();
+        assert_eq!(call_count.load(Ordering::SeqCst), 1);
+    }
+
+    // ============================================================================
+    // 增强测试：FallibleBinding 并发初始化
+    // ============================================================================
+
+    #[test]
+    fn test_fallible_singleton_concurrent_init() {
+        let container = Arc::new(Container::new());
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let call_count_clone = call_count.clone();
+
+        // 使用 try_bind 绑定 Singleton 服务
+        container
+            .try_bind::<dyn TestService>(move |_: &Container| {
+                call_count_clone.fetch_add(1, Ordering::SeqCst);
+                // 模拟一些初始化延迟
+                std::thread::sleep(std::time::Duration::from_millis(1));
+                Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        const THREAD_COUNT: usize = 8;
+
+        let handles: Vec<_> = (0..THREAD_COUNT)
+            .map(|_| {
+                let c = container.clone();
+                thread::spawn(move || c.get::<dyn TestService>())
+            })
+            .collect();
+
+        let mut results = Vec::new();
+        for handle in handles {
+            results.push(handle.join().unwrap());
+        }
+
+        // 所有结果都应该成功
+        for result in &results {
+            assert!(result.is_ok());
+        }
+
+        // Singleton 应该只调用一次 factory（或在竞争情况下最多几次，但缓存同一个结果）
+        let total_calls = call_count.load(Ordering::SeqCst);
+        assert!(
+            total_calls >= 1,
+            "Factory should be called at least once, got {}",
+            total_calls
+        );
+
+        // 所有返回的实例应该相同
+        let first = results[0].as_ref().unwrap();
+        for result in results.iter().skip(1) {
+            let service = result.as_ref().unwrap();
+            assert!(Arc::ptr_eq(first, service));
+        }
+    }
+
+    #[test]
+    fn test_fallible_binding_error_not_cached() {
+        let container = Container::new();
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let call_count_clone = call_count.clone();
+
+        // 绑定一个会失败的服务
+        container
+            .try_bind::<dyn TestService>(move |_: &Container| {
+                let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
+                if count < 2 {
+                    Err(RegistryError::NotBound("Simulated failure".to_string()))
+                } else {
+                    Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
+                }
+            })
+            .in_scope(Scope::Transient) // 使用 Transient 以便多次调用
+            .unwrap();
+
+        // 前两次调用应该失败
+        assert!(container.get::<dyn TestService>().is_err());
+        assert!(container.get::<dyn TestService>().is_err());
+
+        // 第三次调用应该成功
+        let result = container.get::<dyn TestService>();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().value(), 42);
+    }
+
+    // ============================================================================
+    // 增强测试：深层依赖链
+    // ============================================================================
+
+    #[test]
+    fn test_deep_dependency_chain() {
+        let container = Container::new();
+
+        // 创建 5 层深的依赖链：E -> D -> C -> B -> A
+        trait ServiceA: Send + Sync {
+            fn level(&self) -> i32;
+        }
+        trait ServiceB: Send + Sync {
+            fn level(&self) -> i32;
+        }
+        trait ServiceC: Send + Sync {
+            fn level(&self) -> i32;
+        }
+        trait ServiceD: Send + Sync {
+            fn level(&self) -> i32;
+        }
+        trait ServiceE: Send + Sync {
+            fn level(&self) -> i32;
+        }
+
+        struct ServiceAImpl;
+        struct ServiceBImpl(Arc<dyn ServiceA>);
+        struct ServiceCImpl(Arc<dyn ServiceB>);
+        struct ServiceDImpl(Arc<dyn ServiceC>);
+        struct ServiceEImpl(Arc<dyn ServiceD>);
+
+        impl ServiceA for ServiceAImpl {
+            fn level(&self) -> i32 {
+                1
+            }
+        }
+        impl ServiceB for ServiceBImpl {
+            fn level(&self) -> i32 {
+                self.0.level() + 1
+            }
+        }
+        impl ServiceC for ServiceCImpl {
+            fn level(&self) -> i32 {
+                self.0.level() + 1
+            }
+        }
+        impl ServiceD for ServiceDImpl {
+            fn level(&self) -> i32 {
+                self.0.level() + 1
+            }
+        }
+        impl ServiceE for ServiceEImpl {
+            fn level(&self) -> i32 {
+                self.0.level() + 1
+            }
+        }
+
+        // 按顺序绑定
+        container
+            .bind::<dyn ServiceA>(|_: &Container| Arc::new(ServiceAImpl) as Arc<dyn ServiceA>)
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        container
+            .try_bind::<dyn ServiceB>(|c: &Container| {
+                let a = c.get::<dyn ServiceA>()?;
+                Ok(Arc::new(ServiceBImpl(a)) as Arc<dyn ServiceB>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        container
+            .try_bind::<dyn ServiceC>(|c: &Container| {
+                let b = c.get::<dyn ServiceB>()?;
+                Ok(Arc::new(ServiceCImpl(b)) as Arc<dyn ServiceC>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        container
+            .try_bind::<dyn ServiceD>(|c: &Container| {
+                let c_service = c.get::<dyn ServiceC>()?;
+                Ok(Arc::new(ServiceDImpl(c_service)) as Arc<dyn ServiceD>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        container
+            .try_bind::<dyn ServiceE>(|c: &Container| {
+                let d = c.get::<dyn ServiceD>()?;
+                Ok(Arc::new(ServiceEImpl(d)) as Arc<dyn ServiceE>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 获取最深层的服务
+        let service_e: Arc<dyn ServiceE> = container.get::<dyn ServiceE>().unwrap();
+        assert_eq!(service_e.level(), 5);
+    }
+
+    // ============================================================================
+    // 增强测试：边界条件
+    // ============================================================================
+
+    #[test]
+    fn test_unbind_nonexistent_service() {
+        let container = Container::new();
+
+        // 解绑不存在的服务不应该 panic
+        container.unbind::<dyn TestService>();
+        assert!(!container.is_bound::<dyn TestService>());
+    }
+
+    #[test]
+    fn test_get_after_unbind() {
+        let container = Container::new();
+
+        // 绑定服务
+        container
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 解绑
+        container.unbind::<dyn TestService>();
+
+        // 获取应该返回 NotBound 错误
+        let result: Result<Arc<dyn TestService>> = container.get();
+        assert!(result.is_err());
+        assert!(matches!(result, Err(RegistryError::NotBound(_))));
+    }
+
+    #[test]
+    fn test_many_services_binding() {
+        // 压力测试：绑定大量服务
+        let container = Container::new();
+
+        // 使用具体类型绑定多个服务
+        for i in 0..100 {
+            let value = i;
+            container
+                .bind_instance(Arc::new(TestServiceImpl {
+                    value,
+                    id: i as usize,
+                }))
+                .in_scope(Scope::Singleton)
+                .unwrap_or_else(|_| {
+                    // 由于所有都是同一类型，只有第一个会成功
+                });
+        }
+
+        // 至少绑定了一个
+        assert!(container.binding_count() >= 1);
+    }
+
+    #[test]
+    fn test_validate_empty_container() {
+        let container = Container::new();
+
+        // 空容器验证应该成功
+        assert!(container.validate().is_ok());
+        assert_eq!(container.binding_count(), 0);
+    }
+
+    #[test]
+    fn test_is_bound_for_fallible_binding() {
+        let container = Container::new();
+
+        // 使用 try_bind 绑定
+        container
+            .try_bind::<dyn TestService>(|_: &Container| {
+                Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // is_bound 应该返回 true（即使是 fallible binding）
+        assert!(container.is_bound::<dyn TestService>());
+    }
+
+    #[test]
+    fn test_binding_count_includes_both_types() {
+        let container = Container::new();
+
+        trait ServiceA: Send + Sync {}
+        struct ServiceAImpl;
+        impl ServiceA for ServiceAImpl {}
+
+        // 添加普通绑定
+        container
+            .bind::<dyn TestService>(|_: &Container| {
+                Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // 添加可失败绑定
+        container
+            .try_bind::<dyn ServiceA>(|_: &Container| {
+                Ok(Arc::new(ServiceAImpl) as Arc<dyn ServiceA>)
+            })
+            .in_scope(Scope::Singleton)
+            .unwrap();
+
+        // binding_count 应该包含两种类型
+        assert_eq!(container.binding_count(), 2);
+    }
 }

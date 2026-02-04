@@ -27,3 +27,45 @@ pub struct GlobalConfig {
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub aliases: HashMap<String, String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_global_config_serialize_skip_empty() {
+        let config = GlobalConfig::default();
+        let toml = toml::to_string(&config).unwrap();
+        assert!(toml.trim().is_empty());
+    }
+
+    #[test]
+    fn test_global_config_roundtrip_with_aliases_and_jira() {
+        let mut aliases = HashMap::new();
+        aliases.insert("co".to_string(), "checkout".to_string());
+
+        let config = GlobalConfig {
+            jira: JiraSettings {
+                email: "user@example.com".to_string(),
+                api_token: "token".to_string(),
+                service_address: "https://jira.example.com".to_string(),
+            },
+            github: GitHubSettings::default(),
+            log: LogSettings::default(),
+            llm: LLMSettings::default(),
+            aliases,
+        };
+
+        let toml = toml::to_string(&config).unwrap();
+        let deserialized: GlobalConfig = toml::from_str(&toml).unwrap();
+
+        assert_eq!(deserialized.jira.email, "user@example.com");
+        assert_eq!(
+            deserialized
+                .aliases
+                .get("co")
+                .expect("alias should exist"),
+            "checkout"
+        );
+    }
+}
