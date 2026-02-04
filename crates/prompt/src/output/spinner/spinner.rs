@@ -4,7 +4,7 @@
 
 use crate::output::spinner::builder::SpinnerBuilder;
 use crate::output::spinner::format::format_spinner_text;
-use crate::output::terminal_state::{self, RendererType};
+use crate::output::terminal_state;
 use crate::style::theme::get_theme;
 use crossterm::{
     cursor::{self, Hide, Show},
@@ -49,7 +49,7 @@ impl Spinner {
         self.hide_cursor();
 
         // 注册到全局终端状态（渲染线程会自动重绘，不需要复杂的回调）
-        terminal_state::register_renderer(RendererType::Spinner, || {});
+        terminal_state::register_renderer(|| {});
 
         let running = Arc::clone(&self.running);
         let frames = self.frames.clone();

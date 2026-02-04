@@ -7,7 +7,7 @@
 //! cargo run -p prompt --example spinner_demo
 //! ```
 
-use prompt::output::terminal_state::{register_renderer, resume, suspend, RendererType};
+use prompt::output::terminal_state::{register_renderer, resume, suspend};
 use prompt::spinner;
 use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -190,7 +190,7 @@ fn demo_manual_registration() {
     let running_clone = Arc::clone(&running);
 
     // 注册渲染器
-    register_renderer(RendererType::Spinner, || {
+    register_renderer(|| {
         // 这里可以放重绘逻辑，但渲染线程会自动重绘
     });
 

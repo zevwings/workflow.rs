@@ -2,15 +2,12 @@
 //!
 //! 提供 Yes/No 确认对话框功能
 
-use crate::dialog::{common::RawModeGuard, Result};
+use crate::backend::{Backend, TerminalBackend};
+use crate::dialog::Result;
 use crate::dialog::{PROMPT_PREFIX, RESULT_PREFIX};
 use crate::error::PromptError;
 use crate::style::theme::{get_theme, Theme};
-use crossterm::cursor;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use crossterm::execute;
-use crossterm::terminal::ClearType;
-use std::io::Write;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
 /// 确认提示构建器
 pub struct ConfirmBuilder {
@@ -39,30 +36,37 @@ impl ConfirmBuilder {
         self
     }
 
-    /// 执行提示
+    /// 执行提示（使用默认终端后端）
     pub fn prompt(self) -> Result<bool> {
-        prompt(self)
+        let mut backend = TerminalBackend::default();
+        self.prompt_with_backend(&mut backend)
+    }
+
+    /// 使用指定后端执行提示（内部使用）
+    pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<bool> {
+        prompt_with_backend(self, backend)
     }
 }
 
 /// 清除并显示结果
-fn clear_and_display_result(builder: &ConfirmBuilder, value: bool, theme: &Theme) -> Result<()> {
-    let mut stdout = std::io::stdout();
-
-    // 计算消息占用的行数（包含换行符的数量 + 1）
+fn clear_and_display_result<B: Backend>(
+    backend: &mut B,
+    builder: &ConfirmBuilder,
+    value: bool,
+    theme: &Theme,
+) -> Result<()> {
+    // 计算消息占用的行数
     let line_count = builder.message.chars().filter(|&c| c == '\n').count() + 1;
 
-    // 当前光标在提示行的下一行（因为 writeln! 输出了换行符）
-    // 需要向上移动 line_count 行回到提示行的第一行
+    // 向上移动并清除每一行
     for _ in 0..line_count {
-        execute!(stdout, cursor::MoveUp(1))?;
-        execute!(stdout, cursor::MoveToColumn(0))?;
-        execute!(stdout, crossterm::terminal::Clear(ClearType::UntilNewLine))?;
+        backend.move_up(1)?;
+        backend.move_to_column(0)?;
+        backend.clear_line()?;
     }
 
-    // 显示格式化的结果："> [title] yes" 或 "> [title] no"
+    // 显示结果
     let prefix = theme.prefix.apply(RESULT_PREFIX, theme.enable_color);
-    // 使用 result_title（如果存在），否则使用 message 的第一行（避免多行消息导致输出错乱）
     let title_text = builder
         .result_title
         .as_deref()
@@ -74,90 +78,89 @@ fn clear_and_display_result(builder: &ConfirmBuilder, value: bool, theme: &Theme
         theme.answer.apply("no", theme.enable_color)
     };
 
-    write!(stdout, "{}{} {}", prefix, title, result_text)?;
-    writeln!(stdout)?;
-    // 确保光标在新行的开头，以便后续消息输出正确对齐
-    execute!(stdout, cursor::MoveToColumn(0))?;
-
-    // 显示光标
-    execute!(stdout, cursor::Show)?;
-    stdout.flush()?;
+    backend.write(&format!("{}{} {}", prefix, title, result_text))?;
+    backend.writeln("")?;
+    backend.move_to_column(0)?;
+    backend.show_cursor()?;
+    backend.flush()?;
     Ok(())
 }
 
-/// 执行提示
-fn prompt(builder: ConfirmBuilder) -> Result<bool> {
+/// 打印取消消息
+fn print_cancelled_message<B: Backend>(backend: &mut B) -> Result<()> {
+    let theme = get_theme();
+    let prefix = theme.warning.apply("! ", theme.enable_color);
+    let message = theme.hint.apply("Operation cancelled", theme.enable_color);
+    backend.writeln(&format!("{}{}", prefix, message))?;
+    backend.flush()?;
+    Ok(())
+}
+
+/// 使用指定后端执行提示
+fn prompt_with_backend<B: Backend>(builder: ConfirmBuilder, backend: &mut B) -> Result<bool> {
     let theme = get_theme();
 
-    // 显示提示信息（单独一行，使用 ? 前缀）
-    // 格式：? 是否继续操作？ [Y/n]
+    // 显示提示信息
     let hint_text = match builder.default {
         Some(true) => "[Y/n]",
         Some(false) => "[y/N]",
         None => "[y/n]",
     };
 
-    // 应用主题颜色：? 和消息使用 prompt 样式，hint 使用 hint 样式
     let question_prefix = theme.title.apply(PROMPT_PREFIX, theme.enable_color);
     let message_text = theme.title.apply(&builder.message, theme.enable_color);
     let hint_styled = theme.hint.apply(hint_text, theme.enable_color);
 
-    let mut stdout = std::io::stdout();
-    writeln!(
-        stdout,
-        "{}{} {}",
-        question_prefix, message_text, hint_styled
-    )?;
-    stdout.flush()?;
+    backend.writeln(&format!("{}{} {}", question_prefix, message_text, hint_styled))?;
+    backend.flush()?;
 
     // 进入原始模式
-    let _guard = RawModeGuard::new()?;
+    backend.enable_raw_mode()?;
+    backend.hide_cursor()?;
 
-    // 隐藏光标
-    {
-        let mut stdout = std::io::stdout();
-        execute!(stdout, cursor::Hide)?;
-        stdout.flush()?;
-    }
+    let result = prompt_loop(backend, &builder, &theme);
 
+    // 恢复终端状态
+    backend.show_cursor().ok();
+    backend.disable_raw_mode().ok();
+
+    result
+}
+
+/// 主事件循环
+fn prompt_loop<B: Backend>(
+    backend: &mut B,
+    builder: &ConfirmBuilder,
+    theme: &Theme,
+) -> Result<bool> {
     let default_value = builder.default.unwrap_or(true);
 
     loop {
-        // 读取键盘事件
-        match event::read() {
+        match backend.read_event() {
             Ok(Event::Key(KeyEvent {
                 code, modifiers, ..
             })) => {
                 match code {
                     KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
                         if c == 'c' {
-                            // Ctrl+C：输出统一的取消提示，然后返回取消错误
-                            if let Err(e) = crate::dialog::common::print_cancelled_message() {
-                                return Err(PromptError::Io(e));
-                            }
+                            print_cancelled_message(backend)?;
                             return Err(PromptError::Cancelled);
                         }
                     }
                     KeyCode::Char('y') | KeyCode::Char('Y') => {
-                        // 清除提示行，显示结果
-                        clear_and_display_result(&builder, true, &theme)?;
+                        clear_and_display_result(backend, builder, true, theme)?;
                         return Ok(true);
                     }
                     KeyCode::Char('n') | KeyCode::Char('N') => {
-                        // 清除提示行，显示结果
-                        clear_and_display_result(&builder, false, &theme)?;
+                        clear_and_display_result(backend, builder, false, theme)?;
                         return Ok(false);
                     }
                     KeyCode::Enter => {
-                        // 清除提示行，显示结果（使用默认值）
-                        clear_and_display_result(&builder, default_value, &theme)?;
+                        clear_and_display_result(backend, builder, default_value, theme)?;
                         return Ok(default_value);
                     }
                     KeyCode::Esc => {
-                        // Esc：输出统一的取消提示，然后返回取消错误
-                        if let Err(e) = crate::dialog::common::print_cancelled_message() {
-                            return Err(PromptError::Io(e));
-                        }
+                        print_cancelled_message(backend)?;
                         return Err(PromptError::Cancelled);
                     }
                     _ => {}

@@ -5,6 +5,11 @@ edition.workspace = true
 rust-version.workspace = true
 description = "交互式提示库，提供输入提示、确认提示、选择提示、表单、消息输出、加载指示器和表格显示等功能"
 
+[features]
+default = []
+# 测试支持，包含 MockBackend 等测试工具
+testing = []
+
 [dependencies]
 thiserror.workspace = true
 

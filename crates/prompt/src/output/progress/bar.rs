@@ -8,7 +8,7 @@ use crate::output::progress::render::start_render_thread;
 use crate::output::progress::terminal::{
     disable_raw_mode, enable_raw_mode, hide_cursor, show_cursor,
 };
-use crate::output::terminal_state::{self, RendererType};
+use crate::output::terminal_state;
 use crate::style::theme::get_theme;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -102,7 +102,7 @@ impl ProgressBar {
         hide_cursor(self);
 
         // 注册到全局终端状态（渲染线程会自动重绘，不需要复杂的回调）
-        terminal_state::register_renderer(RendererType::ProgressBar, || {});
+        terminal_state::register_renderer(|| {});
 
         start_render_thread(self);
     }

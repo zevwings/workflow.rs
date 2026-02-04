@@ -1,14 +1,14 @@
 //! 选择提示模块
 
+use crate::backend::{Backend, TerminalBackend};
 use crate::dialog::selection::filter::FuzzyFilter;
-use crate::dialog::selection::renderer::{OptionListRenderer, OptionRenderer, RenderOptionsParams};
-use crate::dialog::{
-    common::RawModeGuard, Result, PROMPT_PREFIX, SELECTED_PREFIX, UNSELECTED_PREFIX,
+use crate::dialog::selection::renderer::{
+    clear_and_display_result_with_search, OptionListRenderer, OptionRenderer, RenderOptionsParams,
 };
+use crate::dialog::{Result, PROMPT_PREFIX, SELECTED_PREFIX, UNSELECTED_PREFIX};
 use crate::error::PromptError;
 use crate::style::theme::get_theme;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use std::io::Write;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
 /// Select 选项渲染器
 struct SelectOptionRenderer;
@@ -22,12 +22,10 @@ impl OptionRenderer for SelectOptionRenderer {
         theme: &crate::style::theme::Theme,
     ) -> String {
         if is_current {
-            // 当前选中的选项：使用 "> " 前缀并应用 answer 样式（高亮）
             let prefix = theme.success.apply(SELECTED_PREFIX, theme.enable_color);
             let option_styled = theme.answer.apply(option_text, theme.enable_color);
             format!("{}{}", prefix, option_styled)
         } else {
-            // 其他选项：使用 "  " 前缀
             format!("{}{}", UNSELECTED_PREFIX, option_text)
         }
     }
@@ -67,16 +65,20 @@ where
         self
     }
 
-    /// 设置分页大小（每页显示的选项数量）
-    ///
-    /// 默认值为 10。当选项数量超过分页大小时，会启用滚动窗口。
+    /// 设置分页大小
     pub fn page_size(mut self, size: usize) -> Self {
         self.page_size = Some(size);
         self
     }
 
-    /// 执行提示
+    /// 执行提示（使用默认终端后端）
     pub fn prompt(self) -> Result<T> {
+        let mut backend = TerminalBackend::default();
+        self.prompt_with_backend(&mut backend)
+    }
+
+    /// 使用指定后端执行提示（内部使用）
+    pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<T> {
         if self.options.is_empty() {
             return Err(PromptError::InvalidInput("选项列表不能为空".to_string()));
         }
@@ -84,23 +86,32 @@ where
         let theme = get_theme();
         let filter = FuzzyFilter::new();
 
-        // 验证并调整默认索引
         let mut current_index = self.default.filter(|&idx| idx < self.options.len()).unwrap_or(0);
-
-        // 搜索查询
         let mut search_query = String::new();
 
-        // 显示提示信息（单独一行，使用 ? 前缀）
-        // 应用主题颜色：? 使用 yellow (warning)，message 使用 title，[value] 使用 hint
+        // 显示提示信息
         let question_prefix = theme.warning.apply(PROMPT_PREFIX, theme.enable_color);
+        let styled_text = self.format_message(&theme);
+        backend.writeln(&format!("{}{}", question_prefix, styled_text))?;
+        backend.flush()?;
 
-        // 分离 message 和 [current: ...] 部分，提取 value 显示为 [value]
-        let styled_text = if let Some(current_start) = self.message.find("[current:") {
+        // 进入原始模式
+        backend.enable_raw_mode()?;
+
+        let result = self.prompt_loop(backend, &filter, &mut current_index, &mut search_query);
+
+        // 恢复终端状态
+        backend.show_cursor().ok();
+        backend.disable_raw_mode().ok();
+
+        result
+    }
+
+    fn format_message(&self, theme: &crate::style::theme::Theme) -> String {
+        if let Some(current_start) = self.message.find("[current:") {
             let (base_message, current_part) = self.message.split_at(current_start);
-            // 从 [current: value] 中提取 value，显示为 [value]
-            // 格式："[current: value]"，提取 "value" 部分
             let default_value = if let Some(colon_pos) = current_part.find(": ") {
-                let value_start = colon_pos + 2; // ": " 的长度是 2
+                let value_start = colon_pos + 2;
                 if let Some(bracket_end) = current_part[value_start..].find(']') {
                     format!(
                         "[{}]",
@@ -110,7 +121,6 @@ where
                     format!("[{}]", &current_part[value_start..].trim_end_matches(']'))
                 }
             } else {
-                // 如果格式不对，保持原样
                 current_part.to_string()
             };
             let styled_message = theme.title.apply(base_message.trim_end(), theme.enable_color);
@@ -118,125 +128,105 @@ where
             format!("{} {}", styled_message, styled_default)
         } else {
             theme.title.apply(&self.message, theme.enable_color)
-        };
+        }
+    }
 
-        let mut stdout = std::io::stdout();
-        writeln!(stdout, "{}{}", question_prefix, styled_text)?;
-        stdout.flush()?;
-
-        // 进入原始模式
-        let _guard = RawModeGuard::new()?;
-
-        // 跟踪已渲染的行数（用于正确清除）
-        let mut rendered_lines = 0;
+    fn prompt_loop<B: Backend>(
+        &self,
+        backend: &mut B,
+        filter: &FuzzyFilter,
+        current_index: &mut usize,
+        search_query: &mut String,
+    ) -> Result<T> {
+        let theme = get_theme();
         let renderer = SelectOptionRenderer;
+        let mut rendered_lines = 0;
 
-        // 过滤选项的函数（使用 FuzzyFilter）
         let filter_options =
             |query: &str| -> (Vec<usize>, Vec<&T>) { filter.filter(&self.options, query) };
 
-        // 初始过滤
-        let (mut filtered_indices, mut filtered_options) = filter_options(&search_query);
+        let (mut filtered_indices, mut filtered_options) = filter_options(search_query);
 
-        // 调整当前索引（确保在过滤后的列表中有效）
         if !filtered_options.is_empty() {
-            current_index = current_index.min(filtered_options.len() - 1);
+            *current_index = (*current_index).min(filtered_options.len() - 1);
         } else {
-            current_index = 0;
+            *current_index = 0;
         }
 
         // 渲染初始状态
-        let hint_text = if search_query.is_empty() {
-            "使用 ↑/↓ 导航，输入搜索，回车确认"
-        } else {
-            "使用 ↑/↓ 导航，Esc 清除搜索，回车确认"
-        };
-        rendered_lines = OptionListRenderer::render_options_with_search(&RenderOptionsParams {
-            options: &filtered_options,
-            current_index,
-            rendered_lines,
-            theme: &theme,
-            renderer: &renderer,
-            hint_text,
-            search_query: if search_query.is_empty() {
-                None
-            } else {
-                Some(&search_query)
+        let hint_text = get_hint_text(search_query);
+        rendered_lines = OptionListRenderer::render_options_with_search(
+            backend,
+            &RenderOptionsParams {
+                options: &filtered_options,
+                current_index: *current_index,
+                rendered_lines,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text,
+                search_query: if search_query.is_empty() {
+                    None
+                } else {
+                    Some(search_query)
+                },
+                page_size: self.page_size,
             },
-            page_size: self.page_size,
-        })?;
+        )?;
 
         loop {
-            // 读取键盘事件
-            match event::read() {
+            match backend.read_event() {
                 Ok(Event::Key(KeyEvent {
                     code, modifiers, ..
                 })) => {
                     match code {
                         KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
                             if c == 'c' {
-                                // Ctrl+C：输出统一的取消提示，然后返回取消错误
-                                if let Err(e) = crate::dialog::common::print_cancelled_message() {
-                                    return Err(PromptError::Io(e));
-                                }
+                                print_cancelled_message(backend)?;
                                 return Err(PromptError::Cancelled);
                             }
                         }
                         KeyCode::Char(c) => {
-                            // 输入字符，添加到搜索查询
                             search_query.push(c);
-                            let (new_indices, new_filtered) = filter_options(&search_query);
-
-                            // 更新过滤后的选项和索引映射
+                            let (new_indices, new_filtered) = filter_options(search_query);
                             filtered_indices = new_indices;
                             filtered_options = new_filtered;
+                            *current_index = 0;
 
-                            // 重置当前索引
-                            current_index = 0;
-
-                            let hint_text = if search_query.is_empty() {
-                                "使用 ↑/↓ 导航，输入搜索，回车确认"
-                            } else {
-                                "使用 ↑/↓ 导航，Esc 清除搜索，回车确认"
-                            };
+                            let hint_text = get_hint_text(search_query);
                             rendered_lines = OptionListRenderer::render_options_with_search(
+                                backend,
                                 &RenderOptionsParams {
                                     options: &filtered_options,
-                                    current_index,
+                                    current_index: *current_index,
                                     rendered_lines,
                                     theme: &theme,
                                     renderer: &renderer,
                                     hint_text,
-                                    search_query: Some(&search_query),
+                                    search_query: Some(search_query),
                                     page_size: self.page_size,
                                 },
                             )?;
                         }
                         KeyCode::Backspace => {
-                            // 删除搜索查询的最后一个字符
                             if !search_query.is_empty() {
                                 search_query.pop();
-                                let (new_indices, new_filtered) = filter_options(&search_query);
-
+                                let (new_indices, new_filtered) = filter_options(search_query);
                                 filtered_indices = new_indices;
                                 filtered_options = new_filtered;
 
-                                // 重置当前索引
                                 if !filtered_options.is_empty() {
-                                    current_index = current_index.min(filtered_options.len() - 1);
+                                    *current_index =
+                                        (*current_index).min(filtered_options.len() - 1);
                                 } else {
-                                    current_index = 0;
+                                    *current_index = 0;
                                 }
 
-                                let hint_text = if search_query.is_empty() {
-                                    "使用 ↑/↓ 导航，输入搜索，回车确认"
-                                } else {
-                                    "使用 ↑/↓ 导航，Esc 清除搜索，回车确认"
-                                };
+                                let hint_text = get_hint_text(search_query);
                                 rendered_lines = OptionListRenderer::render_options_with_search(
+                                    backend,
                                     &RenderOptionsParams {
                                         options: &filtered_options,
-                                        current_index,
+                                        current_index: *current_index,
                                         rendered_lines,
                                         theme: &theme,
                                         renderer: &renderer,
@@ -244,7 +234,7 @@ where
                                         search_query: if search_query.is_empty() {
                                             None
                                         } else {
-                                            Some(&search_query)
+                                            Some(search_query)
                                         },
                                         page_size: self.page_size,
                                     },
@@ -252,17 +242,14 @@ where
                             }
                         }
                         KeyCode::Up => {
-                            if !filtered_options.is_empty() && current_index > 0 {
-                                current_index -= 1;
-                                let hint_text = if search_query.is_empty() {
-                                    "使用 ↑/↓ 导航，输入搜索，回车确认"
-                                } else {
-                                    "使用 ↑/↓ 导航，Esc 清除搜索，回车确认"
-                                };
+                            if !filtered_options.is_empty() && *current_index > 0 {
+                                *current_index -= 1;
+                                let hint_text = get_hint_text(search_query);
                                 rendered_lines = OptionListRenderer::render_options_with_search(
+                                    backend,
                                     &RenderOptionsParams {
                                         options: &filtered_options,
-                                        current_index,
+                                        current_index: *current_index,
                                         rendered_lines,
                                         theme: &theme,
                                         renderer: &renderer,
@@ -270,7 +257,7 @@ where
                                         search_query: if search_query.is_empty() {
                                             None
                                         } else {
-                                            Some(&search_query)
+                                            Some(search_query)
                                         },
                                         page_size: self.page_size,
                                     },
@@ -279,18 +266,15 @@ where
                         }
                         KeyCode::Down => {
                             if !filtered_options.is_empty()
-                                && current_index < filtered_options.len() - 1
+                                && *current_index < filtered_options.len() - 1
                             {
-                                current_index += 1;
-                                let hint_text = if search_query.is_empty() {
-                                    "使用 ↑/↓ 导航，输入搜索，回车确认"
-                                } else {
-                                    "使用 ↑/↓ 导航，Esc 清除搜索，回车确认"
-                                };
+                                *current_index += 1;
+                                let hint_text = get_hint_text(search_query);
                                 rendered_lines = OptionListRenderer::render_options_with_search(
+                                    backend,
                                     &RenderOptionsParams {
                                         options: &filtered_options,
-                                        current_index,
+                                        current_index: *current_index,
                                         rendered_lines,
                                         theme: &theme,
                                         renderer: &renderer,
@@ -298,7 +282,7 @@ where
                                         search_query: if search_query.is_empty() {
                                             None
                                         } else {
-                                            Some(&search_query)
+                                            Some(search_query)
                                         },
                                         page_size: self.page_size,
                                     },
@@ -309,14 +293,12 @@ where
                             if filtered_options.is_empty() {
                                 continue;
                             }
-                            // 获取原始索引
-                            let original_index = filtered_indices[current_index];
-                            // 清除选项列表和提示行，显示结果
+                            let original_index = filtered_indices[*current_index];
                             let selected = self.options[original_index].clone();
                             let result_text = selected.to_string();
-                            // 使用 result_title（如果存在），否则使用 message
                             let title_text = self.result_title.as_ref().unwrap_or(&self.message);
-                            crate::dialog::selection::renderer::clear_and_display_result_with_search(
+                            clear_and_display_result_with_search(
+                                backend,
                                 rendered_lines,
                                 title_text,
                                 &result_text,
@@ -326,20 +308,17 @@ where
                         }
                         KeyCode::Esc => {
                             if !search_query.is_empty() {
-                                // 清除搜索查询
                                 search_query.clear();
-                                let (new_indices, new_filtered) = filter_options(&search_query);
-
+                                let (new_indices, new_filtered) = filter_options(search_query);
                                 filtered_indices = new_indices;
                                 filtered_options = new_filtered;
-
-                                // 重置当前索引
-                                current_index = 0;
+                                *current_index = 0;
 
                                 rendered_lines = OptionListRenderer::render_options_with_search(
+                                    backend,
                                     &RenderOptionsParams {
                                         options: &filtered_options,
-                                        current_index,
+                                        current_index: *current_index,
                                         rendered_lines,
                                         theme: &theme,
                                         renderer: &renderer,
@@ -349,10 +328,7 @@ where
                                     },
                                 )?;
                             } else {
-                                // 没有搜索查询，取消操作：输出统一提示
-                                if let Err(e) = crate::dialog::common::print_cancelled_message() {
-                                    return Err(PromptError::Io(e));
-                                }
+                                print_cancelled_message(backend)?;
                                 return Err(PromptError::Cancelled);
                             }
                         }
@@ -366,55 +342,34 @@ where
     }
 }
 
-// 宏定义（通过 #[macro_export] 在 crate 根级别导出）
-/// 选择提示宏
-///
-/// 提供格式化字符串的便捷方式，智能判断是否需要格式化：
-/// - 简单字符串字面量：直接传递，不调用 `format!()`
-/// - 格式化字符串：使用 `format!()` 进行格式化
-/// - 变量或表达式：直接传递，不调用 `format!()`
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use toolkit::select;
-///
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let options = vec!["Option 1", "Option 2", "Option 3"];
-///
-/// // 简单字符串（直接传递，不格式化）
-/// let result1 = select!("Choose an option", options.clone())
-///     .default(0)
-///     .prompt()?;
-///
-/// // 格式化字符串（使用 format!）
-/// let result2 = select!("Choose option for '{}':", "test", options.clone())
-///     .default(0)
-///     .prompt()?;
-///
-/// // 变量（直接传递，不格式化）
-/// let msg = "Choose:";
-/// let result3 = select!(msg, options)
-///     .default(0)
-///     .prompt()?;
-/// # Ok(())
-/// # }
-/// ```
+fn get_hint_text(search_query: &str) -> &'static str {
+    if search_query.is_empty() {
+        "使用 ↑/↓ 导航，输入搜索，回车确认"
+    } else {
+        "使用 ↑/↓ 导航，Esc 清除搜索，回车确认"
+    }
+}
+
+fn print_cancelled_message<B: Backend>(backend: &mut B) -> Result<()> {
+    let theme = get_theme();
+    let prefix = theme.warning.apply("! ", theme.enable_color);
+    let message = theme.hint.apply("Operation cancelled", theme.enable_color);
+    backend.writeln(&format!("{}{}", prefix, message))?;
+    backend.flush()?;
+    Ok(())
+}
+
 #[macro_export]
 macro_rules! select {
-    // 格式化字符串 + 一个格式化参数 + 选项列表
     ($fmt:literal, $arg:expr, $options:expr) => {
         $crate::SelectBuilder::new(format!($fmt, $arg), $options)
     };
-    // 格式化字符串 + 选项列表（无格式化参数）
     ($fmt:literal, $options:expr) => {
         $crate::SelectBuilder::new(format!($fmt), $options)
     };
-    // 简单字符串字面量 + 选项列表
     ($msg:literal, $options:expr) => {
         $crate::SelectBuilder::new($msg, $options)
     };
-    // 变量或其他表达式 + 选项列表
     ($msg:expr, $options:expr) => {
         $crate::SelectBuilder::new($msg, $options)
     };

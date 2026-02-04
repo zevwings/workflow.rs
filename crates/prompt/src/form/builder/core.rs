@@ -1,5 +1,6 @@
 //! 表单构建器核心
 
+use crate::backend::Backend;
 use crate::form::field::FormField;
 use crate::form::types::FormGroup;
 use crate::form::FormExecutor;
@@ -50,11 +51,20 @@ impl FormBuilder {
         self.title.as_deref()
     }
 
-    /// 执行表单并收集用户输入
+    /// 执行表单并收集用户输入（使用默认终端后端）
     ///
     /// 内部使用 `FormExecutor` 来执行表单。
     pub fn run(self) -> crate::Result<crate::form::FormResult> {
         FormExecutor::new().execute(&self)
+    }
+
+    /// 使用指定后端执行表单并收集用户输入（内部使用，仅测试时调用）
+    #[allow(dead_code)]
+    pub(crate) fn run_with_backend<B: Backend>(
+        self,
+        backend: &mut B,
+    ) -> crate::Result<crate::form::FormResult> {
+        FormExecutor::new().execute_with_backend(&self, backend)
     }
 }
 

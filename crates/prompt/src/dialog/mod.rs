@@ -6,7 +6,6 @@
 //! - 单选对话框（select）：从选项列表中选择一个
 //! - 多选对话框（multiselect）：从选项列表中选择多个
 
-mod common;
 mod confirm;
 mod input;
 mod selection;
@@ -34,7 +33,6 @@ pub const SELECTED_PREFIX: &str = "> ";
 pub const UNSELECTED_PREFIX: &str = "  ";
 
 // 重新导出公共 API
-pub use common::RawModeGuard;
 pub use confirm::ConfirmBuilder;
 pub use input::{validators, InputBuilder, ValidationResult, Validator};
 pub use selection::{FuzzyFilter, MultiSelectBuilder, SelectBuilder};
