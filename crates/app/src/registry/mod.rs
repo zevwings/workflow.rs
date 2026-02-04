@@ -2,13 +2,12 @@
 //!
 //! 负责组合各个 crate 的依赖注入容器，统一管理所有服务。
 
-use once_cell::sync::Lazy;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 /// 应用程序初始化标记
 ///
 /// 确保所有模块都已注册
-static APP_INITIALIZED: Lazy<()> = Lazy::new(|| {
+static APP_INITIALIZED: LazyLock<()> = LazyLock::new(|| {
     // 按依赖顺序初始化模块
     // 注意：这些是启动时的关键初始化，失败时程序无法继续运行
     if let Err(e) = storage::register_storage() {
@@ -21,7 +20,7 @@ static APP_INITIALIZED: Lazy<()> = Lazy::new(|| {
 
 /// 确保应用已初始化
 fn ensure_initialized() {
-    Lazy::force(&APP_INITIALIZED);
+    LazyLock::force(&APP_INITIALIZED);
 }
 
 /// 从全局容器获取服务
@@ -49,7 +48,11 @@ fn ensure_initialized() {
 pub fn get_service<T: 'static + Send + Sync + ?Sized>() -> Arc<T> {
     ensure_initialized();
     registry::resolve::<T>().unwrap_or_else(|e| {
-        panic!("Failed to resolve service {}: {}", std::any::type_name::<T>(), e)
+        panic!(
+            "Failed to resolve service {}: {}",
+            std::any::type_name::<T>(),
+            e
+        )
     })
 }
 

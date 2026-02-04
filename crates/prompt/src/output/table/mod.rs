@@ -22,7 +22,7 @@ pub(crate) fn strip_ansi_codes(s: &str) -> String {
             // 跳过 ANSI 转义序列
             if chars.peek() == Some(&'[') {
                 chars.next(); // 跳过 '['
-                // 跳过数字和分号，直到找到 'm'
+                              // 跳过数字和分号，直到找到 'm'
                 while let Some(&ch) = chars.peek() {
                     if ch == 'm' {
                         chars.next();

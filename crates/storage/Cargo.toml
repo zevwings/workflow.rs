@@ -36,8 +36,6 @@ tar = "0.4"
 dirs = "5.0"
 chrono = "0.4"
 toml = "0.8"
-fs2 = "0.4"
-urlencoding = "2.1"
 
 # Git 库
 git2 = { version = "0.20.3", features = ["https", "ssh", "vendored-libgit2", "vendored-openssl"] }

@@ -112,31 +112,6 @@ pub struct BackupInfo {
     pub completion_backups: Vec<(String, PathBuf)>, // (completion_name, backup_path)
 }
 
-impl BackupInfo {
-    // 这些方法目前未使用，但保留以备将来扩展
-    #[allow(dead_code)]
-    /// 创建新的备份信息
-    fn new(backup_dir: PathBuf) -> Self {
-        Self {
-            backup_dir,
-            binary_backups: Vec::new(),
-            completion_backups: Vec::new(),
-        }
-    }
-
-    #[allow(dead_code)]
-    /// 添加二进制文件备份
-    fn add_binary_backup(&mut self, name: String, path: PathBuf) {
-        self.binary_backups.push((name, path));
-    }
-
-    #[allow(dead_code)]
-    /// 添加补全脚本备份
-    fn add_completion_backup(&mut self, name: String, path: PathBuf) {
-        self.completion_backups.push((name, path));
-    }
-}
-
 /// 回滚管理器
 ///
 /// 提供备份和恢复功能，用于更新失败时的回滚操作。
@@ -222,13 +197,25 @@ impl RollbackManager {
                 }
 
                 // 设置执行权限（仅 Unix）
-                Command::new("chmod").arg("+x").arg(&backup_path).status().map_err(|e| {
-                    RollbackError::BackupBinaryFailed {
+                let chmod_status =
+                    Command::new("chmod").arg("+x").arg(&backup_path).status().map_err(|e| {
+                        RollbackError::BackupBinaryFailed {
+                            src: source.display().to_string(),
+                            dest: backup_path.display().to_string(),
+                            message: format!("Failed to set executable permission: {}", e),
+                        }
+                    })?;
+
+                if !chmod_status.success() {
+                    return Err(RollbackError::BackupBinaryFailed {
                         src: source.display().to_string(),
                         dest: backup_path.display().to_string(),
-                        message: format!("Failed to set executable permission: {}", e),
-                    }
-                })?;
+                        message: format!(
+                            "Failed to set executable permission (exit code: {})",
+                            chmod_status.code().unwrap_or(-1)
+                        ),
+                    });
+                }
             }
             #[cfg(windows)]
             {
@@ -334,14 +321,15 @@ impl RollbackManager {
         let completion_dir = Paths::completion_dir()?;
         let completion_backups = Self::backup_completions(&backup_dir, &completion_dir)?;
 
-        let backup_info = BackupInfo {
-            backup_dir,
-            binary_backups: binary_backups.clone(),
-            completion_backups: completion_backups.clone(),
-        };
-
+        // 先获取计数，再转移所有权，避免不必要的 clone
         let binary_count = binary_backups.len();
         let completion_count = completion_backups.len();
+
+        let backup_info = BackupInfo {
+            backup_dir,
+            binary_backups,
+            completion_backups,
+        };
 
         tracing::info!(
             "Backed up {} binary file(s), {} completion script(s)",

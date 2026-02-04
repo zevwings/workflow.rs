@@ -28,6 +28,10 @@ description: 审查 crates 目录下 Rust 代码质量，检查最佳实践、AP
 - [ ] 最小化可见性：优先 `pub(crate)` / `pub(super)`
 - [ ] 内部实现保持私有
 
+### Git 操作规范
+- [ ] 禁止使用 `Command::new("git")` 调用 git 命令行
+- [ ] 统一使用 `git2` 库完成所有 Git 操作
+
 ### 模块导出策略
 - [ ] 层层导出需要公开的类型到 crate 根
 - [ ] 避免导出仅在 crate 内部使用的子模块
