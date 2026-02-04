@@ -2,7 +2,6 @@
 //!
 //! 提供配置存储位置和信息查询功能。
 
-use crate::paths::base::try_icloud_base_dir;
 use crate::paths::config::{config_dir, work_history_dir};
 use crate::paths::PathError;
 
@@ -15,6 +14,7 @@ use crate::paths::PathError;
 pub fn is_config_in_icloud() -> bool {
     #[cfg(target_os = "macos")]
     {
+        use crate::paths::base::try_icloud_base_dir;
         try_icloud_base_dir().is_some()
     }
 
