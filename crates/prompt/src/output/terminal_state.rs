@@ -77,6 +77,9 @@ where
 }
 
 /// 注销渲染器
+///
+/// 递减活跃渲染器计数。当最后一个渲染器注销时，
+/// 清理全局状态并重置暂停标志。
 pub fn unregister_renderer() {
     let state = get_state();
     let count = state.active_count.fetch_sub(1, Ordering::SeqCst);
@@ -142,6 +145,9 @@ pub fn is_suspended() -> bool {
 }
 
 /// 检查是否有活跃的渲染器
+///
+/// 保留此函数以备将来扩展使用。
+#[allow(dead_code)]
 pub fn is_active() -> bool {
     get_state().active.load(Ordering::SeqCst)
 }

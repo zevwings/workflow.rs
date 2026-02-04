@@ -12,6 +12,26 @@ use toolkit::Sensitive;
 // Enums
 // =================================================================================
 
+/// 账户设置模式
+///
+/// 控制新添加的账户是否设为当前账户
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AccountSetMode {
+    /// 设为当前账户
+    #[default]
+    SetAsCurrent,
+    /// 仅添加，不设为当前
+    AddOnly,
+}
+
+impl AccountSetMode {
+    /// 是否应该设为当前账户
+    #[inline]
+    pub fn should_set_current(self) -> bool {
+        matches!(self, Self::SetAsCurrent)
+    }
+}
+
 /// 账户操作选项
 #[derive(Clone)]
 pub enum AccountAction {
@@ -188,7 +208,7 @@ where
     domain::GlobalConfig: GlobalConfigAccessor<S>,
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
-    F: Fn(&mut WorkflowContext, bool) -> Result<String, String>,
+    F: Fn(&mut WorkflowContext, AccountSetMode) -> Result<String, String>,
     U: Fn(&mut WorkflowContext) -> Result<(), String>,
 {
     let mode = context.mode();
@@ -233,7 +253,7 @@ where
     } else {
         info!("No {} accounts were detected.", platform_name);
         br!();
-        add_account_fn(context, true)?;
+        add_account_fn(context, AccountSetMode::SetAsCurrent)?;
     }
 
     Ok(())
@@ -324,7 +344,7 @@ where
 pub fn add_account_generic<S, A, F>(
     context: &mut WorkflowContext,
     account_creator: F,
-    set_as_current: bool,
+    set_mode: AccountSetMode,
     platform_name: &str,
     verify_fn: Option<fn() -> Result<(), String>>,
 ) -> Result<String, String>
@@ -347,7 +367,7 @@ where
 
     settings.accounts_mut().push(account);
 
-    if set_as_current || settings.current().is_empty() {
+    if set_mode.should_set_current() || settings.current().is_empty() {
         settings.set_current(account_name.clone());
     }
 

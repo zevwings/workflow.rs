@@ -922,10 +922,13 @@ impl PullRequestCreateCommand {
             .map_err(|e| format!("Failed to get working tree diff: {}", e))?;
 
         // 如果没有 diff（既没有已提交的 commits，也没有未提交的更改），跳过生成总结
-        if git_diff.is_none() || git_diff.as_ref().unwrap().trim().is_empty() {
-            info!("No changes to generate PR summary");
-            return Ok(None);
-        }
+        let git_diff = match git_diff {
+            Some(diff) if !diff.trim().is_empty() => diff,
+            _ => {
+                info!("No changes to generate PR summary");
+                return Ok(None);
+            }
+        };
 
         // 生成 commit title（用于生成 PR 内容）
         let commit_title = if let Some(jira_id) = jira_id {
@@ -953,7 +956,7 @@ impl PullRequestCreateCommand {
         info!("Generating PR summary...");
         let llm_repo = registry::get_llm_repository();
         let pr_content = spinner!("Generating PR content and summary...")
-            .with(|| llm_repo.create_pr_content(&commit_title, Some(branch_names), git_diff))
+            .with(|| llm_repo.create_pr_content(&commit_title, Some(branch_names), Some(git_diff.clone())))
             .map_err(|e| format!("Failed to generate PR content: {}", e))?;
 
         // 显示 PR 内容

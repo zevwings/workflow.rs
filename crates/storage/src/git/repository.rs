@@ -15,44 +15,30 @@ use crate::git::services::{
     RemoteService, StashService, TagService,
 };
 
+/// Git 服务集合
+///
+/// 将所有 Git 子服务组合为一个结构体，简化 `GitRepositoryImpl` 的构造。
+pub struct GitRepositoryServices {
+    pub blame: Arc<dyn BlameService>,
+    pub branch: Arc<dyn BranchService>,
+    pub commit: Arc<dyn CommitService>,
+    pub diff: Arc<dyn DiffService>,
+    pub merge: Arc<dyn MergeService>,
+    pub remote: Arc<dyn RemoteService>,
+    pub tag: Arc<dyn TagService>,
+    pub stash: Arc<dyn StashService>,
+}
+
 /// Git 仓储实现
 pub struct GitRepositoryImpl {
     ctx: GitContext,
-    blame_service: Arc<dyn BlameService>,
-    branch_service: Arc<dyn BranchService>,
-    commit_service: Arc<dyn CommitService>,
-    diff_service: Arc<dyn DiffService>,
-    merge_service: Arc<dyn MergeService>,
-    remote_service: Arc<dyn RemoteService>,
-    tag_service: Arc<dyn TagService>,
-    stash_service: Arc<dyn StashService>,
+    services: GitRepositoryServices,
 }
 
 impl GitRepositoryImpl {
     /// 创建新的 Git 仓储实例
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        ctx: GitContext,
-        blame_service: Arc<dyn BlameService>,
-        branch_service: Arc<dyn BranchService>,
-        commit_service: Arc<dyn CommitService>,
-        diff_service: Arc<dyn DiffService>,
-        merge_service: Arc<dyn MergeService>,
-        remote_service: Arc<dyn RemoteService>,
-        tag_service: Arc<dyn TagService>,
-        stash_service: Arc<dyn StashService>,
-    ) -> Self {
-        Self {
-            ctx,
-            blame_service,
-            branch_service,
-            commit_service,
-            diff_service,
-            merge_service,
-            remote_service,
-            tag_service,
-            stash_service,
-        }
+    pub fn new(ctx: GitContext, services: GitRepositoryServices) -> Self {
+        Self { ctx, services }
     }
 }
 
@@ -68,25 +54,25 @@ impl GitRepository for GitRepositoryImpl {
     }
 
     fn get_working_tree_diff(&self, base_branch: &str) -> Result<Option<String>, GitError> {
-        self.diff_service.get_working_tree_diff(base_branch)
+        self.services.diff.get_working_tree_diff(base_branch)
     }
 
     // ========== Branch 操作 ==========
 
     fn create_branch(&self, name: &str) -> Result<(), GitError> {
-        self.branch_service.create_branch(name)
+        self.services.branch.create_branch(name)
     }
 
     fn delete_local_branch(&self, name: &str, force: bool) -> Result<(), GitError> {
-        self.branch_service.delete_local_branch(name, force)
+        self.services.branch.delete_local_branch(name, force)
     }
 
     fn delete_remote_branch(&self, name: &str) -> Result<(), GitError> {
-        self.branch_service.delete_remote_branch(name)
+        self.services.branch.delete_remote_branch(name)
     }
 
     fn rename_branch(&self, old_name: Option<&str>, new_name: &str) -> Result<(), GitError> {
-        self.branch_service.rename_branch(old_name, new_name)
+        self.services.branch.rename_branch(old_name, new_name)
     }
 
     fn list_branches(
@@ -94,65 +80,67 @@ impl GitRepository for GitRepositoryImpl {
         remove_prefix: bool,
         all: bool,
     ) -> Result<Vec<domain::BranchInfo>, GitError> {
-        self.branch_service.list_branches(remove_prefix, all)
+        self.services.branch.list_branches(remove_prefix, all)
     }
 
     fn checkout_branch(&self, name: &str) -> Result<(), GitError> {
-        self.branch_service.checkout_branch(name)
+        self.services.branch.checkout_branch(name)
     }
 
     fn get_current_branch(&self) -> Result<String, GitError> {
-        self.branch_service.get_current_branch()
+        self.services.branch.get_current_branch()
     }
 
     fn has_branch(&self, name: &str) -> Result<(bool, bool), GitError> {
-        self.branch_service.has_branch(name)
+        self.services.branch.has_branch(name)
     }
 
     fn get_default_branch(&self) -> Result<String, GitError> {
-        self.branch_service.get_default_branch()
+        self.services.branch.get_default_branch()
     }
 
     fn infer_target_branch(&self, current_branch: &str) -> Result<Option<String>, GitError> {
-        self.branch_service.infer_target_branch(current_branch)
+        self.services.branch.infer_target_branch(current_branch)
     }
 
     // ========== Commit 操作 ==========
 
     fn get_commit_info(&self, ref_or_sha: &str) -> Result<CommitInfo, GitError> {
-        self.commit_service.get_commit_info(ref_or_sha)
+        self.services.commit.get_commit_info(ref_or_sha)
     }
 
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError> {
-        self.commit_service.get_working_tree_status()
+        self.services.commit.get_working_tree_status()
     }
 
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
-        self.commit_service.commit(message, all)
+        self.services.commit.commit(message, all)
     }
 
     // ========== Merge 操作 ==========
 
     fn merge_branch(&self, source_branch: &str, strategy: MergeStrategy) -> Result<(), GitError> {
-        self.merge_service.merge_branch(source_branch, strategy)
+        self.services.merge.merge_branch(source_branch, strategy)
     }
 
     fn has_merge_conflicts(&self) -> Result<bool, GitError> {
-        self.merge_service.has_merge_conflicts()
+        self.services.merge.has_merge_conflicts()
     }
 
     fn is_branch_merged(&self, branch: &str, base_branch: &str) -> Result<bool, GitError> {
-        self.merge_service.is_branch_merged(branch, base_branch)
+        self.services.merge.is_branch_merged(branch, base_branch)
     }
 
     fn merge_base(&self, branch1: &str, branch2: &str) -> Result<String, GitError> {
-        self.merge_service.merge_base(branch1, branch2)
+        self.services.merge.merge_base(branch1, branch2)
     }
 
     // ========== Rebase 操作 ==========
 
     fn rebase_onto(&self, _target_branch: &str) -> Result<(), GitError> {
-        todo!("rebase_onto not implemented")
+        Err(GitError::OperationFailed(
+            "rebase_onto is not implemented yet".to_string(),
+        ))
     }
 
     fn rebase_onto_with_upstream(
@@ -161,43 +149,45 @@ impl GitRepository for GitRepositoryImpl {
         _upstream: &str,
         _branch: &str,
     ) -> Result<(), GitError> {
-        todo!("rebase_onto_with_upstream not implemented")
+        Err(GitError::OperationFailed(
+            "rebase_onto_with_upstream is not implemented yet".to_string(),
+        ))
     }
 
     // ========== Remote 操作 ==========
 
     fn push(&self, branch_name: &str, set_upstream: bool) -> Result<(), GitError> {
-        self.remote_service.push(branch_name, set_upstream)
+        self.services.remote.push(branch_name, set_upstream)
     }
 
     fn pull(&self, branch_name: &str) -> Result<(), GitError> {
-        self.remote_service.pull(branch_name)
+        self.services.remote.pull(branch_name)
     }
 
     fn is_commit_in_remote_branch(&self, branch: &str, commit_sha: &str) -> Result<bool, GitError> {
-        self.remote_service.is_commit_in_remote_branch(branch, commit_sha)
+        self.services.remote.is_commit_in_remote_branch(branch, commit_sha)
     }
 
     // ========== Stash 操作 ==========
 
     fn stash_push(&self, message: Option<&str>) -> Result<usize, GitError> {
-        self.stash_service.stash_push(message)
+        self.services.stash.stash_push(message)
     }
 
     fn stash_pop(&self, index: usize) -> Result<StashPopResult, GitError> {
-        self.stash_service.stash_pop(index)
+        self.services.stash.stash_pop(index)
     }
 
     fn stash_apply(&self, index: usize) -> Result<StashApplyResult, GitError> {
-        self.stash_service.stash_apply(index)
+        self.services.stash.stash_apply(index)
     }
 
     fn stash_list(&self) -> Result<Vec<StashEntry>, GitError> {
-        self.stash_service.stash_list()
+        self.services.stash.stash_list()
     }
 
     fn stash_drop(&self, index: usize) -> Result<(), GitError> {
-        self.stash_service.stash_drop(index)
+        self.services.stash.stash_drop(index)
     }
 
     // ========== Tag 操作 ==========
@@ -210,7 +200,7 @@ impl GitRepository for GitRepositoryImpl {
         scope: TagCreateScope,
         force: bool,
     ) -> Result<TagCreateInfo, GitError> {
-        self.tag_service.create_tag(name, target, message, scope, force)
+        self.services.tag.create_tag(name, target, message, scope, force)
     }
 
     fn delete_tag(
@@ -219,7 +209,7 @@ impl GitRepository for GitRepositoryImpl {
         scope: TagDeleteScope,
         force: bool,
     ) -> Result<TagDeleteInfo, GitError> {
-        self.tag_service.delete_tag(name, scope, force)
+        self.services.tag.delete_tag(name, scope, force)
     }
 
     fn delete_tags_by_pattern(
@@ -228,15 +218,15 @@ impl GitRepository for GitRepositoryImpl {
         scope: TagDeleteScope,
         force: bool,
     ) -> Result<Vec<TagDeleteInfo>, GitError> {
-        self.tag_service.delete_tags_by_pattern(pattern, scope, force)
+        self.services.tag.delete_tags_by_pattern(pattern, scope, force)
     }
 
     fn list_tags(&self, include_remote: bool) -> Result<Vec<String>, GitError> {
-        self.tag_service.list_tags(include_remote)
+        self.services.tag.list_tags(include_remote)
     }
 
     fn has_tag(&self, name: &str) -> Result<(bool, bool), GitError> {
-        self.tag_service.has_tag(name)
+        self.services.tag.has_tag(name)
     }
 
     fn preview_delete(
@@ -245,7 +235,7 @@ impl GitRepository for GitRepositoryImpl {
         pattern: Option<&str>,
         scope: TagDeleteScope,
     ) -> Result<Vec<TagDeleteInfo>, GitError> {
-        self.tag_service.preview_delete(name, pattern, scope)
+        self.services.tag.preview_delete(name, pattern, scope)
     }
 
     // ========== Blame 操作 ==========
@@ -255,7 +245,7 @@ impl GitRepository for GitRepositoryImpl {
         file_path: &str,
         revision: Option<&str>,
     ) -> Result<Vec<BlameLineInfo>, GitError> {
-        self.blame_service.get_file_blame(file_path, revision)
+        self.services.blame.get_file_blame(file_path, revision)
     }
 
     fn get_file_blame_range(
@@ -265,7 +255,8 @@ impl GitRepository for GitRepositoryImpl {
         end_line: usize,
         revision: Option<&str>,
     ) -> Result<Vec<BlameLineInfo>, GitError> {
-        self.blame_service
+        self.services
+            .blame
             .get_file_blame_range(file_path, start_line, end_line, revision)
     }
 }

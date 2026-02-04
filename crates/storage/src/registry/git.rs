@@ -11,7 +11,7 @@ use crate::git::services::{
     GitContextHolder, MergeService, MergeServiceImpl, RemoteService, RemoteServiceImpl,
     StashService, StashServiceImpl, TagService, TagServiceImpl,
 };
-use crate::git::GitRepositoryImpl;
+use crate::git::{GitRepositoryImpl, GitRepositoryServices};
 
 /// 将 GitRepository 包装为 GitRepoRepository，供仅需 get_repo_info 的依赖使用
 struct GitRepoRepositoryWrapper(Arc<dyn GitRepository>);
@@ -123,9 +123,17 @@ pub fn register_git() -> registry::Result<()> {
         let stash = c
             .get::<dyn StashService>()
             .expect("StashService must be registered before GitRepository");
-        Arc::new(GitRepositoryImpl::new(
-            ctx, blame, branch, commit, diff, merge, remote, tag, stash,
-        ))
+        let services = GitRepositoryServices {
+            blame,
+            branch,
+            commit,
+            diff,
+            merge,
+            remote,
+            tag,
+            stash,
+        };
+        Arc::new(GitRepositoryImpl::new(ctx, services))
     })
     .in_scope(Scope::Singleton)?;
 

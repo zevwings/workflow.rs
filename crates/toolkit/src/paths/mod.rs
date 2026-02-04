@@ -359,6 +359,9 @@ impl Paths {
     ///
     /// - `true` - 配置当前存储在 iCloud Drive
     /// - `false` - 配置存储在本地
+    ///
+    /// 保留此方法以备将来扩展使用（如 CLI 显示存储位置）。
+    #[allow(dead_code)]
     pub fn is_config_in_icloud() -> bool {
         info::is_config_in_icloud()
     }
@@ -369,6 +372,9 @@ impl Paths {
     ///
     /// - "iCloud Drive (synced across devices)" - 使用 iCloud
     /// - "Local storage" - 使用本地存储
+    ///
+    /// 保留此方法以备将来扩展使用（如 CLI 显示存储位置）。
+    #[allow(dead_code)]
     pub fn storage_location() -> &'static str {
         info::storage_location()
     }
@@ -384,6 +390,9 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法获取路径，返回相应的错误信息。
+    ///
+    /// 保留此方法以备将来扩展使用（如 CLI 显示存储信息）。
+    #[allow(dead_code)]
     pub fn storage_info() -> Result<String, PathError> {
         info::storage_info()
     }

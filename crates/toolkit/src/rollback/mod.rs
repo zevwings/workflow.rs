@@ -12,6 +12,7 @@ mod reload;
 
 pub use helpers::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
+    CompletionHelperError,
 };
-pub use manager::{BackupInfo, BackupResult, RollbackManager, RollbackResult};
-pub use reload::{Reload, ReloadResult};
+pub use manager::{BackupInfo, BackupResult, RollbackError, RollbackManager, RollbackResult};
+pub use reload::{Reload, ReloadError, ReloadResult};

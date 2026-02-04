@@ -152,13 +152,11 @@ impl RollbackManager {
     /// 返回备份目录路径。
     fn create_backup_dir() -> Result<PathBuf, RollbackError> {
         let temp_dir = std::env::temp_dir();
-        let backup_dir = temp_dir.join(format!(
-            "workflow-backup-{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        ));
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let backup_dir = temp_dir.join(format!("workflow-backup-{}", timestamp));
 
         DirectoryWalker::new(&backup_dir).ensure_exists()?;
 

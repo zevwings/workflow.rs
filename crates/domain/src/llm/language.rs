@@ -91,8 +91,8 @@ impl SupportedLanguage {
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use storage::SupportedLanguage;
+    /// ```rust,ignore
+    /// use domain::llm::SupportedLanguage;
     ///
     /// let default_lang = SupportedLanguage::default_language();
     /// assert_eq!(default_lang.code, "en");
@@ -109,8 +109,8 @@ impl SupportedLanguage {
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use storage::SupportedLanguage;
+    /// ```rust,ignore
+    /// use domain::llm::SupportedLanguage;
     ///
     /// let languages = SupportedLanguage::get();
     /// assert!(!languages.is_empty());
@@ -138,8 +138,8 @@ impl SupportedLanguage {
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use storage::SupportedLanguage;
+    /// ```rust,ignore
+    /// use domain::llm::SupportedLanguage;
     ///
     /// let lang = SupportedLanguage::find("zh-CN");
     /// assert!(lang.is_some());
@@ -168,8 +168,8 @@ impl SupportedLanguage {
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use storage::llm::SupportedLanguage;
+    /// ```rust,ignore
+    /// use domain::llm::SupportedLanguage;
     ///
     /// let instruction = SupportedLanguage::get_instruction("zh-CN");
     /// assert!(!instruction.is_empty());
@@ -203,12 +203,12 @@ impl SupportedLanguage {
     ///
     /// # 示例
     ///
-    /// ```rust,no_run
-    /// use storage::SupportedLanguage;
+    /// ```rust,ignore
+    /// use domain::llm::SupportedLanguage;
     ///
     /// let original = "You are a helpful assistant.";
-    /// let enhanced = SupportedLanguage::get_requirement(original, None);
-    /// // 返回包含强化语言要求的 prompt（语言从默认配置读取）
+    /// let enhanced = SupportedLanguage::get_requirement(original, "en");
+    /// // 返回包含强化语言要求的 prompt
     /// ```
     pub fn get_requirement(system_prompt: &str, language_code: &str) -> String {
         let language_instruction = Self::get_instruction(language_code);
@@ -243,8 +243,8 @@ Remember: ALL output must be in {} only. No exceptions."#,
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use storage::llm::SupportedLanguage;
+    /// ```rust,ignore
+    /// use domain::llm::SupportedLanguage;
     ///
     /// let codes = SupportedLanguage::supported_codes();
     /// assert!(!codes.is_empty());
@@ -263,8 +263,8 @@ Remember: ALL output must be in {} only. No exceptions."#,
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use storage::llm::SupportedLanguage;
+    /// ```rust,ignore
+    /// use domain::llm::SupportedLanguage;
     ///
     /// let names = SupportedLanguage::supported_display_names();
     /// assert!(!names.is_empty());

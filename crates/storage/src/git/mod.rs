@@ -39,5 +39,5 @@ pub mod testing;
 pub mod performance;
 
 // Re-export public types
-pub use repository::GitRepositoryImpl;
+pub use repository::{GitRepositoryImpl, GitRepositoryServices};
 pub use services::{DiscoveredContext, GitContext, GitContextHolder};

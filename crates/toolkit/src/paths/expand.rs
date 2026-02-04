@@ -58,12 +58,12 @@ fn expand_windows_env_vars(path_str: &str) -> Result<String, PathError> {
     while let Some(ch) = chars.next() {
         if ch == '%' {
             let mut var_name = String::new();
-            while let Some(&next_ch) = chars.peek() {
-                if next_ch == '%' {
-                    chars.next();
-                    break;
+            loop {
+                match chars.next() {
+                    Some('%') => break,
+                    Some(c) => var_name.push(c),
+                    None => break,
                 }
-                var_name.push(chars.next().unwrap());
             }
 
             if !var_name.is_empty() {
