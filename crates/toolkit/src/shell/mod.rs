@@ -163,3 +163,181 @@ pub fn supported_shells() -> Vec<Shell> {
         Shell::Elvish,
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // config_file_path 测试
+    // ========================================================================
+
+    #[test]
+    fn test_config_file_path_zsh() {
+        let path = config_file_path(&Shell::Zsh);
+        assert!(path.is_some());
+        let path = path.unwrap();
+        assert!(path.to_string_lossy().ends_with(".zshrc"));
+    }
+
+    #[test]
+    fn test_config_file_path_bash() {
+        let path = config_file_path(&Shell::Bash);
+        assert!(path.is_some());
+        let path = path.unwrap();
+        // macOS 使用 .bash_profile，Linux 使用 .bashrc
+        let path_str = path.to_string_lossy();
+        assert!(path_str.ends_with(".bash_profile") || path_str.ends_with(".bashrc"));
+    }
+
+    #[test]
+    fn test_config_file_path_fish() {
+        let path = config_file_path(&Shell::Fish);
+        assert!(path.is_some());
+        let path = path.unwrap();
+        assert!(path.to_string_lossy().ends_with("config.fish"));
+    }
+
+    #[test]
+    fn test_config_file_path_powershell() {
+        let path = config_file_path(&Shell::PowerShell);
+        assert!(path.is_some());
+        let path = path.unwrap();
+        assert!(path.to_string_lossy().contains("powershell"));
+    }
+
+    #[test]
+    fn test_config_file_path_elvish() {
+        let path = config_file_path(&Shell::Elvish);
+        assert!(path.is_some());
+        let path = path.unwrap();
+        assert!(path.to_string_lossy().ends_with("rc.elv"));
+    }
+
+    // ========================================================================
+    // reload_hint 测试
+    // ========================================================================
+
+    #[test]
+    fn test_reload_hint_zsh() {
+        let hint = reload_hint(&Shell::Zsh);
+        assert_eq!(hint, "source ~/.zshrc");
+    }
+
+    #[test]
+    fn test_reload_hint_bash() {
+        let hint = reload_hint(&Shell::Bash);
+        // macOS 使用 .bash_profile，Linux 使用 .bashrc
+        assert!(hint.contains("source") && hint.contains("bash"));
+    }
+
+    #[test]
+    fn test_reload_hint_fish() {
+        let hint = reload_hint(&Shell::Fish);
+        assert!(hint.contains("source") && hint.contains("config.fish"));
+    }
+
+    #[test]
+    fn test_reload_hint_powershell() {
+        let hint = reload_hint(&Shell::PowerShell);
+        assert_eq!(hint, ". $PROFILE");
+    }
+
+    #[test]
+    fn test_reload_hint_elvish() {
+        let hint = reload_hint(&Shell::Elvish);
+        assert_eq!(hint, "exec elvish");
+    }
+
+    // ========================================================================
+    // shell_to_string 测试
+    // ========================================================================
+
+    #[test]
+    fn test_shell_to_string_all() {
+        assert_eq!(shell_to_string(&Shell::Zsh), "zsh");
+        assert_eq!(shell_to_string(&Shell::Bash), "bash");
+        assert_eq!(shell_to_string(&Shell::Fish), "fish");
+        assert_eq!(shell_to_string(&Shell::PowerShell), "powershell");
+        assert_eq!(shell_to_string(&Shell::Elvish), "elvish");
+    }
+
+    // ========================================================================
+    // shell_from_string 测试
+    // ========================================================================
+
+    #[test]
+    fn test_shell_from_string_valid() {
+        assert!(matches!(shell_from_string("zsh"), Ok(Shell::Zsh)));
+        assert!(matches!(shell_from_string("bash"), Ok(Shell::Bash)));
+        assert!(matches!(shell_from_string("fish"), Ok(Shell::Fish)));
+        assert!(matches!(
+            shell_from_string("powershell"),
+            Ok(Shell::PowerShell)
+        ));
+        assert!(matches!(shell_from_string("pwsh"), Ok(Shell::PowerShell)));
+        assert!(matches!(shell_from_string("elvish"), Ok(Shell::Elvish)));
+    }
+
+    #[test]
+    fn test_shell_from_string_case_insensitive() {
+        assert!(matches!(shell_from_string("ZSH"), Ok(Shell::Zsh)));
+        assert!(matches!(shell_from_string("Bash"), Ok(Shell::Bash)));
+        assert!(matches!(shell_from_string("FISH"), Ok(Shell::Fish)));
+        assert!(matches!(
+            shell_from_string("PowerShell"),
+            Ok(Shell::PowerShell)
+        ));
+    }
+
+    #[test]
+    fn test_shell_from_string_invalid() {
+        let result = shell_from_string("invalid_shell");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ShellError::UnsupportedShell(_)));
+    }
+
+    #[test]
+    fn test_shell_from_string_empty() {
+        let result = shell_from_string("");
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // supported_shells 测试
+    // ========================================================================
+
+    #[test]
+    fn test_supported_shells_count() {
+        let shells = supported_shells();
+        assert_eq!(shells.len(), 5);
+    }
+
+    #[test]
+    fn test_supported_shells_contains_all() {
+        let shells = supported_shells();
+        assert!(shells.contains(&Shell::Zsh));
+        assert!(shells.contains(&Shell::Bash));
+        assert!(shells.contains(&Shell::Fish));
+        assert!(shells.contains(&Shell::PowerShell));
+        assert!(shells.contains(&Shell::Elvish));
+    }
+
+    // ========================================================================
+    // ShellError 测试
+    // ========================================================================
+
+    #[test]
+    fn test_shell_error_display() {
+        let error = ShellError::UnsupportedShell("test".to_string());
+        let error_str = format!("{}", error);
+        assert!(error_str.contains("test"));
+    }
+
+    #[test]
+    fn test_shell_error_detection_failed() {
+        let error = ShellError::DetectionFailed;
+        let error_str = format!("{}", error);
+        assert!(!error_str.is_empty());
+    }
+}
