@@ -62,7 +62,7 @@ impl GitHubClientImpl {
     }
 
     /// 获取 GitHub API 请求的 headers
-    pub fn get_headers(&self) -> Result<HeaderMap, GitHubError> {
+    fn get_headers(&self) -> Result<HeaderMap, GitHubError> {
         let token = self.context.get_api_token()?;
 
         let mut headers = HeaderMap::new();
@@ -72,29 +72,55 @@ impl GitHubClientImpl {
                 GitHubError::ApiError(format!("Failed to parse Authorization header: {}", e))
             })?,
         );
+        // 静态字符串解析不会失败，使用 expect
         headers.insert(
             "Accept",
-            "application/vnd.github+json".parse().map_err(|e| {
-                GitHubError::ApiError(format!("Failed to parse Accept header: {}", e))
-            })?,
+            "application/vnd.github+json".parse().expect("static header value"),
         );
         headers.insert(
             "X-GitHub-Api-Version",
-            "2022-11-28".parse().map_err(|e| {
-                GitHubError::ApiError(format!(
-                    "Failed to parse X-GitHub-Api-Version header: {}",
-                    e
-                ))
-            })?,
+            "2022-11-28".parse().expect("static header value"),
         );
         headers.insert(
             "User-Agent",
-            "workflow-cli".parse().map_err(|e| {
-                GitHubError::ApiError(format!("Failed to parse User-Agent header: {}", e))
-            })?,
+            "workflow-cli".parse().expect("static header value"),
         );
 
         Ok(headers)
+    }
+
+    /// 执行 HTTP 请求的公共逻辑
+    fn execute(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&Value>,
+    ) -> Result<GitHubResponse, GitHubError> {
+        let url = self.build_url(path);
+        let client = HttpClient::global()
+            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
+        let headers = self.get_headers()?;
+
+        let response = match method {
+            "GET" => client.get(&url).headers(headers).send(),
+            "POST" => client
+                .post(&url)
+                .headers(headers)
+                .body(body.expect("POST requires body"))
+                .send(),
+            "PUT" => {
+                client.put(&url).headers(headers).body(body.expect("PUT requires body")).send()
+            }
+            "PATCH" => client
+                .patch(&url)
+                .headers(headers)
+                .body(body.expect("PATCH requires body"))
+                .send(),
+            "DELETE" => client.delete(&url).headers(headers).send(),
+            _ => unreachable!("unsupported HTTP method: {}", method),
+        };
+
+        self.send_request(method, &url, body, response)
     }
 
     /// 将 Response 错误转换为 GitHubError
@@ -234,62 +260,22 @@ impl GitHubClientImpl {
 
 impl GitHubClient for GitHubClientImpl {
     fn get(&self, path: &str) -> Result<GitHubResponse, GitHubError> {
-        let url = self.build_url(path);
-        let client = HttpClient::global()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
-        let headers = self
-            .get_headers()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get headers: {}", e)))?;
-
-        let response = client.get(&url).headers(headers).send();
-        self.send_request("GET", &url, None, response)
+        self.execute("GET", path, None)
     }
 
     fn post(&self, path: &str, body: &Value) -> Result<GitHubResponse, GitHubError> {
-        let url = self.build_url(path);
-        let client = HttpClient::global()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
-        let headers = self
-            .get_headers()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get headers: {}", e)))?;
-
-        let response = client.post(&url).headers(headers).body(body).send();
-        self.send_request("POST", &url, Some(body), response)
+        self.execute("POST", path, Some(body))
     }
 
     fn put(&self, path: &str, body: &Value) -> Result<GitHubResponse, GitHubError> {
-        let url = self.build_url(path);
-        let client = HttpClient::global()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
-        let headers = self
-            .get_headers()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get headers: {}", e)))?;
-
-        let response = client.put(&url).headers(headers).body(body).send();
-        self.send_request("PUT", &url, Some(body), response)
+        self.execute("PUT", path, Some(body))
     }
 
     fn patch(&self, path: &str, body: &Value) -> Result<GitHubResponse, GitHubError> {
-        let url = self.build_url(path);
-        let client = HttpClient::global()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
-        let headers = self
-            .get_headers()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get headers: {}", e)))?;
-
-        let response = client.patch(&url).headers(headers).body(body).send();
-        self.send_request("PATCH", &url, Some(body), response)
+        self.execute("PATCH", path, Some(body))
     }
 
     fn delete(&self, path: &str) -> Result<GitHubResponse, GitHubError> {
-        let url = self.build_url(path);
-        let client = HttpClient::global()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
-        let headers = self
-            .get_headers()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get headers: {}", e)))?;
-
-        let response = client.delete(&url).headers(headers).send();
-        self.send_request("DELETE", &url, None, response)
+        self.execute("DELETE", path, None)
     }
 }

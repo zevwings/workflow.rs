@@ -68,21 +68,16 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
         let pr_number = self.context.parse_pr_number(pull_request_id)?;
         let pr = self.fetch_pr_info(pr_number)?;
 
+        // writeln! 写入 String 不会失败，使用 .ok() 忽略结果
         let mut info = String::new();
-        writeln!(info, "Title: {}", pr.title)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
+        writeln!(info, "Title: {}", pr.title).ok();
         if let Some(body) = pr.body {
-            writeln!(info, "Description: {}", body)
-                .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
+            writeln!(info, "Description: {}", body).ok();
         }
-        writeln!(info, "State: {}", pr.state)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
-        writeln!(info, "Source Branch: {}", pr.head.ref_name)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
-        writeln!(info, "Target Branch: {}", pr.base.ref_name)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
-        writeln!(info, "URL: {}", pr.html_url)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
+        writeln!(info, "State: {}", pr.state).ok();
+        writeln!(info, "Source Branch: {}", pr.head.ref_name).ok();
+        writeln!(info, "Target Branch: {}", pr.base.ref_name).ok();
+        writeln!(info, "URL: {}", pr.html_url).ok();
 
         Ok(info)
     }

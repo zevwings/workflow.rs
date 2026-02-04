@@ -204,9 +204,7 @@ impl PullRequestMutationService for PullRequestMutationServiceImpl {
             "base": new_base
         });
 
-        self.client
-            .patch(&url, &request)
-            .map_err(|e| GitHubError::ApiError(e.to_string()))?;
+        self.client.patch(&url, &request)?;
 
         Ok(())
     }
