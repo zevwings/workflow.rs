@@ -353,7 +353,70 @@ pub fn merge_files(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+    use tar::Builder as TarBuilder;
     use tempfile::TempDir;
+    use zip::write::FileOptions;
+    use zip::ZipWriter;
+
+    // ========================================================================
+    // 辅助函数：创建测试归档文件
+    // ========================================================================
+
+    /// 创建一个测试用的 tar.gz 文件
+    fn create_test_tar_gz(dir: &Path) -> PathBuf {
+        let archive_path = dir.join("test.tar.gz");
+        let file = File::create(&archive_path).unwrap();
+        let encoder = GzEncoder::new(file, Compression::default());
+        let mut builder = TarBuilder::new(encoder);
+
+        // 添加一个测试文件
+        let test_content = b"Hello from tar.gz!";
+        let mut header = tar::Header::new_gnu();
+        header.set_path("test_file.txt").unwrap();
+        header.set_size(test_content.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder.append(&header, &test_content[..]).unwrap();
+
+        // 添加一个子目录和文件
+        let mut header2 = tar::Header::new_gnu();
+        header2.set_path("subdir/nested.txt").unwrap();
+        header2.set_size(12);
+        header2.set_mode(0o644);
+        header2.set_cksum();
+        builder.append(&header2, &b"nested file!"[..]).unwrap();
+
+        builder.finish().unwrap();
+        archive_path
+    }
+
+    /// 创建一个测试用的 zip 文件
+    fn create_test_zip(dir: &Path) -> PathBuf {
+        let archive_path = dir.join("test.zip");
+        let file = File::create(&archive_path).unwrap();
+        let mut zip = ZipWriter::new(file);
+
+        let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+        // 添加一个测试文件
+        zip.start_file("test_file.txt", options).unwrap();
+        zip.write_all(b"Hello from zip!").unwrap();
+
+        // 添加一个子目录和文件
+        zip.add_directory("subdir/", options).unwrap();
+        zip.start_file("subdir/nested.txt", options).unwrap();
+        zip.write_all(b"nested zip!").unwrap();
+
+        zip.finish().unwrap();
+        archive_path
+    }
+
+    // ========================================================================
+    // 格式检测测试
+    // ========================================================================
 
     #[test]
     fn test_extract_detects_format() {
@@ -388,5 +451,219 @@ mod tests {
 
         let result = extract_tar_gz(archive_path, temp_dir.path());
         assert!(matches!(result, Err(FileError::FileNotFound(_))));
+    }
+
+    // ========================================================================
+    // tar.gz 解压测试
+    // ========================================================================
+
+    #[test]
+    fn test_extract_tar_gz_success() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = create_test_tar_gz(temp_dir.path());
+        let output_dir = temp_dir.path().join("output");
+
+        let result = extract_tar_gz(&archive_path, &output_dir);
+        assert!(result.is_ok());
+
+        // 验证文件被正确解压
+        let extracted_file = output_dir.join("test_file.txt");
+        assert!(extracted_file.exists());
+
+        let content = std::fs::read_to_string(&extracted_file).unwrap();
+        assert_eq!(content, "Hello from tar.gz!");
+
+        // 验证嵌套文件
+        let nested_file = output_dir.join("subdir/nested.txt");
+        assert!(nested_file.exists());
+    }
+
+    #[test]
+    fn test_extract_tar_gz_creates_output_dir() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = create_test_tar_gz(temp_dir.path());
+        let output_dir = temp_dir.path().join("new_dir/sub_dir");
+
+        // 输出目录不存在
+        assert!(!output_dir.exists());
+
+        let result = extract_tar_gz(&archive_path, &output_dir);
+        assert!(result.is_ok());
+
+        // 验证目录被创建
+        assert!(output_dir.exists());
+    }
+
+    // ========================================================================
+    // zip 解压测试
+    // ========================================================================
+
+    #[test]
+    fn test_extract_zip_success() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = create_test_zip(temp_dir.path());
+        let output_dir = temp_dir.path().join("output");
+
+        let result = extract_zip(&archive_path, &output_dir);
+        assert!(result.is_ok());
+
+        // 验证文件被正确解压
+        let extracted_file = output_dir.join("test_file.txt");
+        assert!(extracted_file.exists());
+
+        let content = std::fs::read_to_string(&extracted_file).unwrap();
+        assert_eq!(content, "Hello from zip!");
+
+        // 验证嵌套文件
+        let nested_file = output_dir.join("subdir/nested.txt");
+        assert!(nested_file.exists());
+    }
+
+    #[test]
+    fn test_extract_zip_file_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = temp_dir.path().join("nonexistent.zip");
+
+        let result = extract_zip(&archive_path, temp_dir.path());
+        assert!(matches!(result, Err(FileError::FileNotFound(_))));
+    }
+
+    // ========================================================================
+    // extract 自动检测测试
+    // ========================================================================
+
+    #[test]
+    fn test_extract_auto_tar_gz() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = create_test_tar_gz(temp_dir.path());
+        let output_dir = temp_dir.path().join("auto_output");
+
+        let result = extract(&archive_path, &output_dir);
+        assert!(result.is_ok());
+        assert!(output_dir.join("test_file.txt").exists());
+    }
+
+    #[test]
+    fn test_extract_auto_zip() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = create_test_zip(temp_dir.path());
+        let output_dir = temp_dir.path().join("auto_output");
+
+        let result = extract(&archive_path, &output_dir);
+        assert!(result.is_ok());
+        assert!(output_dir.join("test_file.txt").exists());
+    }
+
+    // ========================================================================
+    // list_contents 测试
+    // ========================================================================
+
+    #[test]
+    fn test_list_tar_gz_contents() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = create_test_tar_gz(temp_dir.path());
+
+        let result = list_contents(&archive_path);
+        assert!(result.is_ok());
+
+        let contents = result.unwrap();
+        assert!(contents.iter().any(|s| s.contains("test_file.txt")));
+        assert!(contents.iter().any(|s| s.contains("nested.txt")));
+    }
+
+    #[test]
+    fn test_list_zip_contents() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = create_test_zip(temp_dir.path());
+
+        let result = list_contents(&archive_path);
+        assert!(result.is_ok());
+
+        let contents = result.unwrap();
+        assert!(contents.iter().any(|s| s.contains("test_file.txt")));
+        assert!(contents.iter().any(|s| s.contains("nested.txt")));
+    }
+
+    #[test]
+    fn test_list_contents_unsupported() {
+        let temp_dir = TempDir::new().unwrap();
+        let archive_path = temp_dir.path().join("test.7z");
+        std::fs::write(&archive_path, b"fake").unwrap();
+
+        let result = list_contents(&archive_path);
+        assert!(matches!(result, Err(FileError::Other(_))));
+    }
+
+    // ========================================================================
+    // merge_files 测试
+    // ========================================================================
+
+    #[test]
+    fn test_merge_files_success() {
+        let temp_dir = TempDir::new().unwrap();
+
+        // 创建基础文件
+        let base_file = temp_dir.path().join("base.bin");
+        std::fs::write(&base_file, b"BASE").unwrap();
+
+        // 创建分片文件
+        let split1 = temp_dir.path().join("split.001");
+        let split2 = temp_dir.path().join("split.002");
+        std::fs::write(&split1, b"PART1").unwrap();
+        std::fs::write(&split2, b"PART2").unwrap();
+
+        let output_file = temp_dir.path().join("merged.bin");
+        let result = merge_files(&base_file, &[split1, split2], &output_file);
+        assert!(result.is_ok());
+
+        let merged_content = std::fs::read(&output_file).unwrap();
+        assert_eq!(merged_content, b"BASEPART1PART2");
+    }
+
+    #[test]
+    fn test_merge_files_base_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let base_file = temp_dir.path().join("nonexistent.bin");
+        let output_file = temp_dir.path().join("merged.bin");
+
+        let result = merge_files(&base_file, &[], &output_file);
+        assert!(matches!(result, Err(FileError::FileNotFound(_))));
+    }
+
+    #[test]
+    fn test_merge_files_empty_splits() {
+        let temp_dir = TempDir::new().unwrap();
+
+        // 只有基础文件，没有分片
+        let base_file = temp_dir.path().join("base.bin");
+        std::fs::write(&base_file, b"ONLY_BASE").unwrap();
+
+        let output_file = temp_dir.path().join("merged.bin");
+        let result = merge_files(&base_file, &[], &output_file);
+        assert!(result.is_ok());
+
+        let merged_content = std::fs::read(&output_file).unwrap();
+        assert_eq!(merged_content, b"ONLY_BASE");
+    }
+
+    #[test]
+    fn test_merge_files_large_content() {
+        let temp_dir = TempDir::new().unwrap();
+
+        // 创建较大的测试数据
+        let base_content: Vec<u8> = (0..1000).map(|i| (i % 256) as u8).collect();
+        let split_content: Vec<u8> = (0..500).map(|i| ((i + 100) % 256) as u8).collect();
+
+        let base_file = temp_dir.path().join("base.bin");
+        let split_file = temp_dir.path().join("split.001");
+        std::fs::write(&base_file, &base_content).unwrap();
+        std::fs::write(&split_file, &split_content).unwrap();
+
+        let output_file = temp_dir.path().join("merged.bin");
+        let result = merge_files(&base_file, &[split_file], &output_file);
+        assert!(result.is_ok());
+
+        let merged_content = std::fs::read(&output_file).unwrap();
+        assert_eq!(merged_content.len(), 1500);
     }
 }

@@ -260,3 +260,226 @@ fn get_source_patterns(shell: &Shell, source_path: &str) -> Vec<String> {
         _ => vec![source_path.to_string()],
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // generate_source_statement 测试
+    // ========================================================================
+
+    #[test]
+    fn test_generate_source_statement_zsh() {
+        let result = generate_source_statement(&Shell::Zsh, "/path/to/script.sh");
+        assert!(result.contains("source"));
+        assert!(result.contains("/path/to/script.sh"));
+        // Zsh 使用条件检查
+        assert!(result.contains("[[ -f"));
+    }
+
+    #[test]
+    fn test_generate_source_statement_bash() {
+        let result = generate_source_statement(&Shell::Bash, "/path/to/script.sh");
+        assert!(result.contains("source"));
+        assert!(result.contains("/path/to/script.sh"));
+        // Bash 使用条件检查
+        assert!(result.contains("[[ -f"));
+    }
+
+    #[test]
+    fn test_generate_source_statement_fish() {
+        let result = generate_source_statement(&Shell::Fish, "/path/to/script.fish");
+        assert!(result.contains("source"));
+        assert!(result.contains("/path/to/script.fish"));
+        // Fish 使用 test -f
+        assert!(result.contains("test -f"));
+        assert!(result.contains("end"));
+    }
+
+    #[test]
+    fn test_generate_source_statement_powershell() {
+        let result = generate_source_statement(&Shell::PowerShell, "/path/to/script.ps1");
+        assert!(result.contains("Test-Path"));
+        assert!(result.contains("/path/to/script.ps1"));
+        assert!(result.contains(". "));
+    }
+
+    #[test]
+    fn test_generate_source_statement_elvish() {
+        let result = generate_source_statement(&Shell::Elvish, "/path/to/script.elv");
+        assert!(result.contains("path:is-regular"));
+        assert!(result.contains("/path/to/script.elv"));
+        assert!(result.contains("eval"));
+    }
+
+    // ========================================================================
+    // get_source_patterns 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_source_patterns_zsh() {
+        let patterns = get_source_patterns(&Shell::Zsh, "/test/path");
+        assert_eq!(patterns.len(), 6);
+        assert!(patterns.contains(&"source \"/test/path\"".to_string()));
+        assert!(patterns.contains(&"source '/test/path'".to_string()));
+        assert!(patterns.contains(&"source /test/path".to_string()));
+        assert!(patterns.contains(&". \"/test/path\"".to_string()));
+        assert!(patterns.contains(&". '/test/path'".to_string()));
+        assert!(patterns.contains(&". /test/path".to_string()));
+    }
+
+    #[test]
+    fn test_get_source_patterns_bash() {
+        let patterns = get_source_patterns(&Shell::Bash, "/test/path");
+        // Bash 和 Zsh 使用相同的模式
+        assert_eq!(patterns.len(), 6);
+    }
+
+    #[test]
+    fn test_get_source_patterns_fish() {
+        let patterns = get_source_patterns(&Shell::Fish, "/test/path");
+        assert_eq!(patterns.len(), 3);
+        assert!(patterns.contains(&"source \"/test/path\"".to_string()));
+        assert!(patterns.contains(&"source '/test/path'".to_string()));
+        assert!(patterns.contains(&"source /test/path".to_string()));
+    }
+
+    #[test]
+    fn test_get_source_patterns_powershell() {
+        let patterns = get_source_patterns(&Shell::PowerShell, "/test/path");
+        assert_eq!(patterns.len(), 2);
+        assert!(patterns.contains(&". \"/test/path\"".to_string()));
+        assert!(patterns.contains(&". '/test/path'".to_string()));
+    }
+
+    #[test]
+    fn test_get_source_patterns_elvish() {
+        let patterns = get_source_patterns(&Shell::Elvish, "/test/path");
+        assert_eq!(patterns.len(), 1);
+        assert!(patterns.contains(&"/test/path".to_string()));
+    }
+
+    // ========================================================================
+    // has_source 逻辑测试（通过模式匹配）
+    // ========================================================================
+
+    #[test]
+    fn test_pattern_matching_logic() {
+        // 测试模式匹配逻辑
+        let content = r#"
+# Some comment
+export PATH="$HOME/bin:$PATH"
+source "/path/to/workflow/completion.zsh"
+"#;
+
+        let patterns = get_source_patterns(&Shell::Zsh, "/path/to/workflow/completion.zsh");
+        let has_match = patterns.iter().any(|pattern| content.contains(pattern));
+        assert!(has_match);
+    }
+
+    #[test]
+    fn test_pattern_matching_single_quotes() {
+        let content = "source '/path/to/script.sh'";
+        let patterns = get_source_patterns(&Shell::Zsh, "/path/to/script.sh");
+        let has_match = patterns.iter().any(|pattern| content.contains(pattern));
+        assert!(has_match);
+    }
+
+    #[test]
+    fn test_pattern_matching_no_quotes() {
+        let content = "source /path/to/script.sh";
+        let patterns = get_source_patterns(&Shell::Zsh, "/path/to/script.sh");
+        let has_match = patterns.iter().any(|pattern| content.contains(pattern));
+        assert!(has_match);
+    }
+
+    #[test]
+    fn test_pattern_matching_dot_notation() {
+        let content = ". /path/to/script.sh";
+        let patterns = get_source_patterns(&Shell::Bash, "/path/to/script.sh");
+        let has_match = patterns.iter().any(|pattern| content.contains(pattern));
+        assert!(has_match);
+    }
+
+    #[test]
+    fn test_pattern_no_match() {
+        let content = "echo 'hello world'";
+        let patterns = get_source_patterns(&Shell::Zsh, "/path/to/script.sh");
+        let has_match = patterns.iter().any(|pattern| content.contains(pattern));
+        assert!(!has_match);
+    }
+
+    // ========================================================================
+    // source 语句格式测试
+    // ========================================================================
+
+    #[test]
+    fn test_source_statement_is_idempotent() {
+        // 相同的输入应该产生相同的输出
+        let path = "/workflow/completions.zsh";
+        let result1 = generate_source_statement(&Shell::Zsh, path);
+        let result2 = generate_source_statement(&Shell::Zsh, path);
+        assert_eq!(result1, result2);
+    }
+
+    #[test]
+    fn test_source_statement_handles_spaces_in_path() {
+        let path = "/path with spaces/script.sh";
+        let result = generate_source_statement(&Shell::Zsh, path);
+        // 应该使用引号包裹路径
+        assert!(result.contains("\""));
+        assert!(result.contains(path));
+    }
+
+    #[test]
+    fn test_source_statement_handles_special_chars() {
+        let path = "/path/with-dashes_and.dots/script.sh";
+        let result = generate_source_statement(&Shell::Bash, path);
+        assert!(result.contains(path));
+    }
+
+    // ========================================================================
+    // Fish 特殊语法测试
+    // ========================================================================
+
+    #[test]
+    fn test_fish_multiline_format() {
+        let result = generate_source_statement(&Shell::Fish, "/path/script.fish");
+        // Fish 使用多行格式
+        assert!(result.contains("if test"));
+        assert!(result.contains("source"));
+        assert!(result.contains("end"));
+
+        // 验证换行存在
+        let lines: Vec<&str> = result.lines().collect();
+        assert!(lines.len() > 1);
+    }
+
+    // ========================================================================
+    // PowerShell 特殊语法测试
+    // ========================================================================
+
+    #[test]
+    fn test_powershell_format() {
+        let result = generate_source_statement(&Shell::PowerShell, "/path/script.ps1");
+        // PowerShell 使用 Test-Path 和 {}
+        assert!(result.contains("if"));
+        assert!(result.contains("Test-Path"));
+        assert!(result.contains("{"));
+        assert!(result.contains("}"));
+    }
+
+    // ========================================================================
+    // Elvish 特殊语法测试
+    // ========================================================================
+
+    #[test]
+    fn test_elvish_format() {
+        let result = generate_source_statement(&Shell::Elvish, "/path/script.elv");
+        // Elvish 使用 path:is-regular 和 slurp
+        assert!(result.contains("path:is-regular"));
+        assert!(result.contains("slurp"));
+        assert!(result.contains("eval"));
+    }
+}
