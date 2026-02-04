@@ -55,11 +55,13 @@ impl InputFormField {
     /// # Examples
     ///
     /// ```rust
+    /// use prompt::InputFormField;
+    ///
     /// // 必填字段
-    /// InputFormField::new("name", "Enter name").required_with(true);
+    /// InputFormField::new("name", "Enter name").required();
     ///
     /// // 非必填字段
-    /// InputFormField::new("email", "Enter email").required_with(false);
+    /// InputFormField::new("email", "Enter email");
     /// ```
     pub fn required(mut self) -> Self {
         let key = self.key.clone();

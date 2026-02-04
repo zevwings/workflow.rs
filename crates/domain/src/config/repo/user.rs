@@ -29,3 +29,29 @@ impl UserConfig {
         self.branch.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_user_config_is_empty() {
+        let config = UserConfig::default();
+        assert!(config.is_empty());
+
+        let config = UserConfig {
+            branch: BranchConfig {
+                prefix: "dev".to_string(),
+                ignore: vec![],
+            },
+        };
+        assert!(!config.is_empty());
+    }
+
+    #[test]
+    fn test_user_config_serialize_skip_empty() {
+        let config = UserConfig::default();
+        let toml = toml::to_string(&config).unwrap();
+        assert!(toml.trim().is_empty());
+    }
+}

@@ -79,7 +79,7 @@ pub struct VerifyResult {
 ///
 /// ```no_run
 /// use std::path::Path;
-/// use toolkit::checksum::calculate_sha256;
+/// use toolkit::util::checksum::calculate_sha256;
 ///
 /// let hash = calculate_sha256(Path::new("file.tar.gz")).unwrap();
 /// println!("SHA256: {}", hash);
@@ -117,7 +117,7 @@ pub fn calculate_sha256(file_path: &Path) -> Result<String, ChecksumError> {
 /// # 示例
 ///
 /// ```
-/// use toolkit::checksum::parse_hash_from_content;
+/// use toolkit::util::checksum::parse_hash_from_content;
 ///
 /// // 标准格式：hash  filename
 /// let hash = parse_hash_from_content("abc123def456  file.tar.gz").unwrap();
@@ -158,7 +158,7 @@ pub fn parse_hash_from_content(content: &str) -> Result<String, ChecksumError> {
 ///
 /// ```no_run
 /// use std::path::Path;
-/// use toolkit::checksum::verify;
+/// use toolkit::util::checksum::verify;
 ///
 /// let result = verify(
 ///     Path::new("file.tar.gz"),
@@ -227,7 +227,7 @@ pub fn verify_lenient(
 /// # 示例
 ///
 /// ```
-/// use toolkit::checksum::build_checksum_url;
+/// use toolkit::util::checksum::build_checksum_url;
 ///
 /// let url = build_checksum_url("https://example.com/file.tar.gz");
 /// assert_eq!(url, "https://example.com/file.tar.gz.sha256");

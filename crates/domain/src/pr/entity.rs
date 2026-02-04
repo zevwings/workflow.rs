@@ -87,3 +87,103 @@ pub fn get_change_type_by_index(index: usize) -> Option<&'static ChangeType> {
 pub fn get_change_type_by_name(name: &str) -> Option<&'static ChangeType> {
     CHANGE_TYPES.iter().find(|ct| ct.name == name)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // CHANGE_TYPES 常量测试
+    // ========================================================================
+
+    #[test]
+    fn test_change_types_count() {
+        assert_eq!(CHANGE_TYPES.len(), 5);
+    }
+
+    #[test]
+    fn test_change_types_have_required_fields() {
+        for ct in CHANGE_TYPES {
+            assert!(!ct.name.is_empty());
+            assert!(!ct.description.is_empty());
+            assert!(!ct.example.is_empty());
+        }
+    }
+
+    // ========================================================================
+    // get_all_change_types 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_all_change_types() {
+        let types = get_all_change_types();
+        assert_eq!(types.len(), 5);
+        // 验证返回的内容与常量相同
+        for (i, ct) in types.iter().enumerate() {
+            assert_eq!(ct.name, CHANGE_TYPES[i].name);
+        }
+    }
+
+    #[test]
+    fn test_get_all_change_types_contains_expected() {
+        let types = get_all_change_types();
+        let names: Vec<&str> = types.iter().map(|ct| ct.name).collect();
+
+        assert!(names.iter().any(|n| n.contains("Bug fix")));
+        assert!(names.iter().any(|n| n.contains("New feature")));
+        assert!(names.iter().any(|n| n.contains("Refactoring")));
+        assert!(names.iter().any(|n| n.contains("Hotfix")));
+        assert!(names.iter().any(|n| n.contains("Chore")));
+    }
+
+    // ========================================================================
+    // get_change_type_by_index 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_change_type_by_index_valid() {
+        let ct = get_change_type_by_index(0);
+        assert!(ct.is_some());
+        assert!(ct.unwrap().name.contains("Bug fix"));
+
+        let ct = get_change_type_by_index(1);
+        assert!(ct.is_some());
+        assert!(ct.unwrap().name.contains("New feature"));
+
+        let ct = get_change_type_by_index(4);
+        assert!(ct.is_some());
+        assert!(ct.unwrap().name.contains("Chore"));
+    }
+
+    #[test]
+    fn test_get_change_type_by_index_out_of_bounds() {
+        assert!(get_change_type_by_index(5).is_none());
+        assert!(get_change_type_by_index(100).is_none());
+        assert!(get_change_type_by_index(usize::MAX).is_none());
+    }
+
+    // ========================================================================
+    // get_change_type_by_name 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_change_type_by_name_exact_match() {
+        let ct = get_change_type_by_name("Bug fix (non-breaking change which fixes an issue)");
+        assert!(ct.is_some());
+        assert!(ct.unwrap().name.contains("Bug fix"));
+    }
+
+    #[test]
+    fn test_get_change_type_by_name_not_found() {
+        assert!(get_change_type_by_name("Invalid Type").is_none());
+        assert!(get_change_type_by_name("").is_none());
+        assert!(get_change_type_by_name("bug fix").is_none()); // 区分大小写
+    }
+
+    #[test]
+    fn test_get_change_type_by_name_partial_no_match() {
+        // 部分匹配不应该成功
+        assert!(get_change_type_by_name("Bug fix").is_none());
+        assert!(get_change_type_by_name("New feature").is_none());
+    }
+}

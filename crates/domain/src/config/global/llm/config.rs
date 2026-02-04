@@ -27,7 +27,10 @@ impl LLMProviderSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LLMSettings {
     /// 当前使用的 LLM Provider (openai, deepseek, proxy)
-    #[serde(default = "LLMSettings::default_provider")]
+    #[serde(
+        default = "LLMSettings::default_provider",
+        skip_serializing_if = "LLMSettings::is_default_provider"
+    )]
     pub provider: String,
     /// LLM 输出语言（en, zh, zh-CN, zh-TW 等，默认 en），用于控制 AI 生成内容（如 PR 总结等）的语言
     /// 所有 provider 共享此语言设置
@@ -63,6 +66,11 @@ impl LLMSettings {
     /// 默认 LLM Provider
     pub fn default_provider() -> String {
         "openai".to_string()
+    }
+
+    /// 检查 provider 是否为默认值
+    fn is_default_provider(provider: &str) -> bool {
+        provider == Self::default_provider()
     }
 
     /// 根据 Provider 获取默认模型
@@ -106,5 +114,58 @@ impl LLMSettings {
             && self.proxy.is_empty()
             && self.provider == Self::default_provider()
             && self.language == Self::default_language()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_llm_provider_settings_is_empty() {
+        let settings = LLMProviderSettings::default();
+        assert!(settings.is_empty());
+    }
+
+    #[test]
+    fn test_llm_settings_default_values() {
+        let settings = LLMSettings::default();
+        assert_eq!(settings.provider, "openai");
+        assert_eq!(settings.language, "en");
+        assert!(settings.is_empty());
+    }
+
+    #[test]
+    fn test_llm_settings_current_provider() {
+        let settings = LLMSettings {
+            provider: "deepseek".to_string(),
+            language: LLMSettings::default_language(),
+            openai: LLMProviderSettings::default(),
+            deepseek: LLMProviderSettings {
+                url: Some("https://api.deepseek.com".to_string()),
+                key: Some("token".to_string()),
+                model: Some("deepseek-chat".to_string()),
+            },
+            proxy: LLMProviderSettings::default(),
+        };
+
+        let current = settings.current_provider();
+        assert_eq!(current.model.as_deref(), Some("deepseek-chat"));
+    }
+
+    #[test]
+    fn test_llm_settings_default_model() {
+        assert_eq!(LLMSettings::default_model("openai"), "gpt-4.0");
+        assert_eq!(LLMSettings::default_model("deepseek"), "deepseek-chat");
+        assert_eq!(LLMSettings::default_model("proxy"), "");
+    }
+
+    #[test]
+    fn test_llm_settings_serialize_skip_empty_providers() {
+        let settings = LLMSettings::default();
+        let toml = toml::to_string(&settings).unwrap();
+        assert!(!toml.contains("openai"));
+        assert!(!toml.contains("deepseek"));
+        assert!(!toml.contains("proxy"));
     }
 }

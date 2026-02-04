@@ -167,4 +167,83 @@ mod tests {
         assert_eq!(format!("{}", CodePlatform::CNB), "CNB (Code & Build)");
         assert_eq!(format!("{}", CodePlatform::Codeup), "Codeup");
     }
+
+    // ========================================================================
+    // RepoInfo 测试
+    // ========================================================================
+
+    #[test]
+    fn test_repo_info_invalid_repo() {
+        let repo = RepoInfo {
+            is_valid: false,
+            kind: None,
+            origin_url: None,
+            directory: None,
+            name: None,
+            owner: None,
+        };
+        assert!(!repo.is_valid);
+        assert!(repo.kind.is_none());
+        assert!(repo.origin_url.is_none());
+        assert!(repo.directory.is_none());
+        assert!(repo.name.is_none());
+        assert!(repo.owner.is_none());
+    }
+
+    #[test]
+    fn test_repo_info_valid_repo_with_all_fields() {
+        let repo = RepoInfo {
+            is_valid: true,
+            kind: Some(CodePlatform::GitHub),
+            origin_url: Some("https://github.com/owner/repo.git".to_string()),
+            directory: Some("/path/to/.git".to_string()),
+            name: Some("owner/repo".to_string()),
+            owner: Some("owner".to_string()),
+        };
+        assert!(repo.is_valid);
+        assert_eq!(repo.kind, Some(CodePlatform::GitHub));
+        assert_eq!(
+            repo.origin_url,
+            Some("https://github.com/owner/repo.git".to_string())
+        );
+        assert_eq!(repo.directory, Some("/path/to/.git".to_string()));
+        assert_eq!(repo.name, Some("owner/repo".to_string()));
+        assert_eq!(repo.owner, Some("owner".to_string()));
+    }
+
+    #[test]
+    fn test_repo_info_valid_repo_with_partial_fields() {
+        let repo = RepoInfo {
+            is_valid: true,
+            kind: Some(CodePlatform::Unknown),
+            origin_url: None,
+            directory: Some("/path/to/.git".to_string()),
+            name: None,
+            owner: None,
+        };
+        assert!(repo.is_valid);
+        assert_eq!(repo.kind, Some(CodePlatform::Unknown));
+        assert!(repo.origin_url.is_none());
+        assert!(repo.name.is_none());
+        assert!(repo.owner.is_none());
+    }
+
+    #[test]
+    fn test_repo_info_clone() {
+        let repo = RepoInfo {
+            is_valid: true,
+            kind: Some(CodePlatform::CNB),
+            origin_url: Some("https://codeup.aliyun.com/owner/repo.git".to_string()),
+            directory: Some("/path/to/.git".to_string()),
+            name: Some("owner/repo".to_string()),
+            owner: Some("owner".to_string()),
+        };
+        let cloned = repo.clone();
+        assert_eq!(repo.is_valid, cloned.is_valid);
+        assert_eq!(repo.kind, cloned.kind);
+        assert_eq!(repo.origin_url, cloned.origin_url);
+        assert_eq!(repo.directory, cloned.directory);
+        assert_eq!(repo.name, cloned.name);
+        assert_eq!(repo.owner, cloned.owner);
+    }
 }

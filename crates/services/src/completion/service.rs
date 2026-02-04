@@ -295,3 +295,259 @@ impl CompletionService for CompletionServiceImpl {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::ffi::OsString;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::Mutex;
+
+    use once_cell::sync::Lazy;
+    use tempfile::tempdir;
+    use toolkit::shell::{config_file_path, shell_from_string};
+
+    static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+    struct EnvGuard {
+        original_home: Option<OsString>,
+        original_disable_icloud: Option<OsString>,
+    }
+
+    impl EnvGuard {
+        fn new(home_dir: &PathBuf) -> Self {
+            let original_home = env::var_os("HOME");
+            let original_disable_icloud = env::var_os("WORKFLOW_DISABLE_ICLOUD");
+            env::set_var("HOME", home_dir);
+            env::set_var("WORKFLOW_DISABLE_ICLOUD", "1");
+            Self {
+                original_home,
+                original_disable_icloud,
+            }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.original_home {
+                Some(value) => env::set_var("HOME", value),
+                None => env::remove_var("HOME"),
+            }
+            match &self.original_disable_icloud {
+                Some(value) => env::set_var("WORKFLOW_DISABLE_ICLOUD", value),
+                None => env::remove_var("WORKFLOW_DISABLE_ICLOUD"),
+            }
+        }
+    }
+
+    fn with_test_home<F: FnOnce(&tempfile::TempDir)>(f: F) {
+        let _lock = ENV_LOCK.lock().expect("lock env");
+        let temp = tempdir().expect("tempdir");
+        let _guard = EnvGuard::new(&temp.path().to_path_buf());
+        f(&temp);
+    }
+
+    #[test]
+    fn test_save_and_configure_rejects_invalid_shell() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let err = service.save_and_configure("invalid-shell", b"", None).unwrap_err();
+            assert!(matches!(err, ServiceError::InvalidInput(_)));
+        });
+    }
+
+    #[test]
+    fn test_save_and_configure_zsh_creates_script_and_config() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let result = service.save_and_configure("zsh", b"content", None).unwrap();
+
+            assert_eq!(result.shell, "zsh");
+            assert!(result.script_path.exists());
+            assert_eq!(fs::read(&result.script_path).unwrap(), b"content");
+
+            let config_file = result.config_file.expect("config file should exist");
+            assert!(config_file.exists());
+            let config_content = fs::read_to_string(&config_file).unwrap();
+            assert!(config_content.contains("Workflow CLI completions"));
+            assert!(config_content.contains(&completion_dir_shell_path()));
+            assert!(result.config_added);
+        });
+    }
+
+    #[test]
+    fn test_save_and_configure_fish_writes_source_to_config() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let result = service.save_and_configure("fish", b"content", None).unwrap();
+
+            assert_eq!(result.shell, "fish");
+            assert!(result.script_path.exists());
+            assert!(result.config_file.is_none());
+            assert!(result.config_added);
+
+            let shell = shell_from_string("fish").expect("fish shell");
+            let config_path = config_file_path(&shell).expect("config path");
+            let config_content = fs::read_to_string(config_path).unwrap();
+            let filename = get_completion_filename("fish");
+            let expected = completion_file_shell_path(&filename);
+            assert!(config_content.contains(&expected));
+        });
+    }
+
+    #[test]
+    fn test_check_status_marks_existing_script() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let _ = service.save_and_configure("zsh", b"content", None).unwrap();
+
+            let status = service.check_status().unwrap();
+            let zsh_status =
+                status.shell_statuses.iter().find(|s| s.shell == "zsh").expect("zsh status");
+            assert!(zsh_status.script_exists);
+            assert!(zsh_status.is_configured);
+        });
+    }
+
+    #[test]
+    fn test_remove_all_removes_scripts_and_config() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let result = service.save_and_configure("zsh", b"content", None).unwrap();
+            let script_path = result.script_path.clone();
+            let config_path = result.config_file.clone().expect("config file");
+
+            let remove_result = service.remove(true).unwrap();
+            assert!(remove_result.failures.is_empty());
+            assert!(remove_result.removed_configs.contains(&"zsh".to_string()));
+            assert!(remove_result.removed_files.iter().any(|path| path == &script_path));
+            assert_eq!(remove_result.removed_config_file, Some(config_path.clone()));
+            assert!(!script_path.exists());
+            assert!(!config_path.exists());
+        });
+    }
+
+    #[test]
+    fn test_save_and_configure_bash_creates_script_and_config() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let result = service.save_and_configure("bash", b"bash content", None).unwrap();
+
+            assert_eq!(result.shell, "bash");
+            assert!(result.script_path.exists());
+            assert_eq!(fs::read(&result.script_path).unwrap(), b"bash content");
+
+            let config_file = result.config_file.expect("config file should exist");
+            assert!(config_file.exists());
+            let config_content = fs::read_to_string(&config_file).unwrap();
+            assert!(config_content.contains("Workflow CLI completions"));
+            assert!(config_content.contains("Bash completion setup"));
+            assert!(result.config_added);
+        });
+    }
+
+    #[test]
+    fn test_save_and_configure_powershell_writes_source_to_config() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let result = service.save_and_configure("powershell", b"pwsh content", None).unwrap();
+
+            assert_eq!(result.shell, "powershell");
+            assert!(result.script_path.exists());
+            assert!(result.config_file.is_none());
+            assert!(result.config_added);
+
+            let shell = shell_from_string("powershell").expect("powershell shell");
+            let config_path = config_file_path(&shell).expect("config path");
+            let config_content = fs::read_to_string(config_path).unwrap();
+            let filename = get_completion_filename("powershell");
+            let expected = completion_file_shell_path(&filename);
+            assert!(config_content.contains(&expected));
+        });
+    }
+
+    #[test]
+    fn test_save_and_configure_idempotent() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let result1 = service.save_and_configure("zsh", b"content1", None).unwrap();
+            let script_path = result1.script_path.clone();
+
+            let result2 = service.save_and_configure("zsh", b"content2", None).unwrap();
+            assert_eq!(result2.script_path, script_path);
+            assert_eq!(fs::read(&script_path).unwrap(), b"content2");
+        });
+    }
+
+    #[test]
+    fn test_save_and_configure_with_custom_output_dir() {
+        with_test_home(|temp| {
+            let custom_dir = temp.path().join("custom_completions");
+            fs::create_dir_all(&custom_dir).unwrap();
+
+            let service = CompletionServiceImpl::new();
+            let result = service
+                .save_and_configure("zsh", b"content", Some(custom_dir.to_str().unwrap()))
+                .unwrap();
+
+            assert!(result.script_path.starts_with(&custom_dir));
+            assert!(result.script_path.exists());
+        });
+    }
+
+    #[test]
+    fn test_check_status_when_no_scripts_exist() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let status = service.check_status().unwrap();
+
+            assert!(status.shell_statuses.iter().all(|s| !s.script_exists));
+        });
+    }
+
+    #[test]
+    fn test_remove_when_nothing_exists() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            let result = service.remove(true).unwrap();
+
+            assert!(result.removed_configs.is_empty());
+            assert!(result.removed_files.is_empty());
+            assert!(result.removed_config_file.is_none());
+            assert!(result.failures.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_remove_current_shell_only() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            service.save_and_configure("zsh", b"zsh content", None).unwrap();
+            service.save_and_configure("fish", b"fish content", None).unwrap();
+
+            let result = service.remove(false).unwrap();
+            // 应该只移除当前 shell（如果当前 shell 是 zsh 或 fish）
+            assert!(!result.failures.is_empty() || result.removed_configs.len() <= 1);
+        });
+    }
+
+    #[test]
+    fn test_check_status_detects_multiple_shells() {
+        with_test_home(|_| {
+            let service = CompletionServiceImpl::new();
+            service.save_and_configure("zsh", b"zsh", None).unwrap();
+            service.save_and_configure("bash", b"bash", None).unwrap();
+
+            let status = service.check_status().unwrap();
+            let zsh_status =
+                status.shell_statuses.iter().find(|s| s.shell == "zsh").expect("zsh status");
+            let bash_status =
+                status.shell_statuses.iter().find(|s| s.shell == "bash").expect("bash status");
+
+            assert!(zsh_status.script_exists);
+            assert!(bash_status.script_exists);
+        });
+    }
+}

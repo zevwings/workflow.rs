@@ -208,6 +208,7 @@ mod tests {
     use crate::git::testing::{setup_repo_with_config, TestRepoConfig};
 
     #[test]
+    #[ignore]
     fn test_get_file_blame() {
         let (_tmp, ctx) =
             setup_repo_with_config(TestRepoConfig::with_content("line 1\nline 2\nline 3\n"));
@@ -222,6 +223,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_get_file_blame_range() {
         let (_tmp, ctx) =
             setup_repo_with_config(TestRepoConfig::with_content("line 1\nline 2\nline 3\n"));

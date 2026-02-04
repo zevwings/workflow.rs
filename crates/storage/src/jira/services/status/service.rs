@@ -36,11 +36,30 @@ pub trait StatusService: Send + Sync {
 /// 提供 PR 创建和合并时的状态自动更新功能。
 pub struct StatusServiceImpl {
     jira_client: Arc<dyn JiraClient>,
+    config_path_provider: Arc<dyn Fn() -> Result<PathBuf, JiraError> + Send + Sync + 'static>,
 }
 
 impl StatusServiceImpl {
     pub fn new(jira_client: Arc<dyn JiraClient>) -> Self {
-        Self { jira_client }
+        Self {
+            jira_client,
+            config_path_provider: Arc::new(|| {
+                jira_config_path()
+                    .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))
+            }),
+        }
+    }
+
+    #[cfg(test)]
+    fn new_with_config_path(jira_client: Arc<dyn JiraClient>, config_path: PathBuf) -> Self {
+        Self {
+            jira_client,
+            config_path_provider: Arc::new(move || Ok(config_path.clone())),
+        }
+    }
+
+    fn config_path(&self) -> Result<PathBuf, JiraError> {
+        (self.config_path_provider)()
     }
 }
 
@@ -123,8 +142,7 @@ impl StatusService for StatusServiceImpl {
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(&self, config: &JiraStatusConfig) -> Result<(), JiraError> {
-        let config_path = jira_config_path()
-            .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
+        let config_path = self.config_path()?;
 
         let mut jira_config = Self::read_jira_config(&config_path)
             .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;
@@ -269,8 +287,7 @@ impl StatusServiceImpl {
     ///
     /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_status_config(&self, project: &str) -> Result<JiraStatusConfig, JiraError> {
-        let config_path = jira_config_path()
-            .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
+        let config_path = self.config_path()?;
         let config = Self::read_jira_config(&config_path)
             .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;
 
@@ -288,5 +305,112 @@ impl StatusServiceImpl {
                 merged_pull_request_status: None,
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::jira::client::types::JiraResponse;
+    use serde_json::json;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use tempfile::TempDir;
+
+    static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    struct MockJiraClient {
+        responses: HashMap<String, JiraResponse>,
+    }
+
+    impl MockJiraClient {
+        fn new(responses: HashMap<String, JiraResponse>) -> Self {
+            Self { responses }
+        }
+    }
+
+    impl JiraClient for MockJiraClient {
+        fn get(
+            &self,
+            path: &str,
+            _query: Option<&[(String, String)]>,
+        ) -> Result<JiraResponse, JiraError> {
+            self.responses
+                .get(path)
+                .cloned()
+                .ok_or_else(|| JiraError::ApiError(format!("missing response for {}", path)))
+        }
+
+        fn post(
+            &self,
+            _path: &str,
+            _body: &serde_json::Value,
+            _query: Option<&[(String, String)]>,
+        ) -> Result<JiraResponse, JiraError> {
+            Ok(JiraResponse::new(json!({})))
+        }
+    }
+
+    fn with_lock<F: FnOnce()>(f: F) {
+        let _lock = TEST_ENV_LOCK.lock().unwrap();
+        f();
+    }
+
+    #[test]
+    fn test_get_project_statuses_parses_list() {
+        let mut responses = HashMap::new();
+        responses.insert(
+            "project/PROJ/statuses".to_string(),
+            JiraResponse::new(json!([
+                {
+                    "statuses": [
+                        { "name": "Open" },
+                        { "name": "Done" }
+                    ]
+                }
+            ])),
+        );
+        let client = Arc::new(MockJiraClient::new(responses));
+        let service = StatusServiceImpl::new(client);
+
+        let statuses = service.get_project_statuses("PROJ").unwrap();
+        assert_eq!(statuses, vec!["Open".to_string(), "Done".to_string()]);
+    }
+
+    #[test]
+    fn test_write_and_read_status_config() {
+        with_lock(|| {
+            let tmp = TempDir::new().unwrap();
+            let config_path = tmp.path().join(".workflow").join("config").join("jira.toml");
+            std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+
+            let client = Arc::new(MockJiraClient::new(HashMap::new()));
+            let service = StatusServiceImpl::new_with_config_path(client, config_path);
+
+            let config = JiraStatusConfig {
+                project: "PROJ".to_string(),
+                created_pull_request_status: Some("In Review".to_string()),
+                merged_pull_request_status: Some("Done".to_string()),
+            };
+            service.write_status_config(&config).unwrap();
+
+            let created = service.read_pull_request_created_status("PROJ-1").unwrap();
+            let merged = service.read_pull_request_merged_status("PROJ-1").unwrap();
+            assert_eq!(created, Some("In Review".to_string()));
+            assert_eq!(merged, Some("Done".to_string()));
+        });
+    }
+
+    #[test]
+    fn test_read_status_invalid_ticket() {
+        with_lock(|| {
+            let client = Arc::new(MockJiraClient::new(HashMap::new()));
+            let tmp = TempDir::new().unwrap();
+            let config_path = tmp.path().join(".workflow").join("config").join("jira.toml");
+            let service = StatusServiceImpl::new_with_config_path(client, config_path);
+
+            let result = service.read_pull_request_created_status("invalid");
+            assert!(result.is_err());
+        });
     }
 }

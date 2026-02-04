@@ -478,4 +478,225 @@ mod tests {
         assert_eq!(service2.value(), 200);
         assert!(!Arc::ptr_eq(&service1, &service2));
     }
+
+    // ============================================================================
+    // FallibleBinding 测试
+    // ============================================================================
+
+    #[rstest]
+    #[case(Scope::Singleton, true)]
+    #[case(Scope::Transient, false)]
+    fn test_fallible_binding_resolve_scope(#[case] scope: Scope, #[case] should_be_same: bool) {
+        let container = crate::container::Container::new();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+        let type_name = std::any::type_name::<Arc<dyn TestService>>();
+        let counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(1));
+        let counter_clone = counter.clone();
+
+        let factory: FallibleErasedFactory = Box::new(move |_| {
+            let id = counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let arc: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 42, id });
+            Ok(Binding::box_arc(arc))
+        });
+
+        let binding = FallibleBinding::new(identifier, type_name, factory, scope);
+
+        let service1: Arc<dyn TestService> = binding.resolve(&container).unwrap();
+        let service2: Arc<dyn TestService> = binding.resolve(&container).unwrap();
+
+        assert_eq!(service1.value(), 42);
+        assert_eq!(service2.value(), 42);
+
+        if should_be_same {
+            assert_eq!(service1.id(), service2.id());
+            assert!(Arc::ptr_eq(&service1, &service2));
+        } else {
+            assert_ne!(service1.id(), service2.id());
+            assert!(!Arc::ptr_eq(&service1, &service2));
+        }
+    }
+
+    #[test]
+    fn test_fallible_binding_resolve_error() {
+        let container = crate::container::Container::new();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+        let type_name = std::any::type_name::<Arc<dyn TestService>>();
+
+        let factory: FallibleErasedFactory = Box::new(|_| {
+            Err(crate::error::RegistryError::NotBound(
+                "Simulated error".to_string(),
+            ))
+        });
+
+        let binding = FallibleBinding::new(identifier, type_name, factory, Scope::Singleton);
+
+        let result: crate::error::Result<Arc<dyn TestService>> = binding.resolve(&container);
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(crate::error::RegistryError::NotBound(_))
+        ));
+    }
+
+    #[test]
+    fn test_fallible_binding_singleton_caches_on_success() {
+        let container = crate::container::Container::new();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+        let type_name = std::any::type_name::<Arc<dyn TestService>>();
+        let call_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let call_count_clone = call_count.clone();
+
+        let factory: FallibleErasedFactory = Box::new(move |_| {
+            call_count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let arc: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 42, id: 1 });
+            Ok(Binding::box_arc(arc))
+        });
+
+        let binding = FallibleBinding::new(identifier, type_name, factory, Scope::Singleton);
+
+        // 多次调用 resolve
+        let _ = binding.resolve::<dyn TestService>(&container).unwrap();
+        let _ = binding.resolve::<dyn TestService>(&container).unwrap();
+        let _ = binding.resolve::<dyn TestService>(&container).unwrap();
+
+        // Singleton 应该只调用一次 factory
+        assert_eq!(
+            call_count.load(std::sync::atomic::Ordering::SeqCst),
+            1,
+            "Singleton fallible factory should be called only once"
+        );
+    }
+
+    // ============================================================================
+    // FallibleBindingBuilder 测试
+    // ============================================================================
+
+    #[test]
+    fn test_fallible_binding_builder_in_scope_singleton() {
+        let container = crate::container::Container::new();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+
+        let factory =
+            |_c: &crate::container::Container| -> crate::error::Result<Arc<dyn TestService>> {
+                Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }))
+            };
+
+        let result =
+            FallibleBindingBuilder::new(identifier, factory, &container).in_scope(Scope::Singleton);
+
+        assert!(result.is_ok());
+        assert!(container.is_bound::<dyn TestService>());
+
+        // 验证 Singleton 作用域
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert!(Arc::ptr_eq(&service1, &service2));
+    }
+
+    #[test]
+    fn test_fallible_binding_builder_in_scope_transient() {
+        let container = crate::container::Container::new();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+
+        let factory =
+            |_c: &crate::container::Container| -> crate::error::Result<Arc<dyn TestService>> {
+                Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }))
+            };
+
+        let result =
+            FallibleBindingBuilder::new(identifier, factory, &container).in_scope(Scope::Transient);
+
+        assert!(result.is_ok());
+        assert!(container.is_bound::<dyn TestService>());
+
+        // 验证 Transient 作用域
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert!(!Arc::ptr_eq(&service1, &service2));
+    }
+
+    // ============================================================================
+    // IntoFallibleFactory trait 测试
+    // ============================================================================
+
+    #[test]
+    fn test_into_fallible_factory_with_closure() {
+        let container = crate::container::Container::new();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+
+        // 使用返回 Result 的闭包
+        let factory =
+            |_c: &crate::container::Container| -> crate::error::Result<Arc<dyn TestService>> {
+                Ok(Arc::new(TestServiceImpl { value: 99, id: 42 }))
+            };
+
+        let result =
+            FallibleBindingBuilder::new(identifier, factory, &container).in_scope(Scope::Singleton);
+
+        assert!(result.is_ok());
+
+        let service: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        assert_eq!(service.value(), 99);
+        assert_eq!(service.id(), 42);
+    }
+
+    #[test]
+    fn test_into_fallible_factory_error_propagation() {
+        let container = crate::container::Container::new();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+
+        // 使用返回错误的闭包
+        let factory =
+            |_c: &crate::container::Container| -> crate::error::Result<Arc<dyn TestService>> {
+                Err(crate::error::RegistryError::NotBound(
+                    "Dependency missing".to_string(),
+                ))
+            };
+
+        let result =
+            FallibleBindingBuilder::new(identifier, factory, &container).in_scope(Scope::Singleton);
+
+        assert!(result.is_ok()); // 绑定本身成功
+
+        // 获取时返回错误
+        let get_result: crate::error::Result<Arc<dyn TestService>> = container.get();
+        assert!(get_result.is_err());
+    }
+
+    // ============================================================================
+    // try_unbox_arc 类型不匹配测试
+    // ============================================================================
+
+    #[test]
+    fn test_try_unbox_arc_type_mismatch() {
+        // 创建一个 Arc<TestServiceImpl>
+        let arc: Arc<TestServiceImpl> = Arc::new(TestServiceImpl { value: 42, id: 1 });
+        let boxed = Binding::box_arc(arc);
+
+        // 使用错误的 TypeId 进行 unbox
+        trait OtherService: Send + Sync {}
+        let wrong_identifier = TypeId::of::<Arc<dyn OtherService>>();
+
+        let result = Binding::try_unbox_arc::<TestServiceImpl>(&boxed, wrong_identifier);
+
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(crate::error::RegistryError::TypeCast(_))
+        ));
+    }
+
+    #[test]
+    fn test_try_unbox_arc_correct_type() {
+        // 创建一个 Arc<dyn TestService>
+        let arc: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 42, id: 1 });
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
+        let boxed = Binding::box_arc(arc);
+
+        let result = Binding::try_unbox_arc::<dyn TestService>(&boxed, identifier);
+
+        assert!(result.is_ok());
+        let service = result.unwrap();
+        assert_eq!(service.value(), 42);
+    }
 }

@@ -53,7 +53,7 @@ pub fn progress_bar(message: impl Into<String>) -> ProgressBarBuilder {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use toolkit::progress;
+/// use prompt::progress;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let pb = progress!("Downloading {}...", "file.zip")

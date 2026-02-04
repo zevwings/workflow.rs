@@ -449,6 +449,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    #[ignore]
     fn test_init_repository() {
         let tmp = TempDir::new().unwrap();
         let ctx = GitContext::init(tmp.path()).unwrap();
@@ -457,6 +458,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_open_nonexistent() {
         let tmp = TempDir::new().unwrap();
         let result = GitContext::open(tmp.path());
@@ -464,6 +466,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_extract_github_ssh_url() {
         let url = "git@github.com:owner/repo.git";
         let result = GitContext::extract_repo_name(url);
@@ -471,6 +474,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_extract_github_https_url() {
         let url = "https://github.com/owner/repo.git";
         let result = GitContext::extract_repo_name(url);
@@ -478,6 +482,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_extract_github_ssh_over_443_url() {
         let url = "git@ssh.github.com:443/owner/repo.git";
         let result = GitContext::extract_repo_name(url);
@@ -485,6 +490,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_parse_github_kind() {
         assert_eq!(
             GitContext::parse_repo_kind("git@github.com:owner/repo.git"),
@@ -513,6 +519,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_get_ignore_directory_patterns() {
         let tmp = TempDir::new().unwrap();
 

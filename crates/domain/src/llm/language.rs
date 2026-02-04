@@ -276,3 +276,260 @@ Remember: ALL output must be in {} only. No exceptions."#,
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // default_language 测试
+    // ========================================================================
+
+    #[test]
+    fn test_default_language() {
+        let lang = SupportedLanguage::default_language();
+        assert_eq!(lang.code, "en");
+        assert_eq!(lang.name, "English");
+    }
+
+    // ========================================================================
+    // get 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_returns_all_languages() {
+        let languages = SupportedLanguage::get();
+        assert!(!languages.is_empty());
+        assert!(languages.len() >= 10); // 至少有 10 种语言
+    }
+
+    #[test]
+    fn test_get_contains_major_languages() {
+        let languages = SupportedLanguage::get();
+        let codes: Vec<&str> = languages.iter().map(|l| l.code).collect();
+
+        assert!(codes.contains(&"en"));
+        assert!(codes.contains(&"zh-CN"));
+        assert!(codes.contains(&"zh-TW"));
+        assert!(codes.contains(&"ja"));
+        assert!(codes.contains(&"ko"));
+    }
+
+    // ========================================================================
+    // find 测试
+    // ========================================================================
+
+    #[test]
+    fn test_find_exact_match() {
+        let lang = SupportedLanguage::find("en");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "en");
+
+        let lang = SupportedLanguage::find("zh-CN");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "zh-CN");
+    }
+
+    #[test]
+    fn test_find_zh_alias() {
+        // "zh" 应该匹配简体中文
+        let lang = SupportedLanguage::find("zh");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "zh-CN");
+
+        // "zh-cn"（小写）也应该匹配
+        let lang = SupportedLanguage::find("zh-cn");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "zh-CN");
+    }
+
+    #[test]
+    fn test_find_case_insensitive() {
+        let lang = SupportedLanguage::find("EN");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "en");
+
+        let lang = SupportedLanguage::find("ZH-CN");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "zh-CN");
+    }
+
+    #[test]
+    fn test_find_not_found() {
+        assert!(SupportedLanguage::find("invalid").is_none());
+        assert!(SupportedLanguage::find("").is_none());
+        assert!(SupportedLanguage::find("xyz").is_none());
+    }
+
+    // ========================================================================
+    // get_instruction 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_instruction_found() {
+        let instruction = SupportedLanguage::get_instruction("zh-CN");
+        assert!(!instruction.is_empty());
+        assert!(instruction.contains("简体中文"));
+    }
+
+    #[test]
+    fn test_get_instruction_default_fallback() {
+        // 找不到时返回英文的默认 instruction
+        let instruction = SupportedLanguage::get_instruction("invalid");
+        assert!(!instruction.is_empty());
+        assert!(instruction.contains("English"));
+    }
+
+    // ========================================================================
+    // get_requirement 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_requirement_english() {
+        let prompt = "You are a helpful assistant.";
+        let enhanced = SupportedLanguage::get_requirement(prompt, "en");
+
+        assert!(enhanced.contains("CRITICAL LANGUAGE REQUIREMENT"));
+        assert!(enhanced.contains(prompt));
+        assert!(enhanced.contains("English"));
+    }
+
+    #[test]
+    fn test_get_requirement_chinese() {
+        let prompt = "你是一个有帮助的助手。";
+        let enhanced = SupportedLanguage::get_requirement(prompt, "zh-CN");
+
+        assert!(enhanced.contains("CRITICAL LANGUAGE REQUIREMENT"));
+        assert!(enhanced.contains(prompt));
+        assert!(enhanced.contains("简体中文"));
+    }
+
+    #[test]
+    fn test_get_requirement_fallback() {
+        let prompt = "Original prompt";
+        let enhanced = SupportedLanguage::get_requirement(prompt, "invalid");
+
+        // 找不到语言时使用英文
+        assert!(enhanced.contains("English"));
+        assert!(enhanced.contains(prompt));
+    }
+
+    // ========================================================================
+    // supported_codes 测试
+    // ========================================================================
+
+    #[test]
+    fn test_supported_codes() {
+        let codes = SupportedLanguage::supported_codes();
+        assert!(!codes.is_empty());
+        assert!(codes.contains(&"en"));
+        assert!(codes.contains(&"zh-CN"));
+        assert!(codes.contains(&"ja"));
+    }
+
+    // ========================================================================
+    // supported_display_names 测试
+    // ========================================================================
+
+    #[test]
+    fn test_supported_display_names() {
+        let names = SupportedLanguage::supported_display_names();
+        assert!(!names.is_empty());
+
+        // 检查格式："{native_name} ({name}) - {code}"
+        let english_name = names.iter().find(|n| n.contains("en")).unwrap();
+        assert!(english_name.contains("English"));
+        assert!(english_name.contains("(English)"));
+        assert!(english_name.contains("- en"));
+
+        let chinese_name = names.iter().find(|n| n.contains("zh-CN")).unwrap();
+        assert!(chinese_name.contains("简体中文"));
+        assert!(chinese_name.contains("(Simplified Chinese)"));
+    }
+
+    #[test]
+    fn test_find_with_whitespace() {
+        // 包含空白字符的输入应该无法匹配
+        assert!(SupportedLanguage::find(" en ").is_none());
+        assert!(SupportedLanguage::find("zh-CN ").is_none());
+        assert!(SupportedLanguage::find(" en").is_none());
+    }
+
+    #[test]
+    fn test_find_with_special_chars() {
+        // 特殊字符应该无法匹配
+        assert!(SupportedLanguage::find("en@").is_none());
+        assert!(SupportedLanguage::find("zh#CN").is_none());
+        assert!(SupportedLanguage::find("en!").is_none());
+    }
+
+    #[test]
+    fn test_get_instruction_with_empty_string() {
+        // 空字符串应该返回默认英文 instruction
+        let instruction = SupportedLanguage::get_instruction("");
+        assert!(!instruction.is_empty());
+        assert!(instruction.contains("English"));
+    }
+
+    #[test]
+    fn test_get_requirement_with_empty_prompt() {
+        // 空 prompt 应该仍然包含语言要求
+        let enhanced = SupportedLanguage::get_requirement("", "zh-CN");
+        assert!(enhanced.contains("CRITICAL LANGUAGE REQUIREMENT"));
+        assert!(enhanced.contains("简体中文"));
+    }
+
+    #[test]
+    fn test_get_requirement_preserves_original_prompt() {
+        let prompt = "Custom system prompt";
+        let enhanced = SupportedLanguage::get_requirement(prompt, "en");
+        assert!(enhanced.contains(prompt));
+    }
+
+    #[test]
+    fn test_supported_codes_contains_all_languages() {
+        let codes = SupportedLanguage::supported_codes();
+        assert!(codes.contains(&"en"));
+        assert!(codes.contains(&"zh-CN"));
+        assert!(codes.contains(&"zh-TW"));
+        assert!(codes.contains(&"ja"));
+        assert!(codes.contains(&"ko"));
+        assert!(codes.contains(&"de"));
+        assert!(codes.contains(&"fr"));
+        assert!(codes.contains(&"es"));
+        assert!(codes.contains(&"pt"));
+        assert!(codes.contains(&"ru"));
+    }
+
+    #[test]
+    fn test_supported_codes_length_matches_get() {
+        let codes = SupportedLanguage::supported_codes();
+        let languages = SupportedLanguage::get();
+        assert_eq!(codes.len(), languages.len());
+    }
+
+    #[test]
+    fn test_get_instruction_all_supported_languages() {
+        // 验证所有支持的语言都能返回有效的 instruction
+        for code in SupportedLanguage::supported_codes() {
+            let instruction = SupportedLanguage::get_instruction(code);
+            assert!(
+                !instruction.is_empty(),
+                "Language {} should have instruction",
+                code
+            );
+        }
+    }
+
+    #[test]
+    fn test_find_zh_tw_case_variations() {
+        // zh-TW 应该精确匹配，不匹配 zh
+        let lang = SupportedLanguage::find("zh-TW");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "zh-TW");
+
+        let lang = SupportedLanguage::find("zh-tw");
+        assert!(lang.is_some());
+        assert_eq!(lang.unwrap().code, "zh-TW");
+    }
+}

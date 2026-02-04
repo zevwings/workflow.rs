@@ -9,5 +9,6 @@ description = "领域层（DDD Domain Layer），包含实体、值对象、仓�
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
+toml.workspace = true
 thiserror.workspace = true
 chrono.workspace = true

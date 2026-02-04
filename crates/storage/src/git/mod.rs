@@ -13,7 +13,7 @@
 //! use storage::git::{GitContext, GitRepositoryImpl};
 //! use domain::git::GitRepository;
 //!
-//! # fn main() -> anyhow::Result<()> {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 创建上下文
 //! let ctx = GitContext::discover()?;
 //!

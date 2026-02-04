@@ -225,3 +225,227 @@ impl GitHubRepository for GitHubRepositoryImpl {
         self.query_service.get_current_branch_pull_request(current_branch)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::github::services::{
+        PullRequestDiffService, PullRequestMutationService, PullRequestQueryService,
+        PullRequestReviewService,
+    };
+    use crate::github::types::{GitHubUserInfo, PullRequestBranch, PullRequestInfo};
+    use std::sync::{Arc, Mutex};
+
+    struct MockQueryService {
+        pr_info: PullRequestInfo,
+        pr_id: Mutex<Option<String>>,
+    }
+
+    impl PullRequestQueryService for MockQueryService {
+        fn get_pull_request_info(&self, pull_request_id: &str) -> Result<String, GitHubError> {
+            *self.pr_id.lock().unwrap() = Some(pull_request_id.to_string());
+            Ok("info".to_string())
+        }
+
+        fn get_pull_request_url(&self, _pull_request_id: &str) -> Result<String, GitHubError> {
+            Ok(self.pr_info.html_url.clone())
+        }
+
+        fn get_pull_request_title(&self, _pull_request_id: &str) -> Result<String, GitHubError> {
+            Ok(self.pr_info.title.clone())
+        }
+
+        fn get_pull_request_body(
+            &self,
+            _pull_request_id: &str,
+        ) -> Result<Option<String>, GitHubError> {
+            Ok(self.pr_info.body.clone())
+        }
+
+        fn get_pull_request_status(
+            &self,
+            _pull_request_id: &str,
+        ) -> Result<(String, bool, Option<String>), GitHubError> {
+            Ok((
+                self.pr_info.state.clone(),
+                self.pr_info.merged,
+                self.pr_info.merged_at.clone(),
+            ))
+        }
+
+        fn get_pull_requests(
+            &self,
+            _state: Option<&str>,
+            _limit: Option<usize>,
+        ) -> Result<Vec<PullRequestInfo>, GitHubError> {
+            Ok(vec![self.pr_info.clone()])
+        }
+
+        fn get_current_branch_pull_request(
+            &self,
+            _current_branch: &str,
+        ) -> Result<Option<String>, GitHubError> {
+            Ok(Some(self.pr_info.number.to_string()))
+        }
+
+        fn fetch_pr_info(&self, _pr_number: u64) -> Result<PullRequestInfo, GitHubError> {
+            Ok(self.pr_info.clone())
+        }
+
+        fn get_user_info(&self) -> Result<GitHubUserInfo, GitHubError> {
+            Ok(GitHubUserInfo {
+                login: "user".to_string(),
+                name: Some("User".to_string()),
+                email: Some("user@example.com".to_string()),
+            })
+        }
+    }
+
+    struct MockMutationService {
+        pr_url: String,
+    }
+
+    impl PullRequestMutationService for MockMutationService {
+        fn create_pull_request(
+            &self,
+            _title: &str,
+            _body: &str,
+            _source_branch: &str,
+            _target_branch: &str,
+        ) -> Result<String, GitHubError> {
+            Ok(self.pr_url.clone())
+        }
+
+        fn merge_pull_request(
+            &self,
+            _pull_request_id: &str,
+            _force: bool,
+        ) -> Result<(), GitHubError> {
+            Ok(())
+        }
+
+        fn close_pull_request(&self, _pull_request_id: &str) -> Result<(), GitHubError> {
+            Ok(())
+        }
+
+        fn update_pr_base(
+            &self,
+            _pull_request_id: &str,
+            _new_base: &str,
+        ) -> Result<(), GitHubError> {
+            Ok(())
+        }
+
+        fn update_pull_request(
+            &self,
+            _pull_request_id: &str,
+            _title: Option<&str>,
+            _body: Option<&str>,
+        ) -> Result<(), GitHubError> {
+            Ok(())
+        }
+    }
+
+    struct MockReviewService;
+
+    impl PullRequestReviewService for MockReviewService {
+        fn add_comment(&self, _pull_request_id: &str, _comment: &str) -> Result<(), GitHubError> {
+            Ok(())
+        }
+
+        fn approve(&self, _pull_request_id: &str) -> Result<(), GitHubError> {
+            Ok(())
+        }
+    }
+
+    struct MockDiffService;
+
+    impl PullRequestDiffService for MockDiffService {
+        fn get_pull_request_diff(&self, _pull_request_id: &str) -> Result<String, GitHubError> {
+            Ok("diff".to_string())
+        }
+    }
+
+    fn build_repo(pr_url: &str) -> GitHubRepositoryImpl {
+        let pr_info = PullRequestInfo {
+            number: 123,
+            title: "title".to_string(),
+            body: Some("body".to_string()),
+            state: "open".to_string(),
+            merged: false,
+            merged_at: None,
+            html_url: pr_url.to_string(),
+            head: PullRequestBranch {
+                ref_name: "feature".to_string(),
+            },
+            base: PullRequestBranch {
+                ref_name: "main".to_string(),
+            },
+            user: None,
+        };
+
+        GitHubRepositoryImpl::new(
+            Arc::new(MockQueryService {
+                pr_info,
+                pr_id: Mutex::new(None),
+            }),
+            Arc::new(MockMutationService {
+                pr_url: pr_url.to_string(),
+            }),
+            Arc::new(MockReviewService),
+            Arc::new(MockDiffService),
+        )
+    }
+
+    #[test]
+    fn test_create_pull_request_validation() {
+        let repo = build_repo("https://github.com/owner/repo/pull/123");
+
+        let err = repo.create_pull_request("", "body", "feature", "main").unwrap_err();
+        assert!(err.to_string().contains("title"));
+
+        let err = repo.create_pull_request("title", "body", "", "main").unwrap_err();
+        assert!(err.to_string().contains("Source branch"));
+
+        let err = repo.create_pull_request("title", "body", "feature", "").unwrap_err();
+        assert!(err.to_string().contains("Target branch"));
+    }
+
+    #[test]
+    fn test_create_pull_request_extracts_id() {
+        let repo = build_repo("https://github.com/owner/repo/pull/456");
+        let pr_id = repo.create_pull_request("title", "body", "feature", "main").unwrap();
+        assert_eq!(pr_id, "456");
+    }
+
+    #[test]
+    fn test_get_pull_request_converts_fields() {
+        let repo = build_repo("https://github.com/owner/repo/pull/123");
+        let pr = repo.get_pull_request("123").unwrap();
+        assert_eq!(pr.id, "123");
+        assert_eq!(pr.title, "title");
+        assert_eq!(pr.source_branch, "feature");
+        assert_eq!(pr.target_branch, "main");
+    }
+
+    #[test]
+    fn test_add_comment_rejects_empty() {
+        let repo = build_repo("https://github.com/owner/repo/pull/123");
+        let result = repo.add_comment("123", "");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_pr_base_rejects_empty() {
+        let repo = build_repo("https://github.com/owner/repo/pull/123");
+        let result = repo.update_pr_base("123", "");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_current_branch_pull_request_rejects_empty() {
+        let repo = build_repo("https://github.com/owner/repo/pull/123");
+        let result = repo.get_current_branch_pull_request("");
+        assert!(result.is_err());
+    }
+}

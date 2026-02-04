@@ -49,7 +49,7 @@ pub struct CreatePullRequestResponse {
 }
 
 /// Pull Request 信息
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct PullRequestInfo {
     pub number: u64,
     pub title: String,
@@ -66,7 +66,7 @@ pub struct PullRequestInfo {
 }
 
 /// Pull Request 分支信息
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct PullRequestBranch {
     #[serde(rename = "ref")]
     pub ref_name: String,

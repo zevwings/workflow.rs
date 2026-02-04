@@ -21,7 +21,7 @@ pub use message::MockWriter;
 /// # Examples
 ///
 /// ```
-/// use toolkit::success;
+/// use prompt::success;
 ///
 /// success!("Operation completed");
 /// let count = 5;
@@ -39,7 +39,7 @@ macro_rules! success {
 /// # Examples
 ///
 /// ```
-/// use toolkit::error;
+/// use prompt::error;
 ///
 /// error!("Operation failed");
 /// let code = 404;
@@ -58,7 +58,7 @@ macro_rules! error {
 /// # Examples
 ///
 /// ```
-/// use toolkit::warning;
+/// use prompt::warning;
 ///
 /// warning!("This is a warning");
 /// let count = 3;
@@ -76,7 +76,7 @@ macro_rules! warning {
 /// # Examples
 ///
 /// ```
-/// use toolkit::info;
+/// use prompt::info;
 ///
 /// info!("Processing data");
 /// let count = 10;
@@ -94,7 +94,7 @@ macro_rules! info {
 /// # Examples
 ///
 /// ```
-/// use toolkit::debug;
+/// use prompt::debug;
 ///
 /// debug!("Debug information");
 /// let key = "version";
@@ -113,7 +113,7 @@ macro_rules! debug {
 /// # Examples
 ///
 /// ```
-/// use toolkit::print;
+/// use prompt::print;
 ///
 /// print!("Plain text message");
 /// let name = "Alice";
@@ -131,7 +131,7 @@ macro_rules! print {
 /// # Examples
 ///
 /// ```
-/// use toolkit::br;
+/// use prompt::br;
 ///
 /// // 输出换行符
 /// br!();
@@ -148,7 +148,7 @@ macro_rules! br {
 /// # Examples
 ///
 /// ```
-/// use toolkit::separator;
+/// use prompt::separator;
 ///
 /// // 使用默认分隔符（80个 '─'）
 /// separator!();

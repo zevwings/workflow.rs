@@ -137,3 +137,120 @@ pub fn get_shell_source_path(shell: &str) -> String {
         _ => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_CONFIG),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // get_completion_filename 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_completion_filename_zsh() {
+        assert_eq!(get_completion_filename("zsh"), "_workflow");
+        assert_eq!(get_completion_filename("ZSH"), "_workflow");
+        assert_eq!(get_completion_filename("Zsh"), "_workflow");
+    }
+
+    #[test]
+    fn test_get_completion_filename_bash() {
+        assert_eq!(get_completion_filename("bash"), "workflow.bash");
+        assert_eq!(get_completion_filename("BASH"), "workflow.bash");
+    }
+
+    #[test]
+    fn test_get_completion_filename_fish() {
+        assert_eq!(get_completion_filename("fish"), "workflow.fish");
+        assert_eq!(get_completion_filename("FISH"), "workflow.fish");
+    }
+
+    #[test]
+    fn test_get_completion_filename_powershell() {
+        assert_eq!(get_completion_filename("powershell"), "_workflow.ps1");
+        assert_eq!(get_completion_filename("pwsh"), "_workflow.ps1");
+        assert_eq!(get_completion_filename("POWERSHELL"), "_workflow.ps1");
+        assert_eq!(get_completion_filename("PWSH"), "_workflow.ps1");
+    }
+
+    #[test]
+    fn test_get_completion_filename_elvish() {
+        assert_eq!(get_completion_filename("elvish"), "workflow.elv");
+        assert_eq!(get_completion_filename("ELVISH"), "workflow.elv");
+    }
+
+    #[test]
+    fn test_get_completion_filename_unknown() {
+        assert_eq!(get_completion_filename("unknown"), "workflow");
+        assert_eq!(get_completion_filename(""), "workflow");
+        assert_eq!(get_completion_filename("csh"), "workflow");
+    }
+
+    // ========================================================================
+    // get_all_completion_filenames 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_all_completion_filenames() {
+        let filenames = get_all_completion_filenames();
+        assert_eq!(filenames.len(), 5);
+        assert!(filenames.contains(&"_workflow".to_string()));
+        assert!(filenames.contains(&"workflow.bash".to_string()));
+        assert!(filenames.contains(&"workflow.fish".to_string()));
+        assert!(filenames.contains(&"_workflow.ps1".to_string()));
+        assert!(filenames.contains(&"workflow.elv".to_string()));
+    }
+
+    // ========================================================================
+    // get_shell_source_path 测试
+    // ========================================================================
+
+    #[test]
+    fn test_get_shell_source_path_zsh() {
+        let path = get_shell_source_path("zsh");
+        assert_eq!(path, "$HOME/.workflow/.completions");
+    }
+
+    #[test]
+    fn test_get_shell_source_path_bash() {
+        let path = get_shell_source_path("bash");
+        assert_eq!(path, "$HOME/.workflow/.completions");
+    }
+
+    #[test]
+    fn test_get_shell_source_path_fish() {
+        let path = get_shell_source_path("fish");
+        assert_eq!(path, "$HOME/.workflow/completions/workflow.fish");
+    }
+
+    #[test]
+    fn test_get_shell_source_path_powershell() {
+        let path = get_shell_source_path("powershell");
+        assert_eq!(path, "$HOME/.workflow/completions/_workflow.ps1");
+
+        let path = get_shell_source_path("pwsh");
+        assert_eq!(path, "$HOME/.workflow/completions/_workflow.ps1");
+    }
+
+    #[test]
+    fn test_get_shell_source_path_elvish() {
+        let path = get_shell_source_path("elvish");
+        assert_eq!(path, "$HOME/.workflow/completions/workflow.elv");
+    }
+
+    #[test]
+    fn test_get_shell_source_path_unknown() {
+        let path = get_shell_source_path("unknown");
+        assert_eq!(path, "$HOME/.workflow/.completions");
+    }
+
+    #[test]
+    fn test_get_shell_source_path_case_insensitive() {
+        assert_eq!(get_shell_source_path("ZSH"), get_shell_source_path("zsh"));
+        assert_eq!(get_shell_source_path("FISH"), get_shell_source_path("fish"));
+        assert_eq!(
+            get_shell_source_path("POWERSHELL"),
+            get_shell_source_path("powershell")
+        );
+    }
+}

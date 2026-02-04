@@ -148,3 +148,139 @@ pub trait BranchSyncCallbacks {
     /// 同步完成回调
     fn on_complete(&self, result: &BranchSyncResult);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // BranchType 测试
+    // ========================================================================
+
+    #[test]
+    fn test_branch_type_all() {
+        let all = BranchType::all();
+        assert_eq!(all.len(), 5);
+        assert!(all.contains(&BranchType::Feature));
+        assert!(all.contains(&BranchType::Bugfix));
+        assert!(all.contains(&BranchType::Refactoring));
+        assert!(all.contains(&BranchType::Hotfix));
+        assert!(all.contains(&BranchType::Chore));
+    }
+
+    #[test]
+    fn test_branch_type_as_str() {
+        assert_eq!(BranchType::Feature.as_str(), "feature");
+        assert_eq!(BranchType::Bugfix.as_str(), "bugfix");
+        assert_eq!(BranchType::Refactoring.as_str(), "refactoring");
+        assert_eq!(BranchType::Hotfix.as_str(), "hotfix");
+        assert_eq!(BranchType::Chore.as_str(), "chore");
+    }
+
+    #[test]
+    fn test_branch_type_to_commit_type() {
+        assert_eq!(BranchType::Feature.to_commit_type(), "feat");
+        assert_eq!(BranchType::Bugfix.to_commit_type(), "fix");
+        assert_eq!(BranchType::Refactoring.to_commit_type(), "refactor");
+        assert_eq!(BranchType::Hotfix.to_commit_type(), "fix");
+        assert_eq!(BranchType::Chore.to_commit_type(), "chore");
+    }
+
+    #[test]
+    fn test_branch_type_parse_exact() {
+        assert_eq!(BranchType::parse("feature"), Some(BranchType::Feature));
+        assert_eq!(BranchType::parse("bugfix"), Some(BranchType::Bugfix));
+        assert_eq!(
+            BranchType::parse("refactoring"),
+            Some(BranchType::Refactoring)
+        );
+        assert_eq!(BranchType::parse("hotfix"), Some(BranchType::Hotfix));
+        assert_eq!(BranchType::parse("chore"), Some(BranchType::Chore));
+    }
+
+    #[test]
+    fn test_branch_type_parse_aliases() {
+        // bugfix 别名
+        assert_eq!(BranchType::parse("bug"), Some(BranchType::Bugfix));
+        assert_eq!(BranchType::parse("fix"), Some(BranchType::Bugfix));
+
+        // refactoring 别名
+        assert_eq!(BranchType::parse("refactor"), Some(BranchType::Refactoring));
+    }
+
+    #[test]
+    fn test_branch_type_parse_case_insensitive() {
+        assert_eq!(BranchType::parse("FEATURE"), Some(BranchType::Feature));
+        assert_eq!(BranchType::parse("Feature"), Some(BranchType::Feature));
+        assert_eq!(BranchType::parse("BUGFIX"), Some(BranchType::Bugfix));
+        assert_eq!(BranchType::parse("BUG"), Some(BranchType::Bugfix));
+    }
+
+    #[test]
+    fn test_branch_type_parse_invalid() {
+        assert_eq!(BranchType::parse("invalid"), None);
+        assert_eq!(BranchType::parse(""), None);
+        assert_eq!(BranchType::parse("feat"), None);
+        assert_eq!(BranchType::parse("features"), None);
+    }
+
+    #[test]
+    fn test_branch_type_display() {
+        assert_eq!(format!("{}", BranchType::Feature), "feature");
+        assert_eq!(format!("{}", BranchType::Bugfix), "bugfix");
+        assert_eq!(format!("{}", BranchType::Refactoring), "refactoring");
+        assert_eq!(format!("{}", BranchType::Hotfix), "hotfix");
+        assert_eq!(format!("{}", BranchType::Chore), "chore");
+    }
+
+    // ========================================================================
+    // sanitize_branch_name 测试
+    // ========================================================================
+
+    #[test]
+    fn test_sanitize_branch_name_valid() {
+        // 有效的分支名应该保持不变
+        assert_eq!(sanitize_branch_name("feature/abc-123"), "feature/abc-123");
+        assert_eq!(sanitize_branch_name("bugfix/fix_issue"), "bugfix/fix_issue");
+        assert_eq!(sanitize_branch_name("main"), "main");
+        // 注意：点号会被移除，因为不在允许的字符列表中
+        assert_eq!(sanitize_branch_name("release-100"), "release-100");
+    }
+
+    #[test]
+    fn test_sanitize_branch_name_removes_special_chars() {
+        // 移除特殊字符
+        assert_eq!(sanitize_branch_name("feature@test#123"), "featuretest123");
+        assert_eq!(sanitize_branch_name("branch!name"), "branchname");
+        assert_eq!(sanitize_branch_name("test$branch%name"), "testbranchname");
+        assert_eq!(sanitize_branch_name("a&b*c"), "abc");
+    }
+
+    #[test]
+    fn test_sanitize_branch_name_removes_spaces() {
+        // 移除空格
+        assert_eq!(sanitize_branch_name("  feature/test  "), "feature/test");
+        assert_eq!(sanitize_branch_name("feature test"), "featuretest");
+        assert_eq!(sanitize_branch_name("  "), "");
+    }
+
+    #[test]
+    fn test_sanitize_branch_name_preserves_allowed_chars() {
+        // 保留允许的字符：字母、数字、连字符、下划线、斜杠
+        assert_eq!(sanitize_branch_name("a-b_c/d"), "a-b_c/d");
+        assert_eq!(sanitize_branch_name("ABC-123_xyz/test"), "ABC-123_xyz/test");
+    }
+
+    #[test]
+    fn test_sanitize_branch_name_empty() {
+        assert_eq!(sanitize_branch_name(""), "");
+    }
+
+    #[test]
+    fn test_sanitize_branch_name_unicode() {
+        // 移除非 ASCII 字符
+        assert_eq!(sanitize_branch_name("feature/中文"), "feature/");
+        assert_eq!(sanitize_branch_name("修改bug"), "bug");
+        assert_eq!(sanitize_branch_name("日本語"), "");
+    }
+}

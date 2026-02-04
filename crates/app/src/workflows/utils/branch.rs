@@ -83,6 +83,8 @@ pub fn generate_branch_name_from_template(
 /// # Examples
 ///
 /// ```
+/// use app::workflows::utils::branch::to_slug;
+///
 /// assert_eq!(to_slug("Chat Unified Entry"), "chat-unified-entry");
 /// assert_eq!(to_slug("Fix: Auth Issue"), "fix-auth-issue");
 /// ```
@@ -164,7 +166,8 @@ pub fn generate_branch_name_by_summary(
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
+/// // `strip_branch_type_prefix` 是内部辅助函数（非公有 API）。
 /// assert_eq!(strip_branch_type_prefix("feature/my-branch"), "my-branch");
 /// assert_eq!(strip_branch_type_prefix("my-branch"), "my-branch");
 /// assert_eq!(strip_branch_type_prefix("bugfix/fix-issue"), "fix-issue");

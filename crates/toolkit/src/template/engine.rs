@@ -149,9 +149,7 @@ mod tests {
     fn test_render_with_nested_variables() {
         let mut engine = TemplateEngine::new();
 
-        engine
-            .register_template("user", "{{user.name}} - {{user.email}}")
-            .unwrap();
+        engine.register_template("user", "{{user.name}} - {{user.email}}").unwrap();
 
         let vars = json!({
             "user": {

@@ -286,3 +286,85 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use domain::MCPServerConfig;
+    use std::collections::HashMap;
+    use std::env;
+    use std::sync::Mutex;
+    use tempfile::TempDir;
+    use toolkit::{project_config_file, user_config_file};
+
+    static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn with_temp_repo_dir<F: FnOnce(&TempDir)>(f: F) {
+        let _lock = TEST_ENV_LOCK.lock().unwrap();
+        let tmp = TempDir::new().unwrap();
+        let original_dir = env::current_dir().unwrap();
+        env::set_current_dir(tmp.path()).unwrap();
+        f(&tmp);
+        env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[test]
+    fn test_save_project_config_cleans_defaults() {
+        with_temp_repo_dir(|tmp| {
+            let repo = RepoConfigRepositoryImpl::new();
+            let config = ProjectConfig::default();
+
+            repo.save_project_config(&config).unwrap();
+
+            let path = project_config_file(tmp.path());
+            let content = std::fs::read_to_string(path).unwrap_or_default();
+            assert!(!content.contains("use_scope"));
+            assert!(!content.contains("template"));
+        });
+    }
+
+    #[test]
+    fn test_save_user_config_empty_removes_file() {
+        with_temp_repo_dir(|tmp| {
+            let repo = RepoConfigRepositoryImpl::new();
+            let path = user_config_file(tmp.path());
+            let workflow_dir = repo_workflow_dir(tmp.path());
+            std::fs::create_dir_all(&workflow_dir).unwrap();
+            std::fs::write(&path, "branch = { prefix = \"x\" }").unwrap();
+
+            repo.save_user_config(&UserConfig::default()).unwrap();
+            assert!(!path.exists());
+        });
+    }
+
+    #[test]
+    fn test_save_and_load_mcp_config() {
+        with_temp_repo_dir(|tmp| {
+            let repo = RepoConfigRepositoryImpl::new();
+            let cursor_dir = tmp.path().join(".cursor");
+            std::fs::create_dir_all(&cursor_dir).unwrap();
+
+            let mut servers = HashMap::new();
+            servers.insert(
+                "example".to_string(),
+                MCPServerConfig {
+                    command: "npx".to_string(),
+                    args: vec!["server".to_string()],
+                    env: HashMap::new(),
+                },
+            );
+
+            let config = RepoConfig {
+                project: ProjectConfig::default(),
+                user: UserConfig::default(),
+                mcp: MCPConfig {
+                    mcp_servers: servers,
+                },
+            };
+
+            repo.save(&config).unwrap();
+            let loaded = repo.load().unwrap();
+            assert!(loaded.mcp.mcp_servers.contains_key("example"));
+        });
+    }
+}

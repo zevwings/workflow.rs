@@ -33,3 +33,31 @@ impl RepoConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_repo_config_get_branch_config_prefers_user() {
+        let config = RepoConfig {
+            project: ProjectConfig::default(),
+            user: UserConfig {
+                branch: BranchConfig {
+                    prefix: "zw".to_string(),
+                    ignore: vec![],
+                },
+            },
+            mcp: MCPConfig::default(),
+        };
+
+        let branch = config.get_branch_config().expect("branch config should exist");
+        assert_eq!(branch.prefix, "zw");
+    }
+
+    #[test]
+    fn test_repo_config_get_branch_config_none_when_empty() {
+        let config = RepoConfig::default();
+        assert!(config.get_branch_config().is_none());
+    }
+}

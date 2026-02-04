@@ -5,7 +5,7 @@ use domain::JiraError;
 /// Jira API 响应包装器
 ///
 /// 用于统一处理 Jira API 的响应，支持泛型类型解析。
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JiraResponse {
     /// 解析后的响应数据
     pub data: serde_json::Value,

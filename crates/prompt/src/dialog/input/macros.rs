@@ -8,7 +8,7 @@
 //! # Examples
 //!
 //! ```rust,no_run
-//! use toolkit::input;
+//! use prompt::input;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 简单字符串（直接传递，不格式化）

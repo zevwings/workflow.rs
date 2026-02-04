@@ -99,7 +99,8 @@ impl JsonParser {
     ///
     /// # 示例
     ///
-    /// ```no_run
+    /// ```ignore
+    /// // `JsonParser` 位于 storage 的内部 LLM 模块中（非公共 API），此示例仅用于说明用法。
     /// use serde::Deserialize;
     ///
     /// #[derive(Deserialize)]
@@ -144,7 +145,8 @@ impl JsonParser {
     ///
     /// # 示例
     ///
-    /// ```no_run
+    /// ```ignore
+    /// // `JsonParser` 位于 storage 的内部 LLM 模块中（非公共 API），此示例仅用于说明用法。
     /// let response = r#"{"branch_name": "add-feature", "pr_title": "Add feature"}"#.to_string();
     /// let map = JsonParser::to_map(response)?;
     /// let branch_name = map.get("branch_name").and_then(|v| v.as_str());

@@ -4,7 +4,8 @@
 //!
 //! ## 使用方式
 //!
-//! ```rust
+//! ```rust,ignore
+//! // 该模块属于 storage 的内部实现（`storage::llm` 为非 public 模块），此示例仅用于说明用法。
 //! use storage::llm::prompt;
 //!
 //! // 获取基础 prompt 内容

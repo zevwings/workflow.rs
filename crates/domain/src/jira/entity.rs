@@ -123,3 +123,103 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<(), JiraError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // extract_jira_project 测试
+    // ========================================================================
+
+    #[test]
+    fn test_extract_jira_project_valid_ticket() {
+        assert_eq!(extract_jira_project("PROJ-123"), Some("PROJ"));
+        assert_eq!(extract_jira_project("ABC-1"), Some("ABC"));
+        assert_eq!(extract_jira_project("TEST-99999"), Some("TEST"));
+    }
+
+    #[test]
+    fn test_extract_jira_project_complex_ticket() {
+        // 多段格式（如 PROJ-123-456）
+        assert_eq!(extract_jira_project("PROJ-123-456"), Some("PROJ"));
+    }
+
+    #[test]
+    fn test_extract_jira_project_no_hyphen() {
+        // 没有连字符，返回 None
+        assert_eq!(extract_jira_project("PROJ"), None);
+        assert_eq!(extract_jira_project("PROJECT123"), None);
+    }
+
+    #[test]
+    fn test_extract_jira_project_empty() {
+        assert_eq!(extract_jira_project(""), None);
+    }
+
+    #[test]
+    fn test_extract_jira_project_only_hyphen() {
+        // 只有连字符开头
+        assert_eq!(extract_jira_project("-123"), Some(""));
+    }
+
+    // ========================================================================
+    // validate_jira_ticket_format 测试
+    // ========================================================================
+
+    #[test]
+    fn test_validate_jira_ticket_format_valid_ticket() {
+        // 有效的 ticket 格式
+        assert!(validate_jira_ticket_format("PROJ-123").is_ok());
+        assert!(validate_jira_ticket_format("ABC-1").is_ok());
+        assert!(validate_jira_ticket_format("TEST-99999").is_ok());
+        assert!(validate_jira_ticket_format("MY_PROJECT-100").is_ok());
+    }
+
+    #[test]
+    fn test_validate_jira_ticket_format_valid_project() {
+        // 有效的项目名格式
+        assert!(validate_jira_ticket_format("PROJ").is_ok());
+        assert!(validate_jira_ticket_format("MY_PROJECT").is_ok());
+        assert!(validate_jira_ticket_format("Test123").is_ok());
+    }
+
+    #[test]
+    fn test_validate_jira_ticket_format_multi_segment() {
+        // 多段 ticket 格式
+        assert!(validate_jira_ticket_format("PROJ-123-456").is_ok());
+    }
+
+    #[test]
+    fn test_validate_jira_ticket_format_empty() {
+        // 空字符串
+        let result = validate_jira_ticket_format("");
+        assert!(result.is_err());
+
+        // 只有空白字符
+        let result = validate_jira_ticket_format("   ");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_jira_ticket_format_invalid_chars() {
+        // 包含无效字符
+        assert!(validate_jira_ticket_format("invalid/ticket").is_err());
+        assert!(validate_jira_ticket_format("PROJ@123").is_err());
+        assert!(validate_jira_ticket_format("test#project").is_err());
+    }
+
+    #[test]
+    fn test_validate_jira_ticket_format_no_number() {
+        // ticket 格式但没有数字部分
+        assert!(validate_jira_ticket_format("PROJ-ABC").is_err());
+        assert!(validate_jira_ticket_format("PROJ-").is_err());
+    }
+
+    #[test]
+    fn test_validate_jira_ticket_format_branch_like() {
+        // 类似分支名的格式（应该失败）
+        assert!(validate_jira_ticket_format("zw/修改打包脚本问题").is_err());
+        assert!(validate_jira_ticket_format("feature/test").is_err());
+    }
+}

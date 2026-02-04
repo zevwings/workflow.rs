@@ -104,3 +104,99 @@ impl WorkingTreeStatus {
         !self.conflicted.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_file_status_type_is_staged() {
+        assert!(FileStatusType::NewStaged.is_staged());
+        assert!(FileStatusType::ModifiedStaged.is_staged());
+        assert!(FileStatusType::DeletedStaged.is_staged());
+        assert!(!FileStatusType::NewUntracked.is_staged());
+        assert!(!FileStatusType::ModifiedUnstaged.is_staged());
+    }
+
+    #[test]
+    fn test_file_status_type_label() {
+        assert_eq!(FileStatusType::NewUntracked.label(), "untracked");
+        assert_eq!(FileStatusType::NewStaged.label(), "new file");
+        assert_eq!(FileStatusType::ModifiedUnstaged.label(), "modified");
+        assert_eq!(FileStatusType::ModifiedStaged.label(), "modified");
+        assert_eq!(FileStatusType::DeletedUnstaged.label(), "deleted");
+        assert_eq!(FileStatusType::DeletedStaged.label(), "deleted");
+        assert_eq!(FileStatusType::Renamed.label(), "renamed");
+        assert_eq!(FileStatusType::TypeChanged.label(), "typechange");
+        assert_eq!(FileStatusType::Conflicted.label(), "conflicted");
+    }
+
+    #[test]
+    fn test_working_tree_status_helpers() {
+        let status = WorkingTreeStatus {
+            staged: vec![],
+            unstaged: vec![],
+            untracked: vec![],
+            conflicted: vec![],
+        };
+        assert!(status.is_clean());
+        assert!(!status.has_staged());
+        assert!(!status.has_unstaged());
+        assert!(!status.has_conflicts());
+
+        let status = WorkingTreeStatus {
+            staged: vec![FileStatusInfo {
+                path: "file.txt".to_string(),
+                status_type: FileStatusType::ModifiedStaged,
+                old_path: None,
+            }],
+            unstaged: vec![],
+            untracked: vec![],
+            conflicted: vec![],
+        };
+        assert!(!status.is_clean());
+        assert!(status.has_staged());
+    }
+
+    #[test]
+    fn test_working_tree_status_with_unstaged_and_conflicted() {
+        let status = WorkingTreeStatus {
+            staged: vec![],
+            unstaged: vec![FileStatusInfo {
+                path: "main.rs".to_string(),
+                status_type: FileStatusType::ModifiedUnstaged,
+                old_path: None,
+            }],
+            untracked: vec![],
+            conflicted: vec![FileStatusInfo {
+                path: "conflict.txt".to_string(),
+                status_type: FileStatusType::Conflicted,
+                old_path: None,
+            }],
+        };
+
+        assert!(!status.is_clean());
+        assert!(!status.has_staged());
+        assert!(status.has_unstaged());
+        assert!(status.has_conflicts());
+    }
+
+    #[test]
+    fn test_working_tree_status_with_untracked() {
+        let status = WorkingTreeStatus {
+            staged: vec![],
+            unstaged: vec![],
+            untracked: vec![FileStatusInfo {
+                path: "new.txt".to_string(),
+                status_type: FileStatusType::NewUntracked,
+                old_path: None,
+            }],
+            conflicted: vec![],
+        };
+
+        assert!(!status.is_clean());
+        assert!(!status.has_staged());
+        assert!(!status.has_unstaged());
+        assert!(!status.has_conflicts());
+    }
+}

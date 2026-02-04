@@ -732,6 +732,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "thiserror 1.0.69",
+ "toml",
 ]
 
 [[package]]
@@ -2620,8 +2621,11 @@ version = "0.0.1"
 dependencies = [
  "dirs 5.0.1",
  "domain",
+ "once_cell",
  "registry",
+ "serial_test",
  "storage",
+ "tempfile",
  "toml",
  "toolkit",
 ]

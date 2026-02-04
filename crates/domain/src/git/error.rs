@@ -11,6 +11,9 @@ pub enum GitError {
     #[error("不是 Git 仓库")]
     NotGitRepo,
 
+    #[error("仓库不存在: {0}")]
+    RepositoryNotFound(String),
+
     #[error("分支不存在: {0}")]
     BranchNotFound(String),
 
