@@ -4,19 +4,19 @@
 //!
 //! 运行示例:
 //! ```bash
-//! cargo run -p storage --example performance_monitoring --features test-helpers
+//! cargo run -p storage --example performance_monitoring --features testing
 //! ```
 
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use std::time::Duration;
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use storage::git::services::*;
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use storage::git::testing::performance::{measure, PerformanceCollector, PerformanceTimer};
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use storage::git::testing::*;
 
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn main() {
     println!("=== 性能监控示例 ===\n");
 
@@ -71,11 +71,9 @@ fn main() {
     println!("\n=== 示例完成 ===");
 }
 
-#[cfg(not(feature = "test-helpers"))]
+#[cfg(not(feature = "testing"))]
 fn main() {
-    eprintln!("此示例需要 test-helpers feature");
-    eprintln!(
-        "运行: cargo run -p storage --example performance_monitoring --features test-helpers"
-    );
+    eprintln!("此示例需要 testing feature");
+    eprintln!("运行: cargo run -p storage --example performance_monitoring --features testing");
     std::process::exit(1);
 }

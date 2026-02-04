@@ -133,6 +133,15 @@ fn demo_input(msg: &prompt::MessageRef) -> prompt::Result<()> {
 
     let _ = msg.info(format!("用户名: {}", username));
 
+    // 多行输入
+    let changes = input!("请输入变更说明（可多行）")
+        .multiline()
+        .placeholder("例如：\n- 修复了 XXX\n- 优化了 YYY\n- 新增了 ZZZ")
+        .result_title("Changes")
+        .prompt()?;
+
+    let _ = msg.info(format!("变更说明:\n{}", changes));
+
     Ok(())
 }
 

@@ -86,4 +86,20 @@ pub trait Backend {
 
     /// 禁用 bracketed paste 模式
     fn disable_bracketed_paste(&mut self) -> Result<()>;
+
+    /// 启用增强键盘事件（kitty keyboard protocol）。
+    ///
+    /// 这能让兼容终端上报更丰富的修饰键信息（例如区分 `Enter` 与 `Shift+Enter`）。
+    ///
+    /// 默认实现为 no-op，便于 Mock/不支持的后端忽略该能力。
+    fn enable_keyboard_enhancement(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    /// 禁用增强键盘事件（与 `enable_keyboard_enhancement` 成对）。
+    ///
+    /// 默认实现为 no-op。
+    fn disable_keyboard_enhancement(&mut self) -> Result<()> {
+        Ok(())
+    }
 }

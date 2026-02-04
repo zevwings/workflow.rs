@@ -4,7 +4,10 @@
 
 use super::Backend;
 use crossterm::cursor;
-use crossterm::event::{DisableBracketedPaste, EnableBracketedPaste, Event};
+use crossterm::event::{
+    DisableBracketedPaste, EnableBracketedPaste, Event, KeyboardEnhancementFlags,
+    PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+};
 use crossterm::execute;
 use crossterm::terminal::{self, ClearType};
 use std::io::{Result, Stdout, Write};
@@ -18,6 +21,8 @@ pub struct TerminalBackend {
     raw_mode: bool,
     /// 是否启用了 bracketed paste
     bracketed_paste: bool,
+    /// 是否启用了增强键盘事件（kitty keyboard protocol）
+    keyboard_enhancement: bool,
 }
 
 impl Default for TerminalBackend {
@@ -33,6 +38,7 @@ impl TerminalBackend {
             stdout: std::io::stdout(),
             raw_mode: false,
             bracketed_paste: false,
+            keyboard_enhancement: false,
         }
     }
 }
@@ -42,6 +48,9 @@ impl Drop for TerminalBackend {
         // 确保退出时恢复终端状态
         if self.bracketed_paste {
             let _ = execute!(self.stdout, DisableBracketedPaste);
+        }
+        if self.keyboard_enhancement {
+            let _ = execute!(self.stdout, PopKeyboardEnhancementFlags);
         }
         if self.raw_mode {
             let _ = terminal::disable_raw_mode();
@@ -119,6 +128,22 @@ impl Backend for TerminalBackend {
     fn disable_bracketed_paste(&mut self) -> Result<()> {
         execute!(self.stdout, DisableBracketedPaste)?;
         self.bracketed_paste = false;
+        Ok(())
+    }
+
+    fn enable_keyboard_enhancement(&mut self) -> Result<()> {
+        // 仅在兼容终端上有效；不兼容终端通常会忽略该控制序列。
+        execute!(
+            self.stdout,
+            PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
+        )?;
+        self.keyboard_enhancement = true;
+        Ok(())
+    }
+
+    fn disable_keyboard_enhancement(&mut self) -> Result<()> {
+        execute!(self.stdout, PopKeyboardEnhancementFlags)?;
+        self.keyboard_enhancement = false;
         Ok(())
     }
 }

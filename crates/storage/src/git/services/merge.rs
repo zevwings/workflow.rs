@@ -327,39 +327,3 @@ impl MergeService for MergeServiceImpl {
         Ok(merge_base_oid.to_string())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::git::testing::setup_repo_with_file;
-
-    #[test]
-    #[ignore]
-    fn test_has_merge_conflicts_none() {
-        let (_tmp, ctx) = setup_repo_with_file();
-        let service = MergeServiceImpl::new(ctx);
-
-        assert!(!service.has_merge_conflicts().unwrap());
-    }
-
-    #[test]
-    #[ignore]
-    fn test_merge_base() {
-        let (_tmp, ctx) = setup_repo_with_file();
-
-        // 创建一个分支
-        let expected = {
-            let repo = ctx.repository();
-            let head = repo.head().unwrap();
-            let commit = head.peel_to_commit().unwrap();
-            repo.branch("feature", &commit, false).unwrap();
-            commit.id().to_string()
-        };
-
-        let service = MergeServiceImpl::new(ctx);
-        let base = service.merge_base("master", "feature").unwrap();
-
-        // master 和 feature 指向相同的 commit
-        assert_eq!(base, expected);
-    }
-}

@@ -14,6 +14,7 @@ pub struct InputBuilder {
     pub(crate) placeholder: Option<String>,
     pub(crate) validator: Option<Box<dyn Validator>>,
     pub(crate) password: bool,
+    pub(crate) multiline: bool,
     pub(crate) result_title: Option<String>,
 }
 
@@ -25,6 +26,7 @@ impl InputBuilder {
             placeholder: None,
             validator: None,
             password: false,
+            multiline: false,
             result_title: None,
         }
     }
@@ -55,6 +57,15 @@ impl InputBuilder {
 
     pub fn password(mut self) -> Self {
         self.password = true;
+        self
+    }
+
+    /// 启用多行输入模式。
+    ///
+    /// - `Enter`：提交
+    /// - `Shift+Enter`：插入换行（需要终端支持增强键盘事件；不支持时可用 `Ctrl+J`）
+    pub fn multiline(mut self) -> Self {
+        self.multiline = true;
         self
     }
 
@@ -123,6 +134,12 @@ mod tests {
     fn test_input_builder_password() {
         let builder = InputBuilder::new("Password").password();
         assert!(builder.password);
+    }
+
+    #[test]
+    fn test_input_builder_multiline() {
+        let builder = InputBuilder::new("Message").multiline();
+        assert!(builder.multiline);
     }
 
     #[test]

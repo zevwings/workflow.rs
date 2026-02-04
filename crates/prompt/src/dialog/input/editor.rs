@@ -103,6 +103,59 @@ impl InputEditor {
         self.cursor += text.len();
     }
 
+    /// 将光标移动到上一行（尽量保持列位置）
+    pub(crate) fn move_up(&mut self) {
+        let (row, col) = self.cursor_row_col_display_width();
+        if row == 0 {
+            return;
+        }
+
+        let safe_cursor = self.safe_cursor();
+        let before = &self.buffer[..safe_cursor];
+
+        // 当前行起点（上一行的 '\n' 之后）
+        let current_line_start = before.rfind('\n').map(|i| i + 1).unwrap_or(0);
+
+        // 找到上一行起点与终点
+        let prev_line_end = current_line_start.saturating_sub(1); // '\n' 的位置
+        let prev_line_start = before[..prev_line_end].rfind('\n').map(|i| i + 1).unwrap_or(0);
+
+        let prev_line = &self.buffer[prev_line_start..prev_line_end];
+        let target_in_prev = byte_index_for_display_width(prev_line, col);
+        self.cursor = prev_line_start + target_in_prev;
+    }
+
+    /// 将光标移动到下一行（尽量保持列位置）
+    pub(crate) fn move_down(&mut self) {
+        let (row, col) = self.cursor_row_col_display_width();
+        let lines = self.buffer.split('\n').count();
+        if row + 1 >= lines {
+            return;
+        }
+
+        let safe_cursor = self.safe_cursor();
+        let before = &self.buffer[..safe_cursor];
+
+        // 当前行起点
+        let current_line_start = before.rfind('\n').map(|i| i + 1).unwrap_or(0);
+        // 当前行终点（到下一处 '\n' 或字符串末尾）
+        let current_line_end = self.buffer[current_line_start..]
+            .find('\n')
+            .map(|i| current_line_start + i)
+            .unwrap_or(self.buffer.len());
+
+        // 下一行起点与终点
+        let next_line_start = (current_line_end + 1).min(self.buffer.len());
+        let next_line_end = self.buffer[next_line_start..]
+            .find('\n')
+            .map(|i| next_line_start + i)
+            .unwrap_or(self.buffer.len());
+
+        let next_line = &self.buffer[next_line_start..next_line_end];
+        let target_in_next = byte_index_for_display_width(next_line, col);
+        self.cursor = next_line_start + target_in_next;
+    }
+
     /// 删除光标前的字符（Backspace）
     ///
     /// # 返回
@@ -194,6 +247,19 @@ impl InputEditor {
         }
     }
 
+    /// 获取光标所在的（行、列）位置。
+    ///
+    /// - 行：以 `\n` 分隔，0-based
+    /// - 列：当前行内的显示宽度（考虑 Unicode 宽度），0-based
+    pub(crate) fn cursor_row_col_display_width(&self) -> (usize, usize) {
+        let safe_cursor = self.safe_cursor();
+        let before = &self.buffer[..safe_cursor];
+        let row = before.as_bytes().iter().filter(|&&b| b == b'\n').count();
+        let line_start = before.rfind('\n').map(|i| i + 1).unwrap_or(0);
+        let col = before[line_start..].width();
+        (row, col)
+    }
+
     /// 获取缓冲区内容的字符串切片
     ///
     /// # 返回
@@ -256,6 +322,36 @@ impl InputEditor {
     pub(crate) fn placeholder(&self) -> Option<&String> {
         self.placeholder.as_ref()
     }
+
+    fn safe_cursor(&self) -> usize {
+        if self.cursor > self.buffer.len() {
+            return self.buffer.len();
+        }
+        if self.buffer.is_char_boundary(self.cursor) {
+            return self.cursor;
+        }
+        self.buffer[..self.cursor]
+            .char_indices()
+            .last()
+            .map(|(pos, _)| pos)
+            .unwrap_or(0)
+    }
+}
+
+fn byte_index_for_display_width(line: &str, target_col: usize) -> usize {
+    if target_col == 0 {
+        return 0;
+    }
+
+    let mut col = 0usize;
+    for (idx, ch) in line.char_indices() {
+        let w = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
+        if col + w > target_col {
+            return idx;
+        }
+        col += w;
+    }
+    line.len()
 }
 
 #[cfg(test)]
@@ -505,6 +601,23 @@ mod tests {
         editor.move_right();
         editor.insert('X');
         assert_eq!(editor.as_str(), "你X好");
+    }
+
+    #[test]
+    fn test_editor_move_up_down_multiline() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello\nworld");
+        // 光标默认在末尾（第二行末尾）
+        let (row, _col) = editor.cursor_row_col_display_width();
+        assert_eq!(row, 1);
+
+        editor.move_up();
+        let (row, _col) = editor.cursor_row_col_display_width();
+        assert_eq!(row, 0);
+
+        editor.move_down();
+        let (row, _col) = editor.cursor_row_col_display_width();
+        assert_eq!(row, 1);
     }
 
     // ========================================================================

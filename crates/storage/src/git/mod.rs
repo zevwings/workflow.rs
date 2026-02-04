@@ -32,10 +32,10 @@ pub mod services;
 mod repository;
 
 // 导出 testing 和 performance 模块供测试和基准测试使用
-#[cfg(any(test, feature = "test-helpers"))]
+#[cfg(any(test, feature = "testing"))]
 pub mod testing;
 
-#[cfg(any(test, feature = "test-helpers"))]
+#[cfg(any(test, feature = "testing"))]
 pub mod performance;
 
 // Re-export public types

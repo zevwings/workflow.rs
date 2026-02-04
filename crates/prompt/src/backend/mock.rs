@@ -114,6 +114,11 @@ impl MockBackend {
         Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
     }
 
+    /// 模拟按下 Shift+Enter 键（用于多行输入换行）
+    pub fn press_shift_enter() -> Event {
+        Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::SHIFT))
+    }
+
     /// 模拟按下 Escape 键
     pub fn press_escape() -> Event {
         Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))

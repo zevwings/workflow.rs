@@ -2,17 +2,17 @@
 //!
 //! 这些测试默认被忽略（标记为 #[ignore]），只在需要时运行：
 //! ```bash
-//! cargo test --test stress_tests -- --ignored --test-threads=1
+//! cargo test -p storage --test stress_tests --features testing -- --ignored --test-threads=1
 //! ```
 
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use std::sync::{Arc, Barrier};
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use std::thread;
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use std::time::{Duration, Instant};
 
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 use storage::git::{services::*, testing::*};
 
 // ============================================================
@@ -22,7 +22,7 @@ use storage::git::{services::*, testing::*};
 /// 测试多线程并发访问同一个 GitContext
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_concurrent_read_access() {
     let (_tmp, ctx) = setup_repo_with_file();
     let ctx = Arc::new(ctx);
@@ -77,7 +77,7 @@ fn test_concurrent_read_access() {
 /// 测试混合读写操作的并发性能
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_concurrent_mixed_operations() {
     let (_tmp, ctx) = setup_repo_with_changes(10, 10);
     let ctx = Arc::new(ctx);
@@ -135,7 +135,7 @@ fn test_concurrent_mixed_operations() {
 /// 测试处理大量文件的性能
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_large_file_count_performance() {
     let file_counts = [100, 500, 1000, 2000];
 
@@ -173,7 +173,7 @@ fn test_large_file_count_performance() {
 /// 测试处理大文件 blame 的性能
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_large_file_blame_performance() {
     let line_counts = [1000, 5000, 10000];
 
@@ -207,7 +207,7 @@ fn test_large_file_blame_performance() {
 /// 测试处理大量分支的性能
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_large_branch_count_performance() {
     let branch_counts = [50, 100, 200];
 
@@ -241,7 +241,7 @@ fn test_large_branch_count_performance() {
 /// 测试 commit --all 在不同文件数量下的性能
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_commit_all_performance() {
     let file_counts = [10, 50, 100];
 
@@ -274,7 +274,7 @@ fn test_commit_all_performance() {
 /// 测试 GitContext 锁竞争情况
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_lock_contention() {
     let (_tmp, ctx) = setup_repo_with_file();
     let ctx = Arc::new(ctx);
@@ -336,7 +336,7 @@ fn test_lock_contention() {
 /// 测试大量操作的内存稳定性
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_memory_stability() {
     println!("开始内存稳定性测试...");
 
@@ -363,7 +363,7 @@ fn test_memory_stability() {
 /// 模拟真实工作流的端到端测试
 #[test]
 #[ignore]
-#[cfg(feature = "test-helpers")]
+#[cfg(feature = "testing")]
 fn test_realistic_workflow() {
     println!("模拟真实工作流...");
 

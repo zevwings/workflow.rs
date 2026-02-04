@@ -7,7 +7,7 @@ description = "存储实现层（Storage Adapters），实现各种仓储接口�
 
 [features]
 default = []
-test-helpers = ["dep:tempfile"]
+testing = ["dep:tempfile"]
 
 [dependencies]
 domain = { path = "../domain" }
@@ -52,8 +52,8 @@ criterion.workspace = true
 [[bench]]
 name = "git_services_bench"
 harness = false
-required-features = ["test-helpers"]
+required-features = ["testing"]
 
 [[example]]
 name = "performance_monitoring"
-required-features = ["test-helpers"]
+required-features = ["testing"]

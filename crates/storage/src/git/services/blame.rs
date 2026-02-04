@@ -201,38 +201,3 @@ impl BlameService for BlameServiceImpl {
         self.get_blame_internal(file_path, revision, Some(start_line), Some(end_line))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::git::testing::{setup_repo_with_config, TestRepoConfig};
-
-    #[test]
-    #[ignore]
-    fn test_get_file_blame() {
-        let (_tmp, ctx) =
-            setup_repo_with_config(TestRepoConfig::with_content("line 1\nline 2\nline 3\n"));
-        let service = BlameServiceImpl::new(ctx);
-
-        let blame = service.get_file_blame("test.txt", None).unwrap();
-
-        assert_eq!(blame.len(), 3);
-        assert_eq!(blame[0].line_number, 1);
-        assert_eq!(blame[0].line_content, "line 1");
-        assert_eq!(blame[0].author, "Test");
-    }
-
-    #[test]
-    #[ignore]
-    fn test_get_file_blame_range() {
-        let (_tmp, ctx) =
-            setup_repo_with_config(TestRepoConfig::with_content("line 1\nline 2\nline 3\n"));
-        let service = BlameServiceImpl::new(ctx);
-
-        let blame = service.get_file_blame_range("test.txt", 2, 3, None).unwrap();
-
-        assert_eq!(blame.len(), 2);
-        assert_eq!(blame[0].line_number, 2);
-        assert_eq!(blame[1].line_number, 3);
-    }
-}
