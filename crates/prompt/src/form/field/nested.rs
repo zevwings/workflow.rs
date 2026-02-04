@@ -38,3 +38,24 @@ impl NestedFormField {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::form::FormBuilder;
+
+    #[test]
+    fn test_nested_form_field_builder() {
+        let nested = FormBuilder::new();
+        let field = NestedFormField::new("address", "Enter address details", nested);
+        assert_eq!(field.key, "address");
+        assert_eq!(field.prompt, "Enter address details");
+        assert!(field.result_title.is_none());
+        assert!(field.condition.is_none());
+
+        let nested = FormBuilder::new();
+        let field =
+            NestedFormField::new("profile", "Enter profile", nested).result_title("User Profile");
+        assert_eq!(field.result_title, Some("User Profile".to_string()));
+    }
+}

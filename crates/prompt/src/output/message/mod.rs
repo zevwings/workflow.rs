@@ -9,6 +9,9 @@ mod message_ref;
 pub use message::Message;
 pub use message_ref::MessageRef;
 
+#[cfg(any(test, feature = "testing"))]
+pub use message::MockWriter;
+
 // ============================================================================
 // 宏定义
 // ============================================================================

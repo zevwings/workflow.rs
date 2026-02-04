@@ -11,6 +11,68 @@ pub struct Message {
     writer: Box<dyn Write + Send>,
 }
 
+/// Mock writer for testing
+#[cfg(any(test, feature = "testing"))]
+pub struct MockWriter {
+    buffer: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl MockWriter {
+    /// Create a new mock writer
+    pub fn new() -> Self {
+        Self {
+            buffer: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
+        }
+    }
+
+    /// Get the captured output as a string
+    pub fn output(&self) -> String {
+        let buffer = self.buffer.lock().unwrap();
+        String::from_utf8_lossy(&buffer).to_string()
+    }
+
+    /// Clear the buffer
+    pub fn clear(&self) {
+        let mut buffer = self.buffer.lock().unwrap();
+        buffer.clear();
+    }
+
+    /// Clone the inner buffer for sharing
+    pub fn clone_buffer(&self) -> std::sync::Arc<std::sync::Mutex<Vec<u8>>> {
+        std::sync::Arc::clone(&self.buffer)
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl Default for MockWriter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl Write for MockWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let mut buffer = self.buffer.lock().unwrap();
+        buffer.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl Clone for MockWriter {
+    fn clone(&self) -> Self {
+        Self {
+            buffer: std::sync::Arc::clone(&self.buffer),
+        }
+    }
+}
+
 impl Message {
     /// 获取全局 Message 单例的便捷引用
     ///
@@ -65,6 +127,26 @@ impl Message {
         Self {
             theme: get_theme(),
             writer: Box::new(std::io::stdout()) as Box<dyn Write + Send>,
+        }
+    }
+
+    /// 创建带自定义 writer 的消息输出器（用于测试）
+    #[cfg(any(test, feature = "testing"))]
+    pub fn with_writer<W: Write + Send + 'static>(writer: W) -> Self {
+        Self {
+            theme: get_theme(),
+            writer: Box::new(writer),
+        }
+    }
+
+    /// 创建不带颜色的消息输出器（用于测试验证输出内容）
+    #[cfg(any(test, feature = "testing"))]
+    pub fn with_writer_no_color<W: Write + Send + 'static>(writer: W) -> Self {
+        let mut theme = get_theme();
+        theme.enable_color = false;
+        Self {
+            theme,
+            writer: Box::new(writer),
         }
     }
 
@@ -176,5 +258,168 @@ impl Message {
 impl Default for Message {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_message_info() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.info("Test info message").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("ℹ"));
+        assert!(output.contains("Test info message"));
+    }
+
+    #[test]
+    fn test_message_success() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.success("Operation completed").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("✓"));
+        assert!(output.contains("Operation completed"));
+    }
+
+    #[test]
+    fn test_message_warning() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.warning("This is a warning").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("⚠"));
+        assert!(output.contains("This is a warning"));
+    }
+
+    #[test]
+    fn test_message_error() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.error("An error occurred").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("✗"));
+        assert!(output.contains("An error occurred"));
+    }
+
+    #[test]
+    fn test_message_debug() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.debug("Debug info").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("⚙"));
+        assert!(output.contains("Debug info"));
+    }
+
+    #[test]
+    fn test_message_print() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.print("Plain text").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("Plain text"));
+        // print 不应该有 emoji 前缀
+        assert!(!output.contains("ℹ"));
+        assert!(!output.contains("✓"));
+    }
+
+    #[test]
+    fn test_message_break_line() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.break_line().unwrap();
+
+        let output = mock.output();
+        assert_eq!(output, "\n");
+    }
+
+    #[test]
+    fn test_message_separator() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.separator('-', 10).unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("----------"));
+    }
+
+    #[test]
+    fn test_message_separator_with_text() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.separator_with_text('-', 20, "Title").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("Title"));
+        assert!(output.contains("-"));
+    }
+
+    #[test]
+    fn test_message_separator_with_long_text() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        // 文本比长度长时，应该只输出文本
+        msg.separator_with_text('-', 5, "Very long text").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("Very long text"));
+    }
+
+    #[test]
+    fn test_message_multiple_outputs() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.info("First").unwrap();
+        msg.success("Second").unwrap();
+        msg.error("Third").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("First"));
+        assert!(output.contains("Second"));
+        assert!(output.contains("Third"));
+    }
+
+    #[test]
+    fn test_mock_writer_clear() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.info("Test").unwrap();
+        assert!(!mock.output().is_empty());
+
+        mock.clear();
+        assert!(mock.output().is_empty());
+    }
+
+    #[test]
+    fn test_message_with_unicode() {
+        let mock = MockWriter::new();
+        let mut msg = Message::with_writer_no_color(mock.clone());
+
+        msg.info("你好世界").unwrap();
+
+        let output = mock.output();
+        assert!(output.contains("你好世界"));
     }
 }

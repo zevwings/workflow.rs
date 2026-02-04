@@ -212,11 +212,17 @@ mod tests {
 
         assert!(matches!(
             backend.read_event().unwrap(),
-            Event::Key(KeyEvent { code: KeyCode::Enter, .. })
+            Event::Key(KeyEvent {
+                code: KeyCode::Enter,
+                ..
+            })
         ));
         assert!(matches!(
             backend.read_event().unwrap(),
-            Event::Key(KeyEvent { code: KeyCode::Esc, .. })
+            Event::Key(KeyEvent {
+                code: KeyCode::Esc,
+                ..
+            })
         ));
         assert!(backend.read_event().is_err());
     }

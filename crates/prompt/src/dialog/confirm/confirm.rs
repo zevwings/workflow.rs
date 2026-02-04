@@ -10,6 +10,13 @@ use crate::style::theme::{get_theme, Theme};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
 /// 确认提示构建器
+///
+/// 用于构建 Yes/No 确认对话框。
+///
+/// # 默认行为
+///
+/// 当用户按下 Enter 键时，如果未通过 `.default()` 设置默认值，
+/// 则默认返回 `true`（即 Yes）。
 pub struct ConfirmBuilder {
     pub(crate) message: String,
     pub(crate) default: Option<bool>,
@@ -25,6 +32,10 @@ impl ConfirmBuilder {
         }
     }
 
+    /// 设置默认值
+    ///
+    /// 当用户直接按 Enter 键时返回此值。
+    /// 如果未设置，默认为 `true`。
     pub fn default(mut self, value: bool) -> Self {
         self.default = Some(value);
         self
@@ -111,7 +122,10 @@ fn prompt_with_backend<B: Backend>(builder: ConfirmBuilder, backend: &mut B) -> 
     let message_text = theme.title.apply(&builder.message, theme.enable_color);
     let hint_styled = theme.hint.apply(hint_text, theme.enable_color);
 
-    backend.writeln(&format!("{}{} {}", question_prefix, message_text, hint_styled))?;
+    backend.writeln(&format!(
+        "{}{} {}",
+        question_prefix, message_text, hint_styled
+    ))?;
     backend.flush()?;
 
     // 进入原始模式
@@ -139,33 +153,31 @@ fn prompt_loop<B: Backend>(
         match backend.read_event() {
             Ok(Event::Key(KeyEvent {
                 code, modifiers, ..
-            })) => {
-                match code {
-                    KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
-                        if c == 'c' {
-                            print_cancelled_message(backend)?;
-                            return Err(PromptError::Cancelled);
-                        }
-                    }
-                    KeyCode::Char('y') | KeyCode::Char('Y') => {
-                        clear_and_display_result(backend, builder, true, theme)?;
-                        return Ok(true);
-                    }
-                    KeyCode::Char('n') | KeyCode::Char('N') => {
-                        clear_and_display_result(backend, builder, false, theme)?;
-                        return Ok(false);
-                    }
-                    KeyCode::Enter => {
-                        clear_and_display_result(backend, builder, default_value, theme)?;
-                        return Ok(default_value);
-                    }
-                    KeyCode::Esc => {
+            })) => match code {
+                KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
+                    if c == 'c' {
                         print_cancelled_message(backend)?;
                         return Err(PromptError::Cancelled);
                     }
-                    _ => {}
                 }
-            }
+                KeyCode::Char('y') | KeyCode::Char('Y') => {
+                    clear_and_display_result(backend, builder, true, theme)?;
+                    return Ok(true);
+                }
+                KeyCode::Char('n') | KeyCode::Char('N') => {
+                    clear_and_display_result(backend, builder, false, theme)?;
+                    return Ok(false);
+                }
+                KeyCode::Enter => {
+                    clear_and_display_result(backend, builder, default_value, theme)?;
+                    return Ok(default_value);
+                }
+                KeyCode::Esc => {
+                    print_cancelled_message(backend)?;
+                    return Err(PromptError::Cancelled);
+                }
+                _ => {}
+            },
             Ok(_) => continue,
             Err(e) => return Err(PromptError::Io(e)),
         }
@@ -267,9 +279,10 @@ mod tests {
 
     #[test]
     fn test_confirm_press_y() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('y'),
+            KeyModifiers::NONE,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
         let result = ConfirmBuilder::new("Continue?")
@@ -282,9 +295,10 @@ mod tests {
 
     #[test]
     fn test_confirm_press_capital_y() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('Y'), KeyModifiers::NONE)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('Y'),
+            KeyModifiers::NONE,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
         let result = ConfirmBuilder::new("Continue?")
@@ -297,14 +311,14 @@ mod tests {
 
     #[test]
     fn test_confirm_press_n() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('n'),
+            KeyModifiers::NONE,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
-        let result = ConfirmBuilder::new("Continue?")
-            .default(true)
-            .prompt_with_backend(&mut backend);
+        let result =
+            ConfirmBuilder::new("Continue?").default(true).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert!(!result.unwrap());
@@ -312,14 +326,14 @@ mod tests {
 
     #[test]
     fn test_confirm_press_capital_n() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('N'), KeyModifiers::NONE)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('N'),
+            KeyModifiers::NONE,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
-        let result = ConfirmBuilder::new("Continue?")
-            .default(true)
-            .prompt_with_backend(&mut backend);
+        let result =
+            ConfirmBuilder::new("Continue?").default(true).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert!(!result.unwrap());
@@ -330,9 +344,8 @@ mod tests {
         let events = vec![MockBackend::press_enter()];
         let mut backend = MockBackend::with_events(events);
 
-        let result = ConfirmBuilder::new("Continue?")
-            .default(true)
-            .prompt_with_backend(&mut backend);
+        let result =
+            ConfirmBuilder::new("Continue?").default(true).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert!(result.unwrap());
@@ -357,8 +370,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         // 没有设置 default，默认值为 true
-        let result = ConfirmBuilder::new("Continue?")
-            .prompt_with_backend(&mut backend);
+        let result = ConfirmBuilder::new("Continue?").prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert!(result.unwrap());
@@ -369,9 +381,8 @@ mod tests {
         let events = vec![MockBackend::press_escape()];
         let mut backend = MockBackend::with_events(events);
 
-        let result = ConfirmBuilder::new("Continue?")
-            .default(true)
-            .prompt_with_backend(&mut backend);
+        let result =
+            ConfirmBuilder::new("Continue?").default(true).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
@@ -379,14 +390,14 @@ mod tests {
 
     #[test]
     fn test_confirm_press_ctrl_c() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('c'),
+            KeyModifiers::CONTROL,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
-        let result = ConfirmBuilder::new("Continue?")
-            .default(true)
-            .prompt_with_backend(&mut backend);
+        let result =
+            ConfirmBuilder::new("Continue?").default(true).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
@@ -414,9 +425,10 @@ mod tests {
 
     #[test]
     fn test_confirm_with_result_title() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('y'),
+            KeyModifiers::NONE,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
         let result = ConfirmBuilder::new("Delete all files?")
@@ -434,9 +446,10 @@ mod tests {
 
     #[test]
     fn test_confirm_multiline_message() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('n'),
+            KeyModifiers::NONE,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
         let result = ConfirmBuilder::new("This is a\nmultiline\nmessage")
@@ -449,17 +462,17 @@ mod tests {
 
     #[test]
     fn test_confirm_terminal_modes() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('y'),
+            KeyModifiers::NONE,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
         // 验证初始状态
         assert!(!backend.is_raw_mode());
         assert!(backend.is_cursor_visible());
 
-        let result = ConfirmBuilder::new("Test?")
-            .prompt_with_backend(&mut backend);
+        let result = ConfirmBuilder::new("Test?").prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
 

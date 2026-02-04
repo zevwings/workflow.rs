@@ -73,3 +73,55 @@ impl Default for FormBuilder {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_form_builder_new() {
+        let builder = FormBuilder::new();
+        assert!(builder.fields.is_empty());
+        assert!(builder.groups.is_empty());
+        assert!(builder.title.is_none());
+    }
+
+    #[test]
+    fn test_form_builder_default() {
+        let builder = FormBuilder::default();
+        assert!(builder.fields.is_empty());
+        assert!(builder.groups.is_empty());
+        assert!(builder.title.is_none());
+    }
+
+    #[test]
+    fn test_form_builder_with_title() {
+        let builder = FormBuilder::new().with_title("My Form");
+        assert_eq!(builder.title, Some("My Form".to_string()));
+        assert_eq!(builder.get_title(), Some("My Form"));
+    }
+
+    #[test]
+    fn test_form_builder_get_title_none() {
+        let builder = FormBuilder::new();
+        assert_eq!(builder.get_title(), None);
+    }
+
+    #[test]
+    fn test_form_builder_has_groups_false() {
+        let builder = FormBuilder::new();
+        assert!(!builder.has_groups());
+    }
+
+    #[test]
+    fn test_form_builder_get_fields_empty() {
+        let builder = FormBuilder::new();
+        assert!(builder.get_fields().is_empty());
+    }
+
+    #[test]
+    fn test_form_builder_get_groups_empty() {
+        let builder = FormBuilder::new();
+        assert!(builder.get_groups().is_empty());
+    }
+}

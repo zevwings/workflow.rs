@@ -85,3 +85,129 @@ pub(super) fn align_cell(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_align_cell_left() {
+        let result = align_cell("test".to_string(), 10, 4, Alignment::Left);
+        assert_eq!(result, "test      ");
+    }
+
+    #[test]
+    fn test_align_cell_right() {
+        let result = align_cell("test".to_string(), 10, 4, Alignment::Right);
+        assert_eq!(result, "      test");
+    }
+
+    #[test]
+    fn test_align_cell_center() {
+        let result = align_cell("test".to_string(), 10, 4, Alignment::Center);
+        assert_eq!(result, "   test   ");
+    }
+
+    #[test]
+    fn test_align_cell_center_odd_padding() {
+        let result = align_cell("ab".to_string(), 7, 2, Alignment::Center);
+        // 5 spaces to distribute: 2 left, 3 right
+        assert_eq!(result, "  ab   ");
+    }
+
+    #[test]
+    fn test_align_cell_exact_width() {
+        let result = align_cell("test".to_string(), 4, 4, Alignment::Left);
+        assert_eq!(result, "test");
+    }
+
+    #[test]
+    fn test_align_cell_exceeds_width() {
+        let result = align_cell("toolong".to_string(), 4, 7, Alignment::Left);
+        assert_eq!(result, "toolong"); // 不截断，原样返回
+    }
+
+    #[test]
+    fn test_align_cell_empty_string() {
+        let result = align_cell("".to_string(), 5, 0, Alignment::Center);
+        assert_eq!(result, "     ");
+    }
+
+    #[test]
+    fn test_align_cell_single_char() {
+        let result = align_cell("X".to_string(), 5, 1, Alignment::Center);
+        assert_eq!(result, "  X  ");
+    }
+
+    #[test]
+    fn test_render_row_basic() {
+        let builder = TableBuilder::new(vec!["Name", "Age"]).add_row(vec!["Alice", "30"]);
+        let theme = crate::style::theme::get_theme();
+        let col_widths = vec![5, 3];
+        let row = render_row(
+            &builder,
+            &["Alice".to_string(), "30".to_string()],
+            &col_widths,
+            false,
+            &theme,
+        );
+        assert!(row.contains("Alice"));
+        assert!(row.contains("30"));
+    }
+
+    #[test]
+    fn test_render_row_header() {
+        let builder = TableBuilder::new(vec!["Name", "Age"]);
+        let theme = crate::style::theme::get_theme();
+        let col_widths = vec![4, 3];
+        let row = render_row(
+            &builder,
+            &["Name".to_string(), "Age".to_string()],
+            &col_widths,
+            true,
+            &theme,
+        );
+        assert!(row.contains("Name"));
+        assert!(row.contains("Age"));
+    }
+
+    #[test]
+    fn test_render_row_missing_cells() {
+        let builder = TableBuilder::new(vec!["A", "B", "C"]);
+        let theme = crate::style::theme::get_theme();
+        let col_widths = vec![1, 1, 1];
+        // 只提供 2 个单元格，但有 3 列
+        let row = render_row(
+            &builder,
+            &["1".to_string(), "2".to_string()],
+            &col_widths,
+            false,
+            &theme,
+        );
+        // 应该正常渲染，缺失的列用空字符串填充
+        assert!(row.contains("1"));
+        assert!(row.contains("2"));
+    }
+
+    #[test]
+    fn test_render_row_with_column_alignments() {
+        let builder = TableBuilder::new(vec!["A", "B", "C"]).with_column_alignments(vec![
+            Alignment::Left,
+            Alignment::Center,
+            Alignment::Right,
+        ]);
+        let theme = crate::style::theme::get_theme();
+        let col_widths = vec![5, 5, 5];
+        let row = render_row(
+            &builder,
+            &["1".to_string(), "2".to_string(), "3".to_string()],
+            &col_widths,
+            false,
+            &theme,
+        );
+        // 验证行被正确渲染
+        assert!(row.contains("1"));
+        assert!(row.contains("2"));
+        assert!(row.contains("3"));
+    }
+}

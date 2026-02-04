@@ -29,7 +29,7 @@ fn main() {
             let _ = msg.warning("演示被用户取消");
             return;
         }
-        let _ = msg.error(&format!("错误: {}", e));
+        let _ = msg.error(format!("错误: {}", e));
         return;
     }
 
@@ -39,7 +39,7 @@ fn main() {
             let _ = msg.warning("演示被用户取消");
             return;
         }
-        let _ = msg.error(&format!("错误: {}", e));
+        let _ = msg.error(format!("错误: {}", e));
         return;
     }
 
@@ -49,7 +49,7 @@ fn main() {
             let _ = msg.warning("演示被用户取消");
             return;
         }
-        let _ = msg.error(&format!("错误: {}", e));
+        let _ = msg.error(format!("错误: {}", e));
         return;
     }
 
@@ -59,7 +59,7 @@ fn main() {
             let _ = msg.warning("演示被用户取消");
             return;
         }
-        let _ = msg.error(&format!("错误: {}", e));
+        let _ = msg.error(format!("错误: {}", e));
         return;
     }
 
@@ -91,10 +91,7 @@ fn demo_confirm(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Merge")
         .prompt()?;
 
-    let _ = msg.info(&format!(
-        "合并选择: {}",
-        if confirmed { "是" } else { "否" }
-    ));
+    let _ = msg.info(format!("合并选择: {}", if confirmed { "是" } else { "否" }));
 
     Ok(())
 }
@@ -111,7 +108,7 @@ fn demo_input(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Name")
         .prompt()?;
 
-    let _ = msg.info(&format!("您好, {}!", name));
+    let _ = msg.info(format!("您好, {}!", name));
 
     // 带验证的输入（使用 regex 验证邮箱）
     let email_validator = validators::regex(
@@ -126,7 +123,7 @@ fn demo_input(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Email")
         .prompt()?;
 
-    let _ = msg.info(&format!("邮箱: {}", email));
+    let _ = msg.info(format!("邮箱: {}", email));
 
     // 带长度验证的输入
     let username = input!("请输入用户名（至少 3 个字符）")
@@ -134,7 +131,7 @@ fn demo_input(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Username")
         .prompt()?;
 
-    let _ = msg.info(&format!("用户名: {}", username));
+    let _ = msg.info(format!("用户名: {}", username));
 
     Ok(())
 }
@@ -151,7 +148,7 @@ fn demo_select(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Color")
         .prompt()?;
 
-    let _ = msg.info(&format!("您选择了: {}", color));
+    let _ = msg.info(format!("您选择了: {}", color));
 
     // 带分页的选择（当选项多时）
     let languages = vec![
@@ -173,7 +170,7 @@ fn demo_select(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Language")
         .prompt()?;
 
-    let _ = msg.info(&format!("您选择了: {}", lang));
+    let _ = msg.info(format!("您选择了: {}", lang));
 
     Ok(())
 }
@@ -201,9 +198,9 @@ fn demo_multiselect(msg: &prompt::MessageRef) -> prompt::Result<()> {
     if selected.is_empty() {
         let _ = msg.warning("未选择任何功能");
     } else {
-        let _ = msg.info(&format!("已选择 {} 个功能:", selected.len()));
+        let _ = msg.info(format!("已选择 {} 个功能:", selected.len()));
         for feature in &selected {
-            let _ = msg.print(&format!("  - {}", feature));
+            let _ = msg.print(format!("  - {}", feature));
         }
     }
 
@@ -218,7 +215,7 @@ fn demo_multiselect(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .result_title("Frameworks")
         .prompt()?;
 
-    let _ = msg.info(&format!("已选择: {:?}", selected_frameworks));
+    let _ = msg.info(format!("已选择: {:?}", selected_frameworks));
 
     Ok(())
 }

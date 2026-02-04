@@ -114,8 +114,7 @@ where
         // 进入原始模式
         backend.enable_raw_mode()?;
 
-        let result =
-            self.prompt_loop(backend, &filter, &mut selected, &mut search_query);
+        let result = self.prompt_loop(backend, &filter, &mut selected, &mut search_query);
 
         // 恢复终端状态
         backend.show_cursor().ok();
@@ -201,24 +200,85 @@ where
             match backend.read_event() {
                 Ok(Event::Key(KeyEvent {
                     code, modifiers, ..
-                })) => {
-                    match code {
-                        KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
-                            if c == 'c' {
-                                print_cancelled_message(backend)?;
-                                return Err(PromptError::Cancelled);
-                            }
+                })) => match code {
+                    KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
+                        if c == 'c' {
+                            print_cancelled_message(backend)?;
+                            return Err(PromptError::Cancelled);
                         }
-                        KeyCode::Char(' ') => {
-                            if filtered_options.is_empty() {
-                                continue;
-                            }
-                            let original_index = filtered_indices[current_index];
-                            if selected.contains(&original_index) {
-                                selected.remove(&original_index);
+                    }
+                    KeyCode::Char(' ') => {
+                        if filtered_options.is_empty() {
+                            continue;
+                        }
+                        let original_index = filtered_indices[current_index];
+                        if selected.contains(&original_index) {
+                            selected.remove(&original_index);
+                        } else {
+                            selected.insert(original_index);
+                        }
+                        let hint_text = get_hint_text(search_query);
+                        let renderer = MultiSelectOptionRenderer {
+                            selected,
+                            original_to_filtered: &filtered_indices,
+                        };
+                        rendered_lines = OptionListRenderer::render_options_with_search(
+                            backend,
+                            &RenderOptionsParams {
+                                options: &filtered_options,
+                                current_index,
+                                rendered_lines,
+                                theme: &theme,
+                                renderer: &renderer,
+                                hint_text,
+                                search_query: if search_query.is_empty() {
+                                    None
+                                } else {
+                                    Some(search_query)
+                                },
+                                page_size: self.page_size,
+                            },
+                        )?;
+                    }
+                    KeyCode::Char(c) => {
+                        search_query.push(c);
+                        let (new_indices, new_filtered) = filter_options(search_query);
+                        filtered_indices = new_indices;
+                        filtered_options = new_filtered;
+                        current_index = 0;
+
+                        let hint_text = get_hint_text(search_query);
+                        let renderer = MultiSelectOptionRenderer {
+                            selected,
+                            original_to_filtered: &filtered_indices,
+                        };
+                        rendered_lines = OptionListRenderer::render_options_with_search(
+                            backend,
+                            &RenderOptionsParams {
+                                options: &filtered_options,
+                                current_index,
+                                rendered_lines,
+                                theme: &theme,
+                                renderer: &renderer,
+                                hint_text,
+                                search_query: Some(search_query),
+                                page_size: self.page_size,
+                            },
+                        )?;
+                    }
+                    KeyCode::Backspace => {
+                        if !search_query.is_empty() {
+                            search_query.pop();
+                            let (new_indices, new_filtered) = filter_options(search_query);
+                            filtered_indices = new_indices;
+                            filtered_options = new_filtered;
+
+                            if !filtered_options.is_empty() {
+                                current_index = current_index.min(filtered_options.len() - 1);
                             } else {
-                                selected.insert(original_index);
+                                current_index = 0;
                             }
+
                             let hint_text = get_hint_text(search_query);
                             let renderer = MultiSelectOptionRenderer {
                                 selected,
@@ -242,13 +302,10 @@ where
                                 },
                             )?;
                         }
-                        KeyCode::Char(c) => {
-                            search_query.push(c);
-                            let (new_indices, new_filtered) = filter_options(search_query);
-                            filtered_indices = new_indices;
-                            filtered_options = new_filtered;
-                            current_index = 0;
-
+                    }
+                    KeyCode::Up => {
+                        if !filtered_options.is_empty() && current_index > 0 {
+                            current_index -= 1;
                             let hint_text = get_hint_text(search_query);
                             let renderer = MultiSelectOptionRenderer {
                                 selected,
@@ -263,167 +320,103 @@ where
                                     theme: &theme,
                                     renderer: &renderer,
                                     hint_text,
-                                    search_query: Some(search_query),
+                                    search_query: if search_query.is_empty() {
+                                        None
+                                    } else {
+                                        Some(search_query)
+                                    },
                                     page_size: self.page_size,
                                 },
                             )?;
                         }
-                        KeyCode::Backspace => {
-                            if !search_query.is_empty() {
-                                search_query.pop();
-                                let (new_indices, new_filtered) = filter_options(search_query);
-                                filtered_indices = new_indices;
-                                filtered_options = new_filtered;
-
-                                if !filtered_options.is_empty() {
-                                    current_index = current_index.min(filtered_options.len() - 1);
-                                } else {
-                                    current_index = 0;
-                                }
-
-                                let hint_text = get_hint_text(search_query);
-                                let renderer = MultiSelectOptionRenderer {
-                                    selected,
-                                    original_to_filtered: &filtered_indices,
-                                };
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text,
-                                        search_query: if search_query.is_empty() {
-                                            None
-                                        } else {
-                                            Some(search_query)
-                                        },
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            }
-                        }
-                        KeyCode::Up => {
-                            if !filtered_options.is_empty() && current_index > 0 {
-                                current_index -= 1;
-                                let hint_text = get_hint_text(search_query);
-                                let renderer = MultiSelectOptionRenderer {
-                                    selected,
-                                    original_to_filtered: &filtered_indices,
-                                };
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text,
-                                        search_query: if search_query.is_empty() {
-                                            None
-                                        } else {
-                                            Some(search_query)
-                                        },
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            }
-                        }
-                        KeyCode::Down => {
-                            if !filtered_options.is_empty()
-                                && current_index < filtered_options.len() - 1
-                            {
-                                current_index += 1;
-                                let hint_text = get_hint_text(search_query);
-                                let renderer = MultiSelectOptionRenderer {
-                                    selected,
-                                    original_to_filtered: &filtered_indices,
-                                };
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text,
-                                        search_query: if search_query.is_empty() {
-                                            None
-                                        } else {
-                                            Some(search_query)
-                                        },
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            }
-                        }
-                        KeyCode::Enter => {
-                            let mut selected_indices: Vec<usize> =
-                                selected.iter().copied().collect();
-                            selected_indices.sort();
-                            let selected_items: Vec<T> = selected_indices
-                                .iter()
-                                .map(|&idx| self.options[idx].clone())
-                                .collect();
-
-                            let result_text = if selected_items.is_empty() {
-                                "(未选择)".to_string()
-                            } else {
-                                selected_items
-                                    .iter()
-                                    .map(|v| v.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            };
-
-                            let title_text = self.result_title.as_ref().unwrap_or(&self.message);
-                            clear_and_display_result_with_search(
-                                backend,
-                                rendered_lines,
-                                title_text,
-                                &result_text,
-                                &theme,
-                            )?;
-                            return Ok(selected_items);
-                        }
-                        KeyCode::Esc => {
-                            if !search_query.is_empty() {
-                                search_query.clear();
-                                let (new_indices, new_filtered) = filter_options(search_query);
-                                filtered_indices = new_indices;
-                                filtered_options = new_filtered;
-                                current_index = 0;
-
-                                let renderer = MultiSelectOptionRenderer {
-                                    selected,
-                                    original_to_filtered: &filtered_indices,
-                                };
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text:
-                                            "使用 ↑/↓ 导航，输入搜索，空格键切换选择，回车确认",
-                                        search_query: None,
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            } else {
-                                print_cancelled_message(backend)?;
-                                return Err(PromptError::Cancelled);
-                            }
-                        }
-                        _ => {}
                     }
-                }
+                    KeyCode::Down => {
+                        if !filtered_options.is_empty()
+                            && current_index < filtered_options.len() - 1
+                        {
+                            current_index += 1;
+                            let hint_text = get_hint_text(search_query);
+                            let renderer = MultiSelectOptionRenderer {
+                                selected,
+                                original_to_filtered: &filtered_indices,
+                            };
+                            rendered_lines = OptionListRenderer::render_options_with_search(
+                                backend,
+                                &RenderOptionsParams {
+                                    options: &filtered_options,
+                                    current_index,
+                                    rendered_lines,
+                                    theme: &theme,
+                                    renderer: &renderer,
+                                    hint_text,
+                                    search_query: if search_query.is_empty() {
+                                        None
+                                    } else {
+                                        Some(search_query)
+                                    },
+                                    page_size: self.page_size,
+                                },
+                            )?;
+                        }
+                    }
+                    KeyCode::Enter => {
+                        let mut selected_indices: Vec<usize> = selected.iter().copied().collect();
+                        selected_indices.sort();
+                        let selected_items: Vec<T> =
+                            selected_indices.iter().map(|&idx| self.options[idx].clone()).collect();
+
+                        let result_text = if selected_items.is_empty() {
+                            "(未选择)".to_string()
+                        } else {
+                            selected_items
+                                .iter()
+                                .map(|v| v.to_string())
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        };
+
+                        let title_text = self.result_title.as_ref().unwrap_or(&self.message);
+                        clear_and_display_result_with_search(
+                            backend,
+                            rendered_lines,
+                            title_text,
+                            &result_text,
+                            &theme,
+                        )?;
+                        return Ok(selected_items);
+                    }
+                    KeyCode::Esc => {
+                        if !search_query.is_empty() {
+                            search_query.clear();
+                            let (new_indices, new_filtered) = filter_options(search_query);
+                            filtered_indices = new_indices;
+                            filtered_options = new_filtered;
+                            current_index = 0;
+
+                            let renderer = MultiSelectOptionRenderer {
+                                selected,
+                                original_to_filtered: &filtered_indices,
+                            };
+                            rendered_lines = OptionListRenderer::render_options_with_search(
+                                backend,
+                                &RenderOptionsParams {
+                                    options: &filtered_options,
+                                    current_index,
+                                    rendered_lines,
+                                    theme: &theme,
+                                    renderer: &renderer,
+                                    hint_text: "使用 ↑/↓ 导航，输入搜索，空格键切换选择，回车确认",
+                                    search_query: None,
+                                    page_size: self.page_size,
+                                },
+                            )?;
+                        } else {
+                            print_cancelled_message(backend)?;
+                            return Err(PromptError::Cancelled);
+                        }
+                    }
+                    _ => {}
+                },
                 Ok(_) => continue,
                 Err(e) => return Err(PromptError::Io(e)),
             }
@@ -529,8 +522,7 @@ mod tests {
         let options: Vec<&str> = vec![];
         let mut backend = MockBackend::new();
 
-        let result = MultiSelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = MultiSelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::InvalidInput(_)));
@@ -543,8 +535,8 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose fruits", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            MultiSelectBuilder::new("Choose fruits", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -561,8 +553,8 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose fruits", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            MultiSelectBuilder::new("Choose fruits", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -582,8 +574,8 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose fruits", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            MultiSelectBuilder::new("Choose fruits", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -605,8 +597,8 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose fruits", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            MultiSelectBuilder::new("Choose fruits", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -635,9 +627,9 @@ mod tests {
     fn test_multiselect_default_with_toggle() {
         // 默认选中 Apple 和 Cherry，取消 Cherry，选中 Banana
         let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),      // 移到 Banana
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)), // 移到 Banana
             Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Banana
-            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),      // 移到 Cherry
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)), // 移到 Cherry
             Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 取消 Cherry
             MockBackend::press_enter(),
         ];
@@ -662,8 +654,8 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose fruits", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            MultiSelectBuilder::new("Choose fruits", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
@@ -671,14 +663,15 @@ mod tests {
 
     #[test]
     fn test_multiselect_cancel_with_ctrl_c() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('c'),
+            KeyModifiers::CONTROL,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose fruits", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            MultiSelectBuilder::new("Choose fruits", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
@@ -690,15 +683,15 @@ mod tests {
         let events = vec![
             Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
             Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Banana
-            MockBackend::press_escape(), // 清除搜索
+            MockBackend::press_escape(),                                       // 清除搜索
             Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Apple
             MockBackend::press_enter(),
         ];
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose fruits", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            MultiSelectBuilder::new("Choose fruits", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -720,8 +713,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = MultiSelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -740,8 +732,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = MultiSelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -759,8 +750,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = MultiSelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -780,8 +770,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = MultiSelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = MultiSelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         let selected = result.unwrap();
@@ -828,8 +817,7 @@ mod tests {
         assert!(!backend.is_raw_mode());
 
         let options = vec!["Apple", "Banana"];
-        let result = MultiSelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = MultiSelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert!(!backend.is_raw_mode());

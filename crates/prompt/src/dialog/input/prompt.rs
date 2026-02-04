@@ -319,16 +319,27 @@ fn prompt_loop<B: Backend>(
             }
             Ok(Event::Key(KeyEvent {
                 code, modifiers, ..
-            })) => {
-                match code {
-                    KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
-                        if c == 'c' {
-                            print_cancelled_message(backend)?;
-                            return Err(PromptError::Cancelled);
-                        }
+            })) => match code {
+                KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
+                    if c == 'c' {
+                        print_cancelled_message(backend)?;
+                        return Err(PromptError::Cancelled);
                     }
-                    KeyCode::Char(c) => {
-                        editor.insert(c);
+                }
+                KeyCode::Char(c) => {
+                    editor.insert(c);
+                    validate_and_update_prompt(
+                        backend,
+                        builder,
+                        &editor,
+                        theme,
+                        &mut validation_status,
+                        &mut cursor_line,
+                    )?;
+                    render_input(backend, builder, &editor, theme, &mut cursor_line)?;
+                }
+                KeyCode::Backspace => {
+                    if editor.backspace() {
                         validate_and_update_prompt(
                             backend,
                             builder,
@@ -339,88 +350,70 @@ fn prompt_loop<B: Backend>(
                         )?;
                         render_input(backend, builder, &editor, theme, &mut cursor_line)?;
                     }
-                    KeyCode::Backspace => {
-                        if editor.backspace() {
-                            validate_and_update_prompt(
-                                backend,
-                                builder,
-                                &editor,
-                                theme,
-                                &mut validation_status,
-                                &mut cursor_line,
-                            )?;
-                            render_input(backend, builder, &editor, theme, &mut cursor_line)?;
-                        }
-                    }
-                    KeyCode::Delete => {
-                        if editor.delete() {
-                            validate_and_update_prompt(
-                                backend,
-                                builder,
-                                &editor,
-                                theme,
-                                &mut validation_status,
-                                &mut cursor_line,
-                            )?;
-                            render_input(backend, builder, &editor, theme, &mut cursor_line)?;
-                        }
-                    }
-                    KeyCode::Left => {
-                        editor.move_left();
-                        render_input(backend, builder, &editor, theme, &mut cursor_line)?;
-                    }
-                    KeyCode::Right => {
-                        editor.move_right();
-                        render_input(backend, builder, &editor, theme, &mut cursor_line)?;
-                    }
-                    KeyCode::Enter => {
-                        let input = editor.as_str().to_string();
-                        let final_input = if input.trim().is_empty() {
-                            builder.default.as_ref().cloned().unwrap_or(input)
-                        } else {
-                            input
-                        };
-
-                        if let Some(ref validator) = builder.validator {
-                            match validator.validate(&final_input) {
-                                Ok(()) => {
-                                    clear_and_display_result(
-                                        backend,
-                                        builder,
-                                        &final_input,
-                                        &mut cursor_line,
-                                    )?;
-                                    return Ok(final_input);
-                                }
-                                Err(_) => {
-                                    validation_status = ValidationStatus::Invalid;
-                                    render_prompt_line(
-                                        backend,
-                                        builder,
-                                        theme,
-                                        validation_status,
-                                        &mut cursor_line,
-                                    )?;
-                                    render_input(backend, builder, &editor, theme, &mut cursor_line)?;
-                                }
-                            }
-                        } else {
-                            clear_and_display_result(
-                                backend,
-                                builder,
-                                &final_input,
-                                &mut cursor_line,
-                            )?;
-                            return Ok(final_input);
-                        }
-                    }
-                    KeyCode::Esc => {
-                        print_cancelled_message(backend)?;
-                        return Err(PromptError::Cancelled);
-                    }
-                    _ => {}
                 }
-            }
+                KeyCode::Delete => {
+                    if editor.delete() {
+                        validate_and_update_prompt(
+                            backend,
+                            builder,
+                            &editor,
+                            theme,
+                            &mut validation_status,
+                            &mut cursor_line,
+                        )?;
+                        render_input(backend, builder, &editor, theme, &mut cursor_line)?;
+                    }
+                }
+                KeyCode::Left => {
+                    editor.move_left();
+                    render_input(backend, builder, &editor, theme, &mut cursor_line)?;
+                }
+                KeyCode::Right => {
+                    editor.move_right();
+                    render_input(backend, builder, &editor, theme, &mut cursor_line)?;
+                }
+                KeyCode::Enter => {
+                    let input = editor.as_str().to_string();
+                    let final_input = if input.trim().is_empty() {
+                        builder.default.as_ref().cloned().unwrap_or(input)
+                    } else {
+                        input
+                    };
+
+                    if let Some(ref validator) = builder.validator {
+                        match validator.validate(&final_input) {
+                            Ok(()) => {
+                                clear_and_display_result(
+                                    backend,
+                                    builder,
+                                    &final_input,
+                                    &mut cursor_line,
+                                )?;
+                                return Ok(final_input);
+                            }
+                            Err(_) => {
+                                validation_status = ValidationStatus::Invalid;
+                                render_prompt_line(
+                                    backend,
+                                    builder,
+                                    theme,
+                                    validation_status,
+                                    &mut cursor_line,
+                                )?;
+                                render_input(backend, builder, &editor, theme, &mut cursor_line)?;
+                            }
+                        }
+                    } else {
+                        clear_and_display_result(backend, builder, &final_input, &mut cursor_line)?;
+                        return Ok(final_input);
+                    }
+                }
+                KeyCode::Esc => {
+                    print_cancelled_message(backend)?;
+                    return Err(PromptError::Cancelled);
+                }
+                _ => {}
+            },
             Ok(_) => continue,
             Err(e) => return Err(PromptError::Io(e)),
         }
@@ -640,7 +633,7 @@ mod tests {
     fn test_input_with_validator_invalid_then_valid() {
         // 先输入无效的，然后按 backspace 删除再输入有效的
         let events = [
-            MockBackend::type_string("ab"), // 太短
+            MockBackend::type_string("ab"),   // 太短
             vec![MockBackend::press_enter()], // 验证失败，不会返回
             MockBackend::type_string("cde"),  // 继续输入使其有效
             vec![MockBackend::press_enter()],
@@ -665,9 +658,8 @@ mod tests {
         .concat();
         let mut backend = MockBackend::with_events(events);
 
-        let result = InputBuilder::new("Enter password")
-            .password()
-            .prompt_with_backend(&mut backend);
+        let result =
+            InputBuilder::new("Enter password").password().prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "secret");
@@ -755,7 +747,10 @@ mod tests {
     fn test_input_backspace_at_start() {
         // 在开头按 backspace 应该什么都不做
         let events = [
-            vec![Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE))],
+            vec![Event::Key(KeyEvent::new(
+                KeyCode::Backspace,
+                KeyModifiers::NONE,
+            ))],
             MockBackend::type_string("test"),
             vec![MockBackend::press_enter()],
         ]
@@ -773,7 +768,10 @@ mod tests {
         // 在末尾按 delete 应该什么都不做
         let events = [
             MockBackend::type_string("test"),
-            vec![Event::Key(KeyEvent::new(KeyCode::Delete, KeyModifiers::NONE))],
+            vec![Event::Key(KeyEvent::new(
+                KeyCode::Delete,
+                KeyModifiers::NONE,
+            ))],
             vec![MockBackend::press_enter()],
         ]
         .concat();

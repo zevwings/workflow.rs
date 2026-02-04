@@ -259,3 +259,106 @@ impl Drop for Spinner {
         self.stop();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_frames() -> Vec<String> {
+        vec!["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+            .into_iter()
+            .map(String::from)
+            .collect()
+    }
+
+    #[test]
+    fn test_spinner_new_internal() {
+        let spinner = Spinner::new_internal(
+            "Loading...".to_string(),
+            default_frames(),
+            Duration::from_millis(80),
+        );
+
+        assert_eq!(*spinner.message.lock().unwrap(), "Loading...");
+        assert_eq!(spinner.frames.len(), 10);
+        assert_eq!(spinner.interval, Duration::from_millis(80));
+        assert!(!*spinner.running.lock().unwrap());
+
+        // 自定义帧
+        let frames = vec!["-".to_string(), "|".to_string()];
+        let spinner = Spinner::new_internal(
+            "Custom".to_string(),
+            frames.clone(),
+            Duration::from_millis(100),
+        );
+        assert_eq!(spinner.frames, frames);
+
+        // Unicode 帧
+        let frames: Vec<String> = vec!["🌑", "🌕"].into_iter().map(String::from).collect();
+        let spinner = Spinner::new_internal("Moon".to_string(), frames, Duration::from_millis(100));
+        assert_eq!(spinner.frames[0], "🌑");
+    }
+
+    #[test]
+    fn test_spinner_update_message() {
+        let spinner = Spinner::new_internal(
+            "Initial".to_string(),
+            default_frames(),
+            Duration::from_millis(80),
+        );
+
+        spinner.update_message("Updated");
+        assert_eq!(*spinner.message.lock().unwrap(), "Updated");
+
+        spinner.update_message("处理中 🔄");
+        assert_eq!(*spinner.message.lock().unwrap(), "处理中 🔄");
+
+        spinner.update_message("");
+        assert_eq!(*spinner.message.lock().unwrap(), "");
+    }
+
+    #[test]
+    fn test_spinner_concurrent_message_update() {
+        let spinner = Spinner::new_internal(
+            "Initial".to_string(),
+            default_frames(),
+            Duration::from_millis(80),
+        );
+
+        let message = Arc::clone(&spinner.message);
+
+        let handles: Vec<_> = (0..5)
+            .map(|i| {
+                let message = Arc::clone(&message);
+                thread::spawn(move || {
+                    for j in 0..10 {
+                        if let Ok(mut m) = message.lock() {
+                            *m = format!("Thread {} iteration {}", i, j);
+                        }
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        let final_message = spinner.message.lock().unwrap();
+        assert!(final_message.starts_with("Thread "));
+    }
+
+    #[test]
+    fn test_spinner_stop_safe() {
+        let spinner = Spinner::new_internal(
+            "Test".to_string(),
+            default_frames(),
+            Duration::from_millis(80),
+        );
+
+        // 未运行时停止和多次停止都应该安全
+        spinner.stop();
+        spinner.stop();
+        assert!(!*spinner.running.lock().unwrap());
+    }
+}

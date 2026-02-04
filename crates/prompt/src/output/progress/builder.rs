@@ -87,4 +87,126 @@ impl ProgressBarBuilder {
         progress_bar.start_internal();
         progress_bar
     }
+
+    /// 创建进度条但不启动（用于测试）
+    #[cfg(any(test, feature = "testing"))]
+    pub fn build_without_start(self) -> ProgressBar {
+        ProgressBar::new_internal(
+            self.message,
+            self.total,
+            self.mode,
+            self.interval.unwrap_or(Duration::from_millis(100)),
+            self.bar_width.unwrap_or(30),
+            self.progress_chars.unwrap_or_else(|| "█░".to_string()),
+        )
+    }
+
+    /// 获取配置的消息（用于测试）
+    #[cfg(any(test, feature = "testing"))]
+    pub fn get_message(&self) -> &str {
+        &self.message
+    }
+
+    /// 获取配置的总数（用于测试）
+    #[cfg(any(test, feature = "testing"))]
+    pub fn get_total(&self) -> Option<u64> {
+        self.total
+    }
+
+    /// 获取配置的模式（用于测试）
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) fn get_mode(&self) -> ProgressMode {
+        self.mode
+    }
+
+    /// 获取配置的进度条宽度（用于测试）
+    #[cfg(any(test, feature = "testing"))]
+    pub fn get_bar_width(&self) -> Option<usize> {
+        self.bar_width
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_progress_builder_new() {
+        let builder = ProgressBarBuilder::new("Loading...");
+        assert_eq!(builder.get_message(), "Loading...");
+        assert!(builder.get_total().is_none());
+        assert!(matches!(builder.get_mode(), ProgressMode::Normal));
+    }
+
+    #[test]
+    fn test_progress_builder_with_total() {
+        let builder = ProgressBarBuilder::new("Downloading").with_total(1000);
+        assert_eq!(builder.get_total(), Some(1000));
+    }
+
+    #[test]
+    fn test_progress_builder_with_interval() {
+        let builder =
+            ProgressBarBuilder::new("Processing").with_interval(Duration::from_millis(50));
+        assert_eq!(builder.interval, Some(Duration::from_millis(50)));
+    }
+
+    #[test]
+    fn test_progress_builder_with_bar_width() {
+        let builder = ProgressBarBuilder::new("Working").with_bar_width(50);
+        assert_eq!(builder.get_bar_width(), Some(50));
+    }
+
+    #[test]
+    fn test_progress_builder_with_progress_chars() {
+        let builder = ProgressBarBuilder::new("Loading").with_progress_chars("#>-");
+        assert_eq!(builder.progress_chars, Some("#>-".to_string()));
+    }
+
+    #[test]
+    fn test_progress_builder_with_download_mode() {
+        let builder = ProgressBarBuilder::new("Downloading").with_download_mode();
+        assert!(matches!(builder.get_mode(), ProgressMode::Download));
+    }
+
+    #[test]
+    fn test_progress_builder_chain() {
+        let builder = ProgressBarBuilder::new("Downloading files")
+            .with_total(1024 * 1024)
+            .with_interval(Duration::from_millis(100))
+            .with_bar_width(40)
+            .with_progress_chars("█▓▒░")
+            .with_download_mode();
+
+        assert_eq!(builder.get_message(), "Downloading files");
+        assert_eq!(builder.get_total(), Some(1024 * 1024));
+        assert!(matches!(builder.get_mode(), ProgressMode::Download));
+        assert_eq!(builder.get_bar_width(), Some(40));
+    }
+
+    #[test]
+    fn test_progress_builder_build_without_start() {
+        let pb = ProgressBarBuilder::new("Test").with_total(100).build_without_start();
+
+        // 进度条应该被创建但没有运行
+        drop(pb);
+    }
+
+    #[test]
+    fn test_progress_builder_unicode_message() {
+        let builder = ProgressBarBuilder::new("正在下载...");
+        assert_eq!(builder.get_message(), "正在下载...");
+    }
+
+    #[test]
+    fn test_progress_builder_empty_message() {
+        let builder = ProgressBarBuilder::new("");
+        assert_eq!(builder.get_message(), "");
+    }
+
+    #[test]
+    fn test_progress_builder_large_total() {
+        let builder = ProgressBarBuilder::new("Large file").with_total(u64::MAX);
+        assert_eq!(builder.get_total(), Some(u64::MAX));
+    }
 }

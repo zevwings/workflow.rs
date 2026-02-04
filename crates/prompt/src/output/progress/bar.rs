@@ -279,3 +279,119 @@ impl Drop for ProgressBar {
         self.stop();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_bar() -> ProgressBar {
+        ProgressBar::new_internal(
+            "Test".to_string(),
+            Some(100),
+            ProgressMode::Normal,
+            Duration::from_millis(100),
+            40,
+            "█░".to_string(),
+        )
+    }
+
+    #[test]
+    fn test_progress_bar_new_internal() {
+        let bar = ProgressBar::new_internal(
+            "Test message".to_string(),
+            Some(100),
+            ProgressMode::Normal,
+            Duration::from_millis(100),
+            40,
+            "█▓▒░".to_string(),
+        );
+
+        assert_eq!(*bar.message.lock().unwrap(), "Test message");
+        assert_eq!(*bar.total.lock().unwrap(), Some(100));
+        assert_eq!(*bar.current.lock().unwrap(), 0);
+        assert!(matches!(bar.mode, ProgressMode::Normal));
+        assert!(!*bar.running.lock().unwrap());
+
+        // 下载模式
+        let bar = ProgressBar::new_internal(
+            "Downloading...".to_string(),
+            Some(1024 * 1024),
+            ProgressMode::Download,
+            Duration::from_millis(50),
+            30,
+            "=>-".to_string(),
+        );
+        assert!(matches!(bar.mode, ProgressMode::Download));
+
+        // 未知总数
+        let bar = ProgressBar::new_internal(
+            "Processing...".to_string(),
+            None,
+            ProgressMode::Normal,
+            Duration::from_millis(100),
+            40,
+            "█░".to_string(),
+        );
+        assert_eq!(*bar.total.lock().unwrap(), None);
+    }
+
+    #[test]
+    fn test_progress_bar_updates() {
+        let bar = create_test_bar();
+
+        // inc
+        bar.inc(10);
+        assert_eq!(*bar.current.lock().unwrap(), 10);
+        bar.inc(5);
+        assert_eq!(*bar.current.lock().unwrap(), 15);
+
+        // set_position
+        bar.set_position(50);
+        assert_eq!(*bar.current.lock().unwrap(), 50);
+
+        // set_length
+        bar.set_length(200);
+        assert_eq!(*bar.total.lock().unwrap(), Some(200));
+
+        // update_message
+        bar.update_message("Updated");
+        assert_eq!(*bar.message.lock().unwrap(), "Updated");
+        bar.update_message("下载中 📥");
+        assert_eq!(*bar.message.lock().unwrap(), "下载中 📥");
+    }
+
+    #[test]
+    fn test_progress_bar_concurrent_access() {
+        use std::thread;
+
+        let bar = ProgressBar::new_internal(
+            "Concurrent".to_string(),
+            Some(1000),
+            ProgressMode::Normal,
+            Duration::from_millis(100),
+            40,
+            "█░".to_string(),
+        );
+
+        let current = Arc::clone(&bar.current);
+
+        let handles: Vec<_> = (0..10)
+            .map(|_| {
+                let current = Arc::clone(&current);
+                thread::spawn(move || {
+                    for _ in 0..100 {
+                        if let Ok(mut c) = current.lock() {
+                            *c += 1;
+                        }
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        assert_eq!(*bar.current.lock().unwrap(), 1000);
+    }
+}

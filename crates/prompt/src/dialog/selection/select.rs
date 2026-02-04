@@ -177,20 +177,47 @@ where
             match backend.read_event() {
                 Ok(Event::Key(KeyEvent {
                     code, modifiers, ..
-                })) => {
-                    match code {
-                        KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
-                            if c == 'c' {
-                                print_cancelled_message(backend)?;
-                                return Err(PromptError::Cancelled);
-                            }
+                })) => match code {
+                    KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
+                        if c == 'c' {
+                            print_cancelled_message(backend)?;
+                            return Err(PromptError::Cancelled);
                         }
-                        KeyCode::Char(c) => {
-                            search_query.push(c);
+                    }
+                    KeyCode::Char(c) => {
+                        search_query.push(c);
+                        let (new_indices, new_filtered) = filter_options(search_query);
+                        filtered_indices = new_indices;
+                        filtered_options = new_filtered;
+                        *current_index = 0;
+
+                        let hint_text = get_hint_text(search_query);
+                        rendered_lines = OptionListRenderer::render_options_with_search(
+                            backend,
+                            &RenderOptionsParams {
+                                options: &filtered_options,
+                                current_index: *current_index,
+                                rendered_lines,
+                                theme: &theme,
+                                renderer: &renderer,
+                                hint_text,
+                                search_query: Some(search_query),
+                                page_size: self.page_size,
+                            },
+                        )?;
+                    }
+                    KeyCode::Backspace => {
+                        if !search_query.is_empty() {
+                            search_query.pop();
                             let (new_indices, new_filtered) = filter_options(search_query);
                             filtered_indices = new_indices;
                             filtered_options = new_filtered;
-                            *current_index = 0;
+
+                            if !filtered_options.is_empty() {
+                                *current_index = (*current_index).min(filtered_options.len() - 1);
+                            } else {
+                                *current_index = 0;
+                            }
 
                             let hint_text = get_hint_text(search_query);
                             rendered_lines = OptionListRenderer::render_options_with_search(
@@ -202,139 +229,109 @@ where
                                     theme: &theme,
                                     renderer: &renderer,
                                     hint_text,
-                                    search_query: Some(search_query),
+                                    search_query: if search_query.is_empty() {
+                                        None
+                                    } else {
+                                        Some(search_query)
+                                    },
                                     page_size: self.page_size,
                                 },
                             )?;
                         }
-                        KeyCode::Backspace => {
-                            if !search_query.is_empty() {
-                                search_query.pop();
-                                let (new_indices, new_filtered) = filter_options(search_query);
-                                filtered_indices = new_indices;
-                                filtered_options = new_filtered;
-
-                                if !filtered_options.is_empty() {
-                                    *current_index =
-                                        (*current_index).min(filtered_options.len() - 1);
-                                } else {
-                                    *current_index = 0;
-                                }
-
-                                let hint_text = get_hint_text(search_query);
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index: *current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text,
-                                        search_query: if search_query.is_empty() {
-                                            None
-                                        } else {
-                                            Some(search_query)
-                                        },
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            }
-                        }
-                        KeyCode::Up => {
-                            if !filtered_options.is_empty() && *current_index > 0 {
-                                *current_index -= 1;
-                                let hint_text = get_hint_text(search_query);
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index: *current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text,
-                                        search_query: if search_query.is_empty() {
-                                            None
-                                        } else {
-                                            Some(search_query)
-                                        },
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            }
-                        }
-                        KeyCode::Down => {
-                            if !filtered_options.is_empty()
-                                && *current_index < filtered_options.len() - 1
-                            {
-                                *current_index += 1;
-                                let hint_text = get_hint_text(search_query);
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index: *current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text,
-                                        search_query: if search_query.is_empty() {
-                                            None
-                                        } else {
-                                            Some(search_query)
-                                        },
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            }
-                        }
-                        KeyCode::Enter => {
-                            if filtered_options.is_empty() {
-                                continue;
-                            }
-                            let original_index = filtered_indices[*current_index];
-                            let selected = self.options[original_index].clone();
-                            let result_text = selected.to_string();
-                            let title_text = self.result_title.as_ref().unwrap_or(&self.message);
-                            clear_and_display_result_with_search(
-                                backend,
-                                rendered_lines,
-                                title_text,
-                                &result_text,
-                                &theme,
-                            )?;
-                            return Ok(selected);
-                        }
-                        KeyCode::Esc => {
-                            if !search_query.is_empty() {
-                                search_query.clear();
-                                let (new_indices, new_filtered) = filter_options(search_query);
-                                filtered_indices = new_indices;
-                                filtered_options = new_filtered;
-                                *current_index = 0;
-
-                                rendered_lines = OptionListRenderer::render_options_with_search(
-                                    backend,
-                                    &RenderOptionsParams {
-                                        options: &filtered_options,
-                                        current_index: *current_index,
-                                        rendered_lines,
-                                        theme: &theme,
-                                        renderer: &renderer,
-                                        hint_text: "使用 ↑/↓ 导航，输入搜索，回车确认",
-                                        search_query: None,
-                                        page_size: self.page_size,
-                                    },
-                                )?;
-                            } else {
-                                print_cancelled_message(backend)?;
-                                return Err(PromptError::Cancelled);
-                            }
-                        }
-                        _ => {}
                     }
-                }
+                    KeyCode::Up => {
+                        if !filtered_options.is_empty() && *current_index > 0 {
+                            *current_index -= 1;
+                            let hint_text = get_hint_text(search_query);
+                            rendered_lines = OptionListRenderer::render_options_with_search(
+                                backend,
+                                &RenderOptionsParams {
+                                    options: &filtered_options,
+                                    current_index: *current_index,
+                                    rendered_lines,
+                                    theme: &theme,
+                                    renderer: &renderer,
+                                    hint_text,
+                                    search_query: if search_query.is_empty() {
+                                        None
+                                    } else {
+                                        Some(search_query)
+                                    },
+                                    page_size: self.page_size,
+                                },
+                            )?;
+                        }
+                    }
+                    KeyCode::Down => {
+                        if !filtered_options.is_empty()
+                            && *current_index < filtered_options.len() - 1
+                        {
+                            *current_index += 1;
+                            let hint_text = get_hint_text(search_query);
+                            rendered_lines = OptionListRenderer::render_options_with_search(
+                                backend,
+                                &RenderOptionsParams {
+                                    options: &filtered_options,
+                                    current_index: *current_index,
+                                    rendered_lines,
+                                    theme: &theme,
+                                    renderer: &renderer,
+                                    hint_text,
+                                    search_query: if search_query.is_empty() {
+                                        None
+                                    } else {
+                                        Some(search_query)
+                                    },
+                                    page_size: self.page_size,
+                                },
+                            )?;
+                        }
+                    }
+                    KeyCode::Enter => {
+                        if filtered_options.is_empty() {
+                            continue;
+                        }
+                        let original_index = filtered_indices[*current_index];
+                        let selected = self.options[original_index].clone();
+                        let result_text = selected.to_string();
+                        let title_text = self.result_title.as_ref().unwrap_or(&self.message);
+                        clear_and_display_result_with_search(
+                            backend,
+                            rendered_lines,
+                            title_text,
+                            &result_text,
+                            &theme,
+                        )?;
+                        return Ok(selected);
+                    }
+                    KeyCode::Esc => {
+                        if !search_query.is_empty() {
+                            search_query.clear();
+                            let (new_indices, new_filtered) = filter_options(search_query);
+                            filtered_indices = new_indices;
+                            filtered_options = new_filtered;
+                            *current_index = 0;
+
+                            rendered_lines = OptionListRenderer::render_options_with_search(
+                                backend,
+                                &RenderOptionsParams {
+                                    options: &filtered_options,
+                                    current_index: *current_index,
+                                    rendered_lines,
+                                    theme: &theme,
+                                    renderer: &renderer,
+                                    hint_text: "使用 ↑/↓ 导航，输入搜索，回车确认",
+                                    search_query: None,
+                                    page_size: self.page_size,
+                                },
+                            )?;
+                        } else {
+                            print_cancelled_message(backend)?;
+                            return Err(PromptError::Cancelled);
+                        }
+                    }
+                    _ => {}
+                },
                 Ok(_) => continue,
                 Err(e) => return Err(PromptError::Io(e)),
             }
@@ -431,8 +428,7 @@ mod tests {
         let options: Vec<&str> = vec![];
         let mut backend = MockBackend::new();
 
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::InvalidInput(_)));
@@ -444,8 +440,8 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose a fruit", options)
-            .prompt_with_backend(&mut backend);
+        let result =
+            SelectBuilder::new("Choose a fruit", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Apple");
@@ -490,8 +486,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Cherry");
@@ -508,8 +503,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Banana");
@@ -526,8 +520,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Apple");
@@ -546,8 +539,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Cherry");
@@ -559,8 +551,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
@@ -568,14 +559,14 @@ mod tests {
 
     #[test]
     fn test_select_cancel_with_ctrl_c() {
-        let events = vec![
-            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
-        ];
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('c'),
+            KeyModifiers::CONTROL,
+        ))];
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
@@ -591,8 +582,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Banana");
@@ -614,8 +604,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Cherry");
@@ -632,8 +621,7 @@ mod tests {
         let mut backend = MockBackend::with_events(events);
 
         let options = vec!["Apple", "Banana", "Cherry"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Apple");
@@ -675,8 +663,7 @@ mod tests {
         assert!(!backend.is_raw_mode());
 
         let options = vec!["Apple", "Banana"];
-        let result = SelectBuilder::new("Choose", options)
-            .prompt_with_backend(&mut backend);
+        let result = SelectBuilder::new("Choose", options).prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
         assert!(!backend.is_raw_mode());

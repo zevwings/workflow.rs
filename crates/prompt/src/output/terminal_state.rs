@@ -132,3 +132,46 @@ pub fn resume() {
 pub fn is_suspended() -> bool {
     get_state().suspended.load(Ordering::SeqCst)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_state_singleton() {
+        let state1 = get_state();
+        let state2 = get_state();
+        assert!(std::ptr::eq(state1, state2));
+    }
+
+    #[test]
+    fn test_renderer_registration_increments_count() {
+        let state = get_state();
+        let initial_count = state.active_count.load(Ordering::SeqCst);
+
+        register_renderer(|| {});
+        let after_register = state.active_count.load(Ordering::SeqCst);
+        assert_eq!(after_register, initial_count + 1);
+
+        unregister_renderer();
+        let after_unregister = state.active_count.load(Ordering::SeqCst);
+        assert_eq!(after_unregister, initial_count);
+    }
+
+    #[test]
+    fn test_suspend_and_resume_basic_flow() {
+        register_renderer(|| {});
+
+        let state = get_state();
+        if state.active.load(Ordering::SeqCst) {
+            let was_suspended = state.suspended.load(Ordering::SeqCst);
+            suspend();
+            if !was_suspended {
+                assert!(state.suspended.load(Ordering::SeqCst));
+            }
+            resume();
+        }
+
+        unregister_renderer();
+    }
+}
