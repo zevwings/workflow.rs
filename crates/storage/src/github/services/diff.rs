@@ -43,7 +43,7 @@ impl PullRequestDiffServiceImpl {
 
         let response = self.client.get(&url)?;
         let json_value: Value = response
-            .as_json()
+            .json()
             .map_err(|e| GitHubError::ApiError(format!("Failed to parse PR files JSON: {}", e)))?;
         let files: Vec<PullRequestFile> = serde_json::from_value(json_value)
             .map_err(|e| GitHubError::ApiError(format!("Failed to deserialize PR files: {}", e)))?;
@@ -153,7 +153,7 @@ impl PullRequestDiffService for PullRequestDiffServiceImpl {
         let status = response.status_code();
 
         if status == 406 {
-            let is_too_large = if let Ok(json) = response.as_json::<Value>() {
+            let is_too_large = if let Ok(json) = response.json::<Value>() {
                 json.get("errors")
                     .and_then(|v| v.as_array())
                     .map(|errors| {
@@ -185,8 +185,8 @@ impl PullRequestDiffService for PullRequestDiffServiceImpl {
         }
 
         let text = response
-            .as_text()
+            .text()
             .map_err(|e| GitHubError::ApiError(format!("Failed to parse response text: {}", e)))?;
-        Ok(text)
+        Ok(text.to_string())
     }
 }

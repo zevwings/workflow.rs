@@ -13,7 +13,7 @@ use std::sync::Arc;
 use serde::Serialize;
 
 use domain::{jira::JiraConfigContext, JiraError};
-use toolkit::{Authorization, HttpClient, HttpMethod, RequestConfig};
+use toolkit::{Authorization, HttpClient, HttpMethod};
 
 use crate::jira::client::types::JiraResponse;
 
@@ -107,25 +107,25 @@ impl JiraClientImpl {
         // 获取 HTTP 客户端
         let client = HttpClient::global().map_err(|e| JiraError::ApiError(e.to_string()))?;
 
-        // 构建请求配置
-        let mut request_config = RequestConfig::new().auth(auth);
-
-        // 添加请求体（如果有）
-        if let Some(body) = body {
-            let body_value = serde_json::to_value(body).map_err(|e| {
-                JiraError::ApiError(format!("Failed to serialize request body: {}", e))
-            })?;
-            request_config = request_config.body(&body_value);
-            toolkit::log_debug!("Jira request: {} {}", method, url);
-            toolkit::log_debug!("Jira request body: {}", body_value);
-        } else {
-            toolkit::log_debug!("Jira request: {} {}", method, url);
-        }
-
-        // 发送请求
+        // 构建请求并发送
         let response = match method {
-            HttpMethod::Get => client.get(&url, request_config),
-            HttpMethod::Post => client.post(&url, request_config),
+            HttpMethod::Get => {
+                toolkit::log_debug!("Jira request: {} {}", method, url);
+                client.get(&url).auth(auth).send()
+            }
+            HttpMethod::Post => {
+                if let Some(body) = body {
+                    let body_value = serde_json::to_value(body).map_err(|e| {
+                        JiraError::ApiError(format!("Failed to serialize request body: {}", e))
+                    })?;
+                    toolkit::log_debug!("Jira request: {} {}", method, url);
+                    toolkit::log_debug!("Jira request body: {}", body_value);
+                    client.post(&url).auth(auth).body(&body_value).send()
+                } else {
+                    toolkit::log_debug!("Jira request: {} {}", method, url);
+                    client.post(&url).auth(auth).send()
+                }
+            }
             _ => {
                 return Err(JiraError::ApiError(format!(
                     "Unsupported HTTP method: {}. Only GET and POST are supported.",
@@ -135,17 +135,18 @@ impl JiraClientImpl {
         }
         .map_err(|e| JiraError::ApiError(format!("{} {}: {}", method, url, e)))?;
 
-        // 检查错误（使用 ensure_success_with 统一处理）
-        let response = response
-            .ensure_success_with(|r| {
-                let error_message = r.extract_error_message();
-                format!("Jira API request failed: {} - {}", r.status, error_message)
-            })
-            .map_err(|e| JiraError::ApiError(e.to_string()))?;
+        // 检查响应状态
+        if !response.is_success() {
+            let error_message = response.extract_error_message();
+            return Err(JiraError::ApiError(format!(
+                "Jira API request failed: {} - {}",
+                response.status, error_message
+            )));
+        }
 
         // 解析 JSON 响应
         let data = response
-            .as_json::<serde_json::Value>()
+            .json::<serde_json::Value>()
             .map_err(|e| JiraError::ApiError(e.to_string()))?;
         Ok(JiraResponse::new(data))
     }

@@ -11,7 +11,7 @@ use reqwest::header::HeaderMap;
 use serde_json::Value;
 
 use domain::{GitHubContext, GitHubError};
-use toolkit::{HttpClient, HttpResponse, RequestConfig};
+use toolkit::{HttpClient, Response};
 
 use crate::github::client::response::{GitHubErrorResponse, GitHubResponse};
 
@@ -62,7 +62,7 @@ impl GitHubClientImpl {
     }
 
     /// 获取 GitHub API 请求的 headers
-    pub fn get_headers(&self) -> Result<HeaderMap, GitHubError> {
+    fn get_headers(&self) -> Result<HeaderMap, GitHubError> {
         let token = self.context.get_api_token()?;
 
         let mut headers = HeaderMap::new();
@@ -72,35 +72,61 @@ impl GitHubClientImpl {
                 GitHubError::ApiError(format!("Failed to parse Authorization header: {}", e))
             })?,
         );
+        // 静态字符串解析不会失败，使用 expect
         headers.insert(
             "Accept",
-            "application/vnd.github+json".parse().map_err(|e| {
-                GitHubError::ApiError(format!("Failed to parse Accept header: {}", e))
-            })?,
+            "application/vnd.github+json".parse().expect("static header value"),
         );
         headers.insert(
             "X-GitHub-Api-Version",
-            "2022-11-28".parse().map_err(|e| {
-                GitHubError::ApiError(format!(
-                    "Failed to parse X-GitHub-Api-Version header: {}",
-                    e
-                ))
-            })?,
+            "2022-11-28".parse().expect("static header value"),
         );
         headers.insert(
             "User-Agent",
-            "workflow-cli".parse().map_err(|e| {
-                GitHubError::ApiError(format!("Failed to parse User-Agent header: {}", e))
-            })?,
+            "workflow-cli".parse().expect("static header value"),
         );
 
         Ok(headers)
     }
 
-    /// 将 HttpResponse 错误转换为 GitHubError
-    fn convert_to_github_error(&self, response: HttpResponse) -> GitHubError {
+    /// 执行 HTTP 请求的公共逻辑
+    fn execute(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&Value>,
+    ) -> Result<GitHubResponse, GitHubError> {
+        let url = self.build_url(path);
+        let client = HttpClient::global()
+            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
+        let headers = self.get_headers()?;
+
+        let response = match method {
+            "GET" => client.get(&url).headers(headers).send(),
+            "POST" => client
+                .post(&url)
+                .headers(headers)
+                .body(body.expect("POST requires body"))
+                .send(),
+            "PUT" => {
+                client.put(&url).headers(headers).body(body.expect("PUT requires body")).send()
+            }
+            "PATCH" => client
+                .patch(&url)
+                .headers(headers)
+                .body(body.expect("PATCH requires body"))
+                .send(),
+            "DELETE" => client.delete(&url).headers(headers).send(),
+            _ => unreachable!("unsupported HTTP method: {}", method),
+        };
+
+        self.send_request(method, &url, body, response)
+    }
+
+    /// 将 Response 错误转换为 GitHubError
+    fn convert_to_github_error(&self, response: Response) -> GitHubError {
         // 尝试解析 JSON 错误
-        if let Ok(data) = response.as_json::<Value>() {
+        if let Ok(data) = response.json::<Value>() {
             // 尝试解析为 GitHub 错误格式
             if let Ok(error) = serde_json::from_value::<GitHubErrorResponse>(data.clone()) {
                 return self.format_from_github_error(&error, &response);
@@ -109,8 +135,8 @@ impl GitHubClientImpl {
             // 如果无法解析为 GitHub 格式，返回 JSON 字符串
             if let Ok(json_str) = serde_json::to_string_pretty(&data) {
                 let msg = format!(
-                    "GitHub API request failed: {} - {}\n\nResponse:\n{}",
-                    response.status, response.status_text, json_str
+                    "GitHub API request failed: {}\n\nResponse:\n{}",
+                    response.status, json_str
                 );
                 return GitHubError::ApiError(msg);
             }
@@ -120,14 +146,11 @@ impl GitHubClientImpl {
         let error_msg = response.extract_error_message();
         let msg = if !error_msg.is_empty() {
             format!(
-                "GitHub API request failed: {} - {}\n\n{}",
-                response.status, response.status_text, error_msg
+                "GitHub API request failed: {}\n\n{}",
+                response.status, error_msg
             )
         } else {
-            format!(
-                "GitHub API request failed: {} - {}",
-                response.status, response.status_text
-            )
+            format!("GitHub API request failed: {}", response.status)
         };
         GitHubError::ApiError(msg)
     }
@@ -138,7 +161,7 @@ impl GitHubClientImpl {
     fn format_from_github_error(
         &self,
         error: &GitHubErrorResponse,
-        response: &HttpResponse,
+        response: &Response,
     ) -> GitHubError {
         let mut details = String::new();
 
@@ -158,7 +181,7 @@ impl GitHubClientImpl {
         }
 
         // 尝试添加完整的错误响应 JSON 以便调试
-        if let Ok(data) = response.as_json::<Value>() {
+        if let Ok(data) = response.json::<Value>() {
             if let Ok(json_str) = serde_json::to_string_pretty(&data) {
                 writeln!(details, "\nFull error response:\n{}", json_str).ok();
             }
@@ -192,33 +215,44 @@ impl GitHubClientImpl {
         }
     }
 
-    /// 执行 HTTP 请求的通用逻辑
-    fn execute<F>(
+    /// 发送请求并处理响应
+    fn send_request(
         &self,
-        path: &str,
+        method: &str,
+        url: &str,
         body: Option<&Value>,
-        request_fn: F,
-    ) -> Result<GitHubResponse, GitHubError>
-    where
-        F: FnOnce(&HttpClient, &str, RequestConfig) -> Result<HttpResponse, toolkit::HttpError>,
-    {
-        let url = self.build_url(path);
-        let client = HttpClient::global()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get HTTP client: {}", e)))?;
-        let headers = self
-            .get_headers()
-            .map_err(|e| GitHubError::ApiError(format!("Failed to get headers: {}", e)))?;
-        let mut config = RequestConfig::new().headers(&headers);
+        response: Result<Response, toolkit::HttpError>,
+    ) -> Result<GitHubResponse, GitHubError> {
+        // 记录请求日志
         if let Some(body) = body {
-            config = config.body(body);
+            toolkit::log_debug!("GitHub API request: {} {} body={}", method, url, body);
+        } else {
+            toolkit::log_debug!("GitHub API request: {} {}", method, url);
         }
 
-        let response = request_fn(client, &url, config)
-            .map_err(|e| GitHubError::ApiError(format!("Request failed: {}", e)))?;
+        let response =
+            response.map_err(|e| GitHubError::ApiError(format!("Request failed: {}", e)))?;
+
+        // 记录响应日志
+        toolkit::log_debug!(
+            "GitHub API response: {} {} status={}",
+            method,
+            url,
+            response.status
+        );
 
         if response.is_success() {
+            // 记录成功响应的内容（如果可以解析为 JSON）
+            if let Ok(json) = response.json::<Value>() {
+                toolkit::log_debug!("GitHub API response body: {}", json);
+            }
             Ok(GitHubResponse::new(response))
         } else {
+            // 记录错误响应
+            toolkit::log_debug!(
+                "GitHub API error response: {}",
+                response.extract_error_message()
+            );
             Err(self.convert_to_github_error(response))
         }
     }
@@ -226,28 +260,22 @@ impl GitHubClientImpl {
 
 impl GitHubClient for GitHubClientImpl {
     fn get(&self, path: &str) -> Result<GitHubResponse, GitHubError> {
-        self.execute(path, None, |client, url, config| client.get(url, config))
+        self.execute("GET", path, None)
     }
 
     fn post(&self, path: &str, body: &Value) -> Result<GitHubResponse, GitHubError> {
-        self.execute(path, Some(body), |client, url, config| {
-            client.post(url, config)
-        })
+        self.execute("POST", path, Some(body))
     }
 
     fn put(&self, path: &str, body: &Value) -> Result<GitHubResponse, GitHubError> {
-        self.execute(path, Some(body), |client, url, config| {
-            client.put(url, config)
-        })
+        self.execute("PUT", path, Some(body))
     }
 
     fn patch(&self, path: &str, body: &Value) -> Result<GitHubResponse, GitHubError> {
-        self.execute(path, Some(body), |client, url, config| {
-            client.patch(url, config)
-        })
+        self.execute("PATCH", path, Some(body))
     }
 
     fn delete(&self, path: &str) -> Result<GitHubResponse, GitHubError> {
-        self.execute(path, None, |client, url, config| client.delete(url, config))
+        self.execute("DELETE", path, None)
     }
 }

@@ -1,37 +1,51 @@
 //! HTTP 客户端模块
 //!
-//! 本模块提供了 HTTP 请求的完整功能，包括：
-//! - HTTP 客户端封装（GET、POST、PUT、DELETE、PATCH）
-//! - 多种认证方式支持（Basic Auth、Bearer Token）
-//! - 自定义 Headers 支持
-//! - HTTP 响应封装和解析
-//! - HTTP 请求重试机制（支持 Retry-After header）
-//! - 连接池管理和性能优化
-//! - 请求/响应大小限制
-//! - 请求 ID 追踪
+//! 提供现代化的 HTTP 客户端 API，支持链式调用和增强的错误上下文。
 //!
-//! ## 模块结构
+//! # 使用示例
 //!
-//! - `auth` - HTTP 认证（`Authorization`）
-//! - `client` - HTTP 客户端（`HttpClient`、`HttpClientConfig`、`HttpError`、`HttpResponse`）
-//! - `request` - HTTP 请求配置（`RequestConfig`、`MultipartRequestConfig`）
-//! - `retry` - HTTP 重试工具（`HttpRetry`、`HttpRetryConfig`、`HttpRetryError`、`RetryResult`）
+//! ```ignore
+//! use toolkit::http::{HttpClient, Authorization};
+//!
+//! // 使用全局客户端
+//! let response = HttpClient::global()?
+//!     .get("https://api.example.com/users")
+//!     .query(&[("page", "1")])
+//!     .auth(Authorization::bearer("token"))
+//!     .send()?;
+//!
+//! // 自定义客户端
+//! let client = HttpClient::with_config(
+//!     HttpClientConfig::new().timeout(Duration::from_secs(60))
+//! )?;
+//!
+//! let response = client
+//!     .post("https://api.example.com/users")
+//!     .body(&serde_json::json!({"name": "test"}))
+//!     .send()?;
+//! ```
 
-pub mod auth;
-pub mod client;
-pub mod request;
-pub mod retry;
+mod auth;
+mod client;
+mod config;
+mod error;
+mod headers;
+mod method;
+mod multipart;
+mod request;
+mod response;
+mod retry;
 
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-pub use mock::HttpMockServer;
-
-// 重新导出主要类型（便利性导出）
 pub use auth::Authorization;
-pub use client::{
-    HttpClient, HttpClientConfig, HttpError, HttpMethod, HttpMethodError, HttpResponse,
-};
-pub use request::{IntoHeaderMap, MultipartRequestConfig, RequestConfig};
-pub use retry::{HttpRetry, HttpRetryConfig, HttpRetryError, RetryResult};
+pub use client::HttpClient;
+pub use config::HttpClientConfig;
+pub use error::{ErrorContext, HttpError};
+pub use headers::IntoHeaderMap;
+pub use method::HttpMethod;
+pub use multipart::MultipartRequest;
+pub use request::Request;
+pub use response::Response;
+pub use retry::{RetryConfig, RetryResult};
+
+#[cfg(test)]
+pub(crate) mod mock;

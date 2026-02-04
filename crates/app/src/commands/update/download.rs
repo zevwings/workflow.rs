@@ -10,7 +10,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use prompt::{info, success, warning, Progress, Spinner};
 use toolkit::{
     archive, build_checksum_url, calculate_sha256, parse_hash_from_content,
-    verify_checksum as verify_file_checksum, HttpClient, HttpMethod, RequestConfig, SizeExt,
+    verify_checksum as verify_file_checksum, HttpClient, SizeExt,
 };
 
 use super::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
@@ -48,16 +48,14 @@ pub fn download_file(url: &str, output_path: &Path) -> Result<()> {
 
     // 使用流式下载
     let http_client = HttpClient::global()?;
-    let mut response = http_client
-        .stream(HttpMethod::Get, url, RequestConfig::new())
-        .wrap_err("Failed to send HTTP request")?;
+    let mut response = http_client.get(url).stream().wrap_err("Failed to send HTTP request")?;
 
     if !response.status().is_success() {
         color_eyre::eyre::bail!("Download failed: HTTP {}", response.status());
     }
 
     // 获取文件总大小（如果可用）
-    let total_size = response
+    let total_size: Option<u64> = response
         .headers()
         .get("content-length")
         .and_then(|v| v.to_str().ok())
@@ -103,10 +101,9 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
     toolkit::log_debug!("Checksum URL: {}", checksum_url);
 
     let http_client = HttpClient::global()?;
-    let config = RequestConfig::new();
 
     // 尝试下载校验和文件
-    match http_client.get(&checksum_url, config) {
+    match http_client.get(&checksum_url).send() {
         Ok(response) => {
             if response.status == 404 {
                 // 校验和文件不存在
@@ -123,11 +120,7 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
             }
 
             if response.status < 200 || response.status >= 300 {
-                warning!(
-                    "Failed to download checksum file: HTTP {} {}",
-                    response.status,
-                    response.status_text
-                );
+                warning!("Failed to download checksum file: HTTP {}", response.status);
                 warning!("  Proceeding with update without verification...");
 
                 if let Ok(actual_hash) = calculate_sha256(archive_path) {
@@ -136,7 +129,7 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
                 return Ok(());
             }
 
-            let checksum_content = response.as_text().wrap_err("Failed to read checksum file")?;
+            let checksum_content = response.into_text().wrap_err("Failed to read checksum file")?;
 
             // 解析哈希值
             let expected_hash = parse_hash_from_content(&checksum_content)

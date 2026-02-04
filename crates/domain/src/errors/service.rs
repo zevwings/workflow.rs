@@ -21,7 +21,7 @@ pub enum ServiceError {
     #[error("LLM 错误: {0}")]
     LLM(#[from] LLMError),
 
-    #[error("资源不存在: {0}")]
+    #[error("{0}")]
     NotFound(String),
 
     #[error("不支持的操作: {0}")]

@@ -68,21 +68,16 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
         let pr_number = self.context.parse_pr_number(pull_request_id)?;
         let pr = self.fetch_pr_info(pr_number)?;
 
+        // writeln! 写入 String 不会失败，使用 .ok() 忽略结果
         let mut info = String::new();
-        writeln!(info, "Title: {}", pr.title)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
+        writeln!(info, "Title: {}", pr.title).ok();
         if let Some(body) = pr.body {
-            writeln!(info, "Description: {}", body)
-                .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
+            writeln!(info, "Description: {}", body).ok();
         }
-        writeln!(info, "State: {}", pr.state)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
-        writeln!(info, "Source Branch: {}", pr.head.ref_name)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
-        writeln!(info, "Target Branch: {}", pr.base.ref_name)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
-        writeln!(info, "URL: {}", pr.html_url)
-            .map_err(|e| GitHubError::ApiError(format!("Failed to write info: {}", e)))?;
+        writeln!(info, "State: {}", pr.state).ok();
+        writeln!(info, "Source Branch: {}", pr.head.ref_name).ok();
+        writeln!(info, "Target Branch: {}", pr.base.ref_name).ok();
+        writeln!(info, "URL: {}", pr.html_url).ok();
 
         Ok(info)
     }
@@ -123,9 +118,7 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
 
         let state = match state {
             Some("open") => "open",
-            Some("closed") => "closed",
-            Some("merged") => "closed",
-            Some("all") | None => "all",
+            Some("closed") | Some("merged") => "closed",
             _ => "all",
         };
         let per_page = limit.unwrap_or(30).min(100);
@@ -137,7 +130,7 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
 
         let response = self.client.get(&url)?;
         let json_value = response
-            .as_json()
+            .json()
             .map_err(|e| GitHubError::ApiError(format!("Failed to parse response JSON: {}", e)))?;
         let prs: Vec<PullRequestInfo> = serde_json::from_value(json_value)
             .map_err(|e| GitHubError::ApiError(format!("Failed to deserialize PR list: {}", e)))?;
@@ -151,33 +144,56 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
     ) -> Result<Option<String>, GitHubError> {
         let (owner, repo_name) = self.context.get_owner_and_repo()?;
 
+        log_debug!(
+            "Searching PR for branch '{}' in repo '{}/{}'",
+            current_branch,
+            owner,
+            repo_name
+        );
+
         for state in ["open", "all"] {
             let url = format!(
                 "/repos/{}/{}/pulls?head={}:{}&state={}",
                 owner, repo_name, owner, current_branch, state
             );
 
+            log_debug!("Querying GitHub API: {}", url);
+
             let response = self.client.get(&url)?;
-            let json_value = response.as_json().map_err(|e| {
+            let json_value = response.json().map_err(|e| {
                 GitHubError::ApiError(format!("Failed to parse response JSON: {}", e))
             })?;
+
+            log_debug!("GitHub API response: {}", json_value);
+
             let prs: Vec<PullRequestInfo> = serde_json::from_value(json_value).map_err(|e| {
                 GitHubError::ApiError(format!("Failed to deserialize PR list: {}", e))
             })?;
 
+            log_debug!(
+                "Found {} PRs for state '{}' on branch '{}'",
+                prs.len(),
+                state,
+                current_branch
+            );
+
             if let Some(pr) = prs.first() {
-                if state == "all" {
-                    log_debug!(
-                        "Found PR #{} for branch '{}' (state: {})",
-                        pr.number,
-                        current_branch,
-                        pr.state
-                    );
-                }
+                log_debug!(
+                    "Found PR #{} for branch '{}' (state: {})",
+                    pr.number,
+                    current_branch,
+                    pr.state
+                );
                 return Ok(Some(pr.number.to_string()));
             }
         }
 
+        log_debug!(
+            "No PR found for branch '{}' in repo '{}/{}'",
+            current_branch,
+            owner,
+            repo_name
+        );
         Ok(None)
     }
 
@@ -188,7 +204,7 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
 
         let response = self.client.get(&url)?;
         let json_value = response
-            .as_json()
+            .json()
             .map_err(|e| GitHubError::ApiError(format!("Failed to parse response JSON: {}", e)))?;
         let pr_info: PullRequestInfo = serde_json::from_value(json_value)
             .map_err(|e| GitHubError::ApiError(format!("Failed to deserialize PR info: {}", e)))?;
@@ -199,7 +215,7 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
         let url = "/user";
         let response = self.client.get(url)?;
         let json_value = response
-            .as_json()
+            .json()
             .map_err(|e| GitHubError::ApiError(format!("Failed to parse response JSON: {}", e)))?;
         let user: GitHubUserInfo = serde_json::from_value(json_value).map_err(|e| {
             GitHubError::ApiError(format!("Failed to deserialize user info: {}", e))

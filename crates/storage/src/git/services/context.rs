@@ -318,7 +318,6 @@ impl GitContext {
         Ok(commit.id())
     }
 
-
     /// 获取分支的 commit
     ///
     /// # 参数

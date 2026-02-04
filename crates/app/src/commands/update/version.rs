@@ -4,7 +4,7 @@
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use prompt::{info, success, Spinner};
-use toolkit::{Authorization, HttpClient, RequestConfig};
+use toolkit::{Authorization, HttpClient};
 
 use super::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
 
@@ -44,17 +44,14 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
 
     let http_client = HttpClient::global()?;
 
-    // 构建配置和认证
-    let config = if let Some(token) = github_token {
+    // 构建请求并发送
+    let response = if let Some(token) = github_token {
         toolkit::log_debug!("Using GitHub token for API request");
-        RequestConfig::new().auth(Authorization::bearer(token))
+        http_client.get(&url).auth(Authorization::bearer(token)).send()
     } else {
-        RequestConfig::new()
-    };
-
-    let response = http_client
-        .get(&url, config)
-        .wrap_err("Failed to fetch latest release from GitHub");
+        http_client.get(&url).send()
+    }
+    .wrap_err("Failed to fetch latest release from GitHub");
 
     spinner_instance.stop();
 
@@ -64,7 +61,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
     handle_github_api_error(&response)?;
 
     // 解析响应（使用 serde_json::Value）
-    let json: serde_json::Value = response.as_json()?;
+    let json: serde_json::Value = response.json()?;
     let tag_name = json
         .get("tag_name")
         .and_then(|v| v.as_str())
@@ -77,7 +74,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
 }
 
 /// 处理 GitHub API 错误响应
-fn handle_github_api_error(response: &toolkit::HttpResponse) -> Result<()> {
+fn handle_github_api_error(response: &toolkit::Response) -> Result<()> {
     let status = response.status;
 
     if (200..300).contains(&status) {
@@ -86,11 +83,8 @@ fn handle_github_api_error(response: &toolkit::HttpResponse) -> Result<()> {
 
     let error_msg = match status {
         403 => {
-            let rate_limit_remaining = response
-                .headers
-                .get("x-ratelimit-remaining")
-                .and_then(|v| v.to_str().ok())
-                .and_then(|s| s.parse::<u32>().ok());
+            let rate_limit_remaining =
+                response.header("x-ratelimit-remaining").and_then(|s| s.parse::<u32>().ok());
 
             if rate_limit_remaining == Some(0) {
                 "Failed to fetch latest version: HTTP 403 (Rate limit exceeded)\n\
