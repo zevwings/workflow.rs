@@ -186,6 +186,84 @@ pub use container::Container;
 pub use error::{RegistryError, Result};
 pub use scope::Scope;
 
+// ============================================================================
+// 从全局容器获取服务
+// ============================================================================
+
+/// 从全局容器解析并获取服务实例
+///
+/// 使用 DashMap 的内部细粒度锁，允许多个线程高性能并发访问。
+///
+/// # 示例
+///
+/// ```rust,ignore
+/// use registry::resolve;
+/// use std::sync::Arc;
+///
+/// // 获取 trait 对象
+/// let service: Arc<dyn ConfigService> = resolve::<dyn ConfigService>()?;
+///
+/// // 或获取具体类型
+/// let service: Arc<ConfigServiceImpl> = resolve::<ConfigServiceImpl>()?;
+/// ```
+pub fn resolve<T: 'static + Send + Sync + ?Sized>() -> Result<Arc<T>> {
+    let container = Container::global();
+    container.get::<T>()
+}
+
+/// 从全局容器获取服务的简化宏
+///
+/// # 示例
+///
+/// ```rust,ignore
+/// use registry::get_it;
+/// use std::sync::Arc;
+///
+/// let service: Arc<dyn ConfigService> = get_it!(dyn ConfigService)?;
+/// ```
+#[macro_export]
+macro_rules! get_it {
+    ($ty:ty) => {
+        $crate::resolve::<$ty>()
+    };
+}
+
+/// 注册服务并初始化全局容器（宏）
+///
+/// # 示例
+///
+/// ```rust,ignore
+/// use registry::{bind, Scope};
+/// use std::sync::Arc;
+///
+/// // 方式 1：使用 bind! 宏 - 无依赖（推荐 - 最简洁）
+/// bind!(dyn ConfigService, |_| {
+///     Arc::new(ConfigServiceImpl::new())
+/// })
+/// .in_scope(Scope::Singleton)?;
+///
+/// // 方式 2：使用 bind! 宏 - 有依赖
+/// bind!(dyn OtherService, |c| {
+///     let dep = c.get::<dyn ConfigService>().expect("ConfigService not found");
+///     Arc::new(OtherServiceImpl::new(dep))
+/// })
+/// .in_scope(Scope::Singleton)?;
+///
+/// // 方式 3：直接绑定具体类型（类型自动推断）
+/// Container::global()
+///     .bind_instance(Arc::new(LogServiceImpl::new()))
+///     .in_scope(Scope::Singleton)?;
+/// ```
+#[macro_export]
+macro_rules! registry {
+    (|$container:ident| { $($body:tt)* }) => {
+        $crate::Container::register(|$container| -> $crate::Result<()> {
+            $($body)*
+            Ok(())
+        })
+    };
+}
+
 #[cfg(test)]
 mod tests {
     // 标准库
@@ -402,9 +480,7 @@ mod tests {
 
         // 使用 try_bind! 宏绑定服务（工厂返回错误）
         try_bind!(dyn TestService, |_: &Container| {
-            Err::<Arc<TestServiceImpl>, _>(RegistryError::NotBound(
-                "Simulated error".to_string(),
-            ))
+            Err::<Arc<TestServiceImpl>, _>(RegistryError::NotBound("Simulated error".to_string()))
         })
         .in_scope(Scope::Singleton)
         .unwrap();
@@ -546,82 +622,4 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(result, Err(RegistryError::AlreadyBound(_))));
     }
-}
-
-// ============================================================================
-// 从全局容器获取服务
-// ============================================================================
-
-/// 从全局容器解析并获取服务实例
-///
-/// 使用 DashMap 的内部细粒度锁，允许多个线程高性能并发访问。
-///
-/// # 示例
-///
-/// ```rust,ignore
-/// use registry::resolve;
-/// use std::sync::Arc;
-///
-/// // 获取 trait 对象
-/// let service: Arc<dyn ConfigService> = resolve::<dyn ConfigService>()?;
-///
-/// // 或获取具体类型
-/// let service: Arc<ConfigServiceImpl> = resolve::<ConfigServiceImpl>()?;
-/// ```
-pub fn resolve<T: 'static + Send + Sync + ?Sized>() -> Result<Arc<T>> {
-    let container = Container::global();
-    container.get::<T>()
-}
-
-/// 从全局容器获取服务的简化宏
-///
-/// # 示例
-///
-/// ```rust,ignore
-/// use registry::get_it;
-/// use std::sync::Arc;
-///
-/// let service: Arc<dyn ConfigService> = get_it!(dyn ConfigService)?;
-/// ```
-#[macro_export]
-macro_rules! get_it {
-    ($ty:ty) => {
-        $crate::resolve::<$ty>()
-    };
-}
-
-/// 注册服务并初始化全局容器（宏）
-///
-/// # 示例
-///
-/// ```rust,ignore
-/// use registry::{bind, Scope};
-/// use std::sync::Arc;
-///
-/// // 方式 1：使用 bind! 宏 - 无依赖（推荐 - 最简洁）
-/// bind!(dyn ConfigService, |_| {
-///     Arc::new(ConfigServiceImpl::new())
-/// })
-/// .in_scope(Scope::Singleton)?;
-///
-/// // 方式 2：使用 bind! 宏 - 有依赖
-/// bind!(dyn OtherService, |c| {
-///     let dep = c.get::<dyn ConfigService>().expect("ConfigService not found");
-///     Arc::new(OtherServiceImpl::new(dep))
-/// })
-/// .in_scope(Scope::Singleton)?;
-///
-/// // 方式 3：直接绑定具体类型（类型自动推断）
-/// Container::global()
-///     .bind_instance(Arc::new(LogServiceImpl::new()))
-///     .in_scope(Scope::Singleton)?;
-/// ```
-#[macro_export]
-macro_rules! registry {
-    (|$container:ident| { $($body:tt)* }) => {
-        $crate::Container::register(|$container| -> $crate::Result<()> {
-            $($body)*
-            Ok(())
-        })
-    };
 }

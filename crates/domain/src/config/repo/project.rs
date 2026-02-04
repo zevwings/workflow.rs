@@ -15,7 +15,7 @@ pub struct ProjectConfig {
     /// 当 `false` 时，使用简单格式：`# {title}`
     ///
     /// 默认值为 `false`，表示不使用 scope。
-    #[serde(default = "default_use_scope")]
+    #[serde(default = "default_use_scope", skip_serializing_if = "is_false")]
     pub use_scope: bool,
     /// 模板配置
     #[serde(default, skip_serializing_if = "TemplateConfig::is_empty")]
@@ -24,6 +24,10 @@ pub struct ProjectConfig {
 
 fn default_use_scope() -> bool {
     false
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl ProjectConfig {

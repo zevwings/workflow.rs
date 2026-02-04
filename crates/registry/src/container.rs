@@ -1036,7 +1036,9 @@ mod tests {
         container
             .try_bind::<dyn ServiceA>(|c: &Container| {
                 let self_ref = c.get::<dyn ServiceA>()?;
-                Ok(Arc::new(ServiceAImpl { _self_ref: self_ref }) as Arc<dyn ServiceA>)
+                Ok(Arc::new(ServiceAImpl {
+                    _self_ref: self_ref,
+                }) as Arc<dyn ServiceA>)
             })
             .in_scope(Scope::Transient)
             .unwrap();
@@ -1847,9 +1849,7 @@ mod tests {
                     id: i as usize,
                 }))
                 .in_scope(Scope::Singleton)
-                .unwrap_or_else(|_| {
-                    // 由于所有都是同一类型，只有第一个会成功
-                });
+                .unwrap_or(()); // 由于所有都是同一类型，只有第一个会成功
         }
 
         // 至少绑定了一个

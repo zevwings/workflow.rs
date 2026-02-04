@@ -150,13 +150,11 @@ mod tests {
     #[test]
     fn test_github_settings_get_current_account_fallback_to_first() {
         let settings = GitHubSettings {
-            accounts: vec![
-                GitHubAccount {
-                    name: "work".to_string(),
-                    email: "work@example.com".to_string(),
-                    api_token: "work_token".to_string(),
-                },
-            ],
+            accounts: vec![GitHubAccount {
+                name: "work".to_string(),
+                email: "work@example.com".to_string(),
+                api_token: "work_token".to_string(),
+            }],
             current: String::new(),
         };
 
@@ -173,13 +171,11 @@ mod tests {
     #[test]
     fn test_github_settings_get_current_account_returns_none_when_not_found() {
         let settings = GitHubSettings {
-            accounts: vec![
-                GitHubAccount {
-                    name: "work".to_string(),
-                    email: "work@example.com".to_string(),
-                    api_token: "work_token".to_string(),
-                },
-            ],
+            accounts: vec![GitHubAccount {
+                name: "work".to_string(),
+                email: "work@example.com".to_string(),
+                api_token: "work_token".to_string(),
+            }],
             current: "nonexistent".to_string(),
         };
 
@@ -189,17 +185,50 @@ mod tests {
     #[test]
     fn test_github_settings_get_current_token() {
         let settings = GitHubSettings {
-            accounts: vec![
-                GitHubAccount {
-                    name: "test".to_string(),
-                    email: "test@example.com".to_string(),
-                    api_token: "ghp_test_token".to_string(),
-                },
-            ],
+            accounts: vec![GitHubAccount {
+                name: "test".to_string(),
+                email: "test@example.com".to_string(),
+                api_token: "ghp_test_token".to_string(),
+            }],
             current: "test".to_string(),
         };
 
         assert_eq!(settings.get_current_token(), Some("ghp_test_token"));
+    }
+
+    #[test]
+    fn test_github_settings_get_current_token_fallback_to_first() {
+        let settings = GitHubSettings {
+            accounts: vec![
+                GitHubAccount {
+                    name: "work".to_string(),
+                    email: "work@example.com".to_string(),
+                    api_token: "work_token".to_string(),
+                },
+                GitHubAccount {
+                    name: "personal".to_string(),
+                    email: "personal@example.com".to_string(),
+                    api_token: "personal_token".to_string(),
+                },
+            ],
+            current: String::new(),
+        };
+
+        assert_eq!(settings.get_current_token(), Some("work_token"));
+    }
+
+    #[test]
+    fn test_github_settings_get_current_token_returns_none_when_not_found() {
+        let settings = GitHubSettings {
+            accounts: vec![GitHubAccount {
+                name: "work".to_string(),
+                email: "work@example.com".to_string(),
+                api_token: "work_token".to_string(),
+            }],
+            current: "missing".to_string(),
+        };
+
+        assert!(settings.get_current_token().is_none());
     }
 
     #[test]
@@ -235,5 +264,17 @@ mod tests {
         assert_eq!(settings.accounts.len(), 2);
         assert_eq!(settings.current, "work");
         assert_eq!(settings.get_current_account().unwrap().name, "work");
+    }
+
+    #[test]
+    fn test_github_account_deserialize_with_missing_fields() {
+        let toml = r#"
+            name = "minimal"
+        "#;
+
+        let account: GitHubAccount = toml::from_str(toml).unwrap();
+        assert_eq!(account.name, "minimal");
+        assert!(account.email.is_empty());
+        assert!(account.api_token.is_empty());
     }
 }

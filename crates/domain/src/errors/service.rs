@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_service_error_from_github_error() {
-        let github_error = GitHubError::Unauthorized;
+        let github_error = GitHubError::AuthenticationFailed;
         let service_error: ServiceError = github_error.into();
         assert!(matches!(service_error, ServiceError::GitHub(_)));
         assert!(service_error.to_string().contains("GitHub 错误"));
@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn test_service_error_from_jira_error() {
-        let jira_error = JiraError::Unauthorized;
+        let jira_error = JiraError::AuthenticationFailed;
         let service_error: ServiceError = jira_error.into();
         assert!(matches!(service_error, ServiceError::Jira(_)));
         assert!(service_error.to_string().contains("Jira 错误"));
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_service_error_from_llm_error() {
-        let llm_error = LLMError::Unauthorized;
+        let llm_error = LLMError::AuthenticationFailed;
         let service_error: ServiceError = llm_error.into();
         assert!(matches!(service_error, ServiceError::LLM(_)));
         assert!(service_error.to_string().contains("LLM 错误"));
@@ -117,5 +117,6 @@ mod tests {
         fn assert_send_sync<T: Send + Sync>() {}
         // ServiceError 应该是 Send + Sync 的（如果底层错误都是）
         // 这个测试确保错误类型可以安全地跨线程传递
+        assert_send_sync::<ServiceError>();
     }
 }

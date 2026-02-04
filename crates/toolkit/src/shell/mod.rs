@@ -294,7 +294,10 @@ mod tests {
     fn test_shell_from_string_invalid() {
         let result = shell_from_string("invalid_shell");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ShellError::UnsupportedShell(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            ShellError::UnsupportedShell(_)
+        ));
     }
 
     #[test]

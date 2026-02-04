@@ -27,7 +27,10 @@ impl LLMProviderSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LLMSettings {
     /// 当前使用的 LLM Provider (openai, deepseek, proxy)
-    #[serde(default = "LLMSettings::default_provider")]
+    #[serde(
+        default = "LLMSettings::default_provider",
+        skip_serializing_if = "LLMSettings::is_default_provider"
+    )]
     pub provider: String,
     /// LLM 输出语言（en, zh, zh-CN, zh-TW 等，默认 en），用于控制 AI 生成内容（如 PR 总结等）的语言
     /// 所有 provider 共享此语言设置
@@ -63,6 +66,11 @@ impl LLMSettings {
     /// 默认 LLM Provider
     pub fn default_provider() -> String {
         "openai".to_string()
+    }
+
+    /// 检查 provider 是否为默认值
+    fn is_default_provider(provider: &str) -> bool {
+        provider == Self::default_provider()
     }
 
     /// 根据 Provider 获取默认模型

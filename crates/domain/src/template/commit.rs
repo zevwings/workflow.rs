@@ -62,7 +62,10 @@ mod tests {
         assert_eq!(vars.commit_type, "fix");
         assert_eq!(vars.scope, Some("api".to_string()));
         assert_eq!(vars.subject, "fix null pointer exception");
-        assert_eq!(vars.body, Some("Handle edge case when user is null".to_string()));
+        assert_eq!(
+            vars.body,
+            Some("Handle edge case when user is null".to_string())
+        );
         assert_eq!(vars.jira_key, Some("BUG-456".to_string()));
         assert!(!vars.use_scope);
     }

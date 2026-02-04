@@ -61,10 +61,7 @@ mod tests {
 
         assert_eq!(deserialized.jira.email, "user@example.com");
         assert_eq!(
-            deserialized
-                .aliases
-                .get("co")
-                .expect("alias should exist"),
+            deserialized.aliases.get("co").expect("alias should exist"),
             "checkout"
         );
     }

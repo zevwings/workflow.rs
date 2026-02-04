@@ -248,6 +248,9 @@ mod tests {
     fn test_get_shell_source_path_case_insensitive() {
         assert_eq!(get_shell_source_path("ZSH"), get_shell_source_path("zsh"));
         assert_eq!(get_shell_source_path("FISH"), get_shell_source_path("fish"));
-        assert_eq!(get_shell_source_path("POWERSHELL"), get_shell_source_path("powershell"));
+        assert_eq!(
+            get_shell_source_path("POWERSHELL"),
+            get_shell_source_path("powershell")
+        );
     }
 }

@@ -57,7 +57,9 @@ mod tests {
             },
         );
 
-        let config = MCPConfig { mcp_servers: servers };
+        let config = MCPConfig {
+            mcp_servers: servers,
+        };
         let toml = toml::to_string(&config).unwrap();
         assert!(toml.contains("mcpServers"));
 

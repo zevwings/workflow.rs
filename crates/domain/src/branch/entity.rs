@@ -190,7 +190,10 @@ mod tests {
     fn test_branch_type_parse_exact() {
         assert_eq!(BranchType::parse("feature"), Some(BranchType::Feature));
         assert_eq!(BranchType::parse("bugfix"), Some(BranchType::Bugfix));
-        assert_eq!(BranchType::parse("refactoring"), Some(BranchType::Refactoring));
+        assert_eq!(
+            BranchType::parse("refactoring"),
+            Some(BranchType::Refactoring)
+        );
         assert_eq!(BranchType::parse("hotfix"), Some(BranchType::Hotfix));
         assert_eq!(BranchType::parse("chore"), Some(BranchType::Chore));
     }

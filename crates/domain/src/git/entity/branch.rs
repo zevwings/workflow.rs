@@ -59,3 +59,104 @@ pub enum BranchFilter {
     /// 所有分支
     All,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_branch_info_local_defaults() {
+        let info = BranchInfo::local("feature/test".to_string());
+        assert_eq!(info.name, "feature/test");
+        assert_eq!(info.display_name, "feature/test");
+        assert!(!info.is_remote);
+        assert!(!info.is_current);
+        assert!(info.commit_sha.is_none());
+        assert!(info.upstream.is_none());
+    }
+
+    #[test]
+    fn test_branch_info_remote_defaults() {
+        let info = BranchInfo::remote(
+            "origin/feature/test".to_string(),
+            "[R] feature/test".to_string(),
+        );
+        assert_eq!(info.name, "origin/feature/test");
+        assert_eq!(info.display_name, "[R] feature/test");
+        assert!(info.is_remote);
+        assert!(!info.is_current);
+        assert!(info.commit_message.is_none());
+    }
+
+    #[test]
+    fn test_branch_info_local_with_all_fields() {
+        let mut info = BranchInfo::local("main".to_string());
+        info.is_current = true;
+        info.commit_sha = Some("abc123".to_string());
+        info.commit_message = Some("Initial commit".to_string());
+        info.upstream = Some("origin/main".to_string());
+
+        assert_eq!(info.name, "main");
+        assert_eq!(info.display_name, "main");
+        assert!(!info.is_remote);
+        assert!(info.is_current);
+        assert_eq!(info.commit_sha, Some("abc123".to_string()));
+        assert_eq!(info.commit_message, Some("Initial commit".to_string()));
+        assert_eq!(info.upstream, Some("origin/main".to_string()));
+    }
+
+    #[test]
+    fn test_branch_info_remote_with_all_fields() {
+        let mut info = BranchInfo::remote(
+            "origin/feature/test".to_string(),
+            "[R] feature/test".to_string(),
+        );
+        info.commit_sha = Some("def456".to_string());
+        info.commit_message = Some("Add feature".to_string());
+        info.upstream = Some("origin/main".to_string());
+
+        assert_eq!(info.name, "origin/feature/test");
+        assert_eq!(info.display_name, "[R] feature/test");
+        assert!(info.is_remote);
+        assert_eq!(info.commit_sha, Some("def456".to_string()));
+        assert_eq!(info.commit_message, Some("Add feature".to_string()));
+        assert_eq!(info.upstream, Some("origin/main".to_string()));
+    }
+
+    #[test]
+    fn test_branch_info_clone() {
+        let mut info = BranchInfo::local("test".to_string());
+        info.is_current = true;
+        info.commit_sha = Some("sha123".to_string());
+        let cloned = info.clone();
+
+        assert_eq!(info.name, cloned.name);
+        assert_eq!(info.display_name, cloned.display_name);
+        assert_eq!(info.is_remote, cloned.is_remote);
+        assert_eq!(info.is_current, cloned.is_current);
+        assert_eq!(info.commit_sha, cloned.commit_sha);
+        assert_eq!(info.commit_message, cloned.commit_message);
+        assert_eq!(info.upstream, cloned.upstream);
+    }
+
+    // ========================================================================
+    // BranchFilter 测试
+    // ========================================================================
+
+    #[test]
+    fn test_branch_filter_variants() {
+        assert_eq!(BranchFilter::Local, BranchFilter::Local);
+        assert_eq!(BranchFilter::Remote, BranchFilter::Remote);
+        assert_eq!(BranchFilter::All, BranchFilter::All);
+        assert_ne!(BranchFilter::Local, BranchFilter::Remote);
+        assert_ne!(BranchFilter::Local, BranchFilter::All);
+        assert_ne!(BranchFilter::Remote, BranchFilter::All);
+    }
+
+    #[test]
+    fn test_branch_filter_clone() {
+        let filter = BranchFilter::All;
+        let cloned = filter;
+        assert_eq!(filter, cloned);
+    }
+}

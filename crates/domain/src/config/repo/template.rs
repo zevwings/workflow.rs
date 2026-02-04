@@ -169,3 +169,28 @@ impl TemplateConfig {
         *self == TemplateConfig::default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_template_config_is_empty_default() {
+        let config = TemplateConfig::default();
+        assert!(config.is_empty());
+    }
+
+    #[test]
+    fn test_template_config_is_empty_false_when_customized() {
+        let config = TemplateConfig {
+            engine: default_engine(),
+            branch: BranchTemplates {
+                feature: "custom-feature".to_string(),
+                ..BranchTemplates::default()
+            },
+            commit: CommitTemplates::default(),
+            pull_requests: PullRequestsTemplates::default(),
+        };
+        assert!(!config.is_empty());
+    }
+}

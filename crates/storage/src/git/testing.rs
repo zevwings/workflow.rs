@@ -3,7 +3,9 @@
 //! 提供 Git 服务测试的通用辅助函数和性能监控工具。
 
 use super::GitContext;
+use std::env;
 use std::path::Path;
+use std::sync::Mutex;
 use tempfile::TempDir;
 
 // 重新导出性能监控工具，方便测试代码使用
@@ -46,6 +48,51 @@ impl TestRepoConfig {
             ..Default::default()
         }
     }
+}
+
+static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+fn set_env(key: &str, value: &str, original: &mut Vec<(String, Option<String>)>) {
+    original.push((key.to_string(), env::var(key).ok()));
+    env::set_var(key, value);
+}
+
+fn restore_env(original: Vec<(String, Option<String>)>) {
+    for (key, value) in original {
+        if let Some(value) = value {
+            env::set_var(key, value);
+        } else {
+            env::remove_var(key);
+        }
+    }
+}
+
+/// 在隔离的 Git 环境中运行测试逻辑
+///
+/// - 使用临时 HOME 目录
+/// - 禁用系统级 Git 配置
+/// - 使用空的全局 Git 配置文件
+pub fn with_isolated_git_env<F: FnOnce()>(f: F) {
+    let _lock = TEST_ENV_LOCK.lock().unwrap();
+    let tmp = TempDir::new().unwrap();
+    let mut original = Vec::new();
+
+    set_env("HOME", tmp.path().to_str().unwrap(), &mut original);
+    set_env(
+        "XDG_CONFIG_HOME",
+        tmp.path().to_str().unwrap(),
+        &mut original,
+    );
+    set_env(
+        "GIT_CONFIG_GLOBAL",
+        tmp.path().join("gitconfig").to_str().unwrap(),
+        &mut original,
+    );
+    set_env("GIT_CONFIG_NOSYSTEM", "1", &mut original);
+
+    f();
+
+    restore_env(original);
 }
 
 /// 创建测试仓库

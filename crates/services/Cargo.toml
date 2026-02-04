@@ -12,3 +12,7 @@ toolkit = { path = "../toolkit" }
 registry = { path = "../registry" }
 toml.workspace = true
 dirs.workspace = true
+
+[dev-dependencies]
+once_cell.workspace = true
+tempfile.workspace = true
