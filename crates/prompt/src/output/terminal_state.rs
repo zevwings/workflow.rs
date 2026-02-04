@@ -8,17 +8,8 @@ use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-/// 渲染器类型（保留以备将来扩展）
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RendererType {
-    Spinner,
-    ProgressBar,
-}
-
 /// 渲染器信息
 struct RendererInfo {
-    #[allow(dead_code)]
-    renderer_type: RendererType,
     redraw_callback: Box<dyn Fn() + Send + Sync>,
 }
 
@@ -55,9 +46,8 @@ fn get_state() -> &'static TerminalState {
 ///
 /// # 参数
 ///
-/// * `renderer_type` - 渲染器类型
 /// * `redraw_callback` - 重绘回调函数
-pub fn register_renderer<F>(renderer_type: RendererType, redraw_callback: F)
+pub fn register_renderer<F>(redraw_callback: F)
 where
     F: Fn() + Send + Sync + 'static,
 {
@@ -69,7 +59,6 @@ where
         state.active.store(true, Ordering::SeqCst);
         if let Ok(mut renderer) = state.renderer.lock() {
             *renderer = Some(RendererInfo {
-                renderer_type,
                 redraw_callback: Box::new(redraw_callback),
             });
         }
@@ -144,10 +133,45 @@ pub fn is_suspended() -> bool {
     get_state().suspended.load(Ordering::SeqCst)
 }
 
-/// 检查是否有活跃的渲染器
-///
-/// 保留此函数以备将来扩展使用。
-#[allow(dead_code)]
-pub fn is_active() -> bool {
-    get_state().active.load(Ordering::SeqCst)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_state_singleton() {
+        let state1 = get_state();
+        let state2 = get_state();
+        assert!(std::ptr::eq(state1, state2));
+    }
+
+    #[test]
+    fn test_renderer_registration_increments_count() {
+        let state = get_state();
+        let initial_count = state.active_count.load(Ordering::SeqCst);
+
+        register_renderer(|| {});
+        let after_register = state.active_count.load(Ordering::SeqCst);
+        assert_eq!(after_register, initial_count + 1);
+
+        unregister_renderer();
+        let after_unregister = state.active_count.load(Ordering::SeqCst);
+        assert_eq!(after_unregister, initial_count);
+    }
+
+    #[test]
+    fn test_suspend_and_resume_basic_flow() {
+        register_renderer(|| {});
+
+        let state = get_state();
+        if state.active.load(Ordering::SeqCst) {
+            let was_suspended = state.suspended.load(Ordering::SeqCst);
+            suspend();
+            if !was_suspended {
+                assert!(state.suspended.load(Ordering::SeqCst));
+            }
+            resume();
+        }
+
+        unregister_renderer();
+    }
 }

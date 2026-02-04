@@ -176,7 +176,7 @@ fn demo_indeterminate_progress() {
 
         // 每 10 个更新消息
         if (i + 1) % 10 == 0 {
-            pb.update_message(&format!("Scanned {} files...", (i + 1) * 10));
+            pb.update_message(format!("Scanned {} files...", (i + 1) * 10));
         }
     }
 

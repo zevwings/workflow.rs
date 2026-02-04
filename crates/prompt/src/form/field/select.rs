@@ -49,3 +49,71 @@ impl SelectFormField {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_options() -> Vec<String> {
+        vec![
+            "Option A".to_string(),
+            "Option B".to_string(),
+            "Option C".to_string(),
+        ]
+    }
+
+    #[test]
+    fn test_select_form_field_new() {
+        let options = sample_options();
+        let field = SelectFormField::new("choice", "Select an option", options.clone());
+        assert_eq!(field.key, "choice");
+        assert_eq!(field.prompt, "Select an option");
+        assert_eq!(field.options, options);
+        assert_eq!(field.default_index, 0);
+        assert!(field.result_title.is_none());
+        assert!(field.condition.is_none());
+    }
+
+    #[test]
+    fn test_select_form_field_with_default_index() {
+        let options = sample_options();
+        let field = SelectFormField::new("choice", "Select", options).default(2);
+        assert_eq!(field.default_index, 2);
+    }
+
+    #[test]
+    fn test_select_form_field_with_result_title() {
+        let options = sample_options();
+        let field = SelectFormField::new("color", "Select color", options).result_title("Color");
+        assert_eq!(field.result_title, Some("Color".to_string()));
+    }
+
+    #[test]
+    fn test_select_form_field_with_condition() {
+        let options = sample_options();
+        let condition: Condition = Box::new(|_result| true);
+        let field = SelectFormField::new("choice", "Select", options).condition(condition);
+        assert!(field.condition.is_some());
+    }
+
+    #[test]
+    fn test_select_form_field_builder_chain() {
+        let options = sample_options();
+        let field = SelectFormField::new("theme", "Select theme", options.clone())
+            .default(1)
+            .result_title("Theme");
+
+        assert_eq!(field.key, "theme");
+        assert_eq!(field.prompt, "Select theme");
+        assert_eq!(field.options, options);
+        assert_eq!(field.default_index, 1);
+        assert_eq!(field.result_title, Some("Theme".to_string()));
+    }
+
+    #[test]
+    fn test_select_form_field_empty_options() {
+        let field = SelectFormField::new("empty", "Select", Vec::new());
+        assert!(field.options.is_empty());
+        assert_eq!(field.default_index, 0);
+    }
+}

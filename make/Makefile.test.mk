@@ -7,6 +7,12 @@ define HELP_TEST
 	@echo "  make test             - 运行测试"
 	@echo "  make test-all         - 运行所有测试（包括被忽略的）"
 	@echo ""
+	@echo "覆盖率相关："
+	@echo "  make coverage         - 生成覆盖率报告（HTML）"
+	@echo "  make coverage-open    - 打开覆盖率报告"
+	@echo "  make coverage-ci      - CI环境覆盖率检查"
+	@echo "  make coverage-trend   - 查看覆盖率趋势"
+	@echo ""
 endef
 
 # ============================================
@@ -22,3 +28,65 @@ test:
 test-all:
 	@echo "运行所有测试（包括被忽略的）..."
 	cargo test -- --include-ignored
+
+# ============================================
+# 覆盖率相关目标
+# ============================================
+
+# 检查 cargo-tarpaulin 是否安装
+check-tarpaulin:
+	@if ! command -v cargo-tarpaulin >/dev/null 2>&1; then \
+		echo "错误: cargo-tarpaulin 未安装"; \
+		echo ""; \
+		echo "请运行以下命令安装:"; \
+		echo "  make setup"; \
+		echo ""; \
+		echo "或者手动安装:"; \
+		echo "  cargo install cargo-tarpaulin"; \
+		exit 1; \
+	fi
+
+# 生成覆盖率报告（HTML格式）
+coverage: check-tarpaulin
+	@echo "生成覆盖率报告..."
+	cargo tarpaulin --skip-clean --out Html --out Json --output-dir coverage \
+		--exclude-files "src/bin/*" \
+		--exclude-files "tests/*" \
+		--exclude-files "benches/*" \
+		--exclude-files "src/*/mod.rs"
+	@echo "覆盖率报告已生成到 coverage/ 目录"
+
+# 打开覆盖率报告
+coverage-open:
+	@if [ -f "coverage/tarpaulin-report.html" ]; then \
+		open coverage/tarpaulin-report.html; \
+	elif [ -f "coverage/index.html" ]; then \
+		open coverage/index.html; \
+	else \
+		echo "错误: 覆盖率报告不存在，请先运行 make coverage"; \
+		exit 1; \
+	fi
+
+# CI环境覆盖率检查（输出Lcov格式，适合CI/CD集成）
+coverage-ci: check-tarpaulin
+	@echo "运行CI覆盖率检查..."
+	cargo tarpaulin --skip-clean --out Lcov --output-dir coverage \
+		--exclude-files "src/bin/*" \
+		--exclude-files "tests/*" \
+		--exclude-files "benches/*" \
+		--exclude-files "src/*/mod.rs"
+	@echo "CI覆盖率报告已生成到 coverage/ 目录"
+
+# 查看覆盖率趋势（需要历史数据支持）
+coverage-trend: check-tarpaulin
+	@echo "查看覆盖率趋势..."
+	@if [ ! -d "coverage" ]; then \
+		echo "错误: coverage 目录不存在，请先运行 make coverage"; \
+		exit 1; \
+	fi
+	cargo tarpaulin --skip-clean --out Html --out Json --output-dir coverage \
+		--exclude-files "src/bin/*" \
+		--exclude-files "tests/*" \
+		--exclude-files "benches/*" \
+		--exclude-files "src/*/mod.rs"
+	@echo "覆盖率报告已更新，运行 make coverage-open 查看"

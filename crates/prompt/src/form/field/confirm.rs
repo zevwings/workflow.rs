@@ -46,3 +46,31 @@ impl ConfirmFormField {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_confirm_form_field_builder() {
+        // 基本创建和默认值
+        let field = ConfirmFormField::new("agree", "Do you agree?");
+        assert_eq!(field.key, "agree");
+        assert_eq!(field.prompt, "Do you agree?");
+        assert!(!field.default_value);
+        assert!(field.result_title.is_none());
+        assert!(field.condition.is_none());
+
+        // 链式调用
+        let field = ConfirmFormField::new("terms", "Accept terms?")
+            .default(true)
+            .result_title("Terms Accepted");
+        assert!(field.default_value);
+        assert_eq!(field.result_title, Some("Terms Accepted".to_string()));
+
+        // 条件函数
+        let condition: Condition = Box::new(|_result| true);
+        let field = ConfirmFormField::new("optional", "Optional?").condition(condition);
+        assert!(field.condition.is_some());
+    }
+}

@@ -38,6 +38,7 @@
 //! }
 //! ```
 
+pub(crate) mod backend; // 终端后端抽象（内部使用）
 pub mod dialog; // 交互式对话框（input, confirm, select, multiselect）
 pub mod error; // 错误类型定义
 pub mod form; // 表单构建器（FormBuilder, FormResult）

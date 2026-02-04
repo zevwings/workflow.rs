@@ -18,3 +18,6 @@ pub use progress::{progress_bar, Progress, ProgressBar, ProgressBarBuilder};
 pub use spinner::{spinner, Spinner, SpinnerBuilder};
 pub use table::{table, Alignment, TableBuilder, TableStyle, Tabled};
 pub use terminal_state::{resume, suspend};
+
+#[cfg(any(test, feature = "testing"))]
+pub use message::MockWriter;

@@ -233,7 +233,7 @@ mod tests {
             .create();
 
         // 使用 base_url 配置
-        let config = HttpClientConfig::new().base_url(&server.url());
+        let config = HttpClientConfig::new().base_url(server.url());
         let client = HttpClient::with_config(config).unwrap();
 
         // 只传入路径

@@ -257,3 +257,373 @@ impl InputEditor {
         self.placeholder.as_ref()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========================================================================
+    // CursorLine 和 ValidationStatus 测试
+    // ========================================================================
+
+    #[test]
+    fn test_cursor_line_equality() {
+        assert_eq!(CursorLine::PromptLine, CursorLine::PromptLine);
+        assert_eq!(CursorLine::InputLine, CursorLine::InputLine);
+        assert_ne!(CursorLine::PromptLine, CursorLine::InputLine);
+    }
+
+    #[test]
+    fn test_validation_status_equality() {
+        assert_eq!(ValidationStatus::Initial, ValidationStatus::Initial);
+        assert_eq!(ValidationStatus::Valid, ValidationStatus::Valid);
+        assert_eq!(ValidationStatus::Invalid, ValidationStatus::Invalid);
+        assert_ne!(ValidationStatus::Initial, ValidationStatus::Valid);
+        assert_ne!(ValidationStatus::Valid, ValidationStatus::Invalid);
+    }
+
+    // ========================================================================
+    // InputEditor 基本操作测试
+    // ========================================================================
+
+    #[test]
+    fn test_editor_new_empty() {
+        let editor = InputEditor::new(None);
+        assert_eq!(editor.as_str(), "");
+        assert!(editor.placeholder().is_none());
+    }
+
+    #[test]
+    fn test_editor_new_with_placeholder() {
+        let editor = InputEditor::new(Some("Enter text...".to_string()));
+        assert_eq!(editor.as_str(), "");
+        assert_eq!(editor.placeholder(), Some(&"Enter text...".to_string()));
+    }
+
+    #[test]
+    fn test_editor_insert_single_char() {
+        let mut editor = InputEditor::new(None);
+        editor.insert('a');
+        assert_eq!(editor.as_str(), "a");
+    }
+
+    #[test]
+    fn test_editor_insert_multiple_chars() {
+        let mut editor = InputEditor::new(None);
+        editor.insert('h');
+        editor.insert('e');
+        editor.insert('l');
+        editor.insert('l');
+        editor.insert('o');
+        assert_eq!(editor.as_str(), "hello");
+    }
+
+    #[test]
+    fn test_editor_insert_unicode() {
+        let mut editor = InputEditor::new(None);
+        editor.insert('你');
+        editor.insert('好');
+        assert_eq!(editor.as_str(), "你好");
+    }
+
+    #[test]
+    fn test_editor_insert_str() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello world");
+        assert_eq!(editor.as_str(), "hello world");
+    }
+
+    #[test]
+    fn test_editor_insert_str_at_cursor() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("ac");
+        editor.move_left();
+        editor.insert_str("b");
+        assert_eq!(editor.as_str(), "abc");
+    }
+
+    // ========================================================================
+    // Backspace 测试
+    // ========================================================================
+
+    #[test]
+    fn test_editor_backspace_at_end() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello");
+        assert!(editor.backspace());
+        assert_eq!(editor.as_str(), "hell");
+    }
+
+    #[test]
+    fn test_editor_backspace_at_start() {
+        let editor = InputEditor::new(None);
+        let mut editor = editor;
+        assert!(!editor.backspace());
+        assert_eq!(editor.as_str(), "");
+    }
+
+    #[test]
+    fn test_editor_backspace_empty() {
+        let mut editor = InputEditor::new(None);
+        assert!(!editor.backspace());
+    }
+
+    #[test]
+    fn test_editor_backspace_unicode() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("你好");
+        assert!(editor.backspace());
+        assert_eq!(editor.as_str(), "你");
+        assert!(editor.backspace());
+        assert_eq!(editor.as_str(), "");
+    }
+
+    #[test]
+    fn test_editor_backspace_in_middle() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("abc");
+        editor.move_left();
+        assert!(editor.backspace());
+        assert_eq!(editor.as_str(), "ac");
+    }
+
+    // ========================================================================
+    // Delete 测试
+    // ========================================================================
+
+    #[test]
+    fn test_editor_delete_at_start() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello");
+        // 移动到开头
+        for _ in 0..5 {
+            editor.move_left();
+        }
+        assert!(editor.delete());
+        assert_eq!(editor.as_str(), "ello");
+    }
+
+    #[test]
+    fn test_editor_delete_at_end() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello");
+        assert!(!editor.delete());
+        assert_eq!(editor.as_str(), "hello");
+    }
+
+    #[test]
+    fn test_editor_delete_empty() {
+        let mut editor = InputEditor::new(None);
+        assert!(!editor.delete());
+    }
+
+    #[test]
+    fn test_editor_delete_unicode() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("你好世界");
+        // 移动到开头
+        for _ in 0..4 {
+            editor.move_left();
+        }
+        assert!(editor.delete());
+        assert_eq!(editor.as_str(), "好世界");
+    }
+
+    #[test]
+    fn test_editor_delete_in_middle() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("abcd");
+        editor.move_left();
+        editor.move_left();
+        assert!(editor.delete());
+        assert_eq!(editor.as_str(), "abd");
+    }
+
+    // ========================================================================
+    // 光标移动测试
+    // ========================================================================
+
+    #[test]
+    fn test_editor_move_left() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("abc");
+        editor.move_left();
+        editor.insert('X');
+        assert_eq!(editor.as_str(), "abXc");
+    }
+
+    #[test]
+    fn test_editor_move_left_at_start() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("abc");
+        for _ in 0..10 {
+            // 移动超过文本长度
+            editor.move_left();
+        }
+        editor.insert('X');
+        assert_eq!(editor.as_str(), "Xabc");
+    }
+
+    #[test]
+    fn test_editor_move_right() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("abc");
+        editor.move_left();
+        editor.move_left();
+        editor.move_right();
+        editor.insert('X');
+        assert_eq!(editor.as_str(), "abXc");
+    }
+
+    #[test]
+    fn test_editor_move_right_at_end() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("abc");
+        for _ in 0..10 {
+            // 移动超过文本长度
+            editor.move_right();
+        }
+        editor.insert('X');
+        assert_eq!(editor.as_str(), "abcX");
+    }
+
+    #[test]
+    fn test_editor_move_left_unicode() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("你好");
+        editor.move_left();
+        editor.insert('X');
+        assert_eq!(editor.as_str(), "你X好");
+    }
+
+    #[test]
+    fn test_editor_move_right_unicode() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("你好");
+        editor.move_left();
+        editor.move_left();
+        editor.move_right();
+        editor.insert('X');
+        assert_eq!(editor.as_str(), "你X好");
+    }
+
+    // ========================================================================
+    // 显示宽度测试
+    // ========================================================================
+
+    #[test]
+    fn test_editor_display_width_ascii() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello");
+        assert_eq!(editor.display_width(), 5);
+    }
+
+    #[test]
+    fn test_editor_display_width_unicode() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("你好");
+        // 中文字符通常占 2 个显示宽度
+        assert_eq!(editor.display_width(), 4);
+    }
+
+    #[test]
+    fn test_editor_display_width_mixed() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hi你好");
+        // 2 ASCII + 2*2 中文 = 6
+        assert_eq!(editor.display_width(), 6);
+    }
+
+    #[test]
+    fn test_editor_display_width_empty() {
+        let editor = InputEditor::new(None);
+        assert_eq!(editor.display_width(), 0);
+    }
+
+    #[test]
+    fn test_editor_cursor_display_width_at_start() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello");
+        for _ in 0..5 {
+            editor.move_left();
+        }
+        assert_eq!(editor.cursor_display_width(), 0);
+    }
+
+    #[test]
+    fn test_editor_cursor_display_width_at_end() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello");
+        assert_eq!(editor.cursor_display_width(), 5);
+    }
+
+    #[test]
+    fn test_editor_cursor_display_width_in_middle() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello");
+        editor.move_left();
+        editor.move_left();
+        assert_eq!(editor.cursor_display_width(), 3);
+    }
+
+    #[test]
+    fn test_editor_cursor_display_width_unicode() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("你好世界");
+        editor.move_left();
+        editor.move_left();
+        // 前两个中文字符 = 4 个显示宽度
+        assert_eq!(editor.cursor_display_width(), 4);
+    }
+
+    #[test]
+    fn test_editor_cursor_display_width_empty() {
+        let editor = InputEditor::new(None);
+        assert_eq!(editor.cursor_display_width(), 0);
+    }
+
+    // ========================================================================
+    // 综合测试
+    // ========================================================================
+
+    #[test]
+    fn test_editor_complex_editing() {
+        let mut editor = InputEditor::new(None);
+
+        // 输入 "hello"
+        editor.insert_str("hello");
+        assert_eq!(editor.as_str(), "hello");
+
+        // 删除最后一个字符
+        editor.backspace();
+        assert_eq!(editor.as_str(), "hell");
+
+        // 移动到开头并删除第一个字符
+        for _ in 0..4 {
+            editor.move_left();
+        }
+        editor.delete();
+        assert_eq!(editor.as_str(), "ell");
+
+        // 在开头插入 "w"
+        editor.insert('w');
+        assert_eq!(editor.as_str(), "well");
+
+        // 移动到末尾并追加
+        for _ in 0..3 {
+            editor.move_right();
+        }
+        editor.insert_str(" done");
+        assert_eq!(editor.as_str(), "well done");
+    }
+
+    #[test]
+    fn test_editor_emoji() {
+        let mut editor = InputEditor::new(None);
+        editor.insert_str("hello 👋");
+        assert_eq!(editor.as_str(), "hello 👋");
+
+        editor.backspace();
+        assert_eq!(editor.as_str(), "hello ");
+    }
+}

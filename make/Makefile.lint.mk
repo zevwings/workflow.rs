@@ -4,8 +4,9 @@
 # Help 信息
 define HELP_LINT
 	@echo "代码检查相关："
-	@echo "  make lint             - 运行完整的代码检查（格式化 + Clippy + Check）"
-	@echo "  make fix              - 自动修复代码问题（格式化 + Clippy + Cargo Fix）"
+	@echo "  make lint             - 运行完整的代码检查（格式化 + Clippy + Check，包含 tests/）"
+	@echo "  make fix              - 自动修复代码问题（格式化 + Clippy + Cargo Fix，包含 tests/）"
+	@echo "  make check-docs-links - 验证文档中的链接有效性（使用 lychee）"
 	@echo ""
 endef
 
@@ -33,8 +34,8 @@ lint: check-rustfmt check-clippy
 	@cargo fmt --check || (echo "✗ 代码格式不正确，运行 'cargo fmt' 自动修复" && exit 1)
 	@echo "✓ 代码格式正确"
 	@echo ""
-	@echo "2/3 运行 Clippy 检查..."
-	@cargo clippy -- -D warnings
+	@echo "2/3 运行 Clippy 检查（包含 tests/）..."
+	@cargo clippy --all-targets -- -D warnings
 	@echo "✓ Clippy 检查通过"
 	@echo ""
 	@echo "3/3 运行 cargo check..."
@@ -51,8 +52,8 @@ fix: check-rustfmt check-clippy
 	@cargo fmt
 	@echo "✓ 代码格式已修复"
 	@echo ""
-	@echo "2/3 运行 Clippy 自动修复..."
-	@cargo clippy --fix --allow-dirty --allow-staged || echo "⚠ Clippy 无法自动修复所有问题，请手动检查"
+	@echo "2/3 运行 Clippy 自动修复（包含 tests/）..."
+	@cargo clippy --all-targets --fix --allow-dirty --allow-staged || echo "⚠ Clippy 无法自动修复所有问题，请手动检查"
 	@echo "✓ Clippy 修复完成"
 	@echo ""
 	@echo "3/3 运行 Cargo Fix 修复编译警告..."
@@ -60,3 +61,27 @@ fix: check-rustfmt check-clippy
 	@echo "✓ Cargo Fix 完成"
 	@echo ""
 	@echo "✓ 所有修复完成！"
+
+# ============================================
+# 文档链接检查
+# ============================================
+
+# 验证文档链接有效性
+check-docs-links:
+	@echo "=========================================="
+	@echo "验证文档链接有效性"
+	@echo "=========================================="
+	@echo ""
+	@if command -v lychee >/dev/null 2>&1; then \
+		echo "使用 lychee 验证文档链接..."; \
+		echo ""; \
+		lychee docs/**/*.md --exclude-all-private --exclude-loopback || exit 1; \
+	else \
+		echo "⚠ lychee 未安装"; \
+		echo "安装方法: cargo install lychee"; \
+		echo ""; \
+		echo "或者使用 markdown-link-check (需要 Node.js):"; \
+		echo "  npm install -g markdown-link-check"; \
+		echo "  find docs -name '*.md' -type f -exec markdown-link-check {} \\;"; \
+		exit 1; \
+	fi

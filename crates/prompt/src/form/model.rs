@@ -48,7 +48,7 @@ pub trait FormModel: Sized {
     /// 可以使用 `self` 中的值来填充未在表单中出现的字段。
     fn build_result(&self, result: FormResult) -> Result<Self>;
 
-    /// 运行表单并获取结果
+    /// 运行表单并获取结果（使用默认终端后端）
     fn run(&self) -> Result<Self> {
         let builder = self.build_form();
         let result = builder.run()?;
@@ -56,15 +56,34 @@ pub trait FormModel: Sized {
     }
 }
 
+/// 表单模型测试扩展 Trait（仅在测试时可用）
+///
+/// 提供 `run_with_backend` 方法，允许使用 mock 后端进行测试。
+#[cfg(any(test, feature = "testing"))]
+pub trait FormModelTestExt: FormModel {
+    /// 使用指定后端运行表单并获取结果
+    fn run_with_backend<B: crate::backend::Backend>(&self, backend: &mut B) -> Result<Self>;
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl<T: FormModel> FormModelTestExt for T {
+    fn run_with_backend<B: crate::backend::Backend>(&self, backend: &mut B) -> Result<Self> {
+        let builder = self.build_form();
+        let result = builder.run_with_backend(backend)?;
+        self.build_result(result)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backend::MockBackend;
     use crate::form::InputFormField;
 
     #[derive(Default)]
     struct TestConfig {
         name: String,
-        description: String, // 这是一个不在表单中的字段
+        description: String,
     }
 
     impl TestConfig {
@@ -85,15 +104,42 @@ mod tests {
         fn build_result(&self, result: FormResult) -> Result<Self> {
             Ok(Self {
                 name: result.get_string("name"),
-                description: self.description.clone(), // 保留原值
+                description: self.description.clone(),
             })
         }
     }
 
     #[test]
-    fn test_form_model_compilation() {
+    fn test_form_model_build_form() {
         let config = TestConfig::new("initial");
-        let _builder = config.build_form();
-        let _new_config = config.run();
+        let builder = config.build_form();
+        assert!(!builder.get_fields().is_empty());
+    }
+
+    #[test]
+    fn test_form_model_build_result() {
+        let config = TestConfig::new("initial");
+        let mut result = FormResult::new();
+        result.set("name".to_string(), "new_name".to_string());
+
+        let new_config = config.build_result(result).unwrap();
+        assert_eq!(new_config.name, "new_name");
+        assert_eq!(new_config.description, "default desc");
+    }
+
+    #[test]
+    fn test_form_model_with_mock_backend() {
+        let events = [
+            MockBackend::type_string("test_name"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+
+        let mut backend = MockBackend::with_events(events);
+        let config = TestConfig::new("initial");
+
+        let result = config.run_with_backend(&mut backend).unwrap();
+        assert_eq!(result.name, "test_name");
+        assert_eq!(result.description, "default desc");
     }
 }

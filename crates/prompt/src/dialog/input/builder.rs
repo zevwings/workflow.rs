@@ -2,7 +2,8 @@
 //!
 //! 提供文本输入功能，支持密码模式、验证器、占位符等
 
-use crate::dialog::input::prompt::prompt;
+use crate::backend::Backend;
+use crate::dialog::input::prompt::{prompt, prompt_with_backend};
 use crate::dialog::input::validator::Validator;
 use crate::dialog::Result;
 
@@ -62,9 +63,14 @@ impl InputBuilder {
         self
     }
 
-    /// 执行提示
+    /// 执行提示（使用默认终端后端）
     pub fn prompt(self) -> Result<String> {
         prompt(self)
+    }
+
+    /// 使用指定后端执行提示（内部使用）
+    pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<String> {
+        prompt_with_backend(self, backend)
     }
 }
 

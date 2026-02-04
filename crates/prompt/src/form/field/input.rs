@@ -86,3 +86,78 @@ impl InputFormField {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_input_form_field_new() {
+        let field = InputFormField::new("username", "Enter username");
+        assert_eq!(field.key, "username");
+        assert_eq!(field.prompt, "Enter username");
+        assert_eq!(field.default_value, "");
+        assert!(field.validator.is_none());
+        assert!(field.result_title.is_none());
+        assert!(field.condition.is_none());
+    }
+
+    #[test]
+    fn test_input_form_field_with_default() {
+        let field = InputFormField::new("name", "Enter name").default("John");
+        assert_eq!(field.default_value, "John");
+    }
+
+    #[test]
+    fn test_input_form_field_with_result_title() {
+        let field = InputFormField::new("email", "Enter email").result_title("Email Address");
+        assert_eq!(field.result_title, Some("Email Address".to_string()));
+    }
+
+    #[test]
+    fn test_input_form_field_required_validator() {
+        let field = InputFormField::new("name", "Enter name").required();
+        assert!(field.validator.is_some());
+
+        let validator = field.validator.unwrap();
+        // 空字符串应该验证失败
+        assert!(validator.validate("").is_err());
+        assert!(validator.validate("   ").is_err());
+        // 非空字符串应该验证成功
+        assert!(validator.validate("test").is_ok());
+    }
+
+    #[test]
+    fn test_input_form_field_custom_validator() {
+        let validator = Arc::new(|input: &str| {
+            if input.len() >= 3 {
+                Ok(())
+            } else {
+                Err("Input must be at least 3 characters".to_string())
+            }
+        });
+        let field = InputFormField::new("code", "Enter code").validator(validator);
+        assert!(field.validator.is_some());
+    }
+
+    #[test]
+    fn test_input_form_field_with_condition() {
+        let condition: Condition = Box::new(|_result| true);
+        let field = InputFormField::new("optional", "Enter optional").condition(condition);
+        assert!(field.condition.is_some());
+    }
+
+    #[test]
+    fn test_input_form_field_builder_chain() {
+        let field = InputFormField::new("username", "Enter username")
+            .default("admin")
+            .result_title("Username")
+            .required();
+
+        assert_eq!(field.key, "username");
+        assert_eq!(field.prompt, "Enter username");
+        assert_eq!(field.default_value, "admin");
+        assert_eq!(field.result_title, Some("Username".to_string()));
+        assert!(field.validator.is_some());
+    }
+}

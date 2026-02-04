@@ -82,3 +82,118 @@ impl MessageRef {
         Self::with_lock(|m| m.separator_with_text(char, length, text))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 注意：这些测试会向 stdout 输出内容
+    // 由于使用全局状态，测试之间可能有依赖
+
+    #[test]
+    fn test_message_ref_info() {
+        let msg = MessageRef;
+        let result = msg.info("Test info message");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_success() {
+        let msg = MessageRef;
+        let result = msg.success("Test success message");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_warning() {
+        let msg = MessageRef;
+        let result = msg.warning("Test warning message");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_error() {
+        let msg = MessageRef;
+        let result = msg.error("Test error message");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_debug() {
+        let msg = MessageRef;
+        let result = msg.debug("Test debug message");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_print() {
+        let msg = MessageRef;
+        let result = msg.print("Test print message");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_break_line() {
+        let msg = MessageRef;
+        let result = msg.break_line();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_separator() {
+        let msg = MessageRef;
+        let result = msg.separator('-', 40);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_separator_with_text() {
+        let msg = MessageRef;
+        let result = msg.separator_with_text('=', 60, "Section");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_empty_message() {
+        let msg = MessageRef;
+        let result = msg.info("");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_unicode_message() {
+        let msg = MessageRef;
+        let result = msg.info("中文信息 🎉");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_long_message() {
+        let msg = MessageRef;
+        let long_message = "A".repeat(1000);
+        let result = msg.info(&long_message);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_multiple_calls() {
+        let msg = MessageRef;
+        assert!(msg.info("First").is_ok());
+        assert!(msg.success("Second").is_ok());
+        assert!(msg.warning("Third").is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_separator_zero_length() {
+        let msg = MessageRef;
+        let result = msg.separator('-', 0);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_message_ref_separator_unicode_char() {
+        let msg = MessageRef;
+        let result = msg.separator('─', 20);
+        assert!(result.is_ok());
+    }
+}

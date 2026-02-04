@@ -72,3 +72,78 @@ impl PasswordFormField {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_password_form_field_new() {
+        let field = PasswordFormField::new("password", "Enter password");
+        assert_eq!(field.key, "password");
+        assert_eq!(field.prompt, "Enter password");
+        assert_eq!(field.default_value, "");
+        assert!(field.validator.is_none());
+        assert!(field.result_title.is_none());
+        assert!(field.condition.is_none());
+    }
+
+    #[test]
+    fn test_password_form_field_with_default() {
+        let field = PasswordFormField::new("password", "Enter password").default("secret123");
+        assert_eq!(field.default_value, "secret123");
+    }
+
+    #[test]
+    fn test_password_form_field_with_result_title() {
+        let field = PasswordFormField::new("password", "Enter password").result_title("Password");
+        assert_eq!(field.result_title, Some("Password".to_string()));
+    }
+
+    #[test]
+    fn test_password_form_field_required_validator() {
+        let field = PasswordFormField::new("password", "Enter password").required();
+        assert!(field.validator.is_some());
+
+        let validator = field.validator.unwrap();
+        // 空字符串应该验证失败
+        assert!(validator.validate("").is_err());
+        assert!(validator.validate("   ").is_err());
+        // 非空字符串应该验证成功
+        assert!(validator.validate("secret").is_ok());
+    }
+
+    #[test]
+    fn test_password_form_field_custom_validator() {
+        let validator = Arc::new(|input: &str| {
+            if input.len() >= 8 {
+                Ok(())
+            } else {
+                Err("Password must be at least 8 characters".to_string())
+            }
+        });
+        let field = PasswordFormField::new("password", "Enter password").validator(validator);
+        assert!(field.validator.is_some());
+    }
+
+    #[test]
+    fn test_password_form_field_with_condition() {
+        let condition: Condition = Box::new(|_result| true);
+        let field = PasswordFormField::new("password", "Enter password").condition(condition);
+        assert!(field.condition.is_some());
+    }
+
+    #[test]
+    fn test_password_form_field_builder_chain() {
+        let field = PasswordFormField::new("password", "Enter password")
+            .default("default_pass")
+            .result_title("User Password")
+            .required();
+
+        assert_eq!(field.key, "password");
+        assert_eq!(field.prompt, "Enter password");
+        assert_eq!(field.default_value, "default_pass");
+        assert_eq!(field.result_title, Some("User Password".to_string()));
+        assert!(field.validator.is_some());
+    }
+}

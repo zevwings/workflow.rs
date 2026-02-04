@@ -31,7 +31,7 @@ fn main() {
             let _ = msg.warning("表单被用户取消");
             return;
         }
-        let _ = msg.error(&format!("错误: {}", e));
+        let _ = msg.error(format!("错误: {}", e));
         return;
     }
 
@@ -41,7 +41,7 @@ fn main() {
             let _ = msg.warning("表单被用户取消");
             return;
         }
-        let _ = msg.error(&format!("错误: {}", e));
+        let _ = msg.error(format!("错误: {}", e));
         return;
     }
 
@@ -113,21 +113,21 @@ fn demo_simple_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
 
     let username = result.get_string("username");
     if !username.is_empty() {
-        let _ = msg.print(&format!("  用户名: {}", username));
+        let _ = msg.print(format!("  用户名: {}", username));
     }
     let email = result.get_string("email");
     if !email.is_empty() {
-        let _ = msg.print(&format!("  邮箱: {}", email));
+        let _ = msg.print(format!("  邮箱: {}", email));
     }
     let _ = msg.print("  密码: ****");
 
     let role = result.get_string("role");
     if !role.is_empty() {
-        let _ = msg.print(&format!("  角色: {}", role));
+        let _ = msg.print(format!("  角色: {}", role));
     }
 
     let newsletter = result.get_bool("newsletter");
-    let _ = msg.print(&format!(
+    let _ = msg.print(format!(
         "  订阅新闻: {}",
         if newsletter { "是" } else { "否" }
     ));
@@ -207,34 +207,31 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
 
     let name = result.get_string("project_name");
     if !name.is_empty() {
-        let _ = msg.print(&format!("  项目名称: {}", name));
+        let _ = msg.print(format!("  项目名称: {}", name));
     }
 
     let ptype = result.get_string("project_type");
     if !ptype.is_empty() {
-        let _ = msg.print(&format!("  项目类型: {}", ptype));
+        let _ = msg.print(format!("  项目类型: {}", ptype));
     }
 
     let use_git = result.get_bool("use_git");
-    let _ = msg.print(&format!(
-        "  Git 仓库: {}",
-        if use_git { "是" } else { "否" }
-    ));
+    let _ = msg.print(format!("  Git 仓库: {}", if use_git { "是" } else { "否" }));
 
     if use_git {
         let remote = result.get_string("git_remote");
         if !remote.is_empty() {
-            let _ = msg.print(&format!("  远程地址: {}", remote));
+            let _ = msg.print(format!("  远程地址: {}", remote));
         }
     }
 
     let add_ci = result.get_bool("add_ci");
-    let _ = msg.print(&format!("  CI 配置: {}", if add_ci { "是" } else { "否" }));
+    let _ = msg.print(format!("  CI 配置: {}", if add_ci { "是" } else { "否" }));
 
     if add_ci {
         let platforms = result.get_int_slice("ci_platforms");
         if !platforms.is_empty() {
-            let _ = msg.print(&format!("  CI 平台索引: {:?}", platforms));
+            let _ = msg.print(format!("  CI 平台索引: {:?}", platforms));
         }
     }
 
