@@ -940,10 +940,10 @@ mod tests {
         let response = client.get(&url, config).expect("Request should succeed");
         let result = response.ensure_success();
 
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        let error_msg = error.to_string();
-        assert!(error_msg.contains("500") || error_msg.contains("ResponseFailed"));
+        assert!(matches!(
+            result,
+            Err(HttpError::ResponseFailed { status: 500, .. })
+        ));
     }
 
     // ==================== 响应解析测试 ====================
@@ -1003,7 +1003,7 @@ mod tests {
 
         let response = client.get(&url, config).expect("Request should succeed");
         let error_msg = response.extract_error_message();
-        assert!(error_msg.contains("Invalid request") || error_msg.contains("error"));
+        assert_eq!(error_msg, "Invalid request");
     }
 
     // ==================== 重试机制测试 ====================

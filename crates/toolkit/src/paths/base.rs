@@ -10,7 +10,7 @@ use std::os::unix::fs::PermissionsExt;
 
 use crate::paths::constants::WORKFLOW_DIR;
 use crate::paths::PathError;
-use crate::util::fs::DirectoryWalker;
+use crate::util::fs::directory;
 
 /// 获取用户主目录
 ///
@@ -56,7 +56,7 @@ pub(crate) fn try_icloud_base_dir() -> Option<PathBuf> {
 
     // 尝试创建 .workflow 目录
     let workflow_dir = icloud_base.join(WORKFLOW_DIR);
-    if DirectoryWalker::new(&workflow_dir).ensure_exists().is_err() {
+    if directory::ensure_exists(&workflow_dir).is_err() {
         return None;
     }
 
@@ -96,7 +96,7 @@ pub(crate) fn local_base_dir() -> Result<PathBuf, PathError> {
     let workflow_dir = home.join(WORKFLOW_DIR);
 
     // 确保目录存在
-    DirectoryWalker::new(&workflow_dir).ensure_exists()?;
+    directory::ensure_exists(&workflow_dir)?;
 
     // 设置目录权限为 700（仅用户可访问）
     #[cfg(unix)]

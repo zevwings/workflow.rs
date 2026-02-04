@@ -4,7 +4,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
-use toolkit::{BackupResult, Platform, RollbackManager};
+use toolkit::{cleanup_backup, create_backup, rollback, BackupResult, Platform};
 
 use super::download::{build_download_url, download_file, extract_archive, verify_checksum};
 use super::types::TempDirManager;
@@ -125,7 +125,7 @@ impl UpdateCommand {
 
     /// 创建备份
     fn create_backup(&self) -> Option<BackupResult> {
-        match RollbackManager::create_backup() {
+        match create_backup() {
             Ok(backup) => {
                 info!(
                     "Backup created: {} binary(ies), {} completion(s)",
@@ -214,7 +214,7 @@ impl UpdateCommand {
         warning!("Update failed, rolling back to previous version...");
         br!();
 
-        match RollbackManager::rollback(&backup.backup_info) {
+        match rollback(&backup.backup_info) {
             Ok(rollback_result) => {
                 // 显示恢复的二进制文件
                 if !rollback_result.restored_binaries.is_empty() {
@@ -272,7 +272,7 @@ impl UpdateCommand {
                 br!();
 
                 // 回滚成功后清理备份
-                if let Err(cleanup_err) = RollbackManager::cleanup_backup(&backup.backup_info) {
+                if let Err(cleanup_err) = cleanup_backup(&backup.backup_info) {
                     warning!("Failed to clean up backup: {}", cleanup_err);
                 }
             }
@@ -297,7 +297,7 @@ impl UpdateCommand {
 
         // 清理备份（成功时）
         if let Some(backup) = backup_info {
-            if let Err(e) = RollbackManager::cleanup_backup(&backup.backup_info) {
+            if let Err(e) = cleanup_backup(&backup.backup_info) {
                 warning!("Failed to clean up backup: {}", e);
             }
         }

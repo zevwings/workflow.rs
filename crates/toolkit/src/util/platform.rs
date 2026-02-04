@@ -7,14 +7,14 @@ use std::process::Command;
 
 use thiserror::Error;
 
-use crate::util::fs::FileReader;
+use crate::util::fs::file;
 
 /// 平台操作错误
 #[derive(Debug, Error)]
 pub enum PlatformError {
-    /// 平台操作错误
-    #[error("Platform error: {0}")]
-    Operation(String),
+    /// 不支持的平台
+    #[error("Unsupported platform: {os}-{arch}")]
+    UnsupportedPlatform { os: String, arch: String },
 }
 
 /// 平台信息结构体
@@ -128,7 +128,7 @@ impl Platform {
         }
 
         // 方法1: 检查是否是 Alpine Linux（通常使用 musl）
-        if let Ok(os_release) = FileReader::new("/etc/os-release").to_string() {
+        if let Ok(os_release) = file::read_string(std::path::Path::new("/etc/os-release")) {
             if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
                 return true;
             }
@@ -198,10 +198,10 @@ impl Platform {
             ("linux", "aarch64") => Ok("Linux-ARM64".to_string()),
             ("windows", "x86_64") => Ok("Windows-x86_64".to_string()),
             ("windows", "aarch64") => Ok("Windows-ARM64".to_string()),
-            _ => Err(PlatformError::Operation(format!(
-                "Unsupported platform: {}-{}",
-                self.os, self.arch
-            ))),
+            _ => Err(PlatformError::UnsupportedPlatform {
+                os: self.os.clone(),
+                arch: self.arch.clone(),
+            }),
         }
     }
 }
@@ -446,31 +446,17 @@ mod tests {
     }
 
     #[rstest]
-    #[case(
-        "unsupported",
-        "unknown",
-        Some("Unsupported platform"),
-        Some("unsupported-unknown")
-    )]
-    #[case("freebsd", "x86_64", None, None)]
-    #[case("macos", "armv7", None, None)]
-    fn test_platform_release_identifier_unsupported(
-        #[case] os: &str,
-        #[case] arch: &str,
-        #[case] expected_error_contains: Option<&str>,
-        #[case] expected_error_contains2: Option<&str>,
-    ) {
+    #[case("unsupported", "unknown")]
+    #[case("freebsd", "x86_64")]
+    #[case("macos", "armv7")]
+    fn test_platform_release_identifier_unsupported(#[case] os: &str, #[case] arch: &str) {
         let platform = Platform::new(os, arch);
         let result = platform.release_identifier();
 
-        assert!(result.is_err());
-        let error_msg = result.unwrap_err().to_string();
-        if let Some(expected) = expected_error_contains {
-            assert!(error_msg.contains(expected));
-        }
-        if let Some(expected) = expected_error_contains2 {
-            assert!(error_msg.contains(expected));
-        }
+        assert!(matches!(
+            result,
+            Err(PlatformError::UnsupportedPlatform { .. })
+        ));
     }
 
     #[test]

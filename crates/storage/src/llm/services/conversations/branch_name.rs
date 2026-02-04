@@ -2,8 +2,7 @@
 //!
 //! 用于根据标题生成分支名。
 
-use domain::BranchNaming;
-use domain::LLMError;
+use domain::{sanitize_branch_name, LLMError};
 
 use crate::llm::services::{parsers::JsonParser, LLMConversation};
 
@@ -98,7 +97,7 @@ Return JSON format:
             .ok_or_else(|| LLMError::ApiError("branch_name is missing or empty".to_string()))?;
 
         // 清理分支名，确保只保留 ASCII 字符
-        let cleaned_branch_name: String = BranchNaming::sanitize(branch_name.trim());
+        let cleaned_branch_name: String = sanitize_branch_name(branch_name.trim());
 
         Ok(cleaned_branch_name)
     }

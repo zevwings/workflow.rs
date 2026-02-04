@@ -144,14 +144,11 @@ impl BranchService for BranchServiceImpl {
         opts.remote_callbacks(callbacks);
 
         remote.push(&[&refspec], Some(&mut opts)).map_err(|e| {
-            let error_msg = e.to_string();
             // 检查是否是因为远程分支不存在
-            if error_msg.contains("remote ref does not exist")
-                || error_msg.contains("cannot lock ref")
-            {
+            if e.code() == git2::ErrorCode::NotFound || e.code() == git2::ErrorCode::Locked {
                 GitError::BranchNotFound(format!("origin/{}", name))
             } else {
-                GitError::RemoteError(error_msg)
+                GitError::RemoteError(e.to_string())
             }
         })?;
 
@@ -299,12 +296,7 @@ impl BranchService for BranchServiceImpl {
                 .name()
                 .ok_or_else(|| GitError::OperationFailed("Invalid reference name".into()))?;
 
-            let obj = repo
-                .revparse_single(refname)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.checkout_tree(&obj, None)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.set_head(refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            self.checkout_to_ref(&repo, refname)?;
         } else if remote_exists {
             // 从远程分支创建本地分支
             let remote_branch = repo
@@ -321,24 +313,14 @@ impl BranchService for BranchServiceImpl {
 
             // 切换到新分支
             let refname = format!("refs/heads/{}", name);
-            let obj = repo
-                .revparse_single(&refname)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.checkout_tree(&obj, None)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.set_head(&refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            self.checkout_to_ref(&repo, &refname)?;
         } else {
             // 创建新分支
             self.create_branch(name)?;
 
             // 切换到新分支
             let refname = format!("refs/heads/{}", name);
-            let obj = repo
-                .revparse_single(&refname)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.checkout_tree(&obj, None)
-                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            repo.set_head(&refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
+            self.checkout_to_ref(&repo, &refname)?;
         }
 
         Ok(())
@@ -423,6 +405,23 @@ impl BranchService for BranchServiceImpl {
 }
 
 impl BranchServiceImpl {
+    /// 切换到指定的引用
+    ///
+    /// 将工作区和 HEAD 切换到指定的引用（分支或提交）。
+    ///
+    /// # 参数
+    /// - `repo`: Git 仓库引用（需要外部传入以避免死锁）
+    /// - `refname`: 引用名称（如 `refs/heads/main`）
+    fn checkout_to_ref(&self, repo: &git2::Repository, refname: &str) -> Result<(), GitError> {
+        let obj = repo
+            .revparse_single(refname)
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        repo.checkout_tree(&obj, None)
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        repo.set_head(refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        Ok(())
+    }
+
     /// 格式化分支名称
     ///
     /// # 参数

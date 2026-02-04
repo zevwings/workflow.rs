@@ -11,7 +11,7 @@ use std::{fs, path::PathBuf, sync::Arc};
 use std::os::unix::fs::PermissionsExt;
 
 use domain::{extract_jira_project, JiraError, JiraStatusConfig, ProjectStatusConfig};
-use toolkit::{log_debug, FileReader, FileWriter, Paths};
+use toolkit::{file, jira_config_path, log_debug};
 
 use crate::jira::JiraClient;
 
@@ -123,7 +123,7 @@ impl StatusService for StatusServiceImpl {
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(&self, config: &JiraStatusConfig) -> Result<(), JiraError> {
-        let config_path = Paths::jira_config()
+        let config_path = jira_config_path()
             .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
 
         let mut jira_config = Self::read_jira_config(&config_path)
@@ -220,8 +220,7 @@ impl StatusServiceImpl {
         if !path.exists() {
             return Ok(JiraConfig::default());
         }
-        let content = FileReader::new(path)
-            .to_string()
+        let content = file::read_string(path)
             .map_err(|e| JiraError::ApiError(format!("Failed to read config file: {}", e)))?;
         toml::from_str(&content).map_err(|e| {
             JiraError::ApiError(format!("Failed to parse TOML config {:?}: {}", path, e))
@@ -232,7 +231,7 @@ impl StatusServiceImpl {
     ///
     /// 在 Unix 系统上会自动设置文件权限为 600。
     fn write_jira_config(path: &PathBuf, config: &JiraConfig) -> Result<(), JiraError> {
-        FileWriter::new(path).write_toml(config).map_err(|e| {
+        file::write_toml(path, config).map_err(|e| {
             JiraError::ApiError(format!("Failed to write config file {:?}: {}", path, e))
         })?;
         Self::set_permissions(path)
@@ -270,7 +269,7 @@ impl StatusServiceImpl {
     ///
     /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_status_config(&self, project: &str) -> Result<JiraStatusConfig, JiraError> {
-        let config_path = Paths::jira_config()
+        let config_path = jira_config_path()
             .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
         let config = Self::read_jira_config(&config_path)
             .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;

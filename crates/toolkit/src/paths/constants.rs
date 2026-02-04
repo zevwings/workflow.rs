@@ -17,5 +17,17 @@ pub const JIRA_CONFIG_FILE: &str = "jira.toml";
 /// LLM 配置文件名称
 pub const LLM_CONFIG_FILE: &str = "llm.toml";
 
-/// 补全文件名称
+/// 补全配置文件名称（用于 zsh/bash 的 source 配置）
 pub const COMPLETIONS_FILE: &str = ".completions";
+
+/// 项目配置文件名称（仓库级别）
+pub const PROJECT_CONFIG_FILE: &str = "config.toml";
+
+/// 用户配置文件名称（仓库级别）
+pub const USER_CONFIG_FILE: &str = "user.toml";
+
+/// Completion 缓存目录名称
+pub const COMPLETION_CACHE_DIR: &str = ".completion_cache";
+
+/// Completions 目录名称
+pub const COMPLETIONS_DIR: &str = "completions";

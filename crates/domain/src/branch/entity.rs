@@ -73,37 +73,32 @@ impl fmt::Display for BranchType {
     }
 }
 
-/// 分支命名工具
-pub struct BranchNaming;
-
-impl BranchNaming {
-    /// 清理分支名，移除无效字符
-    ///
-    /// 只保留 ASCII 字母、数字、连字符、下划线和斜杠。
-    /// 移除其他所有特殊字符，确保分支名符合 Git 规范。
-    ///
-    /// # 参数
-    ///
-    /// * `name` - 要清理的分支名
-    ///
-    /// # 返回
-    ///
-    /// 返回清理后的分支名。
-    ///
-    /// # 示例
-    ///
-    /// ```
-    /// use domain::branch::entity::BranchNaming;
-    ///
-    /// assert_eq!(BranchNaming::sanitize("feature/abc-123"), "feature/abc-123");
-    /// assert_eq!(BranchNaming::sanitize("feature@test#123"), "featuretest123");
-    /// assert_eq!(BranchNaming::sanitize("  feature/test  "), "feature/test");
-    /// ```
-    pub fn sanitize(name: &str) -> String {
-        name.chars()
-            .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_' || *c == '/')
-            .collect()
-    }
+/// 清理分支名，移除无效字符
+///
+/// 只保留 ASCII 字母、数字、连字符、下划线和斜杠。
+/// 移除其他所有特殊字符，确保分支名符合 Git 规范。
+///
+/// # 参数
+///
+/// * `name` - 要清理的分支名
+///
+/// # 返回
+///
+/// 返回清理后的分支名。
+///
+/// # 示例
+///
+/// ```
+/// use domain::branch::sanitize_branch_name;
+///
+/// assert_eq!(sanitize_branch_name("feature/abc-123"), "feature/abc-123");
+/// assert_eq!(sanitize_branch_name("feature@test#123"), "featuretest123");
+/// assert_eq!(sanitize_branch_name("  feature/test  "), "feature/test");
+/// ```
+pub fn sanitize_branch_name(name: &str) -> String {
+    name.chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_' || *c == '/')
+        .collect()
 }
 
 /// 同步策略
@@ -153,9 +148,3 @@ pub trait BranchSyncCallbacks {
     /// 同步完成回调
     fn on_complete(&self, result: &BranchSyncResult);
 }
-
-/// 分支同步器
-///
-/// 提供分支同步相关的业务逻辑。
-/// 当前功能通过服务层直接调用仓储实现，此实体为未来业务逻辑封装预留。
-pub struct BranchSync;

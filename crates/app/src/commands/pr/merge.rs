@@ -74,23 +74,16 @@ impl PullRequestMergeCommand {
         // 4. 拉取最新代码
         info!("Pulling latest changes from '{}'...", target_branch);
         if let Err(e) = git_repo.pull(&target_branch) {
-            let error_msg = e.to_string();
-            // 检测是否是冲突错误
-            if error_msg.contains("conflict")
-                || error_msg.contains("Conflict")
-                || error_msg.contains("CONFLICT")
-            {
+            if matches!(e, GitError::MergeConflict) {
                 error!("Pull failed due to merge conflicts!");
                 error!("Please resolve the conflicts manually:");
                 info!("  1. Edit the conflicting files to resolve conflicts");
                 info!("  2. Run 'git add <resolved-files>'");
                 info!("  3. Run 'git commit' to complete the merge");
                 info!("  Or run 'git merge --abort' to cancel the merge");
-                return Err(
-                    format!("Pull failed: merge conflicts detected - {}", error_msg).into(),
-                );
+                return Err(format!("Pull failed: merge conflicts detected - {}", e).into());
             }
-            return Err(format!("Failed to pull latest changes: {}", error_msg).into());
+            return Err(format!("Failed to pull latest changes: {}", e).into());
         }
         success!("Pulled latest changes from '{}'", target_branch);
 

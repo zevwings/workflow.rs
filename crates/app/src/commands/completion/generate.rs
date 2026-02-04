@@ -6,7 +6,7 @@ use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use color_eyre::{eyre::WrapErr, Result};
 use prompt::{info, success};
-use toolkit::{detect_shell, shell_from_string, shell_to_string};
+use toolkit::{completion_cache_dir_shell_path, detect_shell, shell_from_string, shell_to_string};
 
 use crate::cli::Cli;
 use crate::registry::get_completion_service;
@@ -104,36 +104,38 @@ impl CompletionGenerateCommand {
 
     /// 生成 zsh 动态补全代码
     fn generate_zsh_dynamic_completion(&self) -> String {
-        r#"
+        let cache_dir = completion_cache_dir_shell_path();
+        format!(
+            r#"
 # Dynamic completion support
 # This provides dynamic completion for branch names, PR IDs, etc.
 
 # Performance optimization: cache directory
-typeset -g _WORKFLOW_CACHE_DIR="${HOME}/.workflow/.completion_cache"
+typeset -g _WORKFLOW_CACHE_DIR="{cache_dir}"
 typeset -g _WORKFLOW_CACHE_TTL=300  # 5 minutes
 
 # Ensure cache directory exists
-_workflow_ensure_cache_dir() {
+_workflow_ensure_cache_dir() {{
   [[ ! -d "$_WORKFLOW_CACHE_DIR" ]] && mkdir -p "$_WORKFLOW_CACHE_DIR" 2>/dev/null
-}
+}}
 
 # Check if cache file is valid (not expired)
-_workflow_is_cache_valid() {
+_workflow_is_cache_valid() {{
   local cache_file="$1"
   [[ -f "$cache_file" ]] || return 1
   local cache_time=$(stat -f %m "$cache_file" 2>/dev/null || stat -c %Y "$cache_file" 2>/dev/null)
   local current_time=$(date +%s)
   (( current_time - cache_time < _WORKFLOW_CACHE_TTL ))
-}
+}}
 
 # Dynamic branch name completion
-_workflow_complete_branches() {
+_workflow_complete_branches() {{
   _workflow_ensure_cache_dir
   local cache_file="$_WORKFLOW_CACHE_DIR/branches"
 
   # Try to use cached branches if valid
   if _workflow_is_cache_valid "$cache_file"; then
-    local branches=(${(f)"$(<$cache_file)"})
+    local branches=(${{(f)"$(<$cache_file)"}})
     _describe 'branches' branches
     return
   fi
@@ -143,19 +145,19 @@ _workflow_complete_branches() {
   if branches=$(timeout 2s git branch --format='%(refname:short)' 2>/dev/null); then
     # Cache the results
     echo "$branches" > "$cache_file" 2>/dev/null
-    local branch_array=(${(f)branches})
+    local branch_array=(${{(f)branches}})
     _describe 'branches' branch_array
   fi
-}
+}}
 
 # Dynamic PR ID completion
-_workflow_complete_pr_ids() {
+_workflow_complete_pr_ids() {{
   _workflow_ensure_cache_dir
   local cache_file="$_WORKFLOW_CACHE_DIR/pr_ids"
 
   # Try to use cached PR IDs if valid
   if _workflow_is_cache_valid "$cache_file"; then
-    local pr_ids=(${(f)"$(<$cache_file)"})
+    local pr_ids=(${{(f)"$(<$cache_file)"}})
     _describe 'PR IDs' pr_ids
     return
   fi
@@ -165,40 +167,43 @@ _workflow_complete_pr_ids() {
   if command -v gh >/dev/null 2>&1 && pr_ids=$(timeout 3s gh pr list --limit 20 --json number --jq '.[].number' 2>/dev/null); then
     # Cache the results
     echo "$pr_ids" > "$cache_file" 2>/dev/null
-    local pr_array=(${(f)pr_ids})
+    local pr_array=(${{(f)pr_ids}})
     _describe 'PR IDs' pr_array
   fi
-}
-"#
-        .to_string()
+}}
+"#,
+            cache_dir = cache_dir
+        )
     }
 
     /// 生成 bash 动态补全代码
     fn generate_bash_dynamic_completion(&self) -> String {
-        r#"
+        let cache_dir = completion_cache_dir_shell_path();
+        format!(
+            r#"
 # Dynamic completion support for bash
 # This provides dynamic completion for branch names, PR IDs, etc.
 
 # Performance optimization: cache settings
-_WORKFLOW_CACHE_DIR="${HOME}/.workflow/.completion_cache"
+_WORKFLOW_CACHE_DIR="{cache_dir}"
 _WORKFLOW_CACHE_TTL=300  # 5 minutes
 
 # Ensure cache directory exists
-_workflow_ensure_cache_dir() {
+_workflow_ensure_cache_dir() {{
   [[ ! -d "$_WORKFLOW_CACHE_DIR" ]] && mkdir -p "$_WORKFLOW_CACHE_DIR" 2>/dev/null
-}
+}}
 
 # Check if cache file is valid
-_workflow_is_cache_valid() {
+_workflow_is_cache_valid() {{
   local cache_file="$1"
   [[ -f "$cache_file" ]] || return 1
   local cache_time=$(stat -c %Y "$cache_file" 2>/dev/null)
   local current_time=$(date +%s)
   (( current_time - cache_time < _WORKFLOW_CACHE_TTL ))
-}
+}}
 
 # Get branch names for completion
-_workflow_get_branches() {
+_workflow_get_branches() {{
   _workflow_ensure_cache_dir
   local cache_file="$_WORKFLOW_CACHE_DIR/branches"
 
@@ -213,10 +218,10 @@ _workflow_get_branches() {
   if branches=$(timeout 2s git branch --format='%(refname:short)' 2>/dev/null); then
     echo "$branches" | tee "$cache_file" 2>/dev/null
   fi
-}
+}}
 
 # Get PR IDs for completion
-_workflow_get_pr_ids() {
+_workflow_get_pr_ids() {{
   _workflow_ensure_cache_dir
   local cache_file="$_WORKFLOW_CACHE_DIR/pr_ids"
 
@@ -230,8 +235,9 @@ _workflow_get_pr_ids() {
   if command -v gh >/dev/null 2>&1; then
     timeout 3s gh pr list --limit 20 --json number --jq '.[].number' 2>/dev/null | tee "$cache_file" 2>/dev/null
   fi
-}
-"#
-        .to_string()
+}}
+"#,
+            cache_dir = cache_dir
+        )
     }
 }

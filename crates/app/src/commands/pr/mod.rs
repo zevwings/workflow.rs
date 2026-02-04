@@ -1,13 +1,13 @@
 //! Pull Request 操作命令
 
-pub mod approve;
-pub mod close;
-pub mod comment;
-pub mod create;
-pub mod list;
-pub mod merge;
-pub mod summarize;
-pub mod update;
+mod approve;
+mod close;
+mod comment;
+mod create;
+mod list;
+mod merge;
+mod summarize;
+mod update;
 
 pub use approve::PullRequestApproveCommand;
 pub use close::PullRequestCloseCommand;

@@ -10,9 +10,6 @@ use std::path::PathBuf;
 /// Completion 配置文件名
 pub const COMPLETIONS_FILE: &str = ".completions";
 
-/// Completion source 路径（用于 zsh/bash）
-pub const COMPLETIONS_SOURCE_PATH: &str = "$HOME/.workflow/.completions";
-
 // ============================================================================
 // 生成结果
 // ============================================================================
@@ -107,12 +104,36 @@ pub fn get_all_completion_filenames() -> Vec<String> {
 }
 
 /// 获取 shell 的 source 路径
+///
+/// 注意：此函数返回 shell 脚本中使用的路径字符串。
+/// 实际路径应使用 `toolkit::completion_source_shell_path()` 和
+/// `toolkit::completion_file_shell_path()` 获取。
 pub fn get_shell_source_path(shell: &str) -> String {
+    // 使用常量避免硬编码
+    const WORKFLOW_DIR: &str = ".workflow";
+    const COMPLETIONS_DIR: &str = "completions";
+    const COMPLETIONS_CONFIG: &str = ".completions";
+
     match shell.to_lowercase().as_str() {
-        "zsh" | "bash" => COMPLETIONS_SOURCE_PATH.to_string(),
-        "fish" => "$HOME/.workflow/completions/workflow.fish".to_string(),
-        "powershell" | "pwsh" => "$HOME/.workflow/completions/_workflow.ps1".to_string(),
-        "elvish" => "$HOME/.workflow/completions/workflow.elv".to_string(),
-        _ => COMPLETIONS_SOURCE_PATH.to_string(),
+        "zsh" | "bash" => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_CONFIG),
+        "fish" => format!(
+            "$HOME/{}/{}/{}",
+            WORKFLOW_DIR,
+            COMPLETIONS_DIR,
+            get_completion_filename("fish")
+        ),
+        "powershell" | "pwsh" => format!(
+            "$HOME/{}/{}/{}",
+            WORKFLOW_DIR,
+            COMPLETIONS_DIR,
+            get_completion_filename("powershell")
+        ),
+        "elvish" => format!(
+            "$HOME/{}/{}/{}",
+            WORKFLOW_DIR,
+            COMPLETIONS_DIR,
+            get_completion_filename("elvish")
+        ),
+        _ => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_CONFIG),
     }
 }

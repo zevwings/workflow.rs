@@ -4,7 +4,7 @@
 
 use clap::Parser;
 use prompt::{terminal_resume, terminal_suspend};
-use toolkit::{logger, register_spinner_handlers, LoggerConfig, Paths};
+use toolkit::{logger, logs_dir, register_spinner_handlers, LoggerConfig};
 
 use app::cli::{
     AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             level,
             global_config.log.format.clone(),
             global_config.log.enable_trace_console.unwrap_or(false),
-            Paths::logs_dir()?,
+            logs_dir()?,
         );
 
         // 初始化 logger（从配置文件读取 LogSettings 并转换为 LoggerConfig）

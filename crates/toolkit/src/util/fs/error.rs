@@ -4,7 +4,7 @@ use thiserror::Error;
 
 /// 文件系统操作错误
 #[derive(Debug, Error)]
-pub enum FsError {
+pub enum FileError {
     /// I/O 错误
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

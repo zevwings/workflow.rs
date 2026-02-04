@@ -39,11 +39,11 @@ description: 审查 crates 目录下 Rust 代码质量，检查最佳实践、AP
 
 ### 模块导入规则
 - [ ] **crate 内部**：使用全路径到子模块
-  - 单个：`use crate::rollback::RollbackManager`
-  - 多个：`use crate::rollback::{BackInfo, RollbackManager}`
+  - 单个：`use crate::rollback::create_backup`
+  - 多个：`use crate::rollback::{create_backup, rollback, BackupInfo}`
 - [ ] **crate 外部**：从 crate 根导入
-  - 单个：`use toolkit::RollbackManager`
-  - 多个：`use toolkit::{BackInfo, RollbackManager}`
+  - 单个：`use toolkit::create_backup`
+  - 多个：`use toolkit::{create_backup, rollback, BackupInfo}`
 
 ### API 设计
 - [ ] 超过 3 个参数封装为结构体

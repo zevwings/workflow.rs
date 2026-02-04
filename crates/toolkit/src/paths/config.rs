@@ -10,17 +10,18 @@ use std::os::unix::fs::PermissionsExt;
 
 use crate::paths::base::{config_base_dir, local_base_dir};
 use crate::paths::constants::{
-    CONFIG_DIR, JIRA_CONFIG_FILE, LLM_CONFIG_FILE, WORKFLOW_CONFIG_FILE,
+    CONFIG_DIR, JIRA_CONFIG_FILE, LLM_CONFIG_FILE, PROJECT_CONFIG_FILE, USER_CONFIG_FILE,
+    WORKFLOW_CONFIG_FILE, WORKFLOW_DIR,
 };
 use crate::paths::PathError;
-use crate::util::fs::DirectoryWalker;
+use crate::util::fs::directory;
 
 /// 创建目录并设置权限（700，仅用户可访问）
 ///
 /// 这是一个辅助函数，用于统一处理目录创建和权限设置。
 fn create_dir_with_permissions(dir: &Path, name: &str) -> Result<(), PathError> {
     // 确保目录存在
-    DirectoryWalker::new(dir).ensure_exists()?;
+    directory::ensure_exists(dir)?;
 
     // 设置目录权限为 700（仅用户可访问，仅 Unix）
     #[cfg(unix)]
@@ -67,14 +68,14 @@ pub fn config_dir() -> Result<PathBuf, PathError> {
 /// 获取主配置文件路径
 ///
 /// 返回 `~/.workflow/config/workflow.toml` 的路径。
-pub fn workflow_config() -> Result<PathBuf, PathError> {
+pub fn workflow_config_path() -> Result<PathBuf, PathError> {
     Ok(config_dir()?.join(WORKFLOW_CONFIG_FILE))
 }
 
 /// 获取 LLM 配置文件路径
 ///
 /// 返回 `~/.workflow/config/llm.toml` 的路径。
-pub fn llm_config() -> Result<PathBuf, PathError> {
+pub fn llm_config_path() -> Result<PathBuf, PathError> {
     Ok(config_dir()?.join(LLM_CONFIG_FILE))
 }
 
@@ -82,14 +83,14 @@ pub fn llm_config() -> Result<PathBuf, PathError> {
 ///
 /// 返回 `~/.workflow/config/jira.toml` 的路径。
 /// 这是合并后的 Jira 配置文件，包含用户和状态配置。
-pub fn jira_config() -> Result<PathBuf, PathError> {
+pub fn jira_config_path() -> Result<PathBuf, PathError> {
     Ok(config_dir()?.join(JIRA_CONFIG_FILE))
 }
 
 /// 获取常用命令配置文件路径
 ///
 /// 返回 `~/.workflow/config/commands.toml` 的路径。
-pub fn commands_config() -> Result<PathBuf, PathError> {
+pub fn commands_config_path() -> Result<PathBuf, PathError> {
     Ok(config_dir()?.join("commands.toml"))
 }
 
@@ -109,11 +110,11 @@ pub fn commands_config() -> Result<PathBuf, PathError> {
 /// # 错误
 ///
 /// 如果无法获取当前工作目录，返回相应的错误信息。
-pub fn repo_root() -> Result<PathBuf, PathError> {
+pub fn repo_dir() -> Result<PathBuf, PathError> {
     std::env::current_dir().map_err(PathError::Io)
 }
 
-/// 获取项目级配置文件路径
+/// 获取项目级配置文件路径（当前工作目录）
 ///
 /// 返回当前工作目录下的 `.workflow/config.toml` 路径。
 /// 这是项目级别的配置文件，用于存储仓库特定的配置（如分支前缀、提交模板等）。
@@ -129,8 +130,53 @@ pub fn repo_root() -> Result<PathBuf, PathError> {
 /// # 错误
 ///
 /// 如果无法获取当前工作目录，返回相应的错误信息。
-pub fn project_config() -> Result<PathBuf, PathError> {
-    Ok(repo_root()?.join(super::constants::WORKFLOW_DIR).join("config.toml"))
+pub fn project_config_path() -> Result<PathBuf, PathError> {
+    Ok(project_config_file(&repo_dir()?))
+}
+
+/// 获取项目配置文件路径（指定仓库路径）
+///
+/// 返回指定仓库目录下的 `.workflow/config.toml` 路径。
+///
+/// # 参数
+///
+/// * `repo_path` - 仓库根目录路径
+///
+/// # 返回
+///
+/// 返回项目配置文件的 `PathBuf`。
+pub fn project_config_file(repo_path: &Path) -> PathBuf {
+    repo_path.join(WORKFLOW_DIR).join(PROJECT_CONFIG_FILE)
+}
+
+/// 获取用户配置文件路径（指定仓库路径）
+///
+/// 返回指定仓库目录下的 `.workflow/user.toml` 路径。
+///
+/// # 参数
+///
+/// * `repo_path` - 仓库根目录路径
+///
+/// # 返回
+///
+/// 返回用户配置文件的 `PathBuf`。
+pub fn user_config_file(repo_path: &Path) -> PathBuf {
+    repo_path.join(WORKFLOW_DIR).join(USER_CONFIG_FILE)
+}
+
+/// 获取仓库工作流目录路径（指定仓库路径）
+///
+/// 返回指定仓库目录下的 `.workflow/` 目录路径。
+///
+/// # 参数
+///
+/// * `repo_path` - 仓库根目录路径
+///
+/// # 返回
+///
+/// 返回仓库工作流目录的 `PathBuf`。
+pub fn repo_workflow_dir(repo_path: &Path) -> PathBuf {
+    repo_path.join(WORKFLOW_DIR)
 }
 
 /// 获取个人偏好配置文件路径
@@ -150,7 +196,7 @@ pub fn project_config() -> Result<PathBuf, PathError> {
 /// # 错误
 ///
 /// 如果无法创建配置目录，返回相应的错误信息。
-pub fn repository_config() -> Result<PathBuf, PathError> {
+pub fn repository_config_path() -> Result<PathBuf, PathError> {
     Ok(config_dir()?.join("repository.toml"))
 }
 

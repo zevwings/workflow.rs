@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-use crate::util::fs::FsError;
+use crate::util::fs::FileError;
 
 /// 路径操作错误
 #[derive(Debug, Error)]
@@ -13,7 +13,7 @@ pub enum PathError {
 
     /// 文件系统操作错误
     #[error("Filesystem error: {0}")]
-    Fs(#[from] FsError),
+    Fs(#[from] FileError),
 
     /// 环境变量错误
     #[error("Environment variable error: {0}")]

@@ -3,8 +3,7 @@
 //! 用于创建 PR 时生成分支名、PR 标题、描述和 scope。
 //! 注意：详细总结（summary）由服务层在调用此对话后自动生成。
 
-use domain::LLMError;
-use domain::{BranchNaming, PullRequestContent};
+use domain::{sanitize_branch_name, LLMError, PullRequestContent};
 use toolkit::Truncate;
 
 use crate::llm::services::{parsers::JsonParser, prompt, LLMConversation};
@@ -103,7 +102,7 @@ impl LLMConversation for CreateConversation {
         }
 
         // 清理分支名，确保只保留 ASCII 字符
-        model.branch_name = BranchNaming::sanitize(model.branch_name.trim());
+        model.branch_name = sanitize_branch_name(model.branch_name.trim());
         model.pr_title = model.pr_title.trim().to_string();
 
         Ok(model)

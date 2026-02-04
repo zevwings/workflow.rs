@@ -1,7 +1,7 @@
 //! 下载 Jira ticket 附件命令
 
 use prompt::{error, info, spinner, success};
-use toolkit::paths::{default_download_base_dir, Paths};
+use toolkit::{default_download_base_dir, expand};
 
 use crate::registry;
 use crate::workflows::utils::jira::get_jira_id_interactive;
@@ -27,7 +27,7 @@ impl JiraAttachmentsCommand {
 
         // 获取基础目录（使用 domain 层的配置函数）
         let dir_str = default_download_base_dir();
-        let base_dir = Paths::expand(&dir_str).map_err(|e| {
+        let base_dir = expand(&dir_str).map_err(|e| {
             format!(
                 "Failed to expand attachments base directory '{}': {}",
                 dir_str, e

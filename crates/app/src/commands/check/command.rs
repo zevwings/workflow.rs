@@ -33,7 +33,7 @@ impl CheckCommand {
         br!();
 
         let config_service = registry::get_global_config_repository();
-        let workflow_config_path = toolkit::Paths::workflow_config()?;
+        let workflow_config_path = toolkit::workflow_config_path()?;
 
         // 1. 显示配置信息
         if workflow_config_path.exists() {

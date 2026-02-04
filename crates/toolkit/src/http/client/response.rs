@@ -436,48 +436,39 @@ mod tests {
     fn test_http_response_ensure_success_404() {
         let response = create_test_response(404, b"Not Found");
         let result = response.ensure_success();
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        let error_msg = error.to_string();
-        assert!(error_msg.contains("404"));
-        // 错误格式是 "HTTP request failed with status {status}: {body}"
-        assert!(error_msg.contains("status 404"));
+        assert!(matches!(
+            result,
+            Err(HttpError::ResponseFailed { status: 404, .. })
+        ));
     }
 
     #[test]
     fn test_http_response_ensure_success_500() {
         let response = create_test_response(500, b"Internal Server Error");
         let result = response.ensure_success();
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        let error_msg = error.to_string();
-        assert!(error_msg.contains("500"));
+        assert!(matches!(
+            result,
+            Err(HttpError::ResponseFailed { status: 500, .. })
+        ));
     }
 
     #[test]
     fn test_http_response_ensure_success_body_truncation() {
         // 测试 ensure_success 在响应体很大时的截断
-        // 注意：实际的截断逻辑在 ensure_success 中，这里主要测试错误信息包含 body
         let large_body = "x".repeat(1000);
         let response = create_test_response(404, large_body.as_bytes());
         let result = response.ensure_success();
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        let error_msg = error.to_string();
-        assert!(error_msg.contains("404"));
-        // 错误信息应该包含响应体（格式是 "HTTP request failed with status {status}: {body}"）
-        // 由于 body 可能很长，我们只验证错误格式正确
-        assert!(error_msg.contains("status 404"));
+        assert!(matches!(
+            result,
+            Err(HttpError::ResponseFailed { status: 404, .. })
+        ));
     }
 
     #[test]
     fn test_http_response_ensure_success_with() {
         let response = create_test_response(404, b"Not Found");
         let result = response.ensure_success_with(|r| HttpError::HttpRequestFailed(r.status));
-        assert!(result.is_err());
-        let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("Custom error"));
-        assert!(error_msg.contains("404"));
+        assert!(matches!(result, Err(HttpError::HttpRequestFailed(404))));
     }
 
     // ==================== HttpResponse 边界条件测试 ====================
@@ -512,7 +503,7 @@ mod tests {
         let response = create_test_response(400, error_json.to_string().as_bytes());
 
         let error_msg = response.extract_error_message();
-        assert!(error_msg.contains("Something went wrong"));
+        assert_eq!(error_msg, "Something went wrong");
     }
 
     #[test]
@@ -522,17 +513,15 @@ mod tests {
         let response = create_test_response(400, error_text.as_bytes());
 
         let error_msg = response.extract_error_message();
-        assert!(error_msg.contains("Invalid request"));
+        assert_eq!(error_msg, "Error: Invalid request");
     }
 
     #[test]
     fn test_http_response_extract_error_message_empty() {
         // 测试空响应体的错误消息提取
-        // 空响应体在 as_json 时会返回 "null"（JSON 的空值）
         let response = create_test_response(400, b"");
         let error_msg = response.extract_error_message();
-        // 空响应体可能被解析为 JSON null，或者返回空字符串
-        assert!(error_msg.is_empty() || error_msg == "null");
+        assert!(error_msg.is_empty());
     }
 
     #[test]
@@ -544,7 +533,7 @@ mod tests {
         let response = create_test_response(400, error_json.to_string().as_bytes());
 
         let error_msg = response.extract_error_message();
-        assert!(error_msg.contains("Direct message"));
+        assert_eq!(error_msg, "Direct message");
     }
 
     // ==================== HttpResponse from_reqwest_response 测试（使用 Mock Server） ====================
@@ -607,8 +596,10 @@ mod tests {
         // 测试超过大小限制
         let result = mock_server.create_http_response("GET", "/large", 100);
         assert!(result.is_err());
-        let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("too large"));
+        let err = result.unwrap_err();
+        assert!(err
+            .downcast_ref::<HttpError>()
+            .is_some_and(|e| matches!(e, HttpError::UnableToReadBody(_))));
     }
 
     #[test]

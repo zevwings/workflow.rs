@@ -9,6 +9,6 @@ pub mod service;
 pub use entity::{
     get_all_completion_filenames, get_completion_filename, get_shell_source_path,
     CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, ShellCompletionStatus,
-    COMPLETIONS_FILE, COMPLETIONS_SOURCE_PATH,
+    COMPLETIONS_FILE,
 };
 pub use service::CompletionService;

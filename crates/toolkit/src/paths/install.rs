@@ -5,8 +5,9 @@
 use std::path::PathBuf;
 
 use crate::paths::base::local_base_dir;
+use crate::paths::constants::{COMPLETIONS_DIR, COMPLETION_CACHE_DIR, WORKFLOW_DIR};
 use crate::paths::PathError;
-use crate::util::fs::DirectoryWalker;
+use crate::util::fs::directory;
 
 /// 获取所有命令名称
 ///
@@ -21,9 +22,9 @@ use crate::util::fs::DirectoryWalker;
 /// # 示例
 ///
 /// ```
-/// use toolkit::paths::Paths;
+/// use toolkit::command_names;
 ///
-/// let names = Paths::command_names();
+/// let names = command_names();
 /// assert_eq!(names, ["workflow"]);
 /// ```
 pub fn command_names() -> &'static [&'static str] {
@@ -41,9 +42,9 @@ pub fn command_names() -> &'static [&'static str] {
 /// # 示例
 ///
 /// ```
-/// use toolkit::paths::Paths;
+/// use toolkit::binary_install_dir;
 ///
-/// let dir = Paths::binary_install_dir();
+/// let dir = binary_install_dir();
 /// // Unix: "/usr/local/bin"
 /// // Windows: "%LOCALAPPDATA%\\Programs\\workflow\\bin"
 /// ```
@@ -72,9 +73,9 @@ pub fn binary_install_dir() -> String {
 /// # 示例
 ///
 /// ```
-/// use toolkit::paths::Paths;
+/// use toolkit::binary_paths;
 ///
-/// let paths = Paths::binary_paths();
+/// let paths = binary_paths();
 /// assert_eq!(paths, vec![
 ///     "/usr/local/bin/workflow".to_string(),
 /// ]);
@@ -106,9 +107,9 @@ pub fn binary_paths() -> Vec<String> {
 /// # 示例
 ///
 /// ```
-/// use toolkit::paths::Paths;
+/// use toolkit::binary_name;
 ///
-/// let name = Paths::binary_name("workflow");
+/// let name = binary_name("workflow");
 /// // Windows: "workflow.exe"
 /// // Unix: "workflow"
 /// ```
@@ -134,10 +135,77 @@ pub fn binary_name(name: &str) -> String {
 /// 如果无法获取本地目录，返回相应的错误信息。
 pub fn completion_dir() -> Result<PathBuf, PathError> {
     // 确保使用本地路径
-    let completion_dir = local_base_dir()?.join("completions");
+    let completion_dir = local_base_dir()?.join(COMPLETIONS_DIR);
 
     // 确保目录存在
-    DirectoryWalker::new(&completion_dir).ensure_exists()?;
+    directory::ensure_exists(&completion_dir)?;
 
     Ok(completion_dir)
+}
+
+/// 获取补全缓存目录路径（强制本地）
+///
+/// 返回 `~/.workflow/.completion_cache/`（总是本地路径）。
+/// 用于缓存动态补全数据（如分支列表、PR ID 等）。
+///
+/// # 返回
+///
+/// 返回补全缓存目录的 `PathBuf`。
+///
+/// # 错误
+///
+/// 如果无法获取本地目录，返回相应的错误信息。
+pub fn completion_cache_dir() -> Result<PathBuf, PathError> {
+    let cache_dir = local_base_dir()?.join(COMPLETION_CACHE_DIR);
+
+    // 确保目录存在
+    directory::ensure_exists(&cache_dir)?;
+
+    Ok(cache_dir)
+}
+
+/// 获取 completions 目录的 shell 路径字符串
+///
+/// 返回用于 shell 脚本中的路径字符串格式。
+///
+/// # 返回
+///
+/// 返回 `$HOME/.workflow/completions` 格式的路径字符串。
+pub fn completion_dir_shell_path() -> String {
+    format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_DIR)
+}
+
+/// 获取 completion 缓存目录的 shell 路径字符串
+///
+/// 返回用于 shell 脚本中的路径字符串格式。
+///
+/// # 返回
+///
+/// 返回 `$HOME/.workflow/.completion_cache` 格式的路径字符串。
+pub fn completion_cache_dir_shell_path() -> String {
+    format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETION_CACHE_DIR)
+}
+
+/// 获取 completion 配置文件的 shell source 路径
+///
+/// 返回用于 shell source 命令的路径字符串。
+///
+/// # 返回
+///
+/// 返回 `$HOME/.workflow/.completions` 格式的路径字符串。
+pub fn completion_source_shell_path() -> String {
+    format!("$HOME/{}/.completions", WORKFLOW_DIR)
+}
+
+/// 获取指定 shell 的 completion 文件的 shell 路径
+///
+/// # 参数
+///
+/// * `filename` - completion 文件名
+///
+/// # 返回
+///
+/// 返回 `$HOME/.workflow/completions/<filename>` 格式的路径字符串。
+pub fn completion_file_shell_path(filename: &str) -> String {
+    format!("{}/{}", completion_dir_shell_path(), filename)
 }

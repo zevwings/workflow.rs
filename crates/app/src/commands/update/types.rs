@@ -5,7 +5,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use color_eyre::{eyre::WrapErr, Result};
-use toolkit::DirectoryWalker;
+use toolkit::directory;
 
 // ============================================================================
 // 版本比较
@@ -65,7 +65,7 @@ impl TempDirManager {
         }
 
         // 创建临时目录
-        DirectoryWalker::new(&temp_dir).ensure_exists()?;
+        directory::ensure_exists(&temp_dir)?;
 
         // 根据平台确定归档文件扩展名
         let extension = if platform.starts_with("Windows") {

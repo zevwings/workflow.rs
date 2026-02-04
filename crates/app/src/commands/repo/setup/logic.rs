@@ -12,6 +12,7 @@ use domain::{
 };
 use prompt::{br, confirm, info, success, warning};
 use prompt::{ConfirmFormField, FormBuilder, FormResult, GroupConfig, InputFormField};
+use toolkit::{project_config_file, user_config_file};
 
 use crate::registry;
 
@@ -133,12 +134,12 @@ impl RepoSetupCommand {
 
         br!();
         success!(
-            "Project configuration saved to: {}/.workflow/config.toml",
-            repo_path.display()
+            "Project configuration saved to: {}",
+            project_config_file(&repo_path).display()
         );
         success!(
-            "Personal configuration saved to: {}/.workflow/user.toml",
-            repo_path.display()
+            "Personal configuration saved to: {}",
+            user_config_file(&repo_path).display()
         );
         br!();
         success!("Repository configuration completed successfully!");

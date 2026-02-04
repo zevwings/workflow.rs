@@ -1,7 +1,7 @@
 //! 分支工作流模块
 
 use crate::registry;
-use domain::{BranchNaming, BranchTemplateVars, BranchType};
+use domain::{sanitize_branch_name, BranchTemplateVars, BranchType};
 use prompt::{info, select, spinner};
 use toolkit::TemplateEngine;
 
@@ -109,7 +109,7 @@ pub fn to_slug(summary: &str) -> String {
         .join("-");
 
     // 清理结果
-    BranchNaming::sanitize(&slug)
+    sanitize_branch_name(&slug)
 }
 
 /// 选择分支类型

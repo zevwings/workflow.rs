@@ -8,9 +8,21 @@ use thiserror::Error;
 /// 浏览器操作错误
 #[derive(Debug, Error)]
 pub enum BrowserError {
-    /// 浏览器操作错误
-    #[error("Browser error: {0}")]
-    Operation(String),
+    /// 无效的 URL 格式
+    #[error("Invalid URL format '{url}': {reason}")]
+    InvalidUrl { url: String, reason: String },
+
+    /// 打开浏览器失败
+    #[error("Failed to open URL '{url}': {reason}")]
+    OpenFailed { url: String, reason: String },
+
+    /// 打开浏览器失败（指定浏览器）
+    #[error("Failed to open URL '{url}' with browser '{browser}': {reason}")]
+    OpenWithBrowserFailed {
+        url: String,
+        browser: String,
+        reason: String,
+    },
 }
 
 /// 浏览器类型枚举
@@ -181,32 +193,34 @@ pub trait BrowserExt {
 impl BrowserExt for str {
     fn open_in_browser(&self) -> Result<(), BrowserError> {
         // 验证 URL 格式
-        Url::parse(self).map_err(|e| {
-            BrowserError::Operation(format!("Invalid URL format '{}': {}", self, e))
+        Url::parse(self).map_err(|e| BrowserError::InvalidUrl {
+            url: self.to_string(),
+            reason: e.to_string(),
         })?;
 
         // 使用系统默认浏览器打开 URL
-        open::that(self).map_err(|e| {
-            BrowserError::Operation(format!("Failed to open URL '{}': {}", self, e))
+        open::that(self).map_err(|e| BrowserError::OpenFailed {
+            url: self.to_string(),
+            reason: e.to_string(),
         })?;
         Ok(())
     }
 
     fn open_in_browser_with(&self, browser: Browser) -> Result<(), BrowserError> {
         // 验证 URL 格式
-        Url::parse(self).map_err(|e| {
-            BrowserError::Operation(format!("Invalid URL format '{}': {}", self, e))
+        Url::parse(self).map_err(|e| BrowserError::InvalidUrl {
+            url: self.to_string(),
+            reason: e.to_string(),
         })?;
 
         // 获取平台特定的浏览器名称
         let browser_name = browser.as_str();
 
         // 使用指定的浏览器打开 URL
-        open::with(self, browser_name).map_err(|e| {
-            BrowserError::Operation(format!(
-                "Failed to open URL '{}' with browser '{}': {}",
-                self, browser_name, e
-            ))
+        open::with(self, browser_name).map_err(|e| BrowserError::OpenWithBrowserFailed {
+            url: self.to_string(),
+            browser: browser_name.to_string(),
+            reason: e.to_string(),
         })?;
         Ok(())
     }
@@ -225,7 +239,7 @@ impl BrowserExt for String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Browser, BrowserExt};
+    use super::{Browser, BrowserError, BrowserExt};
 
     // ============================================================================
     // Browser 枚举测试
@@ -310,18 +324,10 @@ mod tests {
         for (url, description) in invalid_urls {
             let result = url.open_in_browser();
             assert!(
-                result.is_err(),
+                matches!(result, Err(BrowserError::InvalidUrl { .. })),
                 "open_in_browser() should reject invalid URL: {} ({})",
                 url,
                 description
-            );
-
-            // 验证错误消息包含有用的信息
-            let error_msg = result.unwrap_err().to_string();
-            assert!(
-                error_msg.contains("Invalid URL"),
-                "Error message should mention 'Invalid URL', got: {}",
-                error_msg
             );
         }
     }
@@ -345,15 +351,13 @@ mod tests {
             let result = url.open_in_browser();
             // 在 CI 环境中可能因为没有浏览器而失败，但错误应该是打开浏览器的错误，
             // 而不是 URL 验证错误
-            if let Err(e) = result {
-                let error_msg = e.to_string();
-                // 如果失败，应该是"Failed to open URL"错误，而不是"Invalid URL"错误
-                if error_msg.contains("Invalid URL") {
-                    panic!(
-                        "Valid URL '{}' should pass validation, but got validation error: {}",
-                        url, error_msg
-                    );
-                }
+            if let Err(ref e) = result {
+                assert!(
+                    matches!(e, BrowserError::OpenFailed { .. }),
+                    "Valid URL '{}' should pass validation, but got: {:?}",
+                    url,
+                    e
+                );
             }
         }
     }
@@ -373,12 +377,12 @@ mod tests {
             (Ok(_), Ok(_)) => {
                 // 两者都成功（有浏览器环境）
             }
-            (Err(e1), Err(e2)) => {
+            (Err(ref e1), Err(ref e2)) => {
                 // 两者都失败（CI 环境），错误类型应该相同
                 assert!(
-                    e1.to_string().contains("Failed to open URL")
-                        && e2.to_string().contains("Failed to open URL"),
-                    "Both should fail with same error type"
+                    matches!(e1, BrowserError::OpenFailed { .. })
+                        && matches!(e2, BrowserError::OpenFailed { .. }),
+                    "Both should fail with OpenFailed error type"
                 );
             }
             _ => {
@@ -400,16 +404,9 @@ mod tests {
         for url in invalid_urls {
             let result = url.open_in_browser_with(Browser::Firefox);
             assert!(
-                result.is_err(),
+                matches!(result, Err(BrowserError::InvalidUrl { .. })),
                 "open_in_browser_with() should reject invalid URL: '{}'",
                 url
-            );
-
-            let error_msg = result.unwrap_err().to_string();
-            assert!(
-                error_msg.contains("Invalid URL"),
-                "Error should be URL validation error, got: {}",
-                error_msg
             );
         }
     }
@@ -433,14 +430,13 @@ mod tests {
             let result = url.open_in_browser_with(browser);
             // 在 CI 环境中可能失败，但至少不应该 panic
             // 如果失败，应该是打开浏览器失败，而不是 URL 验证失败
-            if let Err(e) = result {
-                let error_msg = e.to_string();
-                if error_msg.contains("Invalid URL") {
-                    panic!(
-                        "Valid URL should pass validation for browser {:?}, got: {}",
-                        browser, error_msg
-                    );
-                }
+            if let Err(ref e) = result {
+                assert!(
+                    matches!(e, BrowserError::OpenWithBrowserFailed { .. }),
+                    "Valid URL should pass validation for browser {:?}, got: {:?}",
+                    browser,
+                    e
+                );
             }
         }
     }
@@ -457,13 +453,11 @@ mod tests {
         // 验证两种类型都可以调用方法（行为一致）
         match (result_str, result_string) {
             (Ok(_), Ok(_)) => {}
-            (Err(e1), Err(e2)) => {
-                // 都失败是可以接受的（CI 环境）
-                let msg1 = e1.to_string();
-                let msg2 = e2.to_string();
-                // 但不应该是 URL 验证错误
+            (Err(ref e1), Err(ref e2)) => {
+                // 都失败是可以接受的（CI 环境），但不应该是 URL 验证错误
                 assert!(
-                    !msg1.contains("Invalid URL") && !msg2.contains("Invalid URL"),
+                    !matches!(e1, BrowserError::InvalidUrl { .. })
+                        && !matches!(e2, BrowserError::InvalidUrl { .. }),
                     "Should not be URL validation errors"
                 );
             }
@@ -490,13 +484,12 @@ mod tests {
         for url in special_urls {
             let result = url.open_in_browser();
             // 这些 URL 格式都是有效的，不应该在验证阶段失败
-            if let Err(e) = result {
-                let error_msg = e.to_string();
+            if let Err(ref e) = result {
                 assert!(
-                    !error_msg.contains("Invalid URL"),
-                    "Special URL '{}' should be valid, got: {}",
+                    !matches!(e, BrowserError::InvalidUrl { .. }),
+                    "Special URL '{}' should be valid, got: {:?}",
                     url,
-                    error_msg
+                    e
                 );
             }
         }
