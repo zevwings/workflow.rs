@@ -12,7 +12,7 @@ use std::path::PathBuf;
 
 use clap_complete::Shell;
 
-pub use config::ShellConfigManager;
+pub use config::{add_source, has_source, is_configured, remove_source};
 pub use error::ShellError;
 
 /// 检测当前 Shell 类型

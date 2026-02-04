@@ -1,8 +1,8 @@
 //! 总结 Pull Request 命令
 
-use crate::registry;
-use color_eyre::Result;
 use prompt::{info, spinner, success};
+
+use crate::registry;
 
 /// Pull Request Summarize 命令
 pub struct PullRequestSummarizeCommand {

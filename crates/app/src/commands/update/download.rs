@@ -8,7 +8,10 @@ use std::path::Path;
 
 use color_eyre::{eyre::WrapErr, Result};
 use prompt::{info, success, warning, Progress, Spinner};
-use toolkit::{Archive, Checksum, HttpClient, HttpMethod, RequestConfig, SizeExt};
+use toolkit::{
+    archive, build_checksum_url, calculate_sha256, parse_hash_from_content,
+    verify_checksum as verify_file_checksum, HttpClient, HttpMethod, RequestConfig, SizeExt,
+};
 
 use super::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
 
@@ -95,7 +98,7 @@ pub fn download_file(url: &str, output_path: &Path) -> Result<()> {
 ///
 /// 下载校验和文件并验证已下载文件的完整性。
 pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
-    let checksum_url = Checksum::build_checksum_url(download_url);
+    let checksum_url = build_checksum_url(download_url);
 
     toolkit::log_debug!("Checksum URL: {}", checksum_url);
 
@@ -113,7 +116,7 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
                 warning!("  Proceeding with update without verification...");
 
                 // 仍然计算并显示文件的 SHA256，供用户参考
-                if let Ok(actual_hash) = Checksum::calculate_sha256(archive_path) {
+                if let Ok(actual_hash) = calculate_sha256(archive_path) {
                     info!("Downloaded file SHA256: {}", actual_hash);
                 }
                 return Ok(());
@@ -127,7 +130,7 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
                 );
                 warning!("  Proceeding with update without verification...");
 
-                if let Ok(actual_hash) = Checksum::calculate_sha256(archive_path) {
+                if let Ok(actual_hash) = calculate_sha256(archive_path) {
                     info!("Downloaded file SHA256: {}", actual_hash);
                 }
                 return Ok(());
@@ -136,12 +139,12 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
             let checksum_content = response.as_text().wrap_err("Failed to read checksum file")?;
 
             // 解析哈希值
-            let expected_hash = Checksum::parse_hash_from_content(&checksum_content)
+            let expected_hash = parse_hash_from_content(&checksum_content)
                 .wrap_err("Failed to parse checksum file")?;
 
             // 验证文件
             info!("Verifying file integrity...");
-            Checksum::verify(archive_path, &expected_hash)
+            verify_file_checksum(archive_path, &expected_hash)
                 .wrap_err("File integrity verification failed")?;
 
             success!("File integrity verification passed");
@@ -152,7 +155,7 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
             warning!("  Proceeding with update without verification...");
 
             // 仍然计算并显示文件的 SHA256，供用户参考
-            if let Ok(actual_hash) = Checksum::calculate_sha256(archive_path) {
+            if let Ok(actual_hash) = calculate_sha256(archive_path) {
                 info!("Downloaded file SHA256: {}", actual_hash);
             }
         }
@@ -171,7 +174,7 @@ pub fn extract_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
     let spinner = Spinner::new("Extracting update package...");
     let spinner_instance = spinner.start();
 
-    let result = Archive::extract(archive_path, output_dir);
+    let result = archive::extract(archive_path, output_dir);
 
     spinner_instance.stop();
 

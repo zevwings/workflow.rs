@@ -2,24 +2,43 @@
 //!
 //! 负责组合各个 crate 的依赖注入容器，统一管理所有服务。
 
-use once_cell::sync::Lazy;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 /// 应用程序初始化标记
 ///
 /// 确保所有模块都已注册
-static APP_INITIALIZED: Lazy<()> = Lazy::new(|| {
+static APP_INITIALIZED: LazyLock<()> = LazyLock::new(|| {
     // 按依赖顺序初始化模块
-    storage::register_storage().expect("Failed to register storage module");
-    let _services = services::build_services_module();
+    // 注意：这些是启动时的关键初始化，失败时程序无法继续运行
+    if let Err(e) = storage::register_storage() {
+        panic!("Failed to register storage module: {e}");
+    }
+    if let Err(e) = services::register_services() {
+        panic!("Failed to register services module: {e}");
+    }
 });
 
 /// 确保应用已初始化
 fn ensure_initialized() {
-    Lazy::force(&APP_INITIALIZED);
+    LazyLock::force(&APP_INITIALIZED);
 }
 
 /// 从全局容器获取服务
+///
+/// 这是依赖注入的核心函数，用于获取已注册的服务实例。
+/// 首次调用时会自动初始化所有模块（storage, services）。
+///
+/// # 类型参数
+///
+/// * `T` - 服务 trait 类型，必须实现 `Send + Sync + 'static`
+///
+/// # 返回
+///
+/// 返回服务的 `Arc<T>` 智能指针
+///
+/// # Panic
+///
+/// 如果服务未注册或初始化失败，将 panic 并显示详细错误信息。
 ///
 /// # 示例
 ///
@@ -28,7 +47,13 @@ fn ensure_initialized() {
 /// ```
 pub fn get_service<T: 'static + Send + Sync + ?Sized>() -> Arc<T> {
     ensure_initialized();
-    registry::resolve::<T>().expect("Failed to resolve service")
+    registry::resolve::<T>().unwrap_or_else(|e| {
+        panic!(
+            "Failed to resolve service {}: {}",
+            std::any::type_name::<T>(),
+            e
+        )
+    })
 }
 
 // ============================================================================

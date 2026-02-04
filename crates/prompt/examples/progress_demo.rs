@@ -44,9 +44,7 @@ fn demo_basic_progress() {
     println!("\n=== Demo 1: 基本进度条 ===\n");
 
     let total = 50u64;
-    let pb = progress_bar("Processing items...")
-        .with_total(total)
-        .start();
+    let pb = progress_bar("Processing items...").with_total(total).start();
 
     for _ in 0..total {
         thread::sleep(Duration::from_millis(50));
@@ -137,9 +135,7 @@ fn demo_completion_states() {
     println!("\n=== Demo 4: 不同完成状态 ===\n");
 
     // 成功完成
-    let pb = progress_bar("Task 1...")
-        .with_total(20)
-        .start();
+    let pb = progress_bar("Task 1...").with_total(20).start();
 
     for _ in 0..20 {
         thread::sleep(Duration::from_millis(30));
@@ -148,9 +144,7 @@ fn demo_completion_states() {
     pb.with_success("任务 1 成功！");
 
     // 失败 (使用 with_error)
-    let pb = progress_bar("Task 2...")
-        .with_total(20)
-        .start();
+    let pb = progress_bar("Task 2...").with_total(20).start();
 
     for _ in 0..10 {
         thread::sleep(Duration::from_millis(30));
@@ -159,9 +153,7 @@ fn demo_completion_states() {
     pb.with_error("任务 2 失败");
 
     // 信息 (使用 with_info)
-    let pb = progress_bar("Task 3...")
-        .with_total(20)
-        .start();
+    let pb = progress_bar("Task 3...").with_total(20).start();
 
     for _ in 0..20 {
         thread::sleep(Duration::from_millis(30));
@@ -175,8 +167,7 @@ fn demo_indeterminate_progress() {
     println!("\n=== Demo 5: 未知总量 ===\n");
 
     // 不设置 total，显示不确定进度
-    let pb = progress_bar("Scanning files...")
-        .start();
+    let pb = progress_bar("Scanning files...").start();
 
     // 模拟扫描过程
     for i in 0..50 {
@@ -211,9 +202,7 @@ fn demo_progress_with_logs() {
     println!("\n=== Demo 6: ProgressBar 与日志协调 ===\n");
 
     let total = 10u64;
-    let pb = progress_bar("Downloading...")
-        .with_total(total)
-        .start();
+    let pb = progress_bar("Downloading...").with_total(total).start();
 
     // 模拟下载，期间产生日志
     for i in 1..=total {

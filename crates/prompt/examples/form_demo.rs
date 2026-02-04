@@ -93,11 +93,7 @@ fn demo_simple_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .add_select(SelectFormField {
             key: "role".to_string(),
             prompt: "请选择角色".to_string(),
-            options: vec![
-                "User".to_string(),
-                "Admin".to_string(),
-                "Guest".to_string(),
-            ],
+            options: vec!["User".to_string(), "Admin".to_string(), "Guest".to_string()],
             default_index: 0,
             condition: None,
             result_title: Some("Role".to_string()),
@@ -220,7 +216,10 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
     }
 
     let use_git = result.get_bool("use_git");
-    let _ = msg.print(&format!("  Git 仓库: {}", if use_git { "是" } else { "否" }));
+    let _ = msg.print(&format!(
+        "  Git 仓库: {}",
+        if use_git { "是" } else { "否" }
+    ));
 
     if use_git {
         let remote = result.get_string("git_remote");

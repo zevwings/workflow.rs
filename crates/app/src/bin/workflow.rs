@@ -4,12 +4,12 @@
 
 use clap::Parser;
 use prompt::{terminal_resume, terminal_suspend};
-use toolkit::{logger, register_spinner_handlers, LoggerConfig, Paths};
+use toolkit::{logger, logs_dir, register_spinner_handlers, LoggerConfig};
 
 use app::cli::{
-    AliasCommand, AmendArgs, BranchSubcommand, Cli, Command, CommitSubcommand, CompletionCommand,
-    GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
-    RepoCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
+    AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
+    IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
+    StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
 };
 use app::commands;
 use app::registry;
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             level,
             global_config.log.format.clone(),
             global_config.log.enable_trace_console.unwrap_or(false),
-            Paths::logs_dir()?,
+            logs_dir()?,
         );
 
         // 初始化 logger（从配置文件读取 LogSettings 并转换为 LoggerConfig）
@@ -237,23 +237,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Command::Commit(commit_cmd) => {
-            if let Some(CommitSubcommand::Amend(AmendArgs {
-                message,
-                no_edit,
-                verify,
-            })) = commit_cmd.subcommand
-            {
-                let cmd =
-                    commands::commit::CommitAmendCommand::new(message.clone(), no_edit, verify);
-                cmd.run()?;
-            } else if let Some(message) = commit_cmd.message {
-                // 直接使用 -m 参数创建提交
+            if let Some(message) = commit_cmd.message {
                 let cmd = commands::commit::CommitCreateCommand::new(message, commit_cmd.all);
                 cmd.run()?;
             } else {
-                eprintln!("Error: commit message is required. Use -m/--message or 'commit amend' subcommand.");
+                eprintln!("Error: commit message is required. Use -m/--message.");
                 eprintln!("Usage: workflow commit -m <MESSAGE>");
-                eprintln!("   or: workflow commit amend [OPTIONS]");
                 std::process::exit(1);
             }
         }
@@ -319,16 +308,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Command::Pr(pr_cmd) => match pr_cmd {
-            PrSubcommand::Create {
-                jira_id,
-                title,
-                description,
-                dry_run,
-            } => {
+            PrSubcommand::Create { jira_id, dry_run } => {
                 let cmd = commands::pr::PullRequestCreateCommand::new(
                     jira_id.into_option(),
-                    title.clone(),
-                    description.clone(),
                     dry_run.is_dry_run(),
                 );
                 cmd.run()?;

@@ -2,40 +2,10 @@
 
 use crate::output::table::builder::TableBuilder;
 use crate::output::table::row::render_row;
+use crate::output::table::strip_ansi_codes;
 use crate::output::table::width::calculate_column_widths;
 use crate::style::theme::get_theme;
 use unicode_width::UnicodeWidthStr;
-
-/// 去除 ANSI 转义代码
-fn strip_ansi_codes(s: &str) -> String {
-    // 简单的 ANSI 代码去除（匹配 ESC[ ... m 格式）
-    let mut result = String::new();
-    let mut chars = s.chars().peekable();
-
-    while let Some(ch) = chars.next() {
-        if ch == '\x1b' {
-            // 跳过 ANSI 转义序列
-            if chars.peek() == Some(&'[') {
-                chars.next(); // 跳过 '['
-                              // 跳过数字和分号，直到找到 'm'
-                while let Some(&ch) = chars.peek() {
-                    if ch == 'm' {
-                        chars.next();
-                        break;
-                    } else if ch.is_ascii_digit() || ch == ';' {
-                        chars.next();
-                    } else {
-                        break;
-                    }
-                }
-            }
-        } else {
-            result.push(ch);
-        }
-    }
-
-    result
-}
 
 /// 渲染边框
 fn render_border(

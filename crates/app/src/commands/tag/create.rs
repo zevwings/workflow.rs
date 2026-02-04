@@ -1,6 +1,5 @@
 //! 创建 Tag 命令
 
-use color_eyre::Result;
 use domain::{TagCreateScope, TagDeleteScope};
 use prompt::{error, info, success, warning};
 

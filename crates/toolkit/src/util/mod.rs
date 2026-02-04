@@ -27,10 +27,13 @@ pub mod platform;
 pub mod traits;
 
 // Checksum 模块
-pub use checksum::{Checksum, ChecksumError, VerifyResult as ChecksumVerifyResult};
+pub use checksum::{
+    build_checksum_url, calculate_sha256, parse_hash_from_content, verify as verify_checksum,
+    verify_lenient as verify_checksum_lenient, ChecksumError, VerifyResult as ChecksumVerifyResult,
+};
 
 // FS 模块
-pub use fs::{Archive, DirectoryWalker, FileReader, FileWriter, FsError};
+pub use fs::FileError;
 
 // Platform 模块
 pub use platform::{Platform, PlatformError};

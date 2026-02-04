@@ -7,7 +7,7 @@ pub mod service;
 
 // Re-export public types
 pub use entity::{
-    BranchNaming, BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult, BranchType,
+    sanitize_branch_name, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult, BranchType,
     SourceBranchInfo, SyncStrategy,
 };
 pub use service::BranchService;

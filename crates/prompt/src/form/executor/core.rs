@@ -6,6 +6,7 @@ use crate::form::executor::field_executors::FieldExecutors;
 use crate::form::executor::separator::{print_nested_form_separator_simple, print_separator};
 use crate::form::field::{FieldType, FormField};
 use crate::form::types::{FormResult, FormStep, StepType};
+use crate::PromptError;
 
 /// 表单执行器
 pub struct FormExecutor;
@@ -197,11 +198,10 @@ impl FormExecutor {
         field: &FormField,
         level: usize,
     ) -> Result<Box<dyn std::any::Any + Send + Sync>> {
-        use crate::PromptError;
         let nested_form = field
             .nested_form
             .as_ref()
-            .ok_or_else(|| PromptError::InvalidInput("嵌套表单不能为空".to_string()))?;
+            .ok_or_else(|| PromptError::InvalidInput("Nested form cannot be empty".to_string()))?;
 
         let nested_result = self.execute_with_level(nested_form, level + 1)?;
         Ok(Box::new(nested_result))

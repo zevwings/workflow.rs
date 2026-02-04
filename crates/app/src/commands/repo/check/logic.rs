@@ -3,8 +3,10 @@
 //! 验证仓库级别的配置文件并运行验证检查。
 
 use color_eyre::{eyre::WrapErr, Result};
+
 use domain::{BranchTemplates, CommitTemplates, PullRequestsTemplates};
 use prompt::{br, info, print, separator, success, warning, TableBuilder};
+use toolkit::{project_config_file, user_config_file};
 
 use crate::registry;
 
@@ -46,8 +48,8 @@ impl RepoCheckCommand {
         // 2. 显示配置路径
         separator!('=', 80, "Repository Configuration");
         br!();
-        let project_config_path = repo_path.join(".workflow").join("config.toml");
-        let user_config_path = repo_path.join(".workflow").join("user.toml");
+        let project_config_path = project_config_file(&repo_path);
+        let user_config_path = user_config_file(&repo_path);
         info!("Project config: {:?}", project_config_path);
         info!("User config: {:?}", user_config_path);
         br!();
@@ -67,8 +69,8 @@ impl RepoCheckCommand {
         // 创建验证表格
         let mut table = TableBuilder::new(vec!["Check Item", "Status", "Description"]);
 
-        let project_config_path = repo_path.join(".workflow").join("config.toml");
-        let user_config_path = repo_path.join(".workflow").join("user.toml");
+        let project_config_path = project_config_file(repo_path);
+        let user_config_path = user_config_file(repo_path);
 
         // 检查项目配置文件
         let mut public_config_valid = false;

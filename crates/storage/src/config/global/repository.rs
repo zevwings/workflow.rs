@@ -5,7 +5,7 @@
 use std::sync::{Mutex, OnceLock};
 
 use domain::{GlobalConfig, GlobalConfigRepository, ServiceError};
-use toolkit::{FileReader, FileWriter, Paths};
+use toolkit::{file, workflow_config_path};
 
 /// 全局配置缓存
 static GLOBAL_CONFIG: OnceLock<Mutex<Option<GlobalConfig>>> = OnceLock::new();
@@ -56,14 +56,14 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
         }
 
         // 缓存未命中，加载配置
-        let config_path = Paths::workflow_config().map_err(|e| {
+        let config_path = workflow_config_path().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get config path: {}", e))
         })?;
 
         let settings = if !config_path.exists() {
             GlobalConfig::default()
         } else {
-            let content = FileReader::new(&config_path).to_string().map_err(|e| {
+            let content = file::read_string(&config_path).map_err(|e| {
                 ServiceError::OperationFailed(format!("Failed to read config: {}", e))
             })?;
 
@@ -88,7 +88,7 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
     /// 保存配置后会自动清除缓存，下次加载时会重新读取文件。
     /// 在 Unix 系统上会自动设置文件权限为 600 以确保安全性。
     fn save(&self, settings: &GlobalConfig) -> Result<(), ServiceError> {
-        let config_path = Paths::workflow_config().map_err(|e| {
+        let config_path = workflow_config_path().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get config path: {}", e))
         })?;
 
@@ -96,15 +96,13 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
             ServiceError::OperationFailed(format!("Failed to serialize settings: {}", e))
         })?;
 
-        let writer = FileWriter::new(&config_path);
-        writer
-            .write_str(&content)
+        file::write_string(&config_path, &content)
             .map_err(|e| ServiceError::OperationFailed(format!("Failed to write config: {}", e)))?;
 
         // 设置文件权限为 600（仅 Unix 系统）
         #[cfg(unix)]
         {
-            writer.set_permissions(0o600).map_err(|e| {
+            file::set_permissions(&config_path, 0o600).map_err(|e| {
                 ServiceError::OperationFailed(format!(
                     "Failed to set config file permissions: {}",
                     e
@@ -123,7 +121,7 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            if let Ok(config_path) = Paths::workflow_config() {
+            if let Ok(config_path) = workflow_config_path() {
                 if config_path.exists() {
                     if let Ok(metadata) = config_path.metadata() {
                         let permissions = metadata.permissions();

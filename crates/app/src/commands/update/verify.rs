@@ -3,17 +3,28 @@
 //! 提供安装验证功能。
 
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use color_eyre::{eyre::WrapErr, Result};
+
 use prompt::{success, warning, Spinner};
-use toolkit::{detect_shell, get_completion_files_for_shell, shell_to_string, Paths};
+use toolkit::{
+    binary_install_dir, binary_name, command_names, completion_dir, detect_shell,
+    get_completion_files_for_shell, shell_to_string,
+};
 
-use super::types::{BinaryStatus, VerificationResult};
+use super::types::VerificationResult;
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+/// 二进制文件状态（内部使用）
+struct BinaryStatus {
+    name: String,
+    path: String,
+    exists: bool,
+    executable: bool,
+}
 
 /// 检查文件是否可执行
 #[cfg(unix)]
@@ -78,18 +89,18 @@ fn verify_single_binary(path: &str, name: &str) -> Result<BinaryStatus> {
 
 /// 验证所有二进制文件
 fn verify_binaries() -> Result<Vec<BinaryStatus>> {
-    let install_dir = Paths::binary_install_dir();
+    let install_dir = binary_install_dir();
     let install_path = PathBuf::from(&install_dir);
-    let binaries = Paths::command_names();
+    let binaries = command_names();
     let mut results = Vec::new();
 
     let spinner = Spinner::new("Verifying binaries...");
     let spinner_instance = spinner.start();
 
     for binary in binaries {
-        let binary_name = Paths::binary_name(binary);
-        let path = install_path.join(&binary_name);
-        let status = verify_single_binary(&path.to_string_lossy(), &binary_name)?;
+        let bin_name = binary_name(binary);
+        let path = install_path.join(&bin_name);
+        let status = verify_single_binary(&path.to_string_lossy(), &bin_name)?;
         results.push(status);
     }
 
@@ -108,17 +119,17 @@ fn verify_completions() -> Result<bool> {
         }
     };
 
-    let completion_dir = Paths::completion_dir()?;
+    let comp_dir = completion_dir()?;
 
-    if !completion_dir.exists() {
+    if !comp_dir.exists() {
         warning!(
             "Completion script directory does not exist: {}",
-            completion_dir.display()
+            comp_dir.display()
         );
         return Ok(false);
     }
 
-    let commands = Paths::command_names();
+    let commands = command_names();
     let shell_str = shell_to_string(&shell);
     let files = get_completion_files_for_shell(shell_str, commands).unwrap_or_default();
 
@@ -128,7 +139,7 @@ fn verify_completions() -> Result<bool> {
     let spinner_instance = spinner.start();
 
     for file in &files {
-        let path = completion_dir.join(file);
+        let path = comp_dir.join(file);
 
         if !path.exists() {
             warning!("Completion script does not exist: {}", path.display());
@@ -183,18 +194,14 @@ pub fn verify_installation() -> Result<VerificationResult> {
         warning!("Some verifications failed, please check the above warning messages");
     }
 
-    Ok(VerificationResult {
-        binaries,
-        completions_installed,
-        all_checks_passed,
-    })
+    Ok(VerificationResult { all_checks_passed })
 }
 
 /// 运行安装程序
 ///
 /// 在解压目录中运行 ./install 来安装二进制文件和补全脚本。
 pub fn run_installer(extract_dir: &Path) -> Result<()> {
-    let install_binary = extract_dir.join(Paths::binary_name("install"));
+    let install_binary = extract_dir.join(binary_name("install"));
 
     if !install_binary.exists() {
         color_eyre::eyre::bail!(

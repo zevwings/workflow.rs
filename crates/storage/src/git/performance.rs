@@ -40,7 +40,7 @@ impl PerformanceTimer {
         if let Some(threshold) = self.threshold {
             if duration > threshold {
                 eprintln!(
-                    "[WARN] {} 耗时过长: {:?} (阈值: {:?})",
+                    "[WARN] {} took too long: {:?} (threshold: {:?})",
                     self.name, duration, threshold
                 );
             }
@@ -63,7 +63,7 @@ impl Drop for PerformanceTimer {
         if let Some(threshold) = self.threshold {
             if duration > threshold {
                 eprintln!(
-                    "[WARN] {} 耗时过长: {:?} (阈值: {:?})",
+                    "[WARN] {} took too long: {:?} (threshold: {:?})",
                     self.name, duration, threshold
                 );
             }
@@ -89,7 +89,7 @@ where
     let timer = PerformanceTimer::new(name);
     let result = f();
     let duration = timer.stop();
-    eprintln!("[PERF] {} 完成，耗时: {:?}", name, duration);
+    eprintln!("[PERF] {} completed, elapsed: {:?}", name, duration);
     result
 }
 
@@ -103,7 +103,7 @@ where
     let duration = timer.stop();
 
     if duration <= threshold {
-        eprintln!("[PERF] {} 完成，耗时: {:?}", name, duration);
+        eprintln!("[PERF] {} completed, elapsed: {:?}", name, duration);
     }
 
     result
@@ -130,12 +130,12 @@ impl PerformanceStats {
 
     /// 打印统计信息
     pub fn print(&self) {
-        println!("\n=== 性能统计: {} ===", self.name);
-        println!("  调用次数: {}", self.count);
-        println!("  总耗时: {:?}", self.total_duration);
-        println!("  平均耗时: {:?}", self.avg_duration);
-        println!("  最小耗时: {:?}", self.min_duration);
-        println!("  最大耗时: {:?}", self.max_duration);
+        println!("\n=== Performance Stats: {} ===", self.name);
+        println!("  Call count: {}", self.count);
+        println!("  Total time: {:?}", self.total_duration);
+        println!("  Avg time: {:?}", self.avg_duration);
+        println!("  Min time: {:?}", self.min_duration);
+        println!("  Max time: {:?}", self.max_duration);
     }
 }
 
@@ -221,7 +221,7 @@ macro_rules! perf_test {
         let start = Instant::now();
         let result = $code;
         let duration = start.elapsed();
-        eprintln!("[PERF] {} 耗时: {:?}", $name, duration);
+        eprintln!("[PERF] {} elapsed: {:?}", $name, duration);
         result
     }};
 
@@ -233,11 +233,11 @@ macro_rules! perf_test {
 
         if duration > $threshold {
             eprintln!(
-                "[WARN] {} 耗时过长: {:?} (阈值: {:?})",
+                "[WARN] {} took too long: {:?} (threshold: {:?})",
                 $name, duration, $threshold
             );
         } else {
-            eprintln!("[PERF] {} 耗时: {:?}", $name, duration);
+            eprintln!("[PERF] {} elapsed: {:?}", $name, duration);
         }
 
         result

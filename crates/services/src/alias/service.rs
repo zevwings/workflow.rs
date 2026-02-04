@@ -41,18 +41,22 @@ impl AliasService for AliasServiceImpl {
     fn add(&self, name: &str, command: &str, force: bool) -> Result<AliasAddResult, ServiceError> {
         // 验证别名名称
         if name.is_empty() {
-            return Err(ServiceError::InvalidInput("别名名称不能为空".to_string()));
+            return Err(ServiceError::InvalidInput(
+                "Alias name cannot be empty".to_string(),
+            ));
         }
 
         // 验证命令
         if command.is_empty() {
-            return Err(ServiceError::InvalidInput("命令不能为空".to_string()));
+            return Err(ServiceError::InvalidInput(
+                "Command cannot be empty".to_string(),
+            ));
         }
 
         // 检查别名名称是否包含空格
         if name.contains(' ') {
             return Err(ServiceError::InvalidInput(
-                "别名名称不能包含空格".to_string(),
+                "Alias name cannot contain spaces".to_string(),
             ));
         }
 
@@ -63,7 +67,7 @@ impl AliasService for AliasServiceImpl {
         let overwritten = config.aliases.contains_key(name);
         if overwritten && !force {
             return Err(ServiceError::InvalidInput(format!(
-                "别名 '{}' 已存在，使用 --force 覆盖",
+                "Alias '{}' already exists, use --force to overwrite",
                 name
             )));
         }
@@ -84,17 +88,18 @@ impl AliasService for AliasServiceImpl {
     fn remove(&self, name: &str) -> Result<AliasRemoveResult, ServiceError> {
         // 验证别名名称
         if name.is_empty() {
-            return Err(ServiceError::InvalidInput("别名名称不能为空".to_string()));
+            return Err(ServiceError::InvalidInput(
+                "Alias name cannot be empty".to_string(),
+            ));
         }
 
         // 加载当前配置
         let mut config = self.config_repo.load()?;
 
         // 检查别名是否存在
-        let command = config
-            .aliases
-            .remove(name)
-            .ok_or_else(|| ServiceError::InvalidInput(format!("别名 '{}' 不存在", name)))?;
+        let command = config.aliases.remove(name).ok_or_else(|| {
+            ServiceError::InvalidInput(format!("Alias '{}' does not exist", name))
+        })?;
 
         // 保存配置
         self.config_repo.save(&config)?;

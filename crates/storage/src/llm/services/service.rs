@@ -134,7 +134,7 @@ impl LLMServiceImpl {
             // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
             let original_msg = match &e {
                 LLMError::ApiError(msg) => {
-                    msg.strip_prefix("LLM API 调用失败: ").unwrap_or(msg).to_string()
+                    msg.strip_prefix("LLM API call failed: ").unwrap_or(msg).to_string()
                 }
                 _ => e.to_string(),
             };
@@ -149,7 +149,7 @@ impl LLMServiceImpl {
             // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
             let original_msg = match &e {
                 LLMError::ApiError(msg) => {
-                    msg.strip_prefix("LLM API 调用失败: ").unwrap_or(msg).to_string()
+                    msg.strip_prefix("LLM API call failed: ").unwrap_or(msg).to_string()
                 }
                 _ => e.to_string(),
             };

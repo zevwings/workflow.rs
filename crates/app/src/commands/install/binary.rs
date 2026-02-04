@@ -15,7 +15,10 @@ use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use color_eyre::{eyre::ContextCompat, eyre::WrapErr, Result};
 use prompt::{br, info, print, success, warning};
-use toolkit::{detect_shell, shell_to_string, DirectoryWalker, Paths};
+use toolkit::{
+    binary_install_dir, binary_name, command_names, completion_cache_dir_shell_path, detect_shell,
+    directory, shell_to_string,
+};
 
 use crate::cli::Cli;
 use crate::registry::get_completion_service;
@@ -66,12 +69,12 @@ impl InstallCommand {
     /// 在当前可执行文件所在目录查找 workflow 二进制文件，
     /// 并将其复制到系统二进制目录（通常是 /usr/local/bin）。
     fn install_binaries(&self) -> Result<()> {
-        let install_dir = Paths::binary_install_dir();
+        let install_dir = binary_install_dir();
         info!("Installing binaries to {}...", install_dir);
 
         // 创建安装目录（Windows 需要）
         let install_path = PathBuf::from(&install_dir);
-        DirectoryWalker::new(&install_path).ensure_exists()?;
+        directory::ensure_exists(&install_path)?;
 
         // 获取当前可执行文件所在目录
         let current_exe = env::current_exe().wrap_err("Failed to get current executable path")?;
@@ -81,21 +84,21 @@ impl InstallCommand {
         toolkit::log_debug!("Current directory: {}", current_dir.display());
         toolkit::log_debug!("Install directory: {}", install_dir);
 
-        let binaries = Paths::command_names();
+        let binaries = command_names();
         let mut installed_count = 0;
 
         for binary in binaries {
-            let binary_name = Paths::binary_name(binary);
+            let bin_name = binary_name(binary);
 
-            let source = current_dir.join(&binary_name);
-            let target = install_path.join(&binary_name);
+            let source = current_dir.join(&bin_name);
+            let target = install_path.join(&bin_name);
 
             if !source.exists() {
                 warning!("Binary file {} does not exist, skipping", source.display());
                 continue;
             }
 
-            info!("  Installing {} -> {}", binary_name, target.display());
+            info!("  Installing {} -> {}", bin_name, target.display());
 
             // Unix: 使用 sudo 复制文件
             // Windows: 直接复制文件
@@ -143,7 +146,7 @@ impl InstallCommand {
                 })?;
             }
 
-            success!("  {} installed", binary_name);
+            success!("  {} installed", bin_name);
             installed_count += 1;
         }
 
@@ -241,36 +244,38 @@ impl InstallCommand {
     }
 
     /// 生成 zsh 动态补全代码
-    fn generate_zsh_dynamic_completion() -> &'static str {
-        r#"
+    fn generate_zsh_dynamic_completion() -> String {
+        let cache_dir = completion_cache_dir_shell_path();
+        format!(
+            r#"
 # Dynamic completion support
 # This provides dynamic completion for branch names, PR IDs, etc.
 
 # Performance optimization: cache directory
-typeset -g _WORKFLOW_CACHE_DIR="${HOME}/.workflow/.completion_cache"
+typeset -g _WORKFLOW_CACHE_DIR="{cache_dir}"
 typeset -g _WORKFLOW_CACHE_TTL=300  # 5 minutes
 
 # Ensure cache directory exists
-_workflow_ensure_cache_dir() {
+_workflow_ensure_cache_dir() {{
   [[ ! -d "$_WORKFLOW_CACHE_DIR" ]] && mkdir -p "$_WORKFLOW_CACHE_DIR" 2>/dev/null
-}
+}}
 
 # Check if cache file is valid (not expired)
-_workflow_is_cache_valid() {
+_workflow_is_cache_valid() {{
   local cache_file="$1"
   [[ -f "$cache_file" ]] || return 1
   local cache_time=$(stat -f %m "$cache_file" 2>/dev/null || stat -c %Y "$cache_file" 2>/dev/null)
   local current_time=$(date +%s)
   (( current_time - cache_time < _WORKFLOW_CACHE_TTL ))
-}
+}}
 
 # Dynamic branch name completion
-_workflow_complete_branches() {
+_workflow_complete_branches() {{
   _workflow_ensure_cache_dir
   local cache_file="$_WORKFLOW_CACHE_DIR/branches"
 
   if _workflow_is_cache_valid "$cache_file"; then
-    local branches=(${(f)"$(<$cache_file)"})
+    local branches=(${{(f)"$(<$cache_file)"}})
     _describe 'branches' branches
     return
   fi
@@ -278,39 +283,43 @@ _workflow_complete_branches() {
   local branches
   if branches=$(timeout 2s git branch --format='%(refname:short)' 2>/dev/null); then
     echo "$branches" > "$cache_file" 2>/dev/null
-    local branch_array=(${(f)branches})
+    local branch_array=(${{(f)branches}})
     _describe 'branches' branch_array
   fi
-}
-"#
+}}
+"#,
+            cache_dir = cache_dir
+        )
     }
 
     /// 生成 bash 动态补全代码
-    fn generate_bash_dynamic_completion() -> &'static str {
-        r#"
+    fn generate_bash_dynamic_completion() -> String {
+        let cache_dir = completion_cache_dir_shell_path();
+        format!(
+            r#"
 # Dynamic completion support for bash
 # This provides dynamic completion for branch names, PR IDs, etc.
 
 # Performance optimization: cache settings
-_WORKFLOW_CACHE_DIR="${HOME}/.workflow/.completion_cache"
+_WORKFLOW_CACHE_DIR="{cache_dir}"
 _WORKFLOW_CACHE_TTL=300  # 5 minutes
 
 # Ensure cache directory exists
-_workflow_ensure_cache_dir() {
+_workflow_ensure_cache_dir() {{
   [[ ! -d "$_WORKFLOW_CACHE_DIR" ]] && mkdir -p "$_WORKFLOW_CACHE_DIR" 2>/dev/null
-}
+}}
 
 # Check if cache file is valid
-_workflow_is_cache_valid() {
+_workflow_is_cache_valid() {{
   local cache_file="$1"
   [[ -f "$cache_file" ]] || return 1
   local cache_time=$(stat -c %Y "$cache_file" 2>/dev/null)
   local current_time=$(date +%s)
   (( current_time - cache_time < _WORKFLOW_CACHE_TTL ))
-}
+}}
 
 # Get branch names for completion
-_workflow_get_branches() {
+_workflow_get_branches() {{
   _workflow_ensure_cache_dir
   local cache_file="$_WORKFLOW_CACHE_DIR/branches"
 
@@ -323,7 +332,9 @@ _workflow_get_branches() {
   if branches=$(timeout 2s git branch --format='%(refname:short)' 2>/dev/null); then
     echo "$branches" | tee "$cache_file" 2>/dev/null
   fi
-}
-"#
+}}
+"#,
+            cache_dir = cache_dir
+        )
     }
 }

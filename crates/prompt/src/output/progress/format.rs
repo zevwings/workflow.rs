@@ -233,9 +233,9 @@ fn truncate_to_width(s: &str, max_width: usize) -> String {
     let mut result = String::new();
     let mut display_width = 0;
     let mut in_escape = false;
-    let mut chars = s.chars().peekable();
+    let chars = s.chars().peekable();
 
-    while let Some(c) = chars.next() {
+    for c in chars {
         if c == '\x1b' {
             // 开始 ANSI 转义序列
             in_escape = true;

@@ -2,11 +2,13 @@
 //!
 //! 管理工作流执行上下文，包括配置加载和保存。
 
-use crate::registry;
+use std::error::Error;
+
 use domain::{GlobalConfig, ServiceError};
 use prompt::{br, success};
-use std::error::Error;
-use toolkit::Paths;
+use toolkit::workflow_config_path;
+
+use crate::registry;
 
 /// 工作流执行模式
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -64,7 +66,7 @@ impl WorkflowContext {
             .map_err(|e| format!("Failed to save configuration: {}", e))?;
 
         let config_path =
-            Paths::workflow_config().map_err(|e| format!("Failed to get config path: {}", e))?;
+            workflow_config_path().map_err(|e| format!("Failed to get config path: {}", e))?;
 
         br!();
         success!("Configuration saved to: {}", config_path.display());

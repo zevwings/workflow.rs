@@ -105,14 +105,14 @@ pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), Log
         if let Ok(file) = OpenOptions::new().create(true).append(true).open(&file_path) {
             return if use_json {
                 if enable_console {
-                    add_json_layer!(add_json_layer!(registry, file), SpinnerAwareMakeWriter).try_init().map_err(
-                        |e| {
+                    add_json_layer!(add_json_layer!(registry, file), SpinnerAwareMakeWriter)
+                        .try_init()
+                        .map_err(|e| {
                             LoggerError::InitializationFailed(format!(
                                 "Failed to initialize tracing subscriber with file and console: {}",
                                 e
                             ))
-                        },
-                    )
+                        })
                 } else {
                     add_json_layer!(registry, file).try_init().map_err(|e| {
                         LoggerError::InitializationFailed(format!(
@@ -122,14 +122,14 @@ pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), Log
                     })
                 }
             } else if enable_console {
-                add_text_layer!(add_text_layer!(registry, file), SpinnerAwareMakeWriter).try_init().map_err(
-                    |e| {
+                add_text_layer!(add_text_layer!(registry, file), SpinnerAwareMakeWriter)
+                    .try_init()
+                    .map_err(|e| {
                         LoggerError::InitializationFailed(format!(
                             "Failed to initialize tracing subscriber with file and console: {}",
                             e
                         ))
-                    },
-                )
+                    })
             } else {
                 add_text_layer!(registry, file).try_init().map_err(|e| {
                     LoggerError::InitializationFailed(format!(

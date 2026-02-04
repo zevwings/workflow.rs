@@ -2,6 +2,7 @@
 
 use crate::form::field::FormField;
 use crate::form::types::FormGroup;
+use crate::form::FormExecutor;
 
 /// 表单构建器（链式 API）
 pub struct FormBuilder {
@@ -49,11 +50,10 @@ impl FormBuilder {
         self.title.as_deref()
     }
 
-    /// 执行表单并收集用户输入（兼容旧 API）
+    /// 执行表单并收集用户输入
     ///
-    /// 这个方法内部使用 `FormExecutor` 来执行表单。
+    /// 内部使用 `FormExecutor` 来执行表单。
     pub fn run(self) -> crate::Result<crate::form::FormResult> {
-        use crate::form::FormExecutor;
         FormExecutor::new().execute(&self)
     }
 }

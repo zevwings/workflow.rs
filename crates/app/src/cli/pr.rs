@@ -11,12 +11,6 @@ pub enum PrSubcommand {
     Create {
         #[command(flatten)]
         jira_id: JiraIdArg,
-        /// PR 标题
-        #[arg(long)]
-        title: Option<String>,
-        /// PR 描述
-        #[arg(long)]
-        description: Option<String>,
         #[command(flatten)]
         dry_run: DryRunArgs,
     },

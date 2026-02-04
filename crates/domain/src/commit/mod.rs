@@ -6,5 +6,5 @@ pub mod entity;
 pub mod service;
 
 // Re-export public types
-pub use entity::{AmendPreview, CommitAmend, CommitReword, CommitSquash};
+pub use entity::AmendPreview;
 pub use service::CommitService;

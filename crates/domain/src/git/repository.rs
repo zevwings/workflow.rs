@@ -152,14 +152,6 @@ pub trait GitRepository: Send + Sync {
     /// 获取工作树状态
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError>;
 
-    /// 修改最后一次提交（amend）
-    fn amend_commit(
-        &self,
-        message: Option<&str>,
-        no_edit: bool,
-        no_verify: bool,
-    ) -> Result<String, GitError>;
-
     /// 创建提交
     ///
     /// # 参数

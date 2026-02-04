@@ -6,12 +6,19 @@
 //! - 清理备份文件
 //! - Shell 配置重载
 
+mod backup;
+mod error;
 mod helpers;
-mod manager;
 mod reload;
+mod restore;
+mod types;
 
+pub use backup::create_backup;
+pub use error::RollbackError;
 pub use helpers::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
+    CompletionHelperError,
 };
-pub use manager::{BackupInfo, BackupResult, RollbackManager, RollbackResult};
-pub use reload::{Reload, ReloadResult};
+pub use reload::{reload_shell, ReloadError, ReloadResult};
+pub use restore::{cleanup_backup, rollback};
+pub use types::{BackupInfo, BackupResult, RollbackResult};

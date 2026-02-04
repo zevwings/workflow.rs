@@ -19,16 +19,16 @@ impl AliasListCommand {
     /// 运行列表命令
     pub fn run(&self) -> Result<()> {
         let service = get_alias_service();
-        let result = service.list().wrap_err("获取别名列表失败")?;
+        let result = service.list().wrap_err("Failed to get alias list")?;
 
         if result.count == 0 {
-            print!("当前没有定义任何别名。");
+            print!("No aliases defined.");
             br!();
-            info!("使用 'workflow alias add <name> <command>' 添加别名");
+            info!("Use 'workflow alias add <name> <command>' to add an alias");
             return Ok(());
         }
 
-        print!("已定义的别名 ({} 个):", result.count);
+        print!("Defined aliases ({}):", result.count);
         br!();
         println!("{:-<50}", "");
 
@@ -42,7 +42,7 @@ impl AliasListCommand {
 
         println!("{:-<50}", "");
         br!();
-        info!("使用 'workflow <alias>' 执行别名命令");
+        info!("Use 'workflow <alias>' to run an alias command");
 
         Ok(())
     }

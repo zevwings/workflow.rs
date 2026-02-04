@@ -1,10 +1,21 @@
 //! 删除分支命令
 
-use color_eyre::Result;
-use domain::GitError;
+use domain::{GitError, GitRepository};
 use prompt::{error, info, multiselect, success, warning};
 
 use crate::registry;
+
+/// 处理未合并分支的结果
+enum UnmergedBranchAction {
+    /// 成功删除
+    Deleted,
+    /// 跳过此分支
+    Skipped(String),
+    /// 删除失败
+    Failed(String),
+    /// 启用全部强制删除模式
+    EnableForceAll,
+}
 
 /// Branch Remove 命令
 pub struct BranchRemoveCommand {
@@ -189,108 +200,38 @@ impl BranchRemoveCommand {
                     Ok(()) => {
                         success!("Removed local branch '{}'", target_branch);
                     }
-                    Err(e) => {
-                        // 使用模式匹配精确判断错误类型
-                        match e {
-                            GitError::BranchNotFullyMerged(_) if !force_all_unmerged => {
-                                // 提示用户是否要强制删除
-                                warning!("Branch '{}' is not fully merged", target_branch);
+                    Err(GitError::BranchNotFullyMerged(_)) => {
+                        // 处理未合并分支
+                        let action = if force_all_unmerged {
+                            // 已经选择了全部强制删除
+                            warning!(
+                                "Branch '{}' is not fully merged, force deleting...",
+                                target_branch
+                            );
+                            Self::force_delete_branch(branch_repo.as_ref(), &target_branch, false)?
+                        } else {
+                            // 交互式询问用户
+                            Self::handle_unmerged_branch(branch_repo.as_ref(), &target_branch)?
+                        };
 
-                                // 使用 select 提供三个选项
-                                let options = vec![
-                                    "Force delete this branch only",
-                                    "Force delete all unmerged branches",
-                                    "Skip this branch",
-                                ];
-                                let selection = prompt::select!(
-                                    "Branch '{}' is not fully merged. What would you like to do?",
-                                    target_branch,
-                                    options
-                                )
-                                .default(2)
-                                .prompt()
-                                .map_err(|e| format!("Failed to get selection: {}", e))?;
-
-                                match selection.as_ref() {
-                                    "Force delete this branch only" => {
-                                        // 只强制删除这个分支
-                                        info!("Force removing local branch '{}'...", target_branch);
-                                        match branch_repo.delete_local_branch(&target_branch, true) {
-                                            Ok(()) => {
-                                                success!("Removed local branch '{}'", target_branch);
-                                            }
-                                            Err(e) => {
-                                                let err_msg = format!(
-                                                    "Failed to force delete local branch: {}",
-                                                    e
-                                                );
-                                                error!(
-                                                    "Failed to remove local branch '{}': {}",
-                                                    target_branch, e
-                                                );
-                                                failed_branches.push((target_branch.clone(), err_msg));
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    "Force delete all unmerged branches" => {
-                                        // 设置标志，后续未合并分支都强制删除
-                                        force_all_unmerged = true;
-                                        info!("Force removing local branch '{}'...", target_branch);
-                                        match branch_repo.delete_local_branch(&target_branch, true) {
-                                            Ok(()) => {
-                                                success!("Removed local branch '{}'", target_branch);
-                                            }
-                                            Err(e) => {
-                                                let err_msg = format!(
-                                                    "Failed to force delete local branch: {}",
-                                                    e
-                                                );
-                                                error!(
-                                                    "Failed to remove local branch '{}': {}",
-                                                    target_branch, e
-                                                );
-                                                failed_branches.push((target_branch.clone(), err_msg));
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    _ => {
-                                        // 用户选择跳过
-                                        let err_msg = "User cancelled force delete".to_string();
-                                        warning!("Skipped branch '{}'", target_branch);
-                                        failed_branches.push((target_branch.clone(), err_msg));
-                                        continue;
-                                    }
-                                }
+                        match action {
+                            UnmergedBranchAction::Deleted => {}
+                            UnmergedBranchAction::EnableForceAll => {
+                                force_all_unmerged = true;
                             }
-                            GitError::BranchNotFullyMerged(_) if force_all_unmerged => {
-                                // 已经选择了全部强制删除，直接执行
-                                warning!("Branch '{}' is not fully merged, force deleting...", target_branch);
-                                match branch_repo.delete_local_branch(&target_branch, true) {
-                                    Ok(()) => {
-                                        success!("Removed local branch '{}'", target_branch);
-                                    }
-                                    Err(e) => {
-                                        let err_msg =
-                                            format!("Failed to force delete local branch: {}", e);
-                                        error!(
-                                            "Failed to remove local branch '{}': {}",
-                                            target_branch, e
-                                        );
-                                        failed_branches.push((target_branch.clone(), err_msg));
-                                        continue;
-                                    }
-                                }
-                            }
-                            _ => {
-                                // 其他错误，记录并继续处理下一个分支
-                                let err_msg = format!("Failed to delete local branch: {}", e);
-                                error!("Failed to remove local branch '{}': {}", target_branch, e);
+                            UnmergedBranchAction::Skipped(err_msg)
+                            | UnmergedBranchAction::Failed(err_msg) => {
                                 failed_branches.push((target_branch.clone(), err_msg));
                                 continue;
                             }
                         }
+                    }
+                    Err(e) => {
+                        // 其他错误，记录并继续处理下一个分支
+                        let err_msg = format!("Failed to delete local branch: {}", e);
+                        error!("Failed to remove local branch '{}': {}", target_branch, e);
+                        failed_branches.push((target_branch.clone(), err_msg));
+                        continue;
                     }
                 }
             }
@@ -309,11 +250,7 @@ impl BranchRemoveCommand {
                         } else {
                             // 其他错误才算失败
                             let err_msg = format!("Failed to delete remote branch: {}", e);
-                            warning!(
-                                "Failed to remove remote branch '{}': {}",
-                                target_branch,
-                                e
-                            );
+                            warning!("Failed to remove remote branch '{}': {}", target_branch, e);
                             failed_branches.push((target_branch.clone(), err_msg));
                         }
                         // 远程分支删除失败不影响其他分支的删除，继续处理
@@ -339,6 +276,67 @@ impl BranchRemoveCommand {
             Err(format!("Failed to remove branches: {}", branch_names.join(", ")).into())
         } else {
             Ok(())
+        }
+    }
+
+    /// 处理未合并分支的交互式删除
+    fn handle_unmerged_branch(
+        branch_repo: &dyn GitRepository,
+        branch_name: &str,
+    ) -> Result<UnmergedBranchAction, Box<dyn std::error::Error>> {
+        warning!("Branch '{}' is not fully merged", branch_name);
+
+        let options = vec![
+            "Force delete this branch only",
+            "Force delete all unmerged branches",
+            "Skip this branch",
+        ];
+        let selection = prompt::select!(
+            "Branch '{}' is not fully merged. What would you like to do?",
+            branch_name,
+            options
+        )
+        .default(2)
+        .prompt()
+        .map_err(|e| format!("Failed to get selection: {}", e))?;
+
+        match selection {
+            "Force delete this branch only" => {
+                Self::force_delete_branch(branch_repo, branch_name, false)
+            }
+            "Force delete all unmerged branches" => {
+                Self::force_delete_branch(branch_repo, branch_name, true)
+            }
+            _ => {
+                warning!("Skipped branch '{}'", branch_name);
+                Ok(UnmergedBranchAction::Skipped(
+                    "User cancelled force delete".to_string(),
+                ))
+            }
+        }
+    }
+
+    /// 强制删除分支
+    fn force_delete_branch(
+        branch_repo: &dyn GitRepository,
+        branch_name: &str,
+        enable_force_all: bool,
+    ) -> Result<UnmergedBranchAction, Box<dyn std::error::Error>> {
+        info!("Force removing local branch '{}'...", branch_name);
+        match branch_repo.delete_local_branch(branch_name, true) {
+            Ok(()) => {
+                success!("Removed local branch '{}'", branch_name);
+                if enable_force_all {
+                    Ok(UnmergedBranchAction::EnableForceAll)
+                } else {
+                    Ok(UnmergedBranchAction::Deleted)
+                }
+            }
+            Err(e) => {
+                let err_msg = format!("Failed to force delete local branch: {}", e);
+                error!("Failed to remove local branch '{}': {}", branch_name, e);
+                Ok(UnmergedBranchAction::Failed(err_msg))
+            }
         }
     }
 }

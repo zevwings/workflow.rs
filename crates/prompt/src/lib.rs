@@ -57,9 +57,9 @@ pub use form::{
     GroupConfig, InputFormField, MultiSelectFormField, NestedFormField, PasswordFormField,
     SelectFormField,
 };
+pub use output::terminal_state::{resume as terminal_resume, suspend as terminal_suspend};
 pub use output::{
     progress_bar, spinner, table, Alignment, Message, MessageRef, Progress, ProgressBar,
     ProgressBarBuilder, Spinner, SpinnerBuilder, TableBuilder, TableStyle, Tabled,
 };
-pub use output::terminal_state::{resume as terminal_resume, suspend as terminal_suspend};
 pub use style::theme::{get_theme, set_theme, Style, Theme};

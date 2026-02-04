@@ -5,7 +5,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use color_eyre::{eyre::WrapErr, Result};
-use toolkit::DirectoryWalker;
+use toolkit::directory;
 
 // ============================================================================
 // 版本比较
@@ -26,28 +26,9 @@ pub enum VersionComparison {
 // 验证结果
 // ============================================================================
 
-/// 二进制文件状态
-#[derive(Debug)]
-pub struct BinaryStatus {
-    /// 二进制文件名
-    pub name: String,
-    /// 文件路径
-    pub path: String,
-    /// 是否存在
-    pub exists: bool,
-    /// 是否可执行
-    pub executable: bool,
-}
-
 /// 验证结果
 #[derive(Debug)]
 pub struct VerificationResult {
-    /// 二进制文件状态列表
-    #[allow(dead_code)]
-    pub binaries: Vec<BinaryStatus>,
-    /// 补全脚本是否已安装
-    #[allow(dead_code)]
-    pub completions_installed: bool,
     /// 所有检查是否通过
     pub all_checks_passed: bool,
 }
@@ -84,7 +65,7 @@ impl TempDirManager {
         }
 
         // 创建临时目录
-        DirectoryWalker::new(&temp_dir).ensure_exists()?;
+        directory::ensure_exists(&temp_dir)?;
 
         // 根据平台确定归档文件扩展名
         let extension = if platform.starts_with("Windows") {

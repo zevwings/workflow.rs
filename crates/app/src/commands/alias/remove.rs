@@ -32,11 +32,11 @@ impl AliasRemoveCommand {
         };
 
         // 移除别名
-        let result = service.remove(&name).wrap_err("移除别名失败")?;
+        let result = service.remove(&name).wrap_err("Failed to remove alias")?;
 
         // 显示结果
         br!();
-        success!("别名 '{}' 已移除", result.name);
+        success!("Alias '{}' removed", result.name);
         info!("  {} -> {}", result.name, result.command);
 
         Ok(())
@@ -48,13 +48,13 @@ impl AliasRemoveCommand {
         service: &std::sync::Arc<dyn domain::alias::AliasService>,
     ) -> Result<String> {
         // 获取别名列表
-        let list_result = service.list().wrap_err("获取别名列表失败")?;
+        let list_result = service.list().wrap_err("Failed to get alias list")?;
 
         if list_result.count == 0 {
-            color_eyre::eyre::bail!("当前没有定义任何别名");
+            color_eyre::eyre::bail!("No aliases defined");
         }
 
-        info!("选择要移除的别名（交互模式）");
+        info!("Select alias to remove (interactive mode)");
         br!();
 
         // 构建选项列表
@@ -69,9 +69,9 @@ impl AliasRemoveCommand {
             aliases.iter().map(|a| format!("{} -> {}", a.name, a.command)).collect();
 
         // 显示选择器，使用索引方式
-        let selected_display = SelectBuilder::new("请选择要移除的别名", display_options)
+        let selected_display = SelectBuilder::new("Select alias to remove", display_options)
             .prompt()
-            .wrap_err("选择别名失败")?;
+            .wrap_err("Failed to select alias")?;
 
         // 从选中的显示字符串中提取别名名称
         let selected_name = selected_display

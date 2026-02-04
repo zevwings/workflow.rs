@@ -18,21 +18,3 @@ pub struct AmendPreview {
     /// 是否已推送到远程
     pub is_pushed: bool,
 }
-
-/// Commit Amend 业务逻辑
-///
-/// 提供提交修改（amend）相关的业务逻辑。
-/// 当前功能通过服务层直接调用仓储实现，此实体为未来业务逻辑封装预留。
-pub struct CommitAmend;
-
-/// Commit Reword 业务逻辑
-///
-/// 提供提交消息重写相关的业务逻辑。
-/// 当前功能通过服务层直接调用仓储实现，此实体为未来业务逻辑封装预留。
-pub struct CommitReword;
-
-/// Commit Squash 业务逻辑
-///
-/// 提供提交压缩（squash）相关的业务逻辑。
-/// 当前功能通过服务层直接调用仓储实现，此实体为未来业务逻辑封装预留。
-pub struct CommitSquash;

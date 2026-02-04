@@ -168,7 +168,12 @@ fn render_pagination_info(
 ) -> Result<()> {
     let mut stdout = std::io::stdout();
     execute!(stdout, cursor::MoveToColumn(0))?;
-    let info = format!("显示 {}-{} / 共 {} 项", start_index + 1, end_index, total);
+    let info = format!(
+        "Showing {}-{} of {} items",
+        start_index + 1,
+        end_index,
+        total
+    );
     let styled = theme.hint.apply(&info, theme.enable_color);
     writeln!(stdout, "{}", styled)?;
     execute!(stdout, ResetColor)?;

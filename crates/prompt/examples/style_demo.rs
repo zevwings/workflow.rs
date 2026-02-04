@@ -85,8 +85,14 @@ fn demo_theme_usage() {
         "{}",
         theme.warning.apply("⚠ 这是警告样式", theme.enable_color)
     );
-    println!("{}", theme.error.apply("✗ 这是错误样式", theme.enable_color));
-    println!("{}", theme.debug.apply("⚙ 这是调试样式", theme.enable_color));
+    println!(
+        "{}",
+        theme.error.apply("✗ 这是错误样式", theme.enable_color)
+    );
+    println!(
+        "{}",
+        theme.debug.apply("⚙ 这是调试样式", theme.enable_color)
+    );
     println!("{}", theme.hint.apply("这是提示样式", theme.enable_color));
 }
 
@@ -115,7 +121,10 @@ fn demo_custom_theme() {
 
     // 验证主题已更新
     let theme = get_theme();
-    println!("{}", theme.info.apply("ℹ 自定义信息样式", theme.enable_color));
+    println!(
+        "{}",
+        theme.info.apply("ℹ 自定义信息样式", theme.enable_color)
+    );
     println!(
         "{}",
         theme.success.apply("✓ 自定义成功样式", theme.enable_color)
@@ -124,7 +133,10 @@ fn demo_custom_theme() {
         "{}",
         theme.warning.apply("⚠ 自定义警告样式", theme.enable_color)
     );
-    println!("{}", theme.error.apply("✗ 自定义错误样式", theme.enable_color));
+    println!(
+        "{}",
+        theme.error.apply("✗ 自定义错误样式", theme.enable_color)
+    );
 
     // 恢复默认主题
     set_theme(Theme::default());

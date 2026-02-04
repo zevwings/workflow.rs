@@ -2,7 +2,7 @@
 
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
 use crate::workflows::core::platform::{
-    add_account_generic, configure_platform, GlobalConfigAccessor, PlatformAccount,
+    add_account_generic, configure_platform, AccountSetMode, GlobalConfigAccessor, PlatformAccount,
     PlatformConfigurator, PlatformSettings,
 };
 use crate::workflows::core::stage::WorkflowStage;
@@ -220,7 +220,7 @@ impl PlatformSettings for GitHubSettings {
 
 fn add_new_github_account(
     context: &mut WorkflowContext,
-    set_as_current: bool,
+    set_mode: AccountSetMode,
 ) -> Result<String, String> {
     let configurator = GitHubConfigurator;
     add_account_generic::<GitHubSettings, _, _>(
@@ -231,7 +231,7 @@ fn add_new_github_account(
             let form_result = builder.run().map_err(|e: PromptError| e.to_string())?;
             configurator.create_account_from_form(&form_result)
         },
-        set_as_current,
+        set_mode,
         "GitHub",
         None,
     )

@@ -8,7 +8,9 @@ use domain::{
     BranchTemplates, CommitTemplates, MCPConfig, ProjectConfig, PullRequestsTemplates, RepoConfig,
     RepoConfigRepository, ServiceError, TemplateConfig, UserConfig,
 };
-use toolkit::{log_warn, DirectoryWalker, FileReader, FileWriter, Paths};
+use toolkit::{
+    directory, file, log_warn, project_config_file, repo_dir, repo_workflow_dir, user_config_file,
+};
 
 /// 仓库配置仓储实现
 ///
@@ -63,16 +65,16 @@ impl RepoConfigRepositoryImpl {
 
 impl RepoConfigRepository for RepoConfigRepositoryImpl {
     fn load_project_config(&self) -> Result<ProjectConfig, ServiceError> {
-        let repo_path = Paths::repo_root().map_err(|e| {
+        let repo_path = repo_dir().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get repository root: {}", e))
         })?;
-        let config_path = repo_path.join(".workflow").join("config.toml");
+        let config_path = project_config_file(&repo_path);
 
         if !config_path.exists() {
             return Ok(ProjectConfig::default());
         }
 
-        let value: Value = FileReader::new(&config_path).toml().map_err(|e| {
+        let value: Value = file::read_toml(&config_path).map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to read project config: {}", e))
         })?;
 
@@ -102,21 +104,19 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
     }
 
     fn save_project_config(&self, config: &ProjectConfig) -> Result<(), ServiceError> {
-        let repo_path = Paths::repo_root().map_err(|e| {
+        let repo_path = repo_dir().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get repository root: {}", e))
         })?;
-        let config_path = repo_path.join(".workflow").join("config.toml");
+        let config_path = project_config_file(&repo_path);
 
         // 确保父目录存在
-        DirectoryWalker::new(repo_path)
-            .ensure_parent_exists(&config_path)
-            .map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to create config directory: {}", e))
-            })?;
+        directory::ensure_exists(&repo_workflow_dir(&repo_path)).map_err(|e| {
+            ServiceError::OperationFailed(format!("Failed to create config directory: {}", e))
+        })?;
 
         // 读取现有配置（如果存在）
         let mut existing_value: Value = if config_path.exists() {
-            FileReader::new(&config_path).toml().map_err(|e| {
+            file::read_toml(&config_path).map_err(|e| {
                 ServiceError::OperationFailed(format!("Failed to read existing config: {}", e))
             })?
         } else {
@@ -183,7 +183,7 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         }
 
         // 写入文件
-        FileWriter::new(&config_path).write_toml(&existing_value).map_err(|e| {
+        file::write_toml(&config_path, &existing_value).map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to write project config: {}", e))
         })?;
 
@@ -191,10 +191,10 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
     }
 
     fn load_user_config(&self) -> Result<UserConfig, ServiceError> {
-        let repo_path = Paths::repo_root().map_err(|e| {
+        let repo_path = repo_dir().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get repository root: {}", e))
         })?;
-        let config_path = repo_path.join(".workflow").join("user.toml");
+        let config_path = user_config_file(&repo_path);
 
         // 如果文件不存在，返回默认配置
         if !config_path.exists() {
@@ -202,7 +202,7 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         }
 
         // 直接解析整个文件为 UserConfig
-        let config: UserConfig = FileReader::new(&config_path).toml().map_err(|e| {
+        let config: UserConfig = file::read_toml(&config_path).map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to read user config: {}", e))
         })?;
 
@@ -210,10 +210,10 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
     }
 
     fn save_user_config(&self, config: &UserConfig) -> Result<(), ServiceError> {
-        let repo_path = Paths::repo_root().map_err(|e| {
+        let repo_path = repo_dir().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get repository root: {}", e))
         })?;
-        let config_path = repo_path.join(".workflow").join("user.toml");
+        let config_path = user_config_file(&repo_path);
 
         // 如果配置为空，删除文件（如果存在）并返回
         if config.is_empty() {
@@ -229,14 +229,12 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         }
 
         // 确保 .workflow 目录存在
-        DirectoryWalker::new(repo_path)
-            .ensure_parent_exists(&config_path)
-            .map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to create config directory: {}", e))
-            })?;
+        directory::ensure_exists(&repo_workflow_dir(&repo_path)).map_err(|e| {
+            ServiceError::OperationFailed(format!("Failed to create config directory: {}", e))
+        })?;
 
         // 直接序列化 UserConfig 并写入文件
-        FileWriter::new(&config_path).write_toml(config).map_err(|e| {
+        file::write_toml(&config_path, config).map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to write user config: {}", e))
         })?;
 
@@ -244,7 +242,7 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
     }
 
     fn load(&self) -> Result<RepoConfig, ServiceError> {
-        let repo_path = Paths::repo_root().map_err(|e| {
+        let repo_path = repo_dir().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get repository root: {}", e))
         })?;
 
@@ -254,7 +252,7 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         // 加载 MCP 配置
         let mcp_config_path = repo_path.join(".cursor").join("mcp.json");
         let mcp = if mcp_config_path.exists() {
-            match FileReader::new(&mcp_config_path).json::<MCPConfig>() {
+            match file::read_json::<MCPConfig>(&mcp_config_path) {
                 Ok(config) => config,
                 Err(e) => {
                     // MCP 配置加载失败不影响其他配置，记录错误但使用默认值
@@ -270,7 +268,7 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
     }
 
     fn save(&self, config: &RepoConfig) -> Result<(), ServiceError> {
-        let repo_path = Paths::repo_root().map_err(|e| {
+        let repo_path = repo_dir().map_err(|e| {
             ServiceError::OperationFailed(format!("Failed to get repository root: {}", e))
         })?;
 
@@ -280,7 +278,7 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         // 保存 MCP 配置（只有当有配置时才保存）
         if !config.mcp.mcp_servers.is_empty() {
             let mcp_config_path = repo_path.join(".cursor").join("mcp.json");
-            FileWriter::new(&mcp_config_path).write_json_secure(&config.mcp).map_err(|e| {
+            file::write_json_secure(&mcp_config_path, &config.mcp).map_err(|e| {
                 ServiceError::OperationFailed(format!("Failed to save MCP config: {}", e))
             })?;
         }

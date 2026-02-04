@@ -32,18 +32,7 @@ impl PullRequestServiceImpl {
         }
     }
 
-    /// 检查仓库类型是否支持 PR 操作
-    fn check_pr_support(&self) -> Result<(), ServiceError> {
-        let repo_info = self.git_repo.get_repo_info();
-        match repo_info.kind.unwrap_or(CodePlatform::Unknown) {
-            CodePlatform::GitHub => Ok(()),
-            _ => Err(ServiceError::UnsupportedOperation(
-                "PR operations are not supported for this repository".to_string(),
-            )),
-        }
-    }
-
-    /// 根据仓库类型获取 PR repository（当前仅支持 GitHub）
+    /// 获取 PR repository，同时检查仓库类型是否支持 PR 操作（当前仅支持 GitHub）
     fn get_pr_repository(&self) -> Result<Arc<dyn GitHubRepository>, ServiceError> {
         let repo_info = self.git_repo.get_repo_info();
         match repo_info.kind.unwrap_or(CodePlatform::Unknown) {
@@ -83,8 +72,6 @@ impl PullRequestService for PullRequestServiceImpl {
         description: Option<&str>,
         target_branch: Option<&str>,
     ) -> Result<String, ServiceError> {
-        self.check_pr_support()?;
-
         // 获取当前分支信息
         let current_branch = self.git_repo.get_current_branch()?;
 
@@ -110,8 +97,8 @@ impl PullRequestService for PullRequestServiceImpl {
 
             // 如果提供了 jira_id，添加到描述中
             if let Some(jid) = jira_id {
-                let jira_link = format!("\n\nJira: {}", jid);
-                desc = desc + &jira_link;
+                desc.push_str("\n\nJira: ");
+                desc.push_str(jid);
             }
 
             (pr_content.pr_title, desc)
@@ -121,8 +108,8 @@ impl PullRequestService for PullRequestServiceImpl {
 
             // 如果提供了 jira_id，添加到描述中
             if let Some(jid) = jira_id {
-                let jira_link = format!("\n\nJira: {}", jid);
-                desc = desc + &jira_link;
+                desc.push_str("\n\nJira: ");
+                desc.push_str(jid);
             }
 
             (title, desc)
@@ -140,14 +127,11 @@ impl PullRequestService for PullRequestServiceImpl {
     }
 
     fn merge_pull_request(&self, pr_id: &str, force: bool) -> Result<(), ServiceError> {
-        self.check_pr_support()?;
         let repo = self.get_pr_repository()?;
         map_github_err(repo.merge_pull_request(pr_id, force))
     }
 
     fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, ServiceError> {
-        self.check_pr_support()?;
-
         let pr_id = self.resolve_pr_id(pr_id_or_branch)?;
         let repo = self.get_pr_repository()?;
         let (state, merged, _merged_at) = map_github_err(repo.get_pull_request_status(&pr_id))?;
@@ -162,7 +146,6 @@ impl PullRequestService for PullRequestServiceImpl {
     }
 
     fn close_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
-        self.check_pr_support()?;
         let repo = self.get_pr_repository()?;
         map_github_err(repo.close_pull_request(pr_id))
     }
@@ -172,8 +155,6 @@ impl PullRequestService for PullRequestServiceImpl {
         state: Option<&str>,
         limit: Option<usize>,
     ) -> Result<Vec<PrStatus>, ServiceError> {
-        self.check_pr_support()?;
-
         let repo = self.get_pr_repository()?;
         let prs = map_github_err(repo.list_pull_requests(state, limit))?;
 
@@ -194,13 +175,11 @@ impl PullRequestService for PullRequestServiceImpl {
         title: Option<&str>,
         body: Option<&str>,
     ) -> Result<(), ServiceError> {
-        self.check_pr_support()?;
         let repo = self.get_pr_repository()?;
         map_github_err(repo.update_pull_request(pr_id, title, body))
     }
 
     fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), ServiceError> {
-        self.check_pr_support()?;
         if comment.is_empty() {
             return Err(ServiceError::InvalidInput(
                 "Comment cannot be empty".to_string(),
@@ -211,19 +190,16 @@ impl PullRequestService for PullRequestServiceImpl {
     }
 
     fn approve_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
-        self.check_pr_support()?;
         let repo = self.get_pr_repository()?;
         map_github_err(repo.approve_pull_request(pr_id))
     }
 
     fn get_pr_diff(&self, pr_id: &str) -> Result<String, ServiceError> {
-        self.check_pr_support()?;
         let repo = self.get_pr_repository()?;
         map_github_err(repo.get_pr_diff(pr_id))
     }
 
     fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, ServiceError> {
-        self.check_pr_support()?;
         let repo = self.get_pr_repository()?;
         map_github_err(repo.get_pull_request(pr_id))
     }
@@ -232,7 +208,6 @@ impl PullRequestService for PullRequestServiceImpl {
         &self,
         pr_id: Option<&str>,
     ) -> Result<domain::llm::entity::PullRequestSummary, ServiceError> {
-        self.check_pr_support()?;
         let pr_id = self.resolve_pr_id(pr_id)?;
         let repo = self.get_pr_repository()?;
         let pr_info = map_github_err(repo.get_pull_request(&pr_id))?;
@@ -248,7 +223,6 @@ impl PullRequestService for PullRequestServiceImpl {
         &self,
         pr_id: Option<&str>,
     ) -> Result<domain::llm::entity::PullRequestReword, ServiceError> {
-        self.check_pr_support()?;
         let pr_id = self.resolve_pr_id(pr_id)?;
         let repo = self.get_pr_repository()?;
         let pr_info = map_github_err(repo.get_pull_request(&pr_id))?;
@@ -264,7 +238,6 @@ impl PullRequestService for PullRequestServiceImpl {
         &self,
         current_branch: &str,
     ) -> Result<Option<String>, ServiceError> {
-        self.check_pr_support()?;
         let repo = self.get_pr_repository()?;
         map_github_err(repo.get_current_branch_pull_request(current_branch))
     }

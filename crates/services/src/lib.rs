@@ -14,4 +14,4 @@ pub use completion::CompletionServiceImpl;
 pub use pull_request::PullRequestServiceImpl;
 
 // Re-export registry
-pub use registry::{build_services_module, ServicesModule};
+pub use registry::{register_services, ServicesModule};

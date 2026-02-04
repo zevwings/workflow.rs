@@ -2,9 +2,10 @@
 //!
 //! 提供远程相关的业务逻辑实现。
 
+use git2::PushOptions;
+
 use super::{GitContext, MergeService, MergeServiceImpl};
 use domain::git::{GitError, MergeStrategy};
-use git2::PushOptions;
 
 /// 远程服务接口
 pub trait RemoteService: Send + Sync {
@@ -33,9 +34,8 @@ impl RemoteServiceImpl {
 impl RemoteService for RemoteServiceImpl {
     fn push(&self, branch_name: &str, set_upstream: bool) -> Result<(), GitError> {
         let repo = self.ctx.repository();
-        let mut remote = repo
-            .find_remote("origin")
-            .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
+        let mut remote =
+            repo.find_remote("origin").map_err(|e| GitError::RemoteError(e.to_string()))?;
 
         let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
 
@@ -45,19 +45,18 @@ impl RemoteService for RemoteServiceImpl {
 
         remote
             .push(&[&refspec], Some(&mut opts))
-            .map_err(|e| GitError::RemoteError(format!("推送失败: {}", e)))?;
+            .map_err(|e| GitError::RemoteError(e.to_string()))?;
 
         // 设置上游跟踪分支
         if set_upstream {
-            let mut branch =
-                repo.find_branch(branch_name, git2::BranchType::Local).map_err(|e| {
-                    GitError::OperationFailed(format!("找不到分支 '{}': {}", branch_name, e))
-                })?;
+            let mut branch = repo
+                .find_branch(branch_name, git2::BranchType::Local)
+                .map_err(|_| GitError::BranchNotFound(branch_name.to_string()))?;
 
             let upstream_name = format!("origin/{}", branch_name);
             branch
                 .set_upstream(Some(&upstream_name))
-                .map_err(|e| GitError::OperationFailed(format!("设置上游分支失败: {}", e)))?;
+                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
         }
 
         Ok(())
@@ -67,9 +66,8 @@ impl RemoteService for RemoteServiceImpl {
         // 获取 commit id，然后释放 repo 锁，避免死锁
         let commit_id = {
             let repo = self.ctx.repository();
-            let mut remote = repo
-                .find_remote("origin")
-                .map_err(|e| GitError::RemoteError(format!("找不到远程 'origin': {}", e)))?;
+            let mut remote =
+                repo.find_remote("origin").map_err(|e| GitError::RemoteError(e.to_string()))?;
 
             // Fetch
             let callbacks = GitContext::create_callbacks();
@@ -78,16 +76,16 @@ impl RemoteService for RemoteServiceImpl {
 
             remote
                 .fetch(&[branch_name], Some(&mut fetch_opts), None)
-                .map_err(|e| GitError::RemoteError(format!("拉取失败: {}", e)))?;
+                .map_err(|e| GitError::RemoteError(e.to_string()))?;
 
             // 获取 FETCH_HEAD
             let fetch_head = repo
                 .find_reference("FETCH_HEAD")
-                .map_err(|e| GitError::OperationFailed(format!("找不到 FETCH_HEAD: {}", e)))?;
+                .map_err(|e| GitError::InvalidReference(e.to_string()))?;
 
             let annotated = repo
                 .reference_to_annotated_commit(&fetch_head)
-                .map_err(|e| GitError::OperationFailed(format!("无法获取注释提交: {}", e)))?;
+                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
             annotated.id()
             // repo 的 MutexGuard 在这里释放

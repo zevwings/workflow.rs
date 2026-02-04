@@ -10,7 +10,10 @@ use std::process::Command;
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use prompt::{br, info, print, success, warning, ConfirmBuilder};
-use toolkit::{detect_shell, Paths, Reload};
+use toolkit::{
+    binary_install_dir, binary_name, binary_paths, completion_dir, detect_shell, jira_config_path,
+    llm_config_path, reload_shell, workflow_config_path,
+};
 
 use crate::registry::get_completion_service;
 
@@ -131,10 +134,10 @@ impl UninstallCommand {
 
     /// 查找存在的二进制文件
     fn find_existing_binaries(&self) -> Vec<String> {
-        let binary_paths = Paths::binary_paths();
+        let bin_paths = binary_paths();
         let mut existing = Vec::new();
 
-        for binary_path in binary_paths {
+        for binary_path in bin_paths {
             let path = Path::new(&binary_path);
             if path.exists() {
                 existing.push(binary_path);
@@ -142,9 +145,9 @@ impl UninstallCommand {
         }
 
         // 检查 install 二进制
-        let install_dir = Paths::binary_install_dir();
+        let install_dir = binary_install_dir();
         let install_path = PathBuf::from(&install_dir);
-        let install_name = Paths::binary_name("install");
+        let install_name = binary_name("install");
         let install_binary = install_path.join(install_name);
         if install_binary.exists() {
             existing.push(install_binary.to_string_lossy().to_string());
@@ -194,9 +197,9 @@ impl UninstallCommand {
         }
 
         // 删除 install 二进制（如果存在）
-        let install_dir = Paths::binary_install_dir();
+        let install_dir = binary_install_dir();
         let install_path = PathBuf::from(&install_dir);
-        let install_name = Paths::binary_name("install");
+        let install_name = binary_name("install");
         let install_binary = install_path.join(install_name);
 
         if install_binary.exists() {
@@ -247,11 +250,11 @@ impl UninstallCommand {
     ///
     /// 返回 (已删除列表, 需要sudo列表)
     fn try_remove_binaries(&self) -> Result<(Vec<String>, Vec<String>)> {
-        let binary_paths = Paths::binary_paths();
+        let bin_paths = binary_paths();
         let mut removed = Vec::new();
         let mut need_sudo = Vec::new();
 
-        for binary_path in binary_paths {
+        for binary_path in bin_paths {
             let path = Path::new(&binary_path);
             if path.exists() {
                 match fs::remove_file(path) {
@@ -305,23 +308,23 @@ impl UninstallCommand {
         }
 
         // 删除 completions 文件夹
-        if let Ok(completion_dir) = Paths::completion_dir() {
-            if completion_dir.exists() {
+        if let Ok(comp_dir) = completion_dir() {
+            if comp_dir.exists() {
                 // 先尝试删除空文件夹
-                match fs::remove_dir(&completion_dir) {
+                match fs::remove_dir(&comp_dir) {
                     Ok(_) => {
-                        info!("  Removed: {}", completion_dir.display());
+                        info!("  Removed: {}", comp_dir.display());
                     }
                     Err(_) => {
                         // 如果文件夹非空，删除整个文件夹
-                        if let Err(e2) = fs::remove_dir_all(&completion_dir) {
+                        if let Err(e2) = fs::remove_dir_all(&comp_dir) {
                             toolkit::log_debug!(
                                 "Could not remove completions directory: {} ({})",
-                                completion_dir.display(),
+                                comp_dir.display(),
                                 e2
                             );
                         } else {
-                            info!("  Removed: {}", completion_dir.display());
+                            info!("  Removed: {}", comp_dir.display());
                         }
                     }
                 }
@@ -340,16 +343,15 @@ impl UninstallCommand {
         let mut removed = Vec::new();
 
         // 删除 workflow.toml
-        if let Ok(workflow_config_path) = Paths::workflow_config() {
-            if workflow_config_path.exists() {
-                fs::remove_file(&workflow_config_path)
-                    .wrap_err("Failed to remove workflow.toml")?;
+        if let Ok(wf_config_path) = workflow_config_path() {
+            if wf_config_path.exists() {
+                fs::remove_file(&wf_config_path).wrap_err("Failed to remove workflow.toml")?;
                 removed.push("workflow.toml".to_string());
             }
         }
 
         // 删除 jira.toml
-        if let Ok(jira_config_path) = Paths::jira_config() {
+        if let Ok(jira_config_path) = jira_config_path() {
             if jira_config_path.exists() {
                 fs::remove_file(&jira_config_path).wrap_err("Failed to remove jira.toml")?;
                 removed.push("jira.toml".to_string());
@@ -357,7 +359,7 @@ impl UninstallCommand {
         }
 
         // 删除 llm.toml
-        if let Ok(llm_config_path) = Paths::llm_config() {
+        if let Ok(llm_config_path) = llm_config_path() {
             if llm_config_path.exists() {
                 fs::remove_file(&llm_config_path).wrap_err("Failed to remove llm.toml")?;
                 removed.push("llm.toml".to_string());
@@ -370,7 +372,7 @@ impl UninstallCommand {
     /// 重新加载 shell 配置
     fn reload_shell_config(&self) {
         if let Ok(shell) = detect_shell() {
-            match Reload::shell(&shell) {
+            match reload_shell(&shell) {
                 Ok(result) if result.reloaded => {
                     info!("Shell configuration reloaded");
                 }

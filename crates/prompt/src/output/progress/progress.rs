@@ -1,13 +1,13 @@
-//! Progress 结构体（兼容原 indicator::Progress API）
+//! 进度条结构体
 //!
-//! 提供与原有 `indicator::Progress` 相同的 API，已完全替代原实现。
+//! 提供进度条显示功能。
 
 use crate::output::progress::bar::ProgressBar;
 use crate::output::progress::builder::ProgressBarBuilder;
 
-/// Progress 结构体（兼容原 indicator::Progress API）
+/// 进度条结构体
 ///
-/// 提供与原有 `indicator::Progress` 相同的 API，已完全替代原实现。
+/// 用于显示任务进度，支持已知总数和未知总数两种模式。
 pub struct Progress {
     inner: ProgressBar,
 }

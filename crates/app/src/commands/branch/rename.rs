@@ -1,8 +1,7 @@
 //! 重命名分支命令
 
-use std::process::Command;
-
 use color_eyre::Result;
+use domain::git::GitError;
 use prompt::{confirm, error, info, input, select, success, warning};
 
 use crate::registry;
@@ -87,47 +86,18 @@ impl BranchRenameCommand {
             .map_err(|e| format!("Failed to get confirmation: {}", e))?;
 
             if should_update_remote {
-                // 推送新分支到远程
-                let push_output = Command::new("git")
-                    .args(["push", "origin", &new_branch])
-                    .output()
-                    .map_err(|e| format!("Failed to execute git push: {}", e))?;
-
-                if !push_output.status.success() {
-                    let error_msg = String::from_utf8_lossy(&push_output.stderr);
-                    error!("Failed to push new branch: {}", error_msg);
+                // 推送新分支到远程并设置上游跟踪
+                if let Err(e) = branch_repo.push(&new_branch, true) {
+                    error!("Failed to push new branch: {}", e);
                     warning!("Local branch renamed, but remote update failed");
-                    return Err(format!("Failed to push new branch: {}", error_msg).into());
-                }
-
-                // 设置新分支跟踪远程分支
-                let upstream_output = Command::new("git")
-                    .args([
-                        "branch",
-                        "--set-upstream-to",
-                        &format!("origin/{}", new_branch),
-                        &new_branch,
-                    ])
-                    .output()
-                    .map_err(|e| {
-                        format!("Failed to execute git branch --set-upstream-to: {}", e)
-                    })?;
-
-                if !upstream_output.status.success() {
-                    let error_msg = String::from_utf8_lossy(&upstream_output.stderr);
-                    warning!("Failed to set upstream: {}", error_msg);
+                    return Err(format!("Failed to push new branch: {}", e).into());
                 }
 
                 // 删除远程旧分支
-                let delete_output = Command::new("git")
-                    .args(["push", "origin", "--delete", &old_branch])
-                    .output()
-                    .map_err(|e| format!("Failed to execute git push --delete: {}", e))?;
-
-                if !delete_output.status.success() {
-                    let error_msg = String::from_utf8_lossy(&delete_output.stderr);
-                    if !error_msg.contains("remote ref does not exist") {
-                        warning!("Failed to delete remote branch: {}", error_msg.trim());
+                if let Err(e) = branch_repo.delete_remote_branch(&old_branch) {
+                    // 忽略远程分支不存在的错误
+                    if !matches!(e, GitError::BranchNotFound(_)) {
+                        warning!("Failed to delete remote branch: {}", e);
                     }
                 }
 

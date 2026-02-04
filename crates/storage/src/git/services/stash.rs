@@ -2,7 +2,7 @@
 //!
 //! 提供 Git stash 相关的业务逻辑实现。
 
-use chrono::{DateTime, Local, TimeZone};
+use chrono::{Local, TimeZone};
 
 use super::GitContext;
 use domain::git::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
@@ -66,6 +66,50 @@ impl StashServiceImpl {
         Self { ctx }
     }
 
+    /// 获取指定 stash 的统计信息
+    ///
+    /// 通过比较 stash commit 与其父 commit 的 diff 来获取统计信息。
+    fn get_stash_stat(&self, index: usize) -> Option<StashStat> {
+        let repo = self.ctx.repository();
+
+        // 获取 stash commit 的 oid
+        let mut stash_oid = None;
+        let mut repo_mut = self.ctx.repository_mut();
+        let _ = repo_mut.stash_foreach(|idx, _, oid| {
+            if idx == index {
+                stash_oid = Some(*oid);
+                false // 找到后停止遍历
+            } else {
+                true
+            }
+        });
+        drop(repo_mut);
+
+        let oid = stash_oid?;
+
+        // 获取 stash commit
+        let stash_commit = repo.find_commit(oid).ok()?;
+
+        // stash commit 的第一个父 commit 是原始 HEAD
+        let parent_commit = stash_commit.parent(0).ok()?;
+
+        // 获取两个 tree
+        let parent_tree = parent_commit.tree().ok()?;
+        let stash_tree = stash_commit.tree().ok()?;
+
+        // 计算 diff
+        let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None).ok()?;
+
+        // 获取统计信息
+        let stats = diff.stats().ok()?;
+
+        Some(StashStat {
+            files_changed: stats.files_changed(),
+            insertions: stats.insertions(),
+            deletions: stats.deletions(),
+        })
+    }
+
     /// 从 stash 完整消息中提取分支名和消息
     ///
     /// stash 消息格式：
@@ -92,42 +136,18 @@ impl StashServiceImpl {
         // 如果无法提取，返回整个消息作为消息，分支为 unknown
         ("unknown".to_string(), full_message.to_string())
     }
-
-    /// 获取 stash 的统计信息
-    #[allow(dead_code)]
-    fn get_stash_stat(&self, stash_commit: &git2::Commit) -> Option<StashStat> {
-        let repo = self.ctx.repository();
-
-        // 获取 stash commit 的父 commit（工作目录状态的基准）
-        let parent = stash_commit.parent(0).ok()?;
-        let parent_tree = parent.tree().ok()?;
-        let stash_tree = stash_commit.tree().ok()?;
-
-        // 计算 diff
-        let diff = repo.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None).ok()?;
-
-        let stats = diff.stats().ok()?;
-
-        Some(StashStat {
-            files_changed: stats.files_changed(),
-            insertions: stats.insertions(),
-            deletions: stats.deletions(),
-        })
-    }
 }
 
 impl StashService for StashServiceImpl {
     fn stash_push(&self, message: Option<&str>) -> Result<usize, GitError> {
         let mut repo = self.ctx.repository_mut();
-        let signature = repo
-            .signature()
-            .map_err(|e| GitError::OperationFailed(format!("无法获取 Git 签名: {}", e)))?;
+        let signature = repo.signature().map_err(|e| GitError::SignatureError(e.to_string()))?;
 
         let stash_message = message.unwrap_or("Stashed changes");
         let flags = git2::StashFlags::INCLUDE_UNTRACKED;
 
         repo.stash_save(&signature, stash_message, Some(flags))
-            .map_err(|e| GitError::OperationFailed(format!("创建 stash 失败: {}", e)))?;
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 返回 0，表示最新的 stash
         Ok(0)
@@ -174,6 +194,9 @@ impl StashService for StashServiceImpl {
     }
 
     fn stash_apply(&self, index: usize) -> Result<StashApplyResult, GitError> {
+        // 先获取统计信息（在应用之前，因为应用后 stash 可能被删除）
+        let stat = self.get_stash_stat(index);
+
         let mut repo = self.ctx.repository_mut();
         let mut options = git2::StashApplyOptions::default();
 
@@ -194,7 +217,7 @@ impl StashService for StashServiceImpl {
                     } else {
                         vec![]
                     },
-                    stat: None, // TODO: 添加统计信息
+                    stat,
                 })
             }
             Err(e) => {
@@ -214,7 +237,7 @@ impl StashService for StashServiceImpl {
                             "The stash entry is kept. You can try again later.".to_string()
                         },
                     ],
-                    stat: None,
+                    stat: None, // 失败时不返回统计信息
                 })
             }
         }
@@ -233,18 +256,14 @@ impl StashService for StashServiceImpl {
             let commit = match repo_ref.find_commit(*oid) {
                 Ok(c) => c,
                 Err(e) => {
-                    error = Some(GitError::OperationFailed(format!(
-                        "无法获取 stash commit: {}",
-                        e
-                    )));
+                    error = Some(GitError::OperationFailed(e.to_string()));
                     return false; // 停止遍历
                 }
             };
 
             // 获取时间戳
             let time = commit.time();
-            let timestamp =
-                Local.timestamp_opt(time.seconds(), 0).single().map(|dt: DateTime<Local>| dt);
+            let timestamp = Local.timestamp_opt(time.seconds(), 0).single();
 
             // 从消息中提取分支名和消息
             let (branch, msg) = Self::extract_branch_and_message(message);
@@ -259,7 +278,7 @@ impl StashService for StashServiceImpl {
 
             true // 继续遍历
         })
-        .map_err(|e| GitError::OperationFailed(format!("列出 stash 失败: {}", e)))?;
+        .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         if let Some(e) = error {
             return Err(e);
@@ -274,8 +293,7 @@ impl StashService for StashServiceImpl {
     fn stash_drop(&self, index: usize) -> Result<(), GitError> {
         let mut repo = self.ctx.repository_mut();
 
-        repo.stash_drop(index)
-            .map_err(|e| GitError::OperationFailed(format!("删除 stash 失败: {}", e)))?;
+        repo.stash_drop(index).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(())
     }
@@ -284,9 +302,7 @@ impl StashService for StashServiceImpl {
         let repo = self.ctx.repository();
 
         // 检查索引中是否有冲突
-        let index = repo
-            .index()
-            .map_err(|e| GitError::OperationFailed(format!("无法获取索引: {}", e)))?;
+        let index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
 
         Ok(index.has_conflicts())
     }

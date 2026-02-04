@@ -1,10 +1,10 @@
 //! 显示 Jira ticket 信息命令
 
-use crate::registry;
-use crate::workflows::utils::jira::get_jira_id_interactive;
-use color_eyre::Result;
 use domain::JiraIssue;
 use prompt::{info, spinner, success};
+
+use crate::registry;
+use crate::workflows::utils::jira::get_jira_id_interactive;
 
 /// Jira Info 命令
 pub struct JiraInfoCommand {
@@ -50,40 +50,7 @@ impl JiraInfoCommand {
 
     /// JSON 格式输出
     fn output_json(&self, issue: &JiraIssue) -> Result<(), Box<dyn std::error::Error>> {
-        // 由于 domain::JiraIssue 没有实现 Serialize，我们手动构建 JSON
-        // 或者可以创建一个临时的可序列化结构
-        let json = serde_json::json!({
-            "id": issue.id,
-            "key": issue.key,
-            "summary": issue.summary,
-            "status": issue.status,
-            "assignee": issue.assignee,
-            "description": issue.description,
-            "priority": issue.priority,
-            "created": issue.created,
-            "updated": issue.updated,
-            "labels": issue.labels,
-            "components": issue.components,
-            "attachments": issue.attachments.iter().map(|a| serde_json::json!({
-                "filename": a.filename,
-                "size": a.size,
-                "url": a.url,
-            })).collect::<Vec<_>>(),
-            "comments": issue.comments.iter().map(|c| serde_json::json!({
-                "id": c.id,
-                "body": c.body,
-                "created": c.created,
-                "author": c.author.as_ref().map(|u| serde_json::json!({
-                    "display_name": u.display_name,
-                    "account_id": u.account_id,
-                })),
-            })).collect::<Vec<_>>(),
-            "reporter": issue.reporter.as_ref().map(|u| serde_json::json!({
-                "display_name": u.display_name,
-                "account_id": u.account_id,
-            })),
-        });
-        println!("{}", serde_json::to_string_pretty(&json)?);
+        println!("{}", serde_json::to_string_pretty(issue)?);
         Ok(())
     }
 

@@ -233,7 +233,7 @@ impl GitContext {
 
         callbacks.credentials(move |url, username_from_url, allowed_types| {
             // 检查重试次数，防止无限循环
-            let mut count = retry_count.lock().unwrap();
+            let mut count = retry_count.lock().expect("retry_count lock poisoned");
             *count += 1;
 
             const MAX_RETRIES: u32 = 3;
@@ -305,7 +305,7 @@ impl GitContext {
         let repo = self.inner.repo.lock().expect("Failed to lock repository");
         let obj = repo
             .revparse_single(reference)
-            .map_err(|_| GitError::InvalidReference(format!("无法解析引用: {}", reference)))?;
+            .map_err(|_| GitError::InvalidReference(reference.to_string()))?;
         let commit = obj.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(commit.id())
     }
@@ -316,6 +316,51 @@ impl GitContext {
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let commit = head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(commit.id())
+    }
+
+
+    /// 获取分支的 commit
+    ///
+    /// # 参数
+    /// - `name`: 分支名称
+    /// - `branch_type`: 分支类型（本地或远程）
+    ///
+    /// # 返回
+    /// 分支指向的 commit ID
+    pub fn get_branch_commit(
+        &self,
+        name: &str,
+        branch_type: git2::BranchType,
+    ) -> Result<git2::Oid, GitError> {
+        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let branch = repo
+            .find_branch(name, branch_type)
+            .map_err(|_| GitError::BranchNotFound(name.to_string()))?;
+        let commit = branch
+            .get()
+            .peel_to_commit()
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        Ok(commit.id())
+    }
+
+    /// 确保 HEAD 指向分支（非 detached 状态）
+    ///
+    /// # 返回
+    /// 当前分支名称
+    ///
+    /// # 错误
+    /// 如果 HEAD 处于 detached 状态，返回错误
+    pub fn ensure_head_is_branch(&self) -> Result<String, GitError> {
+        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        if !head.is_branch() {
+            return Err(GitError::OperationFailed(
+                "HEAD is in detached state".into(),
+            ));
+        }
+        head.shorthand()
+            .map(String::from)
+            .ok_or_else(|| GitError::OperationFailed("Invalid branch name".into()))
     }
 
     /// 读取 .gitignore 文件并提取目录模式

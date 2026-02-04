@@ -9,6 +9,7 @@
 //! 循环依赖检测使用线程局部变量，每个线程独立跟踪解析栈。
 
 // 标准库
+use std::any::TypeId;
 use std::sync::Arc;
 
 // 第三方库
@@ -16,18 +17,18 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
 // 内部导入
-use crate::binding::{Binding, BindingBuilder};
+use crate::binding::{Binding, BindingBuilder, FallibleBinding, FallibleBindingBuilder};
 use crate::error::{RegistryError, Result};
-use crate::ServiceIdentifier;
 
 // 线程局部变量：跟踪服务解析栈，检测循环依赖
 thread_local! {
-    static RESOLUTION_STACK: std::cell::RefCell<Vec<ServiceIdentifier>> = const { std::cell::RefCell::new(Vec::new()) };
+    static RESOLUTION_STACK: std::cell::RefCell<Vec<TypeId>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// 依赖注入容器
 pub struct Container {
-    bindings: DashMap<ServiceIdentifier, Binding>,
+    bindings: DashMap<TypeId, Binding>,
+    fallible_bindings: DashMap<TypeId, FallibleBinding>,
 }
 
 /// 全局容器单例，使用 Lazy + DashMap 实现无锁并发访问
@@ -38,6 +39,7 @@ impl Container {
     pub(crate) fn new() -> Self {
         Self {
             bindings: DashMap::new(),
+            fallible_bindings: DashMap::new(),
         }
     }
 
@@ -90,7 +92,7 @@ impl Container {
         factory: impl crate::binding::IntoFactory<T>,
     ) -> BindingBuilder<'_> {
         // 使用 Arc<T> 的 TypeId 作为标识符
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         BindingBuilder::new(identifier, factory, self)
     }
 
@@ -118,13 +120,35 @@ impl Container {
         &self,
         factory: impl crate::binding::IntoFactory<T>,
     ) -> BindingBuilder<'_> {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         BindingBuilder::new(identifier, factory, self)
+    }
+
+    /// 绑定服务（可失败的工厂函数）
+    ///
+    /// 支持返回 `Result<Arc<T>>` 的闭包，允许工厂函数在创建服务时返回错误。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,ignore
+    /// // 使用可失败的闭包绑定 trait 对象
+    /// Container::global().try_bind::<dyn Service>(|c| {
+    ///     let dep = c.get::<dyn Dependency>()?;
+    ///     Ok(Arc::new(ServiceImpl::new(dep)) as Arc<dyn Service>)
+    /// })
+    /// .in_scope(Scope::Singleton)?;
+    /// ```
+    pub fn try_bind<T: 'static + Send + Sync + ?Sized>(
+        &self,
+        factory: impl crate::binding::IntoFallibleFactory<T>,
+    ) -> FallibleBindingBuilder<'_> {
+        let identifier = TypeId::of::<Arc<T>>();
+        FallibleBindingBuilder::new(identifier, factory, self)
     }
 
     /// 获取服务，Singleton 作用域返回同一个 Arc 的克隆
     pub fn get<T: 'static + Send + Sync + ?Sized>(&self) -> Result<Arc<T>> {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
 
         // 先检查循环依赖并压栈
         RESOLUTION_STACK.with(|stack| {
@@ -146,16 +170,18 @@ impl Container {
             Ok(())
         })?;
 
-        // 查找绑定
-        let binding = self.bindings.get(&identifier).ok_or_else(|| {
-            RegistryError::NotBound(format!(
+        // 先查找普通绑定
+        let result = if let Some(binding) = self.bindings.get(&identifier) {
+            binding.resolve::<T>(self)
+        } else if let Some(fallible_binding) = self.fallible_bindings.get(&identifier) {
+            // 再查找可失败绑定
+            fallible_binding.resolve::<T>(self)
+        } else {
+            Err(RegistryError::NotBound(format!(
                 "Service '{}' is not bound",
                 std::any::type_name::<Arc<T>>()
-            ))
-        })?;
-
-        // 在没有持有 stack 借用的情况下调用 resolve
-        let result = binding.resolve::<T>(self);
+            )))
+        };
 
         // 无论成功与否，都要从栈中弹出
         RESOLUTION_STACK.with(|stack| {
@@ -167,35 +193,56 @@ impl Container {
 
     /// 内部方法：完成绑定
     pub(crate) fn add_binding(&self, binding: Binding) -> Result<()> {
-        // DashMap 的 insert 返回旧值，如果存在则表示已绑定
-        if self.bindings.insert(binding.identifier, binding).is_some() {
+        let identifier = binding.identifier;
+        // 检查是否已在任一 map 中绑定
+        if self.bindings.contains_key(&identifier)
+            || self.fallible_bindings.contains_key(&identifier)
+        {
             return Err(RegistryError::AlreadyBound(
                 "Service already bound".to_string(),
             ));
         }
+        self.bindings.insert(identifier, binding);
+        Ok(())
+    }
+
+    /// 内部方法：完成可失败绑定
+    pub(crate) fn add_fallible_binding(&self, binding: FallibleBinding) -> Result<()> {
+        let identifier = binding.identifier;
+        // 检查是否已在任一 map 中绑定
+        if self.bindings.contains_key(&identifier)
+            || self.fallible_bindings.contains_key(&identifier)
+        {
+            return Err(RegistryError::AlreadyBound(
+                "Service already bound".to_string(),
+            ));
+        }
+        self.fallible_bindings.insert(identifier, binding);
         Ok(())
     }
 
     /// 检查服务是否已绑定
     pub fn is_bound<T: 'static + ?Sized>(&self) -> bool {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
-        self.bindings.contains_key(&identifier)
+        let identifier = TypeId::of::<Arc<T>>();
+        self.bindings.contains_key(&identifier) || self.fallible_bindings.contains_key(&identifier)
     }
 
     /// 解绑服务
     pub fn unbind<T: 'static + ?Sized>(&self) {
-        let identifier = std::any::TypeId::of::<Arc<T>>();
+        let identifier = TypeId::of::<Arc<T>>();
         self.bindings.remove(&identifier);
+        self.fallible_bindings.remove(&identifier);
     }
 
     /// 解绑所有服务
     pub fn unbind_all(&self) {
         self.bindings.clear();
+        self.fallible_bindings.clear();
     }
 
     /// 获取绑定数量
     pub fn binding_count(&self) -> usize {
-        self.bindings.len()
+        self.bindings.len() + self.fallible_bindings.len()
     }
 
     /// 验证容器中所有已绑定的服务，建议在应用启动时调用
@@ -208,7 +255,7 @@ impl Container {
     pub fn validate(&self) -> Result<()> {
         let mut errors = Vec::new();
 
-        // DashMap 的 iter() 提供快照式迭代，不会长时间持有锁
+        // 验证普通绑定
         for entry in self.bindings.iter() {
             let binding = entry.value();
             let container_ref = self as *const Container;
@@ -223,6 +270,30 @@ impl Container {
                 (binding.factory)(container)
             })) {
                 Ok(_instance) => {}
+                Err(_) => {
+                    errors.push(format!(
+                        "Service '{}': Factory function panicked during validation",
+                        binding.type_name
+                    ));
+                }
+            }
+        }
+
+        // 验证可失败绑定
+        for entry in self.fallible_bindings.iter() {
+            let binding = entry.value();
+            let container_ref = self as *const Container;
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let container = unsafe { &*container_ref };
+                (binding.factory)(container)
+            })) {
+                Ok(Ok(_instance)) => {}
+                Ok(Err(e)) => {
+                    errors.push(format!(
+                        "Service '{}': Factory function returned error: {}",
+                        binding.type_name, e
+                    ));
+                }
                 Err(_) => {
                     errors.push(format!(
                         "Service '{}': Factory function panicked during validation",
@@ -401,7 +472,7 @@ mod tests {
     #[test]
     fn test_add_binding_scenarios() {
         let container = Container::new();
-        let identifier = std::any::TypeId::of::<Arc<dyn TestService>>();
+        let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
 
         // 测试添加绑定成功
