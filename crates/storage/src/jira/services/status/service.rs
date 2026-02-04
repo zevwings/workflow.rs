@@ -36,11 +36,30 @@ pub trait StatusService: Send + Sync {
 /// 提供 PR 创建和合并时的状态自动更新功能。
 pub struct StatusServiceImpl {
     jira_client: Arc<dyn JiraClient>,
+    config_path_provider: Arc<dyn Fn() -> Result<PathBuf, JiraError> + Send + Sync + 'static>,
 }
 
 impl StatusServiceImpl {
     pub fn new(jira_client: Arc<dyn JiraClient>) -> Self {
-        Self { jira_client }
+        Self {
+            jira_client,
+            config_path_provider: Arc::new(|| {
+                jira_config_path()
+                    .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))
+            }),
+        }
+    }
+
+    #[cfg(test)]
+    fn new_with_config_path(jira_client: Arc<dyn JiraClient>, config_path: PathBuf) -> Self {
+        Self {
+            jira_client,
+            config_path_provider: Arc::new(move || Ok(config_path.clone())),
+        }
+    }
+
+    fn config_path(&self) -> Result<PathBuf, JiraError> {
+        (self.config_path_provider)()
     }
 }
 
@@ -123,8 +142,7 @@ impl StatusService for StatusServiceImpl {
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(&self, config: &JiraStatusConfig) -> Result<(), JiraError> {
-        let config_path = jira_config_path()
-            .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
+        let config_path = self.config_path()?;
 
         let mut jira_config = Self::read_jira_config(&config_path)
             .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;
@@ -269,8 +287,7 @@ impl StatusServiceImpl {
     ///
     /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_status_config(&self, project: &str) -> Result<JiraStatusConfig, JiraError> {
-        let config_path = jira_config_path()
-            .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
+        let config_path = self.config_path()?;
         let config = Self::read_jira_config(&config_path)
             .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;
 
@@ -297,7 +314,6 @@ mod tests {
     use crate::jira::client::types::JiraResponse;
     use serde_json::json;
     use std::collections::HashMap;
-    use std::env;
     use std::sync::{Arc, Mutex};
     use tempfile::TempDir;
 
@@ -335,27 +351,9 @@ mod tests {
         }
     }
 
-    fn with_temp_home<F: FnOnce()>(f: F) {
+    fn with_lock<F: FnOnce()>(f: F) {
         let _lock = TEST_ENV_LOCK.lock().unwrap();
-        let tmp = TempDir::new().unwrap();
-        let original_home = env::var("HOME").ok();
-        let original_disable = env::var("WORKFLOW_DISABLE_ICLOUD").ok();
-
-        env::set_var("HOME", tmp.path());
-        env::set_var("WORKFLOW_DISABLE_ICLOUD", "1");
-
         f();
-
-        if let Some(value) = original_home {
-            env::set_var("HOME", value);
-        } else {
-            env::remove_var("HOME");
-        }
-        if let Some(value) = original_disable {
-            env::set_var("WORKFLOW_DISABLE_ICLOUD", value);
-        } else {
-            env::remove_var("WORKFLOW_DISABLE_ICLOUD");
-        }
     }
 
     #[test]
@@ -381,9 +379,13 @@ mod tests {
 
     #[test]
     fn test_write_and_read_status_config() {
-        with_temp_home(|| {
+        with_lock(|| {
+            let tmp = TempDir::new().unwrap();
+            let config_path = tmp.path().join(".workflow").join("config").join("jira.toml");
+            std::fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+
             let client = Arc::new(MockJiraClient::new(HashMap::new()));
-            let service = StatusServiceImpl::new(client);
+            let service = StatusServiceImpl::new_with_config_path(client, config_path);
 
             let config = JiraStatusConfig {
                 project: "PROJ".to_string(),
@@ -401,9 +403,11 @@ mod tests {
 
     #[test]
     fn test_read_status_invalid_ticket() {
-        with_temp_home(|| {
+        with_lock(|| {
             let client = Arc::new(MockJiraClient::new(HashMap::new()));
-            let service = StatusServiceImpl::new(client);
+            let tmp = TempDir::new().unwrap();
+            let config_path = tmp.path().join(".workflow").join("config").join("jira.toml");
+            let service = StatusServiceImpl::new_with_config_path(client, config_path);
 
             let result = service.read_pull_request_created_status("invalid");
             assert!(result.is_err());

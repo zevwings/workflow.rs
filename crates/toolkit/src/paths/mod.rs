@@ -9,7 +9,7 @@
 //!
 //! 所有路径 API 都通过模块级函数直接访问：
 //! ```rust
-//! use toolkit::paths::{config_dir, workflow_config, binary_install_dir};
+//! use toolkit::paths::{config_dir, workflow_config_path, binary_install_dir};
 //! ```
 
 mod base;

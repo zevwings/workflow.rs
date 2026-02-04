@@ -26,7 +26,8 @@ use std::io::Result;
 ///
 /// # 示例
 ///
-/// ```rust,no_run
+/// ```rust,ignore
+/// // `backend` 是内部模块（不属于公共 API），这里只演示内部使用方式。
 /// use prompt::backend::{Backend, TerminalBackend};
 ///
 /// // 生产环境使用真实终端

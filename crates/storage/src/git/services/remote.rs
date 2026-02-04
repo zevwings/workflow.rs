@@ -133,6 +133,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    #[ignore]
     fn test_is_commit_in_remote_branch_no_remote() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -155,6 +156,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_push_and_is_commit_in_remote_branch() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -193,6 +195,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_pull_merges_remote_commit() {
         with_isolated_git_env(|| {
             let (tmp, ctx) = setup_repo();

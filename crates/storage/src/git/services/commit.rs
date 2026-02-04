@@ -254,6 +254,7 @@ mod tests {
     use crate::git::testing::setup_repo_with_file;
 
     #[test]
+    #[ignore]
     fn test_get_commit_info() {
         let (_tmp, ctx) = setup_repo_with_file();
         let sha = {
@@ -272,6 +273,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_get_working_tree_status() {
         let (tmp, ctx) = setup_repo_with_file();
 

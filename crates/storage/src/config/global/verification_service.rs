@@ -4,7 +4,9 @@
 //!
 //! ## 使用方式
 //!
-//! ```rust,no_run
+//! ```rust,ignore
+//! // `storage::config` 为内部模块（非 public API），且该示例依赖 app 层的 registry。
+//! // 这里仅用于说明用途，不作为可编译示例。
 //! use domain::VerificationService;
 //! use storage::config::global::VerificationServiceImpl;
 //! use app::registry;

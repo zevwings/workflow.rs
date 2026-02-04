@@ -58,6 +58,8 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
+    use serial_test::serial;
+
     use domain::{
         alias::AliasService, completion::CompletionService, errors::ServiceError,
         pr::PullRequestService, GlobalConfigRepository,
@@ -472,6 +474,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_register_services_succeeds() {
         let container = registry::Container::global();
         container.unbind_all();
@@ -507,6 +510,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_register_services_resolves_dependencies() {
         let container = registry::Container::global();
         container.unbind_all();
@@ -551,6 +555,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_register_services_fails_when_dependency_missing() {
         let container = registry::Container::global();
         container.unbind_all();

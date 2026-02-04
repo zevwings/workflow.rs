@@ -20,7 +20,7 @@
 //! use toolkit::logger::LoggerError;
 //! use std::path::PathBuf;
 //!
-//! # fn main() -> Result<()> {
+//! # fn main() -> std::result::Result<(), LoggerError> {
 //! let config = LoggerConfig::new(
 //!     Some("info".to_string()),  // 日志级别
 //!     Some("text".to_string()),   // 日志格式

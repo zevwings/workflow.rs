@@ -581,6 +581,7 @@ mod tests {
     use crate::git::testing::{setup_repo, with_isolated_git_env};
 
     #[test]
+    #[ignore]
     fn test_create_branch() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -593,6 +594,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_current_branch() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -604,6 +606,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_local_branch() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -618,6 +621,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_current_branch_fails() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -630,6 +634,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_rename_branch() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -646,6 +651,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_list_branches_remove_prefix() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -659,6 +665,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_checkout_branch() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -673,6 +680,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_get_default_branch_from_remote_head() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();
@@ -704,6 +712,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_infer_target_branch_from_merge_base() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo();

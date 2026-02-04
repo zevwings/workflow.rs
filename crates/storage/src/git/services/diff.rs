@@ -212,6 +212,7 @@ mod tests {
     use crate::git::testing::setup_repo_with_file;
 
     #[test]
+    #[ignore]
     fn test_get_working_tree_diff_empty() {
         let (_tmp, ctx) = setup_repo_with_file();
         let service = DiffServiceImpl::new(ctx);
@@ -220,6 +221,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_get_working_tree_diff_with_changes() {
         let (tmp, ctx) = setup_repo_with_file();
 

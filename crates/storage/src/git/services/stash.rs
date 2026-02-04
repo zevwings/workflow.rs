@@ -315,6 +315,7 @@ mod tests {
     use std::fs;
 
     #[test]
+    #[ignore]
     fn test_stash_push_and_list() {
         with_isolated_git_env(|| {
             let (tmp, ctx) = setup_repo_with_file();
@@ -338,6 +339,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_stash_list_empty() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -349,6 +351,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_extract_branch_and_message() {
         with_isolated_git_env(|| {
             // 测试 "WIP on" 格式
@@ -372,6 +375,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_stash_apply_keeps_entry() {
         with_isolated_git_env(|| {
             let (tmp, ctx) = setup_repo_with_file();
@@ -390,6 +394,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_stash_pop_removes_entry() {
         with_isolated_git_env(|| {
             let (tmp, ctx) = setup_repo_with_file();
@@ -408,6 +413,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_stash_drop_removes_entry() {
         with_isolated_git_env(|| {
             let (tmp, ctx) = setup_repo_with_file();

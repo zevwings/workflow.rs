@@ -24,7 +24,7 @@ pub fn spinner(message: impl Into<String>) -> SpinnerBuilder {
 /// # 示例
 ///
 /// ```rust,no_run
-/// use toolkit::spinner;
+/// use prompt::spinner;
 ///
 /// # fn main() {
 /// let spinner = spinner!("正在处理 {}...", "文件");
@@ -54,9 +54,10 @@ macro_rules! spinner {
 /// # 示例
 ///
 /// ```rust,no_run
-/// use toolkit::spinner_then;
+/// use prompt::spinner_then;
 ///
 /// # struct OperationResult;
+/// # struct Settings { github: () }
 /// # struct DisplayService;
 /// # impl DisplayService {
 /// #     fn github(_: &OperationResult) {}
@@ -68,7 +69,7 @@ macro_rules! spinner {
 /// #     }
 /// # }
 /// # let operation_service = OperationService;
-/// # let settings = ();
+/// # let settings = Settings { github: () };
 ///
 /// spinner_then!(
 ///     "Verifying GitHub configuration...",

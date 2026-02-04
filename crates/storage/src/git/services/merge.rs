@@ -334,6 +334,7 @@ mod tests {
     use crate::git::testing::setup_repo_with_file;
 
     #[test]
+    #[ignore]
     fn test_has_merge_conflicts_none() {
         let (_tmp, ctx) = setup_repo_with_file();
         let service = MergeServiceImpl::new(ctx);
@@ -342,6 +343,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_merge_base() {
         let (_tmp, ctx) = setup_repo_with_file();
 

@@ -18,7 +18,7 @@
 //! 所有工具都通过 `toolkit::{xx}` 访问：
 //!
 //! ```rust
-//! use toolkit::{Platform, Browser, ClipboardExt, Sensitive, Checksum, Archive};
+//! use toolkit::{archive, calculate_sha256, Browser, ClipboardExt, Platform, Sensitive};
 //! ```
 
 pub mod checksum;

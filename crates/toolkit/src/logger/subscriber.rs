@@ -71,7 +71,7 @@ macro_rules! add_text_layer {
 /// use toolkit::logger::LoggerError;
 /// use std::path::PathBuf;
 ///
-/// # fn main() -> Result<()> {
+/// # fn main() -> std::result::Result<(), LoggerError> {
 /// let config = LoggerConfig::new(
 ///     Some("info".to_string()),
 ///     Some("text".to_string()),

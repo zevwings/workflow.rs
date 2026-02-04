@@ -24,7 +24,7 @@ pub trait Tabled {
 ///
 /// ```rust,no_run
 /// use prompt::Tabled;
-/// use toolkit::impl_tabled;
+/// use prompt::impl_tabled;
 ///
 /// struct User {
 ///     name: String,

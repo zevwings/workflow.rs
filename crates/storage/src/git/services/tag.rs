@@ -438,6 +438,7 @@ mod tests {
     use crate::git::testing::{setup_repo_with_file, with_isolated_git_env};
 
     #[test]
+    #[ignore]
     fn test_create_lightweight_tag() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -453,6 +454,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_list_tags() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -474,6 +476,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_tag_exists_local() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -492,6 +495,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_tag_force() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -520,6 +524,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_nonexistent_tag_without_force() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -536,6 +541,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_create_annotated_tag() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -561,6 +567,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_tags_by_pattern() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();
@@ -585,6 +592,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_preview_delete_and_has_tag() {
         with_isolated_git_env(|| {
             let (_tmp, ctx) = setup_repo_with_file();

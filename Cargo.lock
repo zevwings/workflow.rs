@@ -2623,6 +2623,7 @@ dependencies = [
  "domain",
  "once_cell",
  "registry",
+ "serial_test",
  "storage",
  "tempfile",
  "toml",
