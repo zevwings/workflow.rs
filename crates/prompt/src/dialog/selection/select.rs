@@ -378,6 +378,8 @@ macro_rules! select {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backend::MockBackend;
+    use crossterm::event::{Event, KeyEvent, KeyModifiers};
 
     #[test]
     fn test_select_builder_new() {
@@ -418,5 +420,266 @@ mod tests {
         let options: Vec<String> = vec!["Option 1".to_string(), "Option 2".to_string()];
         let builder = SelectBuilder::new("Choose", options);
         assert_eq!(builder.options.len(), 2);
+    }
+
+    // ========================================================================
+    // MockBackend 测试 - 测试实际交互逻辑
+    // ========================================================================
+
+    #[test]
+    fn test_select_empty_options() {
+        let options: Vec<&str> = vec![];
+        let mut backend = MockBackend::new();
+
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn test_select_first_option_with_enter() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose a fruit", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Apple");
+    }
+
+    #[test]
+    fn test_select_with_default_index() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose a fruit", options)
+            .default(1)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Banana");
+    }
+
+    #[test]
+    fn test_select_default_out_of_bounds() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        // default 超出范围，应该回退到 0
+        let result = SelectBuilder::new("Choose", options)
+            .default(100)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Apple");
+    }
+
+    #[test]
+    fn test_select_navigate_down_and_select() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Cherry");
+    }
+
+    #[test]
+    fn test_select_navigate_up_and_select() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Banana");
+    }
+
+    #[test]
+    fn test_select_navigate_up_at_top() {
+        // 在顶部按 Up 应该保持在顶部
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Apple");
+    }
+
+    #[test]
+    fn test_select_navigate_down_at_bottom() {
+        // 在底部按 Down 应该保持在底部
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Cherry");
+    }
+
+    #[test]
+    fn test_select_cancel_with_escape() {
+        let events = vec![MockBackend::press_escape()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_select_cancel_with_ctrl_c() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_select_search_filter() {
+        // 输入 "b" 过滤出 Banana，然后按 Enter 选择
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Banana");
+    }
+
+    #[test]
+    fn test_select_search_no_match_then_backspace() {
+        // 输入 "xyz" 无匹配，然后删除，再输入 "a" 选择
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char('z'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Cherry");
+    }
+
+    #[test]
+    fn test_select_escape_clears_search() {
+        // 输入搜索词，然后按 Escape 清除搜索，再选择第一项
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
+            MockBackend::press_escape(), // 清除搜索
+            MockBackend::press_enter(),  // 选择第一项 Apple
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Apple");
+    }
+
+    #[test]
+    fn test_select_with_result_title() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = SelectBuilder::new("Choose a fruit", options)
+            .result_title("Selected fruit")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Apple");
+    }
+
+    #[test]
+    fn test_select_with_page_size() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options: Vec<String> = (1..=20).map(|i| format!("Option {}", i)).collect();
+        let result = SelectBuilder::new("Choose", options)
+            .page_size(5)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Option 1");
+    }
+
+    #[test]
+    fn test_select_terminal_modes() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        assert!(!backend.is_raw_mode());
+
+        let options = vec!["Apple", "Banana"];
+        let result = SelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(!backend.is_raw_mode());
+        assert!(backend.is_cursor_visible());
     }
 }

@@ -311,3 +311,293 @@ impl FormExecutor {
         Ok(Box::new(nested_result))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::MockBackend;
+    use crate::form::{ConfirmFormField, InputFormField, SelectFormField};
+
+    #[test]
+    fn test_form_executor_new() {
+        let executor = FormExecutor::new();
+        // Just verify it can be created
+        assert!(std::mem::size_of_val(&executor) >= 0);
+    }
+
+    #[test]
+    fn test_form_executor_default() {
+        let executor = FormExecutor::default();
+        assert!(std::mem::size_of_val(&executor) >= 0);
+    }
+
+    #[test]
+    fn test_execute_single_input_field() {
+        let events = [
+            MockBackend::type_string("test_value"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let builder = FormBuilder::new()
+            .add_input(InputFormField::new("name", "Enter name"));
+
+        let executor = FormExecutor::new();
+        let result = executor.execute_with_backend(&builder, &mut backend);
+
+        assert!(result.is_ok());
+        let form_result = result.unwrap();
+        assert_eq!(form_result.get_string("name"), "test_value");
+    }
+
+    #[test]
+    fn test_execute_single_confirm_field() {
+        use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+        let events = vec![Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE))];
+        let mut backend = MockBackend::with_events(events);
+
+        let builder = FormBuilder::new()
+            .add_confirm(ConfirmFormField::new("proceed", "Continue?"));
+
+        let executor = FormExecutor::new();
+        let result = executor.execute_with_backend(&builder, &mut backend);
+
+        assert!(result.is_ok());
+        let form_result = result.unwrap();
+        assert!(form_result.get_bool("proceed"));
+    }
+
+    #[test]
+    fn test_execute_single_select_field() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let builder = FormBuilder::new()
+            .add_select(SelectFormField::new(
+                "choice",
+                "Select option",
+                vec!["Option A".to_string(), "Option B".to_string(), "Option C".to_string()],
+            ));
+
+        let executor = FormExecutor::new();
+        let result = executor.execute_with_backend(&builder, &mut backend);
+
+        assert!(result.is_ok());
+        let form_result = result.unwrap();
+        assert_eq!(form_result.get_int("choice"), 0); // First option selected
+    }
+
+    #[test]
+    fn test_execute_multiple_fields() {
+        use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+        let events = [
+            // Input field: "Alice"
+            MockBackend::type_string("Alice"),
+            vec![MockBackend::press_enter()],
+            // Confirm field: 'y'
+            vec![Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE))],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let builder = FormBuilder::new()
+            .add_input(InputFormField::new("name", "Enter name"))
+            .add_confirm(ConfirmFormField::new("agree", "Do you agree?"));
+
+        let executor = FormExecutor::new();
+        let result = executor.execute_with_backend(&builder, &mut backend);
+
+        assert!(result.is_ok());
+        let form_result = result.unwrap();
+        assert_eq!(form_result.get_string("name"), "Alice");
+        assert!(form_result.get_bool("agree"));
+    }
+
+    #[test]
+    fn test_execute_with_default_value() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let builder = FormBuilder::new()
+            .add_input(InputFormField::new("name", "Enter name").default("DefaultName"));
+
+        let executor = FormExecutor::new();
+        let result = executor.execute_with_backend(&builder, &mut backend);
+
+        assert!(result.is_ok());
+        let form_result = result.unwrap();
+        assert_eq!(form_result.get_string("name"), "DefaultName");
+    }
+
+    #[test]
+    fn test_execute_conditional_field_executed() {
+        use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+        let events = [
+            // First confirm: 'y' (enable)
+            vec![Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE))],
+            // Second input: "conditional_value"
+            MockBackend::type_string("conditional_value"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let builder = FormBuilder::new()
+            .add_confirm(ConfirmFormField::new("enable", "Enable feature?"))
+            .add_input(
+                InputFormField::new("feature_name", "Feature name")
+                    .condition(Box::new(|result| result.get_bool("enable"))),
+            );
+
+        let executor = FormExecutor::new();
+        let result = executor.execute_with_backend(&builder, &mut backend);
+
+        assert!(result.is_ok());
+        let form_result = result.unwrap();
+        assert!(form_result.get_bool("enable"));
+        assert_eq!(form_result.get_string("feature_name"), "conditional_value");
+    }
+
+    #[test]
+    fn test_execute_conditional_field_skipped() {
+        use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+        let events = [
+            // First confirm: 'n' (disable)
+            vec![Event::Key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE))],
+            // Second input should be skipped, so no events needed
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let builder = FormBuilder::new()
+            .add_confirm(ConfirmFormField::new("enable", "Enable feature?"))
+            .add_input(
+                InputFormField::new("feature_name", "Feature name")
+                    .condition(Box::new(|result| result.get_bool("enable"))),
+            );
+
+        let executor = FormExecutor::new();
+        let result = executor.execute_with_backend(&builder, &mut backend);
+
+        assert!(result.is_ok());
+        let form_result = result.unwrap();
+        assert!(!form_result.get_bool("enable"));
+        // Conditional field was skipped, so its value should be empty/default
+        assert_eq!(form_result.get_string("feature_name"), "");
+    }
+
+    #[test]
+    fn test_step_type_unconditional() {
+        let executor = FormExecutor::new();
+        let result = FormResult::new();
+        let step = FormStep {
+            step_type: StepType::Unconditional,
+            fields: vec![],
+        };
+        assert!(executor.should_execute_step(&step, &result));
+    }
+
+    #[test]
+    fn test_step_type_conditional() {
+        let executor = FormExecutor::new();
+
+        let mut result = FormResult::new();
+        result.set("enabled".to_string(), true);
+
+        let step = FormStep {
+            step_type: StepType::Conditional(Box::new(|r| r.get_bool("enabled"))),
+            fields: vec![],
+        };
+        assert!(executor.should_execute_step(&step, &result));
+
+        result.set("enabled".to_string(), false);
+        let step2 = FormStep {
+            step_type: StepType::Conditional(Box::new(|r| r.get_bool("enabled"))),
+            fields: vec![],
+        };
+        assert!(!executor.should_execute_step(&step2, &result));
+    }
+
+    #[test]
+    fn test_step_type_conditional_all() {
+        let executor = FormExecutor::new();
+
+        let mut result = FormResult::new();
+        result.set("a".to_string(), true);
+        result.set("b".to_string(), true);
+
+        let step = FormStep {
+            step_type: StepType::ConditionalAll(vec![
+                Box::new(|r| r.get_bool("a")),
+                Box::new(|r| r.get_bool("b")),
+            ]),
+            fields: vec![],
+        };
+        assert!(executor.should_execute_step(&step, &result));
+
+        result.set("b".to_string(), false);
+        let step2 = FormStep {
+            step_type: StepType::ConditionalAll(vec![
+                Box::new(|r| r.get_bool("a")),
+                Box::new(|r| r.get_bool("b")),
+            ]),
+            fields: vec![],
+        };
+        assert!(!executor.should_execute_step(&step2, &result));
+    }
+
+    #[test]
+    fn test_step_type_conditional_any() {
+        let executor = FormExecutor::new();
+
+        let mut result = FormResult::new();
+        result.set("a".to_string(), false);
+        result.set("b".to_string(), true);
+
+        let step = FormStep {
+            step_type: StepType::ConditionalAny(vec![
+                Box::new(|r| r.get_bool("a")),
+                Box::new(|r| r.get_bool("b")),
+            ]),
+            fields: vec![],
+        };
+        assert!(executor.should_execute_step(&step, &result));
+
+        result.set("a".to_string(), false);
+        result.set("b".to_string(), false);
+        let step2 = FormStep {
+            step_type: StepType::ConditionalAny(vec![
+                Box::new(|r| r.get_bool("a")),
+                Box::new(|r| r.get_bool("b")),
+            ]),
+            fields: vec![],
+        };
+        assert!(!executor.should_execute_step(&step2, &result));
+    }
+
+    #[test]
+    fn test_step_type_dynamic_condition() {
+        let executor = FormExecutor::new();
+
+        let mut result = FormResult::new();
+        result.set("count".to_string(), 5usize);
+
+        let step = FormStep {
+            step_type: StepType::DynamicCondition(Box::new(|r| r.get_int("count") > 3)),
+            fields: vec![],
+        };
+        assert!(executor.should_execute_step(&step, &result));
+
+        result.set("count".to_string(), 2usize);
+        let step2 = FormStep {
+            step_type: StepType::DynamicCondition(Box::new(|r| r.get_int("count") > 3)),
+            fields: vec![],
+        };
+        assert!(!executor.should_execute_step(&step2, &result));
+    }
+}

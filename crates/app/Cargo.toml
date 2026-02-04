@@ -23,7 +23,7 @@ prompt = { path = "../prompt" }
 registry = { path = "../registry" }
 once_cell.workspace = true
 clap.workspace = true
-clap_complete = "4.5"
+clap_complete.workspace = true
 color-eyre = "0.6"
 serde_json.workspace = true
-git2 = { version = "0.20.3", features = ["https", "ssh", "vendored-libgit2", "vendored-openssl"] }
+git2.workspace = true

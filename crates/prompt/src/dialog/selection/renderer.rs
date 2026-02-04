@@ -215,3 +215,348 @@ pub(super) fn clear_and_display_result_with_search<B: Backend>(
     backend.flush()?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::MockBackend;
+    use crate::style::theme::get_theme;
+
+    /// 简单的测试渲染器
+    struct TestOptionRenderer;
+
+    impl OptionRenderer for TestOptionRenderer {
+        fn render_option(
+            &self,
+            _index: usize,
+            option_text: &str,
+            is_current: bool,
+            _theme: &Theme,
+        ) -> String {
+            if is_current {
+                format!("> {}", option_text)
+            } else {
+                format!("  {}", option_text)
+            }
+        }
+    }
+
+    #[test]
+    fn test_render_options_basic() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options = vec!["Apple", "Banana", "Cherry"];
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 0,
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Use arrow keys",
+                search_query: None,
+                page_size: None,
+            },
+        );
+
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        // 3 options + 1 hint line = 4 lines
+        assert_eq!(lines, 4);
+
+        let output = backend.output_string();
+        assert!(output.contains("Apple"));
+        assert!(output.contains("Banana"));
+        assert!(output.contains("Cherry"));
+    }
+
+    #[test]
+    fn test_render_options_with_search_query() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options = vec!["Apple", "Banana"];
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 0,
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Use arrow keys",
+                search_query: Some("test"),
+                page_size: None,
+            },
+        );
+
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        // 1 search line + 2 options + 1 hint line = 4 lines
+        assert_eq!(lines, 4);
+
+        let output = backend.output_string();
+        assert!(output.contains("搜索"));
+        assert!(output.contains("test"));
+    }
+
+    #[test]
+    fn test_render_options_with_pagination() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options: Vec<String> = (1..=15).map(|i| format!("Option {}", i)).collect();
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 0,
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Use arrow keys",
+                search_query: None,
+                page_size: Some(5),
+            },
+        );
+
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        // 5 visible options + 1 pagination info + 1 hint line = 7 lines
+        assert_eq!(lines, 7);
+
+        let output = backend.output_string();
+        assert!(output.contains("Showing"));
+        assert!(output.contains("1-5"));
+        assert!(output.contains("15"));
+    }
+
+    #[test]
+    fn test_render_options_pagination_middle() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options: Vec<String> = (1..=20).map(|i| format!("Option {}", i)).collect();
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 10, // 在中间位置
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Use arrow keys",
+                search_query: None,
+                page_size: Some(5),
+            },
+        );
+
+        assert!(result.is_ok());
+        let output = backend.output_string();
+        // 中间位置应该显示窗口
+        assert!(output.contains("Showing"));
+    }
+
+    #[test]
+    fn test_render_options_pagination_end() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options: Vec<String> = (1..=20).map(|i| format!("Option {}", i)).collect();
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 19, // 在末尾
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Use arrow keys",
+                search_query: None,
+                page_size: Some(5),
+            },
+        );
+
+        assert!(result.is_ok());
+        let output = backend.output_string();
+        assert!(output.contains("16-20"));
+    }
+
+    #[test]
+    fn test_render_options_no_pagination_when_small() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options = vec!["Apple", "Banana", "Cherry"];
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 0,
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Use arrow keys",
+                search_query: None,
+                page_size: Some(10), // page_size > options.len()
+            },
+        );
+
+        assert!(result.is_ok());
+        let lines = result.unwrap();
+        // 3 options + 1 hint line = 4 lines (no pagination line)
+        assert_eq!(lines, 4);
+
+        let output = backend.output_string();
+        assert!(!output.contains("Showing"));
+    }
+
+    #[test]
+    fn test_render_options_clears_previous_lines() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options = vec!["Apple", "Banana"];
+
+        // 第一次渲染
+        let result1 = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 0,
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Hint",
+                search_query: None,
+                page_size: None,
+            },
+        );
+        assert!(result1.is_ok());
+        let lines1 = result1.unwrap();
+
+        // 第二次渲染，应该清除之前的行
+        let result2 = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 1,
+                rendered_lines: lines1,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Hint",
+                search_query: None,
+                page_size: None,
+            },
+        );
+        assert!(result2.is_ok());
+    }
+
+    #[test]
+    fn test_render_options_empty() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options: Vec<&str> = vec![];
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 0,
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "No options",
+                search_query: None,
+                page_size: None,
+            },
+        );
+
+        assert!(result.is_ok());
+        // 0 options + 1 hint line = 1 line
+        assert_eq!(result.unwrap(), 1);
+    }
+
+    #[test]
+    fn test_clear_and_display_result() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+
+        let result = clear_and_display_result_with_search(
+            &mut backend,
+            3, // 之前渲染了 3 行
+            "Selection",
+            "Apple",
+            &theme,
+        );
+
+        assert!(result.is_ok());
+        let output = backend.output_string();
+        assert!(output.contains("Selection"));
+        assert!(output.contains("Apple"));
+        assert!(backend.is_cursor_visible());
+    }
+
+    #[test]
+    fn test_render_options_current_index_highlight() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options = vec!["Apple", "Banana", "Cherry"];
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 1, // Banana 高亮
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Hint",
+                search_query: None,
+                page_size: None,
+            },
+        );
+
+        assert!(result.is_ok());
+        let output = backend.output_string();
+        // TestOptionRenderer 为当前项添加 "> " 前缀
+        assert!(output.contains("> Banana"));
+        assert!(output.contains("  Apple"));
+        assert!(output.contains("  Cherry"));
+    }
+
+    #[test]
+    fn test_cursor_hidden_after_render() {
+        let mut backend = MockBackend::new();
+        let theme = get_theme();
+        let renderer = TestOptionRenderer;
+        let options = vec!["Apple"];
+
+        let result = OptionListRenderer::render_options_with_search(
+            &mut backend,
+            &RenderOptionsParams {
+                options: &options,
+                current_index: 0,
+                rendered_lines: 0,
+                theme: &theme,
+                renderer: &renderer,
+                hint_text: "Hint",
+                search_query: None,
+                page_size: None,
+            },
+        );
+
+        assert!(result.is_ok());
+        assert!(!backend.is_cursor_visible());
+    }
+}

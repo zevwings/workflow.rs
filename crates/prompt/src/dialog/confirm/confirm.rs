@@ -227,6 +227,7 @@ macro_rules! confirm {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backend::MockBackend;
 
     #[test]
     fn test_confirm_builder_new() {
@@ -258,5 +259,212 @@ mod tests {
         assert_eq!(builder.message, "Delete file?");
         assert_eq!(builder.default, Some(false));
         assert_eq!(builder.result_title, Some("Delete".to_string()));
+    }
+
+    // ========================================================================
+    // MockBackend 测试 - 测试实际交互逻辑
+    // ========================================================================
+
+    #[test]
+    fn test_confirm_press_y() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(false)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_press_capital_y() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('Y'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(false)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_press_n() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(true)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_press_capital_n() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('N'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(true)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_press_enter_with_default_true() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(true)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_press_enter_with_default_false() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(false)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_press_enter_without_default() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        // 没有设置 default，默认值为 true
+        let result = ConfirmBuilder::new("Continue?")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_press_escape() {
+        let events = vec![MockBackend::press_escape()];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(true)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_confirm_press_ctrl_c() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(true)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_confirm_ignore_invalid_keys() {
+        // 测试无效按键被忽略，最终按 y 确认
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char('z'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Continue?")
+            .default(false)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_with_result_title() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("Delete all files?")
+            .default(false)
+            .result_title("Confirmed")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+
+        // 验证输出中包含结果
+        let output = backend.output_string();
+        assert!(!output.is_empty());
+    }
+
+    #[test]
+    fn test_confirm_multiline_message() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = ConfirmBuilder::new("This is a\nmultiline\nmessage")
+            .default(true)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_confirm_terminal_modes() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        // 验证初始状态
+        assert!(!backend.is_raw_mode());
+        assert!(backend.is_cursor_visible());
+
+        let result = ConfirmBuilder::new("Test?")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+
+        // 验证终端模式已恢复
+        assert!(!backend.is_raw_mode());
+        assert!(backend.is_cursor_visible());
     }
 }

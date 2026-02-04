@@ -21,7 +21,7 @@ unicode-width = "0.1"
 fuzzy-matcher = "0.3"
 
 # 正则表达式（用于验证器）
-regex = "1.10"
+regex.workspace = true
 
 [dev-dependencies]
-rstest = "0.19"
+rstest.workspace = true

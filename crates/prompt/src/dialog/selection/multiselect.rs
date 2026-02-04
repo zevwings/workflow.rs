@@ -467,6 +467,8 @@ macro_rules! multiselect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backend::MockBackend;
+    use crossterm::event::{Event, KeyEvent, KeyModifiers};
 
     #[test]
     fn test_multiselect_builder_new() {
@@ -516,5 +518,321 @@ mod tests {
         let options: Vec<String> = vec!["Option 1".to_string(), "Option 2".to_string()];
         let builder = MultiSelectBuilder::new("Choose", options);
         assert_eq!(builder.options.len(), 2);
+    }
+
+    // ========================================================================
+    // MockBackend 测试 - 测试实际交互逻辑
+    // ========================================================================
+
+    #[test]
+    fn test_multiselect_empty_options() {
+        let options: Vec<&str> = vec![];
+        let mut backend = MockBackend::new();
+
+        let result = MultiSelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::InvalidInput(_)));
+    }
+
+    #[test]
+    fn test_multiselect_select_none_and_confirm() {
+        // 不选择任何项，直接按 Enter
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert!(selected.is_empty());
+    }
+
+    #[test]
+    fn test_multiselect_select_first_with_space() {
+        // 按空格选择第一项，然后按 Enter 确认
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected, vec!["Apple"]);
+    }
+
+    #[test]
+    fn test_multiselect_select_multiple() {
+        // 选择第一项和第三项
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Apple
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),      // 移到 Banana
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),      // 移到 Cherry
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Cherry
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected.len(), 2);
+        assert!(selected.contains(&"Apple"));
+        assert!(selected.contains(&"Cherry"));
+    }
+
+    #[test]
+    fn test_multiselect_toggle_selection() {
+        // 选择、取消选择、再选择
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Apple
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 取消 Apple
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),      // 移到 Banana
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Banana
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected, vec!["Banana"]);
+    }
+
+    #[test]
+    fn test_multiselect_with_default_selected() {
+        // 使用默认选中，直接确认
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .default(vec![0, 2]) // Apple 和 Cherry 默认选中
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected.len(), 2);
+        assert!(selected.contains(&"Apple"));
+        assert!(selected.contains(&"Cherry"));
+    }
+
+    #[test]
+    fn test_multiselect_default_with_toggle() {
+        // 默认选中 Apple 和 Cherry，取消 Cherry，选中 Banana
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),      // 移到 Banana
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Banana
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),      // 移到 Cherry
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 取消 Cherry
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .default(vec![0, 2])
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected.len(), 2);
+        assert!(selected.contains(&"Apple"));
+        assert!(selected.contains(&"Banana"));
+        assert!(!selected.contains(&"Cherry"));
+    }
+
+    #[test]
+    fn test_multiselect_cancel_with_escape() {
+        let events = vec![MockBackend::press_escape()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_multiselect_cancel_with_ctrl_c() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL)),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_multiselect_search_filter() {
+        // 输入 "b" 过滤，选择 Banana，然后清除搜索并选择 Apple
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Banana
+            MockBackend::press_escape(), // 清除搜索
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Apple
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected.len(), 2);
+        assert!(selected.contains(&"Apple"));
+        assert!(selected.contains(&"Banana"));
+    }
+
+    #[test]
+    fn test_multiselect_search_backspace() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // 选择 Apple
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected, vec!["Apple"]);
+    }
+
+    #[test]
+    fn test_multiselect_navigate_up() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected, vec!["Banana"]);
+    }
+
+    #[test]
+    fn test_multiselect_navigate_up_at_top() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected, vec!["Apple"]);
+    }
+
+    #[test]
+    fn test_multiselect_navigate_down_at_bottom() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected, vec!["Cherry"]);
+    }
+
+    #[test]
+    fn test_multiselect_with_result_title() {
+        let events = vec![
+            Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let options = vec!["Apple", "Banana", "Cherry"];
+        let result = MultiSelectBuilder::new("Choose fruits", options)
+            .result_title("Selected fruits")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        let selected = result.unwrap();
+        assert_eq!(selected, vec!["Apple"]);
+    }
+
+    #[test]
+    fn test_multiselect_with_page_size() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let options: Vec<String> = (1..=20).map(|i| format!("Option {}", i)).collect();
+        let result = MultiSelectBuilder::new("Choose", options)
+            .page_size(5)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_multiselect_terminal_modes() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        assert!(!backend.is_raw_mode());
+
+        let options = vec!["Apple", "Banana"];
+        let result = MultiSelectBuilder::new("Choose", options)
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert!(!backend.is_raw_mode());
+        assert!(backend.is_cursor_visible());
     }
 }

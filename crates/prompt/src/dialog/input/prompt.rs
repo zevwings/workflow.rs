@@ -432,3 +432,356 @@ pub(super) fn prompt(builder: InputBuilder) -> Result<String> {
     let mut backend = TerminalBackend::default();
     prompt_with_backend(builder, &mut backend)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::MockBackend;
+    use crate::dialog::input::validator::validators;
+
+    #[test]
+    fn test_input_basic_input_and_enter() {
+        let events = [
+            MockBackend::type_string("hello"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "hello");
+    }
+
+    #[test]
+    fn test_input_empty_with_default() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text")
+            .default("default value")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "default value");
+    }
+
+    #[test]
+    fn test_input_empty_without_default() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "");
+    }
+
+    #[test]
+    fn test_input_override_default() {
+        let events = [
+            MockBackend::type_string("custom"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text")
+            .default("default")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "custom");
+    }
+
+    #[test]
+    fn test_input_cancel_with_escape() {
+        let events = vec![MockBackend::press_escape()];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_input_cancel_with_ctrl_c() {
+        let events = vec![Event::Key(KeyEvent::new(
+            KeyCode::Char('c'),
+            KeyModifiers::CONTROL,
+        ))];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PromptError::Cancelled));
+    }
+
+    #[test]
+    fn test_input_backspace() {
+        let events = [
+            MockBackend::type_string("hello"),
+            vec![
+                Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+                Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE)),
+            ],
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "hel");
+    }
+
+    #[test]
+    fn test_input_delete() {
+        let events = [
+            MockBackend::type_string("hello"),
+            vec![
+                Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+                Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+                Event::Key(KeyEvent::new(KeyCode::Delete, KeyModifiers::NONE)),
+            ],
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "helo");
+    }
+
+    #[test]
+    fn test_input_cursor_movement() {
+        let events = [
+            MockBackend::type_string("ab"),
+            vec![
+                Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+                Event::Key(KeyEvent::new(KeyCode::Char('X'), KeyModifiers::NONE)),
+            ],
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "aXb");
+    }
+
+    #[test]
+    fn test_input_cursor_left_at_start() {
+        // 在开头按左键应该不改变位置
+        let events = [
+            vec![
+                Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+                Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE)),
+            ],
+            MockBackend::type_string("test"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "test");
+    }
+
+    #[test]
+    fn test_input_cursor_right_at_end() {
+        // 在末尾按右键应该不改变位置
+        let events = [
+            MockBackend::type_string("test"),
+            vec![
+                Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+                Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE)),
+                Event::Key(KeyEvent::new(KeyCode::Char('X'), KeyModifiers::NONE)),
+            ],
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "testX");
+    }
+
+    #[test]
+    fn test_input_with_validator_valid() {
+        let events = [
+            MockBackend::type_string("hello"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text")
+            .validator(validators::min_length(3))
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "hello");
+    }
+
+    #[test]
+    fn test_input_with_validator_invalid_then_valid() {
+        // 先输入无效的，然后按 backspace 删除再输入有效的
+        let events = [
+            MockBackend::type_string("ab"), // 太短
+            vec![MockBackend::press_enter()], // 验证失败，不会返回
+            MockBackend::type_string("cde"),  // 继续输入使其有效
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text")
+            .validator(validators::min_length(3))
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "abcde");
+    }
+
+    #[test]
+    fn test_input_password_mode() {
+        let events = [
+            MockBackend::type_string("secret"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter password")
+            .password()
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "secret");
+    }
+
+    #[test]
+    fn test_input_password_with_default() {
+        let events = vec![MockBackend::press_enter()];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter password")
+            .password()
+            .default("default_pass")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "default_pass");
+    }
+
+    #[test]
+    fn test_input_with_result_title() {
+        let events = [
+            MockBackend::type_string("test"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text")
+            .result_title("Your Input")
+            .prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "test");
+    }
+
+    #[test]
+    fn test_input_unicode_characters() {
+        let events = [
+            MockBackend::type_string("你好世界"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "你好世界");
+    }
+
+    #[test]
+    fn test_input_paste_event() {
+        let events = vec![
+            Event::Paste("pasted text".to_string()),
+            MockBackend::press_enter(),
+        ];
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "pasted text");
+    }
+
+    #[test]
+    fn test_input_terminal_modes_restored() {
+        let events = [
+            MockBackend::type_string("test"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        assert!(!backend.is_raw_mode());
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        // 终端模式应该已恢复
+        assert!(!backend.is_raw_mode());
+    }
+
+    #[test]
+    fn test_input_backspace_at_start() {
+        // 在开头按 backspace 应该什么都不做
+        let events = [
+            vec![Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE))],
+            MockBackend::type_string("test"),
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "test");
+    }
+
+    #[test]
+    fn test_input_delete_at_end() {
+        // 在末尾按 delete 应该什么都不做
+        let events = [
+            MockBackend::type_string("test"),
+            vec![Event::Key(KeyEvent::new(KeyCode::Delete, KeyModifiers::NONE))],
+            vec![MockBackend::press_enter()],
+        ]
+        .concat();
+        let mut backend = MockBackend::with_events(events);
+
+        let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "test");
+    }
+}

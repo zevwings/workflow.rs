@@ -10,5 +10,5 @@ domain = { path = "../domain" }
 storage = { path = "../storage" }
 toolkit = { path = "../toolkit" }
 registry = { path = "../registry" }
-toml = "0.8"
-dirs = "5.0"
+toml.workspace = true
+dirs.workspace = true
