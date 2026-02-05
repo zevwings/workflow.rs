@@ -444,8 +444,7 @@ fn clear_and_display_result_multiline<B: Backend>(
     backend.move_up(lines)?;
     backend.move_to_column(0)?;
 
-    // 多行值不能直接 write（包含 '\n' 会导致 raw mode 下列位置不回 0，出现缩进串行）。
-    // 这里按行输出，第一行带 title，后续行以两空格做延续缩进。
+    // 多行输入只显示第一行并添加省略号
     let display_value = if builder.password {
         PASSWORD_MASK
     } else {
@@ -455,15 +454,15 @@ fn clear_and_display_result_multiline<B: Backend>(
     let title_text = builder.result_title.as_ref().unwrap_or(&builder.message);
     let title = theme.title.apply(title_text, theme.enable_color);
 
-    let mut it = display_value.split('\n');
-    let first = it.next().unwrap_or("");
-    let first_answer = theme.answer.apply(first, theme.enable_color);
-    backend.writeln(&format!("{}{} {}", prefix, title, first_answer))?;
-
-    for line in it {
-        let answer = theme.answer.apply(line, theme.enable_color);
-        backend.writeln(&format!("  {}", answer))?;
-    }
+    // 只显示第一行，如果有多行则添加省略号
+    let first_line = display_value.lines().next().unwrap_or("");
+    let result_text = if display_value.contains('\n') {
+        format!("{}...", first_line)
+    } else {
+        first_line.to_string()
+    };
+    let answer = theme.answer.apply(&result_text, theme.enable_color);
+    backend.writeln(&format!("{}{} {}", prefix, title, answer))?;
 
     backend.move_to_column(0)?;
     backend.show_cursor()?;
@@ -472,11 +471,105 @@ fn clear_and_display_result_multiline<B: Backend>(
 }
 
 /// 打印取消消息
-fn print_cancelled_message<B: Backend>(backend: &mut B) -> Result<()> {
+fn print_cancelled_message<B: Backend>(
+    backend: &mut B,
+    editor: &InputEditor,
+    cursor_line: &mut CursorLine,
+) -> Result<()> {
     let theme = get_theme();
+
+    // 确保光标在输入行
+    ensure_cursor_on_input_line(backend, cursor_line)?;
+
+    // 清除输入行并显示已输入的内容（如果有）
+    backend.move_to_column(0)?;
+    backend.clear_line()?;
+
+    if !editor.as_str().is_empty() {
+        let prefix = theme.success.apply("> ", theme.enable_color);
+        let input_text = theme.answer.apply(editor.as_str(), theme.enable_color);
+        backend.writeln(&format!("{}{}", prefix, input_text))?;
+        backend.move_to_column(0)?;
+    } else {
+        // 如果没有输入，直接换行
+        backend.writeln("")?;
+        backend.move_to_column(0)?;
+    }
+
+    // 显示取消消息（不删除提示行）
+    let cancel_prefix = theme.warning.apply("! ", theme.enable_color);
+    let cancel_message = theme.hint.apply("Operation cancelled", theme.enable_color);
+    backend.writeln(&format!("{}{}", cancel_prefix, cancel_message))?;
+    backend.move_to_column(0)?;
+    backend.show_cursor()?;
+    backend.flush()?;
+    Ok(())
+}
+
+/// 多行输入模式下打印取消消息（需要先清除已渲染的输入内容）
+fn print_cancelled_message_multiline<B: Backend>(
+    backend: &mut B,
+    editor: &InputEditor,
+    cursor_row: u16,
+    rendered_input_lines: u16,
+) -> Result<()> {
+    let theme = get_theme();
+
+    // 回到输入区首行
+    backend.move_up(cursor_row)?;
+    backend.move_to_column(0)?;
+
+    let lines = rendered_input_lines.max(1);
+
+    if !editor.as_str().is_empty() {
+        // 清空并在第一行显示输入内容
+        backend.clear_line()?;
+        let prefix = theme.success.apply("> ", theme.enable_color);
+        let first_line = editor.as_str().lines().next().unwrap_or("");
+        let input_text = if editor.as_str().contains('\n') {
+            format!("{}...", first_line)
+        } else {
+            first_line.to_string()
+        };
+        let styled_input = theme.answer.apply(&input_text, theme.enable_color);
+        backend.writeln(&format!("{}{}", prefix, styled_input))?;
+        backend.move_to_column(0)?;
+
+        // 清空剩余的输入行（第2行到第N行），但保持光标在第2行
+        if lines > 1 {
+            for i in 1..lines {
+                backend.clear_line()?;
+                if i + 1 < lines {
+                    backend.move_down(1)?;
+                    backend.move_to_column(0)?;
+                }
+            }
+            // 移回到第2行（取消消息将显示的位置）
+            if lines > 2 {
+                backend.move_up((lines - 2) as u16)?;
+                backend.move_to_column(0)?;
+            }
+        }
+    } else {
+        // 没有输入，清空所有输入行
+        for i in 0..lines {
+            backend.clear_line()?;
+            if i + 1 < lines {
+                backend.move_down(1)?;
+                backend.move_to_column(0)?;
+            }
+        }
+        // 换行到下一行
+        backend.writeln("")?;
+        backend.move_to_column(0)?;
+    }
+
+    // 显示取消消息（不删除提示行）
     let prefix = theme.warning.apply("! ", theme.enable_color);
     let message = theme.hint.apply("Operation cancelled", theme.enable_color);
     backend.writeln(&format!("{}{}", prefix, message))?;
+    backend.move_to_column(0)?;
+    backend.show_cursor()?;
     backend.flush()?;
     Ok(())
 }
@@ -587,7 +680,16 @@ fn prompt_loop<B: Backend>(
             })) => match code {
                 KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
                     if c == 'c' {
-                        print_cancelled_message(backend)?;
+                        if builder.multiline {
+                            print_cancelled_message_multiline(
+                                backend,
+                                &editor,
+                                cursor_row,
+                                rendered_input_lines,
+                            )?;
+                        } else {
+                            print_cancelled_message(backend, &editor, &mut cursor_line)?;
+                        }
                         return Err(PromptError::Cancelled);
                     }
                     // 兼容：部分终端无法区分 Enter / Shift+Enter（两者都会上报为 Enter）。
@@ -838,7 +940,16 @@ fn prompt_loop<B: Backend>(
                     }
                 }
                 KeyCode::Esc => {
-                    print_cancelled_message(backend)?;
+                    if builder.multiline {
+                        print_cancelled_message_multiline(
+                            backend,
+                            &editor,
+                            cursor_row,
+                            rendered_input_lines,
+                        )?;
+                    } else {
+                        print_cancelled_message(backend, &editor, &mut cursor_line)?;
+                    }
                     return Err(PromptError::Cancelled);
                 }
                 _ => {}

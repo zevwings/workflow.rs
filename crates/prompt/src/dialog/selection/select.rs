@@ -180,7 +180,7 @@ where
                 })) => match code {
                     KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
                         if c == 'c' {
-                            print_cancelled_message(backend)?;
+                            print_cancelled_message(backend, rendered_lines)?;
                             return Err(PromptError::Cancelled);
                         }
                     }
@@ -326,7 +326,7 @@ where
                                 },
                             )?;
                         } else {
-                            print_cancelled_message(backend)?;
+                            print_cancelled_message(backend, rendered_lines)?;
                             return Err(PromptError::Cancelled);
                         }
                     }
@@ -347,11 +347,35 @@ fn get_hint_text(search_query: &str) -> &'static str {
     }
 }
 
-fn print_cancelled_message<B: Backend>(backend: &mut B) -> Result<()> {
+fn print_cancelled_message<B: Backend>(backend: &mut B, rendered_lines: usize) -> Result<()> {
     let theme = get_theme();
+
+    // 清除已渲染的选项列表
+    if rendered_lines > 0 {
+        // 向上移动到已渲染区域的第一行
+        backend.move_up(rendered_lines as u16)?;
+
+        // 清除所有已渲染的行
+        for i in 0..rendered_lines {
+            backend.move_to_column(0)?;
+            backend.clear_line()?;
+            if i < rendered_lines - 1 {
+                backend.move_down(1)?;
+            }
+        }
+
+        // 回到第一行
+        if rendered_lines > 1 {
+            backend.move_up((rendered_lines - 1) as u16)?;
+        }
+    }
+
+    // 显示取消消息（不删除提示行）
     let prefix = theme.warning.apply("! ", theme.enable_color);
     let message = theme.hint.apply("Operation cancelled", theme.enable_color);
     backend.writeln(&format!("{}{}", prefix, message))?;
+    backend.move_to_column(0)?;
+    backend.show_cursor()?;
     backend.flush()?;
     Ok(())
 }

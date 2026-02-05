@@ -98,11 +98,14 @@ fn clear_and_display_result<B: Backend>(
 }
 
 /// 打印取消消息
-fn print_cancelled_message<B: Backend>(backend: &mut B) -> Result<()> {
+fn print_cancelled_message<B: Backend>(backend: &mut B, _builder: &ConfirmBuilder) -> Result<()> {
     let theme = get_theme();
+
+    // 不清除提示行，直接在下方显示取消消息
     let prefix = theme.warning.apply("! ", theme.enable_color);
     let message = theme.hint.apply("Operation cancelled", theme.enable_color);
     backend.writeln(&format!("{}{}", prefix, message))?;
+    backend.move_to_column(0)?;
     backend.flush()?;
     Ok(())
 }
@@ -156,7 +159,7 @@ fn prompt_loop<B: Backend>(
             })) => match code {
                 KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
                     if c == 'c' {
-                        print_cancelled_message(backend)?;
+                        print_cancelled_message(backend, builder)?;
                         return Err(PromptError::Cancelled);
                     }
                 }
@@ -173,7 +176,7 @@ fn prompt_loop<B: Backend>(
                     return Ok(default_value);
                 }
                 KeyCode::Esc => {
-                    print_cancelled_message(backend)?;
+                    print_cancelled_message(backend, builder)?;
                     return Err(PromptError::Cancelled);
                 }
                 _ => {}
