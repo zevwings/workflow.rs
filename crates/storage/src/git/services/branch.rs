@@ -479,6 +479,12 @@ impl BranchServiceImpl {
     /// 从 merge base 推断目标分支
     ///
     /// 计算当前分支与候选分支的 merge base，选择最"近"的分支。
+    ///
+    /// 策略：
+    /// 1. 首先检查所有本地分支，找出 merge base 等于候选分支 HEAD 的情况
+    ///    （这意味着当前分支是从该分支直接创建的，是最准确的推断）
+    /// 2. 如果找到多个精确匹配，选择 commit 时间最新的（最近的父分支）
+    /// 3. 如果没有精确匹配，则选择 merge base 时间最新的主线分支
     fn infer_from_merge_base(&self, current_branch: &str) -> Result<Option<String>, GitError> {
         let repo = self.ctx.repository();
 
@@ -491,47 +497,75 @@ impl BranchServiceImpl {
             .peel_to_commit()
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        // 候选目标分支列表（优先级从高到低）
-        let candidates = vec!["develop", "master", "main"];
+        // 主线分支优先级列表
+        const MAIN_BRANCHES: &[&str] = &["develop", "master", "main"];
 
-        let mut best_candidate: Option<(String, i64)> = None;
+        // 收集所有本地分支（排除当前分支）
+        let all_branches = repo
+            .branches(Some(BranchType::Local))
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        for candidate_name in candidates {
-            // 检查候选分支是否存在
-            if let Ok(candidate_branch) = repo.find_branch(candidate_name, BranchType::Local) {
-                let candidate_commit = match candidate_branch.get().peel_to_commit() {
-                    Ok(c) => c,
-                    Err(_) => continue,
-                };
+        // 精确匹配：merge base == 候选分支 HEAD，记录 (分支名, commit时间)
+        let mut exact_matches: Vec<(String, i64)> = Vec::new();
+        // 备选：记录主线分支的 merge base 时间
+        let mut main_branch_candidates: Vec<(String, i64)> = Vec::new();
 
-                // 计算 merge base
-                let merge_base_oid =
-                    match repo.merge_base(current_commit.id(), candidate_commit.id()) {
-                        Ok(oid) => oid,
-                        Err(_) => continue,
-                    };
+        for branch_result in all_branches {
+            let (branch, _) = match branch_result {
+                Ok(b) => b,
+                Err(_) => continue,
+            };
 
-                // 检查 merge base 是否就是候选分支的 HEAD（最理想情况）
-                if merge_base_oid == candidate_commit.id() {
-                    return Ok(Some(candidate_name.to_string()));
-                }
+            let branch_name = match branch.name() {
+                Ok(Some(name)) => name.to_string(),
+                _ => continue,
+            };
 
-                // 否则，记录 merge base 的时间，选择最新的
+            // 排除当前分支
+            if branch_name == current_branch {
+                continue;
+            }
+
+            let candidate_commit = match branch.get().peel_to_commit() {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+
+            // 计算 merge base
+            let merge_base_oid = match repo.merge_base(current_commit.id(), candidate_commit.id()) {
+                Ok(oid) => oid,
+                Err(_) => continue,
+            };
+
+            // 检查 merge base 是否就是候选分支的 HEAD（精确匹配）
+            if merge_base_oid == candidate_commit.id() {
+                let timestamp = candidate_commit.time().seconds();
+                exact_matches.push((branch_name.clone(), timestamp));
+            }
+
+            // 记录主线分支的 merge base 时间（作为备选）
+            if MAIN_BRANCHES.contains(&branch_name.as_str()) {
                 if let Ok(merge_base_commit) = repo.find_commit(merge_base_oid) {
                     let timestamp = merge_base_commit.time().seconds();
-
-                    if let Some((_, best_time)) = best_candidate {
-                        if timestamp > best_time {
-                            best_candidate = Some((candidate_name.to_string(), timestamp));
-                        }
-                    } else {
-                        best_candidate = Some((candidate_name.to_string(), timestamp));
-                    }
+                    main_branch_candidates.push((branch_name, timestamp));
                 }
             }
         }
 
-        Ok(best_candidate.map(|(name, _)| name))
+        // 如果有精确匹配，选择 commit 时间最新的（最近的父分支）
+        if !exact_matches.is_empty() {
+            // 按 commit 时间降序排序
+            exact_matches.sort_by(|a, b| b.1.cmp(&a.1));
+            return Ok(Some(exact_matches.remove(0).0));
+        }
+
+        // 没有精确匹配，选择 merge base 时间最新的主线分支
+        if !main_branch_candidates.is_empty() {
+            main_branch_candidates.sort_by(|a, b| b.1.cmp(&a.1));
+            return Ok(Some(main_branch_candidates.remove(0).0));
+        }
+
+        Ok(None)
     }
 
     /// 从 reflog 消息中提取源分支名

@@ -8,8 +8,8 @@ use registry::{bind, Container, Scope};
 use crate::git::services::{
     BlameService, BlameServiceImpl, BranchService, BranchServiceImpl, CommitService,
     CommitServiceImpl, DiffService, DiffServiceImpl, DiscoveredContext, GitContext,
-    GitContextHolder, MergeService, MergeServiceImpl, RemoteService, RemoteServiceImpl,
-    StashService, StashServiceImpl, TagService, TagServiceImpl,
+    GitContextHolder, HookService, HookServiceImpl, MergeService, MergeServiceImpl, RemoteService,
+    RemoteServiceImpl, StashService, StashServiceImpl, TagService, TagServiceImpl,
 };
 use crate::git::{GitRepositoryImpl, GitRepositoryServices};
 
@@ -46,11 +46,22 @@ pub fn register_git() -> registry::Result<()> {
     })
     .in_scope(Scope::Singleton)?;
 
+    bind!(dyn HookService, |c: &Container| {
+        let holder = c
+            .get::<dyn GitContextHolder>()
+            .expect("GitContextHolder must be registered before HookService");
+        Arc::new(HookServiceImpl::new(holder.context()))
+    })
+    .in_scope(Scope::Singleton)?;
+
     bind!(dyn CommitService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
             .expect("GitContextHolder must be registered before CommitService");
-        Arc::new(CommitServiceImpl::new(holder.context()))
+        let hook_service = c
+            .get::<dyn HookService>()
+            .expect("HookService must be registered before CommitService");
+        Arc::new(CommitServiceImpl::new(holder.context(), hook_service))
     })
     .in_scope(Scope::Singleton)?;
 
@@ -74,7 +85,10 @@ pub fn register_git() -> registry::Result<()> {
         let holder = c
             .get::<dyn GitContextHolder>()
             .expect("GitContextHolder must be registered before RemoteService");
-        Arc::new(RemoteServiceImpl::new(holder.context()))
+        let hook_service = c
+            .get::<dyn HookService>()
+            .expect("HookService must be registered before RemoteService");
+        Arc::new(RemoteServiceImpl::new(holder.context(), hook_service))
     })
     .in_scope(Scope::Singleton)?;
 

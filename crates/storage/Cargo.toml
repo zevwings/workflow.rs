@@ -26,7 +26,7 @@ serde_json.workspace = true
 serde_with.workspace = true
 thiserror.workspace = true
 regex.workspace = true
-glob = "0.3"
+glob.workspace = true
 base64.workspace = true
 zip.workspace = true
 flate2.workspace = true
@@ -38,6 +38,10 @@ toml.workspace = true
 
 # Git 库
 git2.workspace = true
+
+# Hook 工具检测
+which.workspace = true
+wait-timeout.workspace = true
 
 # 延迟初始化
 once_cell.workspace = true

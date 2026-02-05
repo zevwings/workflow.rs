@@ -59,7 +59,10 @@ pub trait FormModel: Sized {
 /// 表单模型测试扩展 Trait（仅在测试时可用）
 ///
 /// 提供 `run_with_backend` 方法，允许使用 mock 后端进行测试。
+///
+/// 此 trait 供外部 crate 测试使用，在本 crate 内仅用于 tests 模块。
 #[cfg(any(test, feature = "testing"))]
+#[allow(dead_code)]
 pub trait FormModelTestExt: FormModel {
     /// 使用指定后端运行表单并获取结果
     fn run_with_backend<B: crate::backend::Backend>(&self, backend: &mut B) -> Result<Self>;

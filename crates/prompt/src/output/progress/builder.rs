@@ -115,6 +115,7 @@ impl ProgressBarBuilder {
 
     /// 获取配置的模式（用于测试）
     #[cfg(any(test, feature = "testing"))]
+    #[allow(dead_code)]
     pub(crate) fn get_mode(&self) -> ProgressMode {
         self.mode
     }

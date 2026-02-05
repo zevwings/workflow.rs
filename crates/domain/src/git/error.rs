@@ -50,6 +50,9 @@ pub enum GitError {
     #[error("签名错误: {0}")]
     SignatureError(String),
 
+    #[error("Hook 执行失败: {0}")]
+    HookFailed(String),
+
     #[error("其他错误: {0}")]
     Other(String),
 }

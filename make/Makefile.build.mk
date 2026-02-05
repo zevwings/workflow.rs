@@ -65,7 +65,7 @@ update:
 	@./target/release/$(BINARY_NAME) --version
 	@echo "若需更新到最新版，请重新拉取仓库后执行 make install"
 
-# 卸载：v2 无 workflow uninstall 子命令，提示用户手动删除或使用卸载脚本
+# 卸载 Workflow CLI
 uninstall:
-	@echo "v2 无 workflow uninstall 子命令。请手动删除二进制（如 /usr/local/bin/workflow、/usr/local/bin/install）"
-	@echo "及配置目录 ~/.workflow，或执行: bash scripts/install/uninstall.sh"
+	@echo "卸载 Workflow CLI..."
+	@workflow uninstall

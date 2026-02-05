@@ -34,12 +34,12 @@ lint: check-rustfmt check-clippy
 	@cargo fmt --check || (echo "✗ 代码格式不正确，运行 'cargo fmt' 自动修复" && exit 1)
 	@echo "✓ 代码格式正确"
 	@echo ""
-	@echo "2/3 运行 Clippy 检查（包含 tests/）..."
-	@cargo clippy --all-targets -- -D warnings
+	@echo "2/3 运行 Clippy 检查（包含 tests/ 和 all-features）..."
+	@cargo clippy --all-targets --all-features -- -D warnings
 	@echo "✓ Clippy 检查通过"
 	@echo ""
 	@echo "3/3 运行 cargo check..."
-	@cargo check
+	@cargo check --all-features
 	@echo "✓ Check 通过"
 	@echo ""
 	@echo "✓ 所有检查通过！"
@@ -52,12 +52,12 @@ fix: check-rustfmt check-clippy
 	@cargo fmt
 	@echo "✓ 代码格式已修复"
 	@echo ""
-	@echo "2/3 运行 Clippy 自动修复（包含 tests/）..."
-	@cargo clippy --all-targets --fix --allow-dirty --allow-staged || echo "⚠ Clippy 无法自动修复所有问题，请手动检查"
+	@echo "2/3 运行 Clippy 自动修复（包含 tests/ 和 all-features）..."
+	@cargo clippy --all-targets --all-features --fix --allow-dirty --allow-staged || echo "⚠ Clippy 无法自动修复所有问题，请手动检查"
 	@echo "✓ Clippy 修复完成"
 	@echo ""
 	@echo "3/3 运行 Cargo Fix 修复编译警告..."
-	@cargo fix --allow-dirty --allow-staged || echo "⚠ Cargo Fix 无法修复所有问题"
+	@cargo fix --all-features --allow-dirty --allow-staged || echo "⚠ Cargo Fix 无法修复所有问题"
 	@echo "✓ Cargo Fix 完成"
 	@echo ""
 	@echo "✓ 所有修复完成！"

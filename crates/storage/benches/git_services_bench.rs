@@ -6,6 +6,11 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use storage::git::services::*;
 use storage::git::testing::*;
 
+/// 创建 CommitServiceImpl 的辅助函数
+fn create_commit_service(ctx: GitContext) -> CommitServiceImpl {
+    CommitServiceImpl::new(ctx, noop_hook_service())
+}
+
 // ============================================================
 // Commit Service 基准测试
 // ============================================================
@@ -17,7 +22,7 @@ fn bench_commit_get_working_tree_status(c: &mut Criterion) {
     // 测试不同数量的更改文件
     for &(modified, untracked) in &[(10, 10), (50, 50), (100, 100)] {
         let (_tmp, ctx) = setup_repo_with_changes(modified, untracked);
-        let service = CommitServiceImpl::new(ctx);
+        let service = create_commit_service(ctx);
 
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("{}m_{}u", modified, untracked)),
@@ -36,7 +41,7 @@ fn bench_commit_get_working_tree_status(c: &mut Criterion) {
 /// 测试获取提交信息的性能
 fn bench_commit_get_commit_info(c: &mut Criterion) {
     let (_tmp, ctx) = setup_repo_with_commits(100);
-    let service = CommitServiceImpl::new(ctx);
+    let service = create_commit_service(ctx);
 
     c.bench_function("commit_get_commit_info", |b| {
         b.iter(|| {
@@ -70,7 +75,7 @@ fn bench_commit_create_without_all(c: &mut Criterion) {
                         (tmp, ctx)
                     },
                     |(_tmp, ctx)| {
-                        let service = CommitServiceImpl::new(ctx);
+                        let service = create_commit_service(ctx);
                         service.commit(black_box("test commit"), false).unwrap();
                     },
                     criterion::BatchSize::SmallInput,
@@ -98,7 +103,7 @@ fn bench_commit_create_with_all(c: &mut Criterion) {
                         setup_repo_with_changes(count, count)
                     },
                     |(_tmp, ctx)| {
-                        let service = CommitServiceImpl::new(ctx);
+                        let service = create_commit_service(ctx);
                         service.commit(black_box("test commit"), true).unwrap();
                     },
                     criterion::BatchSize::SmallInput,
@@ -262,7 +267,7 @@ fn bench_tag_create(c: &mut Criterion) {
 
     c.bench_function("tag_create", |b| {
         b.iter_batched(
-            || setup_repo_with_file(),
+            setup_repo_with_file,
             |(_tmp, ctx)| {
                 let service = TagServiceImpl::new(ctx);
                 service
@@ -347,7 +352,7 @@ fn bench_context_concurrent_access(c: &mut Criterion) {
             for _ in 0..10 {
                 let ctx_clone = Arc::clone(&ctx);
                 let handle = thread::spawn(move || {
-                    let service = CommitServiceImpl::new((*ctx_clone).clone());
+                    let service = create_commit_service((*ctx_clone).clone());
                     service.get_commit_info("HEAD").unwrap();
                 });
                 handles.push(handle);

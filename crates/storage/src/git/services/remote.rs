@@ -2,9 +2,13 @@
 //!
 //! 提供远程相关的业务逻辑实现。
 
+use std::sync::Arc;
+
 use git2::PushOptions;
 
-use super::{GitContext, MergeService, MergeServiceImpl};
+use crate::git::services::context::GitContext;
+use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
+use crate::git::services::merge::{MergeService, MergeServiceImpl};
 use domain::git::{GitError, MergeStrategy};
 
 /// 远程服务接口
@@ -22,17 +26,58 @@ pub trait RemoteService: Send + Sync {
 /// 远程服务实现
 pub struct RemoteServiceImpl {
     ctx: GitContext,
+    hook_service: Arc<dyn HookService>,
 }
 
 impl RemoteServiceImpl {
     /// 创建新的远程服务实例
-    pub fn new(ctx: GitContext) -> Self {
-        Self { ctx }
+    pub fn new(ctx: GitContext, hook_service: Arc<dyn HookService>) -> Self {
+        Self { ctx, hook_service }
     }
 }
 
 impl RemoteService for RemoteServiceImpl {
     fn push(&self, branch_name: &str, set_upstream: bool) -> Result<(), GitError> {
+        // 获取路径信息和推送相关数据
+        let (repo_path, git_dir, remote_url, commits_to_push) = {
+            let repo = self.ctx.repository();
+            let git_dir = repo.path().to_path_buf();
+            let repo_path = repo
+                .workdir()
+                .ok_or_else(|| GitError::OperationFailed("Not a work tree".into()))?
+                .to_path_buf();
+
+            let remote_url = repo
+                .find_remote("origin")
+                .ok()
+                .and_then(|r| r.url().map(String::from))
+                .unwrap_or_default();
+
+            let commits_to_push = Self::get_commits_to_push(&repo, branch_name).unwrap_or_default();
+
+            (repo_path, git_dir, remote_url, commits_to_push)
+        };
+
+        // [1] pre-push hook
+        let hook_context = HookContext::for_pre_push(
+            repo_path,
+            git_dir,
+            branch_name.to_string(),
+            remote_url,
+            commits_to_push,
+        );
+
+        if let HookResult::Failure(msg) =
+            self.hook_service.execute_hook(git_hooks::PRE_PUSH, &hook_context)?
+        {
+            return Err(GitError::HookFailed(format!(
+                "{} hook failed: {}",
+                git_hooks::PRE_PUSH,
+                msg
+            )));
+        }
+
+        // [2] 执行实际的 push
         let repo = self.ctx.repository();
         let mut remote =
             repo.find_remote("origin").map_err(|e| GitError::RemoteError(e.to_string()))?;
@@ -122,5 +167,51 @@ impl RemoteService for RemoteServiceImpl {
         Ok(repo
             .graph_descendant_of(remote_commit.id(), target_commit.id())
             .unwrap_or(false))
+    }
+}
+
+impl RemoteServiceImpl {
+    /// 获取将要推送的提交列表
+    ///
+    /// 返回本地分支相对于远程分支的新提交 SHA 列表
+    fn get_commits_to_push(
+        repo: &git2::Repository,
+        branch_name: &str,
+    ) -> Result<Vec<String>, GitError> {
+        // 获取本地分支
+        let local_branch = repo
+            .find_branch(branch_name, git2::BranchType::Local)
+            .map_err(|_| GitError::BranchNotFound(branch_name.to_string()))?;
+
+        let local_commit = local_branch
+            .get()
+            .peel_to_commit()
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        // 尝试获取远程分支
+        let remote_branch_name = format!("origin/{}", branch_name);
+        let remote_oid = repo
+            .find_reference(&format!("refs/remotes/{}", remote_branch_name))
+            .ok()
+            .and_then(|r| r.peel_to_commit().ok())
+            .map(|c| c.id());
+
+        // 收集将要推送的提交
+        let mut commits = Vec::new();
+        let mut revwalk = repo.revwalk().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        revwalk
+            .push(local_commit.id())
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        // 如果有远程分支，隐藏远程分支的提交
+        if let Some(oid) = remote_oid {
+            let _ = revwalk.hide(oid);
+        }
+
+        for oid in revwalk.flatten() {
+            commits.push(oid.to_string());
+        }
+
+        Ok(commits)
     }
 }

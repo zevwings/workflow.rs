@@ -2,7 +2,10 @@
 //!
 //! 提供提交相关的业务逻辑实现。
 
-use super::GitContext;
+use std::sync::Arc;
+
+use crate::git::services::context::GitContext;
+use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
 use domain::git::{CommitInfo, FileStatusInfo, FileStatusType, GitError, WorkingTreeStatus};
 
 /// 提交服务接口
@@ -33,12 +36,13 @@ pub trait CommitService: Send + Sync {
 /// 提交服务实现
 pub struct CommitServiceImpl {
     ctx: GitContext,
+    hook_service: Arc<dyn HookService>,
 }
 
 impl CommitServiceImpl {
     /// 创建新的提交服务实例
-    pub fn new(ctx: GitContext) -> Self {
-        Self { ctx }
+    pub fn new(ctx: GitContext, hook_service: Arc<dyn HookService>) -> Self {
+        Self { ctx, hook_service }
     }
 }
 
@@ -189,8 +193,18 @@ impl CommitService for CommitServiceImpl {
         // 获取签名（必须在获取 repo 锁之前，避免死锁）
         let signature = self.ctx.get_signature()?;
 
-        let repo = self.ctx.repository();
+        // 获取路径信息（用于 hook 上下文）
+        let (repo_path, git_dir) = {
+            let repo = self.ctx.repository();
+            let git_dir = repo.path().to_path_buf();
+            let repo_path = repo
+                .workdir()
+                .ok_or_else(|| GitError::OperationFailed("Not a work tree".into()))?
+                .to_path_buf();
+            (repo_path, git_dir)
+        };
 
+        let repo = self.ctx.repository();
         let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
 
         // 添加更改到暂存区
@@ -221,39 +235,131 @@ impl CommitService for CommitServiceImpl {
         // 写入索引到磁盘
         index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
 
-        // 检查是否有更改需要提交
-        let tree_id = index.write_tree().map_err(|e| GitError::IndexError(e.to_string()))?;
-        let tree = repo.find_tree(tree_id).map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        // 获取暂存文件列表（用于 hook 上下文）
+        let staged_files = Self::get_staged_files(&index);
 
-        // 检查是否有实际更改（比较 tree 和 HEAD）
-        let parent_commit = repo.head().and_then(|head| head.peel_to_commit()).ok();
+        // 释放 repo 锁以执行 hook
+        drop(repo);
 
-        // 如果有父提交，检查 tree 是否与父提交的 tree 相同
-        if let Some(ref parent) = parent_commit {
-            let parent_tree =
-                parent.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            if tree_id == parent_tree.id() {
-                return Err(GitError::OperationFailed("Nothing to commit".into()));
+        // [1] pre-commit hook
+        let hook_context =
+            HookContext::for_pre_commit(repo_path.clone(), git_dir.clone(), staged_files);
+
+        match self.hook_service.execute_hook(git_hooks::PRE_COMMIT, &hook_context)? {
+            HookResult::Failure(msg) => {
+                return Err(GitError::HookFailed(format!(
+                    "{} hook failed: {}",
+                    git_hooks::PRE_COMMIT,
+                    msg
+                )));
             }
+            HookResult::Modified => {
+                // Hook 修改了文件（如 cargo fmt），需要重新添加到暂存区
+                let repo = self.ctx.repository();
+                let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+
+                // 获取需要跳过的目录模式
+                let ignore_patterns = self.ctx.get_ignore_directory_patterns();
+
+                // 重新添加所有修改的文件到暂存区
+                index
+                    .add_all(
+                        ["."].iter(),
+                        git2::IndexAddOption::DEFAULT | git2::IndexAddOption::CHECK_PATHSPEC,
+                        Some(&mut |path, _| {
+                            if let Some(path_str) = path.to_str() {
+                                if ignore_patterns
+                                    .iter()
+                                    .any(|pattern| path_str.starts_with(pattern))
+                                {
+                                    return 1; // Skip
+                                }
+                            }
+                            0 // Add
+                        }),
+                    )
+                    .map_err(|e| GitError::IndexError(e.to_string()))?;
+
+                index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+                toolkit::log_info!("Files modified by hook have been re-staged");
+            }
+            HookResult::Success => {}
         }
 
-        // 创建提交
-        let oid = if let Some(parent) = parent_commit {
-            repo.commit(
-                Some("HEAD"),
-                &signature,
-                &signature,
-                message,
-                &tree,
-                &[&parent],
-            )
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?
-        } else {
-            // 首次提交，没有父提交
-            repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[])
+        // 重新获取 repo 锁执行提交
+        let oid = {
+            let repo = self.ctx.repository();
+            let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+
+            // 检查是否有更改需要提交
+            let tree_id = index.write_tree().map_err(|e| GitError::IndexError(e.to_string()))?;
+            let tree =
+                repo.find_tree(tree_id).map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+            // 检查是否有实际更改（比较 tree 和 HEAD）
+            let parent_commit = repo.head().and_then(|head| head.peel_to_commit()).ok();
+
+            // 如果有父提交，检查 tree 是否与父提交的 tree 相同
+            if let Some(ref parent) = parent_commit {
+                let parent_tree =
+                    parent.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+                if tree_id == parent_tree.id() {
+                    return Err(GitError::OperationFailed("Nothing to commit".into()));
+                }
+            }
+
+            // 创建提交
+            if let Some(parent) = parent_commit {
+                repo.commit(
+                    Some("HEAD"),
+                    &signature,
+                    &signature,
+                    message,
+                    &tree,
+                    &[&parent],
+                )
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?
+            } else {
+                // 首次提交，没有父提交
+                repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[])
+                    .map_err(|e| GitError::OperationFailed(e.to_string()))?
+            }
+            // repo 锁在这里自动释放
         };
 
+        // [2] commit-msg hook
+        let commit_msg_context = HookContext::for_commit_msg(
+            repo_path.clone(),
+            git_dir.clone(),
+            message.to_string(),
+            Some(oid.to_string()),
+        );
+
+        if let HookResult::Failure(msg) =
+            self.hook_service.execute_hook(git_hooks::COMMIT_MSG, &commit_msg_context)?
+        {
+            return Err(GitError::HookFailed(format!(
+                "{} hook failed: {}",
+                git_hooks::COMMIT_MSG,
+                msg
+            )));
+        }
+
+        // [3] post-commit hook（失败不影响提交结果）
+        let post_commit_context =
+            HookContext::new(repo_path, git_dir).with_commit_sha(oid.to_string());
+        let _ = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context);
+
         Ok(oid.to_string())
+    }
+}
+
+impl CommitServiceImpl {
+    /// 获取暂存区文件列表
+    fn get_staged_files(index: &git2::Index) -> Vec<String> {
+        index
+            .iter()
+            .filter_map(|entry| std::str::from_utf8(&entry.path).ok().map(String::from))
+            .collect()
     }
 }

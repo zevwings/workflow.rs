@@ -2,14 +2,42 @@
 //!
 //! 提供 Git 服务测试的通用辅助函数和性能监控工具。
 
+use super::services::hooks::{HookContext, HookResult, HookService};
 use super::GitContext;
+use domain::git::GitError;
 use std::env;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tempfile::TempDir;
 
 // 重新导出性能监控工具，方便测试代码使用
 pub use super::performance;
+
+// ============================================================
+// NoopHookService - 测试用空 Hook 服务
+// ============================================================
+
+/// 测试用空 Hook 服务
+///
+/// 不执行任何 hook，始终返回成功。用于测试和基准测试。
+pub struct NoopHookService;
+
+impl HookService for NoopHookService {
+    fn execute_hook(
+        &self,
+        _hook_name: &str,
+        _context: &HookContext,
+    ) -> Result<HookResult, GitError> {
+        Ok(HookResult::Success)
+    }
+}
+
+/// 创建一个 NoopHookService 的 Arc 引用
+///
+/// 用于传递给需要 `Arc<dyn HookService>` 的服务。
+pub fn noop_hook_service() -> Arc<dyn HookService> {
+    Arc::new(NoopHookService)
+}
 
 /// 测试仓库配置
 pub struct TestRepoConfig {
