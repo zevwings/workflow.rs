@@ -8,19 +8,19 @@ use std::str::FromStr;
 pub enum HttpMethod {
     /// GET 请求
     #[default]
-    Get,
+    GET,
     /// POST 请求
-    Post,
+    POST,
     /// PUT 请求
-    Put,
+    PUT,
     /// DELETE 请求
-    Delete,
+    DELETE,
     /// PATCH 请求
-    Patch,
+    PATCH,
     /// HEAD 请求
-    Head,
+    HEAD,
     /// OPTIONS 请求
-    Options,
+    OPTIONS,
 }
 
 impl HttpMethod {
@@ -28,26 +28,26 @@ impl HttpMethod {
     pub fn is_idempotent(self) -> bool {
         matches!(
             self,
-            Self::Get | Self::Put | Self::Delete | Self::Head | Self::Options
+            Self::GET | Self::PUT | Self::DELETE | Self::HEAD | Self::OPTIONS
         )
     }
 
     /// 是否可以有请求体
     pub fn can_have_body(self) -> bool {
-        matches!(self, Self::Post | Self::Put | Self::Patch)
+        matches!(self, Self::POST | Self::PUT | Self::PATCH)
     }
 }
 
 impl From<HttpMethod> for reqwest::Method {
     fn from(method: HttpMethod) -> Self {
         match method {
-            HttpMethod::Get => reqwest::Method::GET,
-            HttpMethod::Post => reqwest::Method::POST,
-            HttpMethod::Put => reqwest::Method::PUT,
-            HttpMethod::Delete => reqwest::Method::DELETE,
-            HttpMethod::Patch => reqwest::Method::PATCH,
-            HttpMethod::Head => reqwest::Method::HEAD,
-            HttpMethod::Options => reqwest::Method::OPTIONS,
+            HttpMethod::GET => reqwest::Method::GET,
+            HttpMethod::POST => reqwest::Method::POST,
+            HttpMethod::PUT => reqwest::Method::PUT,
+            HttpMethod::DELETE => reqwest::Method::DELETE,
+            HttpMethod::PATCH => reqwest::Method::PATCH,
+            HttpMethod::HEAD => reqwest::Method::HEAD,
+            HttpMethod::OPTIONS => reqwest::Method::OPTIONS,
         }
     }
 }
@@ -55,13 +55,13 @@ impl From<HttpMethod> for reqwest::Method {
 impl fmt::Display for HttpMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            Self::Get => "GET",
-            Self::Post => "POST",
-            Self::Put => "PUT",
-            Self::Delete => "DELETE",
-            Self::Patch => "PATCH",
-            Self::Head => "HEAD",
-            Self::Options => "OPTIONS",
+            Self::GET => "GET",
+            Self::POST => "POST",
+            Self::PUT => "PUT",
+            Self::DELETE => "DELETE",
+            Self::PATCH => "PATCH",
+            Self::HEAD => "HEAD",
+            Self::OPTIONS => "OPTIONS",
         };
         write!(f, "{}", s)
     }
@@ -86,13 +86,13 @@ impl FromStr for HttpMethod {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
-            "GET" => Ok(Self::Get),
-            "POST" => Ok(Self::Post),
-            "PUT" => Ok(Self::Put),
-            "DELETE" => Ok(Self::Delete),
-            "PATCH" => Ok(Self::Patch),
-            "HEAD" => Ok(Self::Head),
-            "OPTIONS" => Ok(Self::Options),
+            "GET" => Ok(Self::GET),
+            "POST" => Ok(Self::POST),
+            "PUT" => Ok(Self::PUT),
+            "DELETE" => Ok(Self::DELETE),
+            "PATCH" => Ok(Self::PATCH),
+            "HEAD" => Ok(Self::HEAD),
+            "OPTIONS" => Ok(Self::OPTIONS),
             _ => Err(ParseMethodError {
                 method: s.to_string(),
             }),
@@ -106,18 +106,18 @@ mod tests {
 
     #[test]
     fn test_display() {
-        assert_eq!(HttpMethod::Get.to_string(), "GET");
-        assert_eq!(HttpMethod::Post.to_string(), "POST");
-        assert_eq!(HttpMethod::Put.to_string(), "PUT");
-        assert_eq!(HttpMethod::Delete.to_string(), "DELETE");
-        assert_eq!(HttpMethod::Patch.to_string(), "PATCH");
+        assert_eq!(HttpMethod::GET.to_string(), "GET");
+        assert_eq!(HttpMethod::POST.to_string(), "POST");
+        assert_eq!(HttpMethod::PUT.to_string(), "PUT");
+        assert_eq!(HttpMethod::DELETE.to_string(), "DELETE");
+        assert_eq!(HttpMethod::PATCH.to_string(), "PATCH");
     }
 
     #[test]
     fn test_from_str() {
-        assert_eq!("get".parse::<HttpMethod>().unwrap(), HttpMethod::Get);
-        assert_eq!("POST".parse::<HttpMethod>().unwrap(), HttpMethod::Post);
-        assert_eq!("Put".parse::<HttpMethod>().unwrap(), HttpMethod::Put);
+        assert_eq!("get".parse::<HttpMethod>().unwrap(), HttpMethod::GET);
+        assert_eq!("POST".parse::<HttpMethod>().unwrap(), HttpMethod::POST);
+        assert_eq!("Put".parse::<HttpMethod>().unwrap(), HttpMethod::PUT);
     }
 
     #[test]
@@ -127,19 +127,19 @@ mod tests {
 
     #[test]
     fn test_is_idempotent() {
-        assert!(HttpMethod::Get.is_idempotent());
-        assert!(HttpMethod::Put.is_idempotent());
-        assert!(HttpMethod::Delete.is_idempotent());
-        assert!(!HttpMethod::Post.is_idempotent());
-        assert!(!HttpMethod::Patch.is_idempotent());
+        assert!(HttpMethod::GET.is_idempotent());
+        assert!(HttpMethod::PUT.is_idempotent());
+        assert!(HttpMethod::DELETE.is_idempotent());
+        assert!(!HttpMethod::POST.is_idempotent());
+        assert!(!HttpMethod::PATCH.is_idempotent());
     }
 
     #[test]
     fn test_can_have_body() {
-        assert!(HttpMethod::Post.can_have_body());
-        assert!(HttpMethod::Put.can_have_body());
-        assert!(HttpMethod::Patch.can_have_body());
-        assert!(!HttpMethod::Get.can_have_body());
-        assert!(!HttpMethod::Delete.can_have_body());
+        assert!(HttpMethod::POST.can_have_body());
+        assert!(HttpMethod::PUT.can_have_body());
+        assert!(HttpMethod::PATCH.can_have_body());
+        assert!(!HttpMethod::GET.can_have_body());
+        assert!(!HttpMethod::DELETE.can_have_body());
     }
 }

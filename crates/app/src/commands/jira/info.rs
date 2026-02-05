@@ -58,10 +58,10 @@ impl JiraInfoCommand {
     fn output_markdown(&self, issue: &JiraIssue) -> Result<(), Box<dyn std::error::Error>> {
         println!("# {}", issue.key);
         println!();
-        println!("**Summary:** {}", issue.summary);
+        println!("**Summary:** {}", issue.fields.summary);
         println!();
 
-        if let Some(description) = &issue.description {
+        if let Some(description) = &issue.fields.description {
             println!("## Description");
             println!();
             println!("{}", description);
@@ -70,74 +70,91 @@ impl JiraInfoCommand {
 
         println!("## Details");
         println!();
-        println!("- **Status:** {}", issue.status);
+        println!("- **Status:** {}", issue.fields.status.name);
         println!("- **ID:** {}", issue.id);
         println!("- **Key:** {}", issue.key);
 
-        if let Some(reporter) = &issue.reporter {
+        if let Some(reporter) = &issue.fields.reporter {
             println!(
                 "- **Reporter:** {} ({})",
                 reporter.display_name, reporter.account_id
             );
         }
 
-        if let Some(assignee) = &issue.assignee {
-            println!("- **Assignee:** {}", assignee);
+        if let Some(assignee) = &issue.fields.assignee {
+            println!(
+                "- **Assignee:** {} ({})",
+                assignee.display_name, assignee.account_id
+            );
         }
 
-        if let Some(priority) = &issue.priority {
-            println!("- **Priority:** {}", priority);
+        if let Some(priority) = &issue.fields.priority {
+            println!("- **Priority:** {}", priority.name);
         }
 
-        if let Some(created) = &issue.created {
+        if let Some(created) = &issue.fields.created {
             println!("- **Created:** {}", created);
         }
 
-        if let Some(updated) = &issue.updated {
+        if let Some(updated) = &issue.fields.updated {
             println!("- **Updated:** {}", updated);
         }
 
-        if !issue.labels.is_empty() {
-            println!("- **Labels:** {}", issue.labels.join(", "));
-        }
-
-        if !issue.components.is_empty() {
-            println!("- **Components:** {}", issue.components.join(", "));
-        }
-
-        if !issue.attachments.is_empty() {
-            println!();
-            println!("## Attachments");
-            println!();
-            for attachment in &issue.attachments {
-                let size_str = if attachment.size > 0 {
-                    format!(" ({})", self.format_size(attachment.size))
-                } else {
-                    String::new()
-                };
-                println!(
-                    "- [{}]({}){}",
-                    attachment.filename, attachment.url, size_str
-                );
+        if let Some(labels) = &issue.fields.labels {
+            if !labels.is_empty() {
+                println!("- **Labels:** {}", labels.join(", "));
             }
         }
 
-        if !issue.comments.is_empty() {
-            println!();
-            println!("## Comments");
-            println!();
-            for (idx, comment) in issue.comments.iter().enumerate() {
-                println!("### Comment #{}", idx + 1);
-                if let Some(author) = &comment.author {
+        if let Some(components) = &issue.fields.components {
+            if !components.is_empty() {
+                let component_names: Vec<&str> =
+                    components.iter().map(|c| c.name.as_str()).collect();
+                println!("- **Components:** {}", component_names.join(", "));
+            }
+        }
+
+        if let Some(attachments) = &issue.fields.attachment {
+            if !attachments.is_empty() {
+                println!();
+                println!("## Attachments");
+                println!();
+                for attachment in attachments {
+                    let size_str = if let Some(size) = attachment.size {
+                        if size > 0 {
+                            format!(" ({})", self.format_size(size))
+                        } else {
+                            String::new()
+                        }
+                    } else {
+                        String::new()
+                    };
                     println!(
-                        "**Author:** {} ({})",
-                        author.display_name, author.account_id
+                        "- [{}]({}){}",
+                        attachment.filename, attachment.content_url, size_str
                     );
                 }
-                println!("**Created:** {}", comment.created);
+            }
+        }
+
+        if let Some(comments_container) = &issue.fields.comment {
+            if !comments_container.comments.is_empty() {
                 println!();
-                println!("{}", comment.body);
+                println!("## Comments");
                 println!();
+                for (idx, comment) in comments_container.comments.iter().enumerate() {
+                    println!("### Comment #{}", idx + 1);
+                    if let Some(author) = &comment.author {
+                        println!(
+                            "**Author:** {} ({})",
+                            author.display_name, author.account_id
+                        );
+                    }
+                    println!("**Created:** {}", comment.created);
+                    println!();
+                    println!("{}", comment.body);
+                    println!();
+                }
             }
         }
 
@@ -147,10 +164,10 @@ impl JiraInfoCommand {
     /// 人类可读格式输出
     fn output_human_readable(&self, issue: &JiraIssue) -> Result<(), Box<dyn std::error::Error>> {
         success!("JIRA Ticket: {}", issue.key);
-        info!("Summary: {}", issue.summary);
-        info!("Status: {}", issue.status);
+        info!("Summary: {}", issue.fields.summary);
+        info!("Status: {}", issue.fields.status.name);
 
-        if let Some(description) = &issue.description {
+        if let Some(description) = &issue.fields.description {
             println!();
             info!("Description:");
             println!("{}", description);
@@ -161,66 +178,83 @@ impl JiraInfoCommand {
         println!("  ID: {}", issue.id);
         println!("  Key: {}", issue.key);
 
-        if let Some(reporter) = &issue.reporter {
+        if let Some(reporter) = &issue.fields.reporter {
             println!(
                 "  Reporter: {} ({})",
                 reporter.display_name, reporter.account_id
             );
         }
 
-        if let Some(assignee) = &issue.assignee {
-            println!("  Assignee: {}", assignee);
+        if let Some(assignee) = &issue.fields.assignee {
+            println!(
+                "  Assignee: {} ({})",
+                assignee.display_name, assignee.account_id
+            );
         } else {
             println!("  Assignee: Unassigned");
         }
 
-        if let Some(priority) = &issue.priority {
-            println!("  Priority: {}", priority);
+        if let Some(priority) = &issue.fields.priority {
+            println!("  Priority: {}", priority.name);
         }
 
-        if let Some(created) = &issue.created {
+        if let Some(created) = &issue.fields.created {
             println!("  Created: {}", created);
         }
 
-        if let Some(updated) = &issue.updated {
+        if let Some(updated) = &issue.fields.updated {
             println!("  Updated: {}", updated);
         }
 
-        if !issue.labels.is_empty() {
-            println!("  Labels: {}", issue.labels.join(", "));
-        }
-
-        if !issue.components.is_empty() {
-            println!("  Components: {}", issue.components.join(", "));
-        }
-
-        if !issue.attachments.is_empty() {
-            println!();
-            info!("Attachments ({}):", issue.attachments.len());
-            for attachment in &issue.attachments {
-                let size_str = if attachment.size > 0 {
-                    format!(" - {} bytes", attachment.size)
-                } else {
-                    String::new()
-                };
-                println!("  - {} {}", attachment.filename, size_str);
+        if let Some(labels) = &issue.fields.labels {
+            if !labels.is_empty() {
+                println!("  Labels: {}", labels.join(", "));
             }
         }
 
-        if !issue.comments.is_empty() {
-            println!();
-            info!("Comments ({}):", issue.comments.len());
-            for (idx, comment) in issue.comments.iter().enumerate() {
+        if let Some(components) = &issue.fields.components {
+            if !components.is_empty() {
+                let component_names: Vec<&str> =
+                    components.iter().map(|c| c.name.as_str()).collect();
+                println!("  Components: {}", component_names.join(", "));
+            }
+        }
+
+        if let Some(attachments) = &issue.fields.attachment {
+            if !attachments.is_empty() {
                 println!();
-                println!("  Comment #{}:", idx + 1);
-                if let Some(author) = &comment.author {
-                    println!(
-                        "    Author: {} ({})",
-                        author.display_name, author.account_id
-                    );
+                info!("Attachments ({}):", attachments.len());
+                for attachment in attachments {
+                    let size_str = if let Some(size) = attachment.size {
+                        if size > 0 {
+                            format!(" - {} bytes", size)
+                        } else {
+                            String::new()
+                        }
+                    } else {
+                        String::new()
+                    };
+                    println!("  - {} {}", attachment.filename, size_str);
                 }
-                println!("    Created: {}", comment.created);
-                println!("    Body: {}", comment.body);
+            }
+        }
+
+        if let Some(comments_container) = &issue.fields.comment {
+            if !comments_container.comments.is_empty() {
+                println!();
+                info!("Comments ({}):", comments_container.comments.len());
+                for (idx, comment) in comments_container.comments.iter().enumerate() {
+                    println!();
+                    println!("  Comment #{}:", idx + 1);
+                    if let Some(author) = &comment.author {
+                        println!(
+                            "    Author: {} ({})",
+                            author.display_name, author.account_id
+                        );
+                    }
+                    println!("    Created: {}", comment.created);
+                    println!("    Body: {}", comment.body);
+                }
             }
         }
 

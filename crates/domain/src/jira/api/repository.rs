@@ -30,6 +30,19 @@ pub trait JiraRepository: Send + Sync {
     /// 更新 Issue 状态
     fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<(), JiraError>;
 
+    /// 分配 issue 给用户
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `account_id` - 被分配用户的 account_id
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回 `Ok(JiraUser)`，包含被分配的用户信息。
+    fn assign_issue(&self, ticket: &str, account_id: Option<String>)
+        -> Result<JiraUser, JiraError>;
+
     /// 添加评论
     fn add_comment(&self, issue_id: &str, comment: &str) -> Result<(), JiraError>;
 

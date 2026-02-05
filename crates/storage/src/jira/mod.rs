@@ -27,7 +27,6 @@
 pub(crate) mod api;
 pub(crate) mod client;
 pub(crate) mod history;
-pub(crate) mod types;
 
 // 重新导出 client
 pub use client::{JiraClient, JiraClientImpl, JiraConfigContextImpl};

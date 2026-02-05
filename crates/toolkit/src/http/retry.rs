@@ -341,7 +341,7 @@ mod tests {
     fn test_is_retryable_timeout() {
         let config = RetryConfig::default();
         let error = HttpError::Timeout {
-            context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+            context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
         };
         assert!(config.is_retryable(&error));
     }
@@ -350,7 +350,7 @@ mod tests {
     fn test_is_retryable_connection() {
         let config = RetryConfig::default();
         let error = HttpError::Connection {
-            context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+            context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
         };
         assert!(config.is_retryable(&error));
     }
@@ -362,14 +362,14 @@ mod tests {
         // 429 is retryable
         let error = HttpError::Status {
             status: 429,
-            context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+            context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
         };
         assert!(config.is_retryable(&error));
 
         // 404 is not retryable
         let error = HttpError::Status {
             status: 404,
-            context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+            context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
         };
         assert!(!config.is_retryable(&error));
     }
@@ -409,7 +409,7 @@ mod tests {
                 attempts += 1;
                 if attempts < 3 {
                     Err(HttpError::Timeout {
-                        context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+                        context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
                     })
                 } else {
                     Ok(42)
@@ -433,7 +433,7 @@ mod tests {
 
         let result: Result<i32, _> = executor.execute(|| {
             Err(HttpError::Timeout {
-                context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+                context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
             })
         });
 

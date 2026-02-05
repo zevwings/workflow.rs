@@ -212,7 +212,7 @@ pub fn generate_pr_summary(
         let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
             .with(|| jira_repo.get_issue_info(jira_id))
             .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
-        format!("{}: {}", jira_id, issue.summary)
+        format!("{}: {}", jira_id, issue.fields.summary)
     } else if let Some(desc) = description {
         desc.to_string()
     } else {

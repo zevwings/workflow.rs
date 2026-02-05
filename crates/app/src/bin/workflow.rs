@@ -178,6 +178,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let cmd = commands::jira::JiraStatusCommand::new(args.jira_id);
                 cmd.run()?;
             }
+            JiraCommand::Transition(args) => {
+                let cmd = commands::jira::JiraTransitionCommand::new(args.jira_id);
+                cmd.run()?;
+            }
+            JiraCommand::Assign(args) => {
+                let cmd = commands::jira::JiraAssignCommand::new(args.jira_id);
+                cmd.run()?;
+            }
         },
         Command::Branch(branch_cmd) => match branch_cmd {
             BranchSubcommand::Create {

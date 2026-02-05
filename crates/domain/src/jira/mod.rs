@@ -9,7 +9,8 @@ pub mod history;
 
 pub use api::{
     extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format, JiraAttachment,
-    JiraComment, JiraIssue, JiraStatusConfig, JiraUser, ProjectStatusConfig, StatusConfigResult,
+    JiraComment, JiraComponent, JiraIssue, JiraPriority, JiraStatusConfig, JiraTransition,
+    JiraUser, ProjectStatusConfig, StatusConfigResult,
 };
 pub use error::JiraError;
 

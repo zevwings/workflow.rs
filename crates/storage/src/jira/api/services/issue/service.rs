@@ -11,13 +11,10 @@ use std::sync::Arc;
 
 use serde::Serialize;
 
-use domain::{JiraAttachment, JiraComment, JiraError, JiraIssue, JiraUser};
+use domain::{JiraAttachment, JiraError, JiraIssue, JiraTransition};
 
 use crate::jira::client::core::JiraClient;
 use crate::jira::client::types::JiraResponseSerializable;
-use crate::jira::types::{
-    JiraAttachment as StorageJiraAttachment, JiraIssue as StorageJiraIssue, JiraTransition,
-};
 
 // 文件私有请求类型
 
@@ -31,6 +28,15 @@ struct TransitionRef {
     id: String,
 }
 
+/// 分配请求体
+///
+/// 用于分配 issue 给用户的请求体结构。
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssigneeRequest {
+    pub account_id: String,
+}
+
 #[derive(Serialize)]
 struct CommentRequest {
     body: String,
@@ -39,12 +45,13 @@ struct CommentRequest {
 pub trait IssueService: Send + Sync {
     fn get_issue_info(&self, issue_id: &str) -> Result<JiraIssue, JiraError>;
     fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<(), JiraError>;
+    fn assign_issue(&self, ticket: &str, account_id: &str) -> Result<(), JiraError>;
     fn add_comment(&self, issue_id: &str, comment: &str) -> Result<(), JiraError>;
     fn get_attachments(&self, issue_id: &str) -> Result<Vec<JiraAttachment>, JiraError>;
     fn fetch_issue_data(
         &self,
         issue_id: &str,
-    ) -> Result<(StorageJiraIssue, Vec<StorageJiraAttachment>, Option<String>), JiraError>;
+    ) -> Result<(JiraIssue, Vec<JiraAttachment>, Option<String>), JiraError>;
 }
 
 /// Issue 数据获取服务
@@ -56,62 +63,12 @@ pub struct IssueServiceImpl {
 
 impl IssueService for IssueServiceImpl {
     fn get_issue_info(&self, issue_id: &str) -> Result<JiraIssue, JiraError> {
-        let (issue, attachments, _) = self
+        let (issue, _, _) = self
             .fetch_issue_data(issue_id)
             .map_err(|e| JiraError::ApiError(format!("Failed to get issue {}: {}", issue_id, e)))?;
 
         // DTO → Domain 映射
-        Ok(JiraIssue {
-            id: issue.id,
-            key: issue.key,
-            summary: issue.fields.summary,
-            status: issue.fields.status.name,
-            assignee: issue.fields.assignee.as_ref().map(|u| u.display_name.clone()),
-            description: issue.fields.description.clone(),
-            attachments: attachments
-                .iter()
-                .map(|a| JiraAttachment {
-                    id: a.filename.clone(), // Jira 附件可能没有单独的 ID，使用 filename 作为标识
-                    filename: a.filename.clone(),
-                    size: a.size.unwrap_or(0),
-                    url: a.content_url.clone(),
-                })
-                .collect(),
-            comments: issue
-                .fields
-                .comment
-                .as_ref()
-                .map(|c| {
-                    c.comments
-                        .iter()
-                        .map(|comment| JiraComment {
-                            id: comment.id.clone(),
-                            body: comment.body.clone(),
-                            created: comment.created.clone(),
-                            author: comment.author.as_ref().map(|u| JiraUser {
-                                display_name: u.display_name.clone(),
-                                account_id: u.account_id.clone(),
-                            }),
-                        })
-                        .collect()
-                })
-                .unwrap_or_default(),
-            priority: issue.fields.priority.as_ref().map(|p| p.name.clone()),
-            created: issue.fields.created.clone(),
-            updated: issue.fields.updated.clone(),
-            reporter: issue.fields.reporter.as_ref().map(|u| JiraUser {
-                display_name: u.display_name.clone(),
-                account_id: u.account_id.clone(),
-            }),
-            labels: issue.fields.labels.unwrap_or_default(),
-            components: issue
-                .fields
-                .components
-                .unwrap_or_default()
-                .into_iter()
-                .map(|c| c.name)
-                .collect(),
-        })
+        Ok(issue)
     }
 
     fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<(), JiraError> {
@@ -162,6 +119,39 @@ impl IssueService for IssueServiceImpl {
         Ok(())
     }
 
+    /// 分配 issue 给用户
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `account_id` - 被分配用户的 account_id
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回 `Ok(())`。
+    fn assign_issue(&self, ticket: &str, account_id: &str) -> Result<(), JiraError> {
+        let path = format!("issue/{}/assignee", ticket);
+        let body = AssigneeRequest {
+            account_id: account_id.to_string(),
+        };
+        let body_value = serde_json::to_value(&body).map_err(|e| {
+            JiraError::ApiError(format!("Failed to serialize assignee request: {}", e))
+        })?;
+        self.jira_client.put(&path, &body_value, None).map_err(|e| {
+            JiraError::ApiError(format!("Failed to assign issue {}: {}", ticket, e))
+        })?;
+        Ok(())
+    }
+
+    /// 添加评论
+    ///
+    /// # 参数
+    ///
+    /// * `issue_id` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `comment` - 评论内容
+    ///
+    /// # 返回
+    ///
     fn add_comment(&self, issue_id: &str, comment: &str) -> Result<(), JiraError> {
         let body = CommentRequest {
             body: comment.to_string(),
@@ -185,21 +175,13 @@ impl IssueService for IssueServiceImpl {
             JiraError::ApiError(format!("Failed to get attachments for {}: {}", issue_id, e))
         })?;
 
-        Ok(attachments
-            .iter()
-            .map(|a| JiraAttachment {
-                id: a.filename.clone(), // Jira 附件可能没有单独的 ID，使用 filename 作为标识
-                filename: a.filename.clone(),
-                size: a.size.unwrap_or(0),
-                url: a.content_url.clone(),
-            })
-            .collect())
+        Ok(attachments)
     }
 
     fn fetch_issue_data(
         &self,
         issue_id: &str,
-    ) -> Result<(StorageJiraIssue, Vec<StorageJiraAttachment>, Option<String>), JiraError> {
+    ) -> Result<(JiraIssue, Vec<JiraAttachment>, Option<String>), JiraError> {
         // 1. 调用 API 获取 issue 信息
         let path = format!("issue/{}?fields=*all&expand=renderedFields", issue_id);
         let response = self
@@ -208,7 +190,7 @@ impl IssueService for IssueServiceImpl {
             .map_err(|e| JiraError::ApiError(format!("Failed to get issue {}: {}", issue_id, e)))?;
 
         let issue = response
-            .as_model::<StorageJiraIssue>()
+            .as_model::<JiraIssue>()
             .map_err(|e| JiraError::ApiError(format!("Failed to parse issue data: {}", e)))?;
         let description = issue.fields.description.clone();
 
@@ -240,7 +222,7 @@ impl IssueServiceImpl {
     pub(crate) fn parse_attachments_from_description(
         &self,
         description: &str,
-    ) -> Vec<StorageJiraAttachment> {
+    ) -> Vec<JiraAttachment> {
         let mut attachments = Vec::new();
         let link_pattern = regex::Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
 
@@ -254,7 +236,7 @@ impl IssueServiceImpl {
                     || filename.ends_with(".log")
                     || filename.ends_with(".zip")
                 {
-                    attachments.push(StorageJiraAttachment {
+                    attachments.push(JiraAttachment {
                         filename,
                         content_url: url,
                         mime_type: None,

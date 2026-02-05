@@ -38,7 +38,7 @@ pub fn commit_changes(
             {
                 Ok(issue) => {
                     info!("Successfully fetched JIRA ticket '{}'", jira_id);
-                    format!("{}: {}", jira_id, issue.summary)
+                    format!("{}: {}", jira_id, issue.fields.summary)
                 }
                 Err(e) => {
                     error!("Failed to fetch JIRA ticket '{}': {}", jira_id, e);

@@ -215,13 +215,13 @@ impl<'a> Request<'a> {
     /// 构建请求（可变，消费 multipart）
     fn build_request_mut(&mut self) -> Result<reqwest::blocking::RequestBuilder, HttpError> {
         let mut request = match self.method {
-            HttpMethod::Get => self.client.client.get(&self.url),
-            HttpMethod::Post => self.client.client.post(&self.url),
-            HttpMethod::Put => self.client.client.put(&self.url),
-            HttpMethod::Delete => self.client.client.delete(&self.url),
-            HttpMethod::Patch => self.client.client.patch(&self.url),
-            HttpMethod::Head => self.client.client.head(&self.url),
-            HttpMethod::Options => self.client.client.request(reqwest::Method::OPTIONS, &self.url),
+            HttpMethod::GET => self.client.client.get(&self.url),
+            HttpMethod::POST => self.client.client.post(&self.url),
+            HttpMethod::PUT => self.client.client.put(&self.url),
+            HttpMethod::DELETE => self.client.client.delete(&self.url),
+            HttpMethod::PATCH => self.client.client.patch(&self.url),
+            HttpMethod::HEAD => self.client.client.head(&self.url),
+            HttpMethod::OPTIONS => self.client.client.request(reqwest::Method::OPTIONS, &self.url),
         };
 
         // 设置 multipart 或 body（multipart 优先）
@@ -258,13 +258,13 @@ impl<'a> Request<'a> {
     /// 构建请求（引用，用于重试，不含 multipart）
     fn build_request_ref(&self) -> Result<reqwest::blocking::RequestBuilder, HttpError> {
         let mut request = match self.method {
-            HttpMethod::Get => self.client.client.get(&self.url),
-            HttpMethod::Post => self.client.client.post(&self.url),
-            HttpMethod::Put => self.client.client.put(&self.url),
-            HttpMethod::Delete => self.client.client.delete(&self.url),
-            HttpMethod::Patch => self.client.client.patch(&self.url),
-            HttpMethod::Head => self.client.client.head(&self.url),
-            HttpMethod::Options => self.client.client.request(reqwest::Method::OPTIONS, &self.url),
+            HttpMethod::GET => self.client.client.get(&self.url),
+            HttpMethod::POST => self.client.client.post(&self.url),
+            HttpMethod::PUT => self.client.client.put(&self.url),
+            HttpMethod::DELETE => self.client.client.delete(&self.url),
+            HttpMethod::PATCH => self.client.client.patch(&self.url),
+            HttpMethod::HEAD => self.client.client.head(&self.url),
+            HttpMethod::OPTIONS => self.client.client.request(reqwest::Method::OPTIONS, &self.url),
         };
 
         // 只设置 body（不含 multipart）
@@ -364,7 +364,7 @@ mod tests {
             .timeout(Duration::from_secs(60));
 
         assert_eq!(request.url, "https://example.com/api");
-        assert_eq!(request.method, HttpMethod::Post);
+        assert_eq!(request.method, HttpMethod::POST);
         assert!(request.body.is_some());
         assert!(request.headers.is_some());
         assert!(request.auth.is_some());

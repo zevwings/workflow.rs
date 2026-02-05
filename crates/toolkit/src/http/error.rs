@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn test_error_context_display() {
-        let context = ErrorContext::new("https://api.example.com/users", HttpMethod::Get)
+        let context = ErrorContext::new("https://api.example.com/users", HttpMethod::GET)
             .with_response_status(404)
             .with_duration(Duration::from_millis(150));
 
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn test_error_context_body_truncation() {
         let long_body = "x".repeat(2000);
-        let context = ErrorContext::new("https://api.example.com", HttpMethod::Post)
+        let context = ErrorContext::new("https://api.example.com", HttpMethod::POST)
             .with_response_body(long_body);
 
         let body = context.response_body.unwrap();
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_http_error_is_timeout() {
         let error = HttpError::Timeout {
-            context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+            context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
         };
         assert!(error.is_timeout());
         assert!(!error.is_connection());
@@ -292,7 +292,7 @@ mod tests {
     fn test_http_error_status() {
         let error = HttpError::Status {
             status: 500,
-            context: ErrorContext::boxed("https://example.com", HttpMethod::Get),
+            context: ErrorContext::boxed("https://example.com", HttpMethod::GET),
         };
         assert_eq!(error.status(), Some(500));
         assert!(error.is_status());
