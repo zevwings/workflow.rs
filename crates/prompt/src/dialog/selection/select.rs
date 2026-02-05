@@ -83,6 +83,14 @@ where
             return Err(PromptError::InvalidInput("选项列表不能为空".to_string()));
         }
 
+        // 检查是否在交互式终端中运行
+        use std::io::IsTerminal;
+        if !std::io::stdin().is_terminal() {
+            // 不是交互式终端，使用默认值或返回第一个选项
+            let default_idx = self.default.filter(|&idx| idx < self.options.len()).unwrap_or(0);
+            return Ok(self.options[default_idx].clone());
+        }
+
         let theme = get_theme();
         let filter = FuzzyFilter::new();
 
@@ -94,6 +102,11 @@ where
         let styled_text = self.format_message(&theme);
         backend.writeln(&format!("{}{}", question_prefix, styled_text))?;
         backend.flush()?;
+
+        // 强制同步 stderr 和 stdout
+        use std::io::Write;
+        let _ = std::io::stderr().flush();
+        let _ = std::io::stdout().flush();
 
         // 进入原始模式
         backend.enable_raw_mode()?;

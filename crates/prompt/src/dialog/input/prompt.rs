@@ -579,6 +579,18 @@ pub(super) fn prompt_with_backend<B: Backend>(
     builder: InputBuilder,
     backend: &mut B,
 ) -> Result<String> {
+    // 检查是否在交互式终端中运行
+    use std::io::IsTerminal;
+    if !std::io::stdin().is_terminal() {
+        // 不是交互式终端，使用默认值或返回错误
+        if let Some(default) = builder.default {
+            return Ok(default);
+        }
+        return Err(PromptError::Io(std::io::Error::other(
+            "Not running in an interactive terminal. Cannot prompt for user input.",
+        )));
+    }
+
     let theme = get_theme();
 
     // 显示提示信息
@@ -600,6 +612,11 @@ pub(super) fn prompt_with_backend<B: Backend>(
 
     backend.writeln(&format!("{}{}", styled_question, styled_text))?;
     backend.flush()?;
+
+    // 强制同步 stderr 和 stdout
+    use std::io::Write;
+    let _ = std::io::stderr().flush();
+    let _ = std::io::stdout().flush();
 
     // 进入原始模式
     backend.enable_raw_mode()?;

@@ -117,7 +117,7 @@
   - 文档命名规范和注意事项
 - **优先级**: 高优先级（确保规则正确执行）
 
-#### 8. [logger-enhancement.md](./logger-enhancement.md)
+#### 7. [logger-enhancement.md](./logger-enhancement.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 日志系统增强
@@ -130,6 +130,18 @@
   - JSON 格式输出支持
 - **优先级**: 中优先级（功能增强，非阻塞性）
 
+#### 8. [git-hooks-implementation.md](./git-hooks-implementation.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: Git 功能增强
+- **内容**:
+  - Git hooks 发现和执行机制
+  - 支持标准 Git hooks（pre-commit、pre-push、post-commit 等）
+  - Hook 执行器、发现器、配置管理
+  - 在 CommitService 和 RemoteService 中集成 hooks
+  - 跳过机制（--no-verify、环境变量）
+- **优先级**: P0（高优先级，保持与标准 Git 兼容性）
+
 ---
 
 ## 📊 当前统计
@@ -138,8 +150,8 @@
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 1 个 | 测试架构改进 |
-| ⏳ 待实施 | 5 个 | 集成扩展、文档检查工具、依赖迁移、Cursor 规则增强、日志系统增强 |
-| **总计** | **6 个** | - |
+| ⏳ 待实施 | 6 个 | 集成扩展、文档检查工具、依赖迁移、Cursor 规则增强、日志系统增强、Git Hooks 实现 |
+| **总计** | **7 个** | - |
 
 ---
 
@@ -181,6 +193,7 @@
 - **依赖迁移** → [gix-migration.md](./gix-migration.md) ⏳ 待实施
 - **Cursor 规则增强** → [cursor-rules-enhancement.md](./cursor-rules-enhancement.md) ⏳ 待实施
 - **日志系统增强** → [logger-enhancement.md](./logger-enhancement.md) ⏳ 待实施
+- **Git Hooks 实现** → [git-hooks-implementation.md](./git-hooks-implementation.md) ⏳ 待实施
 
 ---
 
@@ -193,4 +206,4 @@
 
 ---
 
-**最后更新**: 2025-01-15
+**最后更新**: 2025-02-05

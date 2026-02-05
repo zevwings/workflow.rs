@@ -30,9 +30,7 @@ impl PullCommand {
         info!("Pulling from origin/{}...", branch_name);
 
         log_debug!("pull: calling git_repo.pull");
-        git_repo
-            .pull(&branch_name)
-            .map_err(|e| format!("Failed to pull: {}", e))?;
+        git_repo.pull(&branch_name).map_err(|e| format!("Failed to pull: {}", e))?;
 
         log_debug!("pull: done");
         success!("Successfully pulled from origin/{}", branch_name);
