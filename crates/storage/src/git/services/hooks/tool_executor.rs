@@ -70,10 +70,13 @@ impl ToolHookExecutor {
 
         // pre-commit/prek 的命令行参数（两者格式不同）
         if self.is_prek {
-            // prek 使用: prek run --stage <STAGE>
+            // prek 使用: prek run --stage <STAGE> --commit-msg-filename <FILE>
+            let commit_msg_file = context.git_dir.join("COMMIT_EDITMSG");
             cmd.arg("run")
-                .arg("--hook-stage")
+                .arg("--stage")
                 .arg(hook_name)
+                .arg("--commit-msg-filename")
+                .arg(&commit_msg_file)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
         } else {
