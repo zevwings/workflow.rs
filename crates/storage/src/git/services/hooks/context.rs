@@ -10,6 +10,7 @@ pub enum HookResult {
     /// Hook 执行成功
     Success,
     /// Hook 执行失败，包含错误消息
+    #[allow(dead_code)]
     Failure(String),
     /// Hook 修改了文件，需要重新暂存
     Modified,
@@ -36,14 +37,9 @@ pub struct HookContext {
     // Push 相关
     /// 分支名称
     pub branch_name: Option<String>,
-    /// 远程 URL
-    pub remote_url: Option<String>,
+
     /// 要推送的提交列表
     pub commits_to_push: Vec<String>,
-
-    // Merge 相关
-    /// 是否有冲突
-    pub has_conflicts: Option<bool>,
 }
 
 impl HookContext {
@@ -56,9 +52,7 @@ impl HookContext {
             commit_message: None,
             commit_sha: None,
             branch_name: None,
-            remote_url: None,
             commits_to_push: Vec::new(),
-            has_conflicts: None,
         }
     }
 
@@ -76,9 +70,7 @@ impl HookContext {
             commit_message: None,
             commit_sha: None,
             branch_name: None,
-            remote_url: None,
             commits_to_push: Vec::new(),
-            has_conflicts: None,
         }
     }
 
@@ -102,9 +94,7 @@ impl HookContext {
             commit_message: Some(commit_message),
             commit_sha,
             branch_name: None,
-            remote_url: None,
             commits_to_push: Vec::new(),
-            has_conflicts: None,
         }
     }
 
@@ -120,7 +110,6 @@ impl HookContext {
         repo_path: PathBuf,
         git_dir: PathBuf,
         branch_name: String,
-        remote_url: String,
         commits_to_push: Vec<String>,
     ) -> Self {
         Self {
@@ -130,9 +119,7 @@ impl HookContext {
             commit_message: None,
             commit_sha: None,
             branch_name: Some(branch_name),
-            remote_url: Some(remote_url),
             commits_to_push,
-            has_conflicts: None,
         }
     }
 
@@ -141,8 +128,8 @@ impl HookContext {
     /// # 参数
     /// - `repo_path`: 仓库根目录路径
     /// - `git_dir`: Git 目录路径（.git）
-    /// - `has_conflicts`: 是否有冲突
-    pub fn for_post_merge(repo_path: PathBuf, git_dir: PathBuf, has_conflicts: bool) -> Self {
+    #[allow(dead_code)]
+    pub fn for_post_merge(repo_path: PathBuf, git_dir: PathBuf) -> Self {
         Self {
             repo_path,
             git_dir,
@@ -150,47 +137,37 @@ impl HookContext {
             commit_message: None,
             commit_sha: None,
             branch_name: None,
-            remote_url: None,
             commits_to_push: Vec::new(),
-            has_conflicts: Some(has_conflicts),
         }
     }
 
     // ========== Builder 方法 ==========
 
     /// 设置暂存区文件列表
+    #[allow(dead_code)]
     pub fn with_staged_files(mut self, files: Vec<String>) -> Self {
         self.staged_files = files;
         self
     }
 
     /// 设置提交消息
+    #[allow(dead_code)]
     pub fn with_commit_message(mut self, message: String) -> Self {
         self.commit_message = Some(message);
         self
     }
 
     /// 设置提交 SHA
+    #[allow(dead_code)]
     pub fn with_commit_sha(mut self, sha: String) -> Self {
         self.commit_sha = Some(sha);
         self
     }
 
     /// 设置分支名称
+    #[allow(dead_code)]
     pub fn with_branch_name(mut self, name: String) -> Self {
         self.branch_name = Some(name);
-        self
-    }
-
-    /// 设置远程 URL
-    pub fn with_remote_url(mut self, url: String) -> Self {
-        self.remote_url = Some(url);
-        self
-    }
-
-    /// 设置要推送的提交列表
-    pub fn with_commits_to_push(mut self, commits: Vec<String>) -> Self {
-        self.commits_to_push = commits;
         self
     }
 }

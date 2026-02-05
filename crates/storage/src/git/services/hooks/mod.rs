@@ -13,7 +13,7 @@ mod tool_executor;
 
 pub use constants::{git_hooks, pre_commit_hooks};
 pub use context::{HookContext, HookResult};
-pub use detector::{HookTool, HookToolDetector, ToolDetectionResult};
+pub use detector::{HookTool, HookToolDetector};
 pub use discoverer::HookDiscoverer;
 pub use script_executor::ScriptHookExecutor;
 pub use service::{HookService, HookServiceImpl};

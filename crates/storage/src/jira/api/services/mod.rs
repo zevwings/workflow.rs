@@ -1,11 +1,12 @@
-//! Jira Repository 内部服务层
+//! Jira API 服务层
 //!
-//! 提供统一的业务协调服务，包括：
+//! 提供与 Jira REST API 交互的业务服务，包括：
 //! - Issue 数据获取服务
-//! - 附件下载服务
 //! - 状态管理服务
-//! - 配置上下文
+//! - 用户信息服务
+//! - 附件下载服务（暂时禁用）
 
+mod attachment;
 mod issue;
 pub mod status;
 mod user;

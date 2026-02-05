@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use crate::jira::services::{IssueService, StatusService, UserService};
+use crate::jira::api::services::{IssueService, StatusService, UserService};
 use domain::{
     AttachmentDownloadResult, JiraAttachment, JiraError, JiraIssue, JiraRepository,
     JiraStatusConfig, JiraUser,
@@ -59,15 +59,11 @@ impl JiraRepository for JiraRepositoryImpl {
         _issue_id: &str,
         _base_dir: &std::path::Path,
     ) -> Result<AttachmentDownloadResult, JiraError> {
-        Err(JiraError::Other(
-            "Attachment download functionality is currently disabled. See jira/services/attachment/mod.rs for details.".to_string()
-        ))
+        unimplemented!()
     }
 
     fn clean_attachments(&self, _jira_id: Option<&str>) -> Result<(), JiraError> {
-        Err(JiraError::Other(
-            "Attachment cleanup functionality is currently disabled. See jira/services/attachment/mod.rs for details.".to_string()
-        ))
+        unimplemented!()
     }
 
     fn get_project_statuses(&self, project: &str) -> Result<Vec<String>, JiraError> {

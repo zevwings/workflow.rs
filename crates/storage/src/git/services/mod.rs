@@ -18,9 +18,7 @@ pub use branch::{BranchService, BranchServiceImpl};
 pub use commit::{CommitService, CommitServiceImpl};
 pub use context::{DiscoveredContext, GitContext, GitContextHolder};
 pub use diff::{DiffService, DiffServiceImpl};
-pub use hooks::{
-    git_hooks, pre_commit_hooks, HookContext, HookResult, HookService, HookServiceImpl,
-};
+pub use hooks::{HookService, HookServiceImpl};
 pub use merge::{MergeService, MergeServiceImpl};
 pub use remote::{RemoteService, RemoteServiceImpl};
 pub use stash::{StashService, StashServiceImpl};

@@ -84,7 +84,13 @@ macro_rules! add_text_layer {
 /// ```
 pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), LoggerError> {
     let log_level_str = config.level.as_deref().unwrap_or("off");
-    let filter = EnvFilter::new(log_level_str);
+
+    // 构建过滤器：项目代码使用用户设置的级别，第三方库（特别是 HTTP 相关）限制为 warn
+    // 这避免了 hyper/h2/rustls 等库的 DEBUG 日志干扰交互式 UI（如选择菜单）
+    let filter = EnvFilter::new(format!(
+        "{},hyper=warn,h2=warn,rustls=warn,reqwest=warn,tower=warn",
+        log_level_str
+    ));
     let use_json = config.format.as_deref().is_some_and(|f| f.eq_ignore_ascii_case("json"));
     let enable_console = config.enable_console;
 

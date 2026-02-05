@@ -174,6 +174,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     commands::jira::JiraCleanCommand::new(args.jira_id.into_option(), args.all);
                 cmd.run()?;
             }
+            JiraCommand::Status(args) => {
+                let cmd = commands::jira::JiraStatusCommand::new(args.jira_id);
+                cmd.run()?;
+            }
         },
         Command::Branch(branch_cmd) => match branch_cmd {
             BranchSubcommand::Create {

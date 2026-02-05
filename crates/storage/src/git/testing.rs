@@ -2,8 +2,11 @@
 //!
 //! 提供 Git 服务测试的通用辅助函数和性能监控工具。
 
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
+use super::services::context::GitContext;
 use super::services::hooks::{HookContext, HookResult, HookService};
-use super::GitContext;
 use domain::git::GitError;
 use std::env;
 use std::path::Path;

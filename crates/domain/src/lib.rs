@@ -89,9 +89,10 @@ pub use git::{
 // Re-export external service types
 pub use github::{GitHubContext, GitHubError, GitHubRepository, GitHubUser};
 pub use jira::{
-    extract_jira_project, validate_jira_ticket_format, AttachmentDownloadResult, JiraAttachment,
-    JiraComment, JiraConfigContext, JiraError, JiraIssue, JiraRepository, JiraStatusConfig,
-    JiraUser, ProjectStatusConfig, StatusConfigResult,
+    extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
+    AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraConfigContext,
+    JiraError, JiraIssue, JiraRepository, JiraStatusConfig, JiraUser, JiraWorkHistoryRepository,
+    ProjectStatusConfig, StatusConfigResult, WorkHistoryEntry,
 };
 pub use llm::{
     LLMConfigContext, LLMError, LLMRepository, PullRequestContent, PullRequestReword,

@@ -39,7 +39,7 @@ impl RemoteServiceImpl {
 impl RemoteService for RemoteServiceImpl {
     fn push(&self, branch_name: &str, set_upstream: bool) -> Result<(), GitError> {
         // 获取路径信息和推送相关数据
-        let (repo_path, git_dir, remote_url, commits_to_push) = {
+        let (repo_path, git_dir, commits_to_push) = {
             let repo = self.ctx.repository();
             let git_dir = repo.path().to_path_buf();
             let repo_path = repo
@@ -47,25 +47,14 @@ impl RemoteService for RemoteServiceImpl {
                 .ok_or_else(|| GitError::OperationFailed("Not a work tree".into()))?
                 .to_path_buf();
 
-            let remote_url = repo
-                .find_remote("origin")
-                .ok()
-                .and_then(|r| r.url().map(String::from))
-                .unwrap_or_default();
-
             let commits_to_push = Self::get_commits_to_push(&repo, branch_name).unwrap_or_default();
 
-            (repo_path, git_dir, remote_url, commits_to_push)
+            (repo_path, git_dir, commits_to_push)
         };
 
         // [1] pre-push hook
-        let hook_context = HookContext::for_pre_push(
-            repo_path,
-            git_dir,
-            branch_name.to_string(),
-            remote_url,
-            commits_to_push,
-        );
+        let hook_context =
+            HookContext::for_pre_push(repo_path, git_dir, branch_name.to_string(), commits_to_push);
 
         if let HookResult::Failure(msg) =
             self.hook_service.execute_hook(git_hooks::PRE_PUSH, &hook_context)?

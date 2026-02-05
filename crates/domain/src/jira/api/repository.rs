@@ -1,8 +1,8 @@
 //! Jira 仓储接口
 
-use crate::jira::entity::{JiraAttachment, JiraIssue};
+use crate::jira::api::entity::JiraStatusConfig;
+use crate::jira::api::entity::{JiraAttachment, JiraIssue};
 use crate::jira::error::JiraError;
-use crate::jira::status::JiraStatusConfig;
 use crate::JiraUser;
 use std::path::{Path, PathBuf};
 

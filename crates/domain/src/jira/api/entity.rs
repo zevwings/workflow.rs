@@ -1,8 +1,18 @@
 //! Jira 实体类型和辅助函数
 
-use serde::Serialize;
+use std::sync::LazyLock;
+
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::jira::error::JiraError;
+
+/// 预编译的 Jira ticket 正则表达式
+///
+/// 匹配格式：PROJECT-NUMBER（如 `PROJ-123`、`MY_PROJECT-456`）
+static JIRA_TICKET_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"([A-Z][A-Z0-9_]*-\d+)").expect("Invalid regex pattern"));
 
 /// Jira Issue 信息
 #[derive(Debug, Clone, Serialize)]
@@ -48,6 +58,45 @@ pub struct JiraAttachment {
     pub url: String,
 }
 
+/// 状态配置结果
+#[derive(Debug, Clone)]
+pub struct StatusConfigResult {
+    /// 项目名称
+    pub project: String,
+    /// PR 创建时的目标状态
+    pub created_pull_request_status: String,
+    /// PR 合并时的目标状态
+    pub merged_pull_request_status: String,
+}
+
+/// 项目状态配置
+///
+/// 存储单个项目的状态配置，包括 PR 创建和合并时的目标状态。
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectStatusConfig {
+    /// PR 创建时的目标状态（JSON 字段名：`created-pr`）
+    #[serde(rename = "created-pr")]
+    pub created_pull_request_status: Option<String>,
+    /// PR 合并时的目标状态（JSON 字段名：`merged-pr`）
+    #[serde(rename = "merged-pr")]
+    pub merged_pull_request_status: Option<String>,
+}
+
+/// Jira 状态配置
+///
+/// 包含项目名称和对应的状态配置。
+#[skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JiraStatusConfig {
+    /// 项目名称（如 `"PROJ"`）
+    pub project: String,
+    /// PR 创建时的目标状态
+    pub created_pull_request_status: Option<String>,
+    /// PR 合并时的目标状态
+    pub merged_pull_request_status: Option<String>,
+}
+
 // ============================================================================
 // 辅助函数
 // ============================================================================
@@ -74,6 +123,25 @@ const VALIDATION_JIRA_ID_EMPTY: &str = "JIRA ID cannot be empty";
 /// ```
 pub fn extract_jira_project(ticket: &str) -> Option<&str> {
     ticket.split('-').next().filter(|s| *s != ticket)
+}
+
+/// 从文本中提取 Jira ticket ID
+///
+/// 支持从各种文本格式中提取 Jira ticket ID，例如：
+/// - PR 标题：`"PROJ-123: Fix bug"` → `Some("PROJ-123")`
+/// - Commit 消息：`"feat(scope): PROJ-456 add feature"` → `Some("PROJ-456")`
+/// - 分支名：`"feature/PROJ-789-add-feature"` → `Some("PROJ-789")`
+/// - 纯文本：`"This is about PROJ-111"` → `Some("PROJ-111")`
+///
+/// # 示例
+/// ```
+/// use domain::jira::extract_jira_ticket_id;
+/// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123".to_string()));
+/// assert_eq!(extract_jira_ticket_id("No ticket here"), None);
+/// assert_eq!(extract_jira_ticket_id("feature/ABC-456-test"), Some("ABC-456".to_string()));
+/// ```
+pub fn extract_jira_ticket_id(text: &str) -> Option<String> {
+    JIRA_TICKET_REGEX.captures(text).map(|c| c[1].to_string())
 }
 
 /// 验证 Jira ticket 格式
@@ -221,5 +289,75 @@ mod tests {
         // 类似分支名的格式（应该失败）
         assert!(validate_jira_ticket_format("zw/修改打包脚本问题").is_err());
         assert!(validate_jira_ticket_format("feature/test").is_err());
+    }
+
+    // ========================================================================
+    // extract_jira_ticket_id 测试
+    // ========================================================================
+
+    #[test]
+    fn test_extract_jira_ticket_id_from_pr_title() {
+        // PR 标题格式
+        assert_eq!(
+            extract_jira_ticket_id("PROJ-123: Fix bug"),
+            Some("PROJ-123".to_string())
+        );
+        assert_eq!(
+            extract_jira_ticket_id("PROJ-456 - Add feature"),
+            Some("PROJ-456".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_jira_ticket_id_from_commit_message() {
+        // Commit 消息格式
+        assert_eq!(
+            extract_jira_ticket_id("feat(scope): PROJ-789 add feature"),
+            Some("PROJ-789".to_string())
+        );
+        assert_eq!(
+            extract_jira_ticket_id("[ABC-111] fix: resolve issue"),
+            Some("ABC-111".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_jira_ticket_id_from_branch_name() {
+        // 分支名格式
+        assert_eq!(
+            extract_jira_ticket_id("feature/PROJ-222-add-feature"),
+            Some("PROJ-222".to_string())
+        );
+        assert_eq!(
+            extract_jira_ticket_id("bugfix/ABC-333-fix-bug"),
+            Some("ABC-333".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_jira_ticket_id_no_match() {
+        // 无匹配
+        assert_eq!(extract_jira_ticket_id("No ticket here"), None);
+        assert_eq!(extract_jira_ticket_id("lowercase-123"), None);
+        assert_eq!(extract_jira_ticket_id("PROJ without number"), None);
+        assert_eq!(extract_jira_ticket_id(""), None);
+    }
+
+    #[test]
+    fn test_extract_jira_ticket_id_first_match() {
+        // 多个匹配时返回第一个
+        assert_eq!(
+            extract_jira_ticket_id("PROJ-111 and PROJ-222"),
+            Some("PROJ-111".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_jira_ticket_id_with_underscore() {
+        // 项目名包含下划线
+        assert_eq!(
+            extract_jira_ticket_id("MY_PROJECT-123: test"),
+            Some("MY_PROJECT-123".to_string())
+        );
     }
 }

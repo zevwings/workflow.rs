@@ -171,9 +171,6 @@ impl BranchCreateCommand {
 
     /// 手动输入分支名（不使用 JIRA ID）
     fn generate_branch_name_manual(&self) -> Result<String, Box<dyn std::error::Error>> {
-        // 让用户选择分支类型
-        let branch_type = select_branch_type()?;
-
         // 提示用户输入分支名
         let branch_name = input!("Please enter your new branch name:")
             .validator(|input: &str| {
@@ -193,6 +190,9 @@ impl BranchCreateCommand {
 
         // 将输入转换为 slug 格式
         let branch_name_slug = to_slug(&branch_name);
+
+        // 让用户选择分支类型
+        let branch_type = select_branch_type()?;
 
         // 使用模板生成分支名（不包含 JIRA ID）
         let full_branch_name = format!("{}/{}", branch_type.as_str(), branch_name_slug);
