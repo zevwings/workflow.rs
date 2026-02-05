@@ -8,6 +8,8 @@
 mod mock;
 mod terminal;
 
+// NOTE: 测试代码需要此导出，#[allow] 防止 clippy --fix 误删
+#[allow(unused_imports)]
 #[cfg(any(test, feature = "testing"))]
 pub use mock::MockBackend;
 pub use terminal::TerminalBackend;

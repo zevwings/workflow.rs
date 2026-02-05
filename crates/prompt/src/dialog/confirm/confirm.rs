@@ -112,6 +112,18 @@ fn print_cancelled_message<B: Backend>(backend: &mut B, _builder: &ConfirmBuilde
 
 /// 使用指定后端执行提示
 fn prompt_with_backend<B: Backend>(builder: ConfirmBuilder, backend: &mut B) -> Result<bool> {
+    // 检查是否在交互式终端中运行
+    use std::io::IsTerminal;
+    if !std::io::stdin().is_terminal() {
+        // 不是交互式终端，使用默认值或返回错误
+        if let Some(default) = builder.default {
+            return Ok(default);
+        }
+        return Err(PromptError::Io(std::io::Error::other(
+            "Not running in an interactive terminal. Cannot prompt for user input.",
+        )));
+    }
+
     let theme = get_theme();
 
     // 显示提示信息

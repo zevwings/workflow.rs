@@ -1,6 +1,11 @@
 //! Mock 后端实现
 //!
 //! 用于测试的 Mock 后端，支持预设事件和输出捕获。
+//!
+//! 此模块仅在 `testing` feature 启用时编译，供外部 crate 测试使用。
+
+// NOTE: 这是测试工具 API，供外部 crate 使用，在本 crate 内不直接调用
+#![allow(dead_code)]
 
 use super::Backend;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};

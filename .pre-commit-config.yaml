@@ -1,0 +1,42 @@
+# .pre-commit-config.yaml
+# Workflow 项目的 pre-commit 配置
+# 使用 prek 运行：prek install && prek run
+
+repos:
+  # Rust 代码格式化
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        description: 格式化 Rust 代码
+        entry: cargo fmt --all --
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      # Clippy 检查（带自动修复）
+      - id: cargo-clippy-fix
+        name: cargo clippy fix
+        description: 运行 Clippy 并尝试自动修复
+        entry: cargo clippy --all-targets --all-features --fix --allow-dirty --allow-staged
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      # Clippy 严格检查（警告视为错误）
+      - id: cargo-clippy
+        name: cargo clippy
+        description: 检查 Clippy 警告
+        entry: cargo clippy --all-targets --all-features -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      # 编译检查
+      - id: cargo-check
+        name: cargo check
+        description: 检查代码是否能编译
+        entry: cargo check --all-targets
+        language: system
+        types: [rust]
+        pass_filenames: false

@@ -16,6 +16,12 @@ use storage::git::testing::performance::{measure, PerformanceCollector, Performa
 #[cfg(feature = "testing")]
 use storage::git::testing::*;
 
+/// 创建 CommitServiceImpl 的辅助函数
+#[cfg(feature = "testing")]
+fn create_commit_service(ctx: GitContext) -> CommitServiceImpl {
+    CommitServiceImpl::new(ctx, noop_hook_service())
+}
+
 #[cfg(feature = "testing")]
 fn main() {
     println!("=== 性能监控示例 ===\n");
@@ -27,7 +33,7 @@ fn main() {
 
         let timer = PerformanceTimer::new("setup_and_query").with_threshold(Duration::from_secs(2));
 
-        let service = CommitServiceImpl::new(ctx);
+        let service = create_commit_service(ctx);
         let status = service.get_working_tree_status().unwrap();
 
         println!("   文件数: {}", status.staged.len());
@@ -39,7 +45,7 @@ fn main() {
     println!("2. 使用 measure 函数:");
     {
         let (_tmp, ctx) = setup_repo_with_file();
-        let service = CommitServiceImpl::new(ctx);
+        let service = create_commit_service(ctx);
 
         let info = measure("get_commit_info", || {
             service.get_commit_info("HEAD").unwrap()
@@ -53,7 +59,7 @@ fn main() {
     println!("3. 使用 PerformanceCollector:");
     {
         let (_tmp, ctx) = setup_repo_with_commits(5);
-        let service = CommitServiceImpl::new(ctx);
+        let service = create_commit_service(ctx);
 
         let mut collector = PerformanceCollector::new("commit_info_queries");
 

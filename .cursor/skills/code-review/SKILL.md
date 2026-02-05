@@ -38,7 +38,10 @@ description: 审查 crates 目录下 Rust 代码质量，检查最佳实践、AP
 - [ ] crate 根 `lib.rs` 只 re-export 真正需要公开的 API
 
 ### 模块导入规则
-- [ ] **crate 内部**：使用全路径到子模块
+- [ ] **同一模块内部**：使用 `super::` 引用兄弟模块
+  - 如 `hooks/tool_executor.rs` 引用 `hooks/context.rs`
+  - 使用 `super::context::HookContext` 而非 `crate::git::services::hooks::context::HookContext`
+- [ ] **跨模块（crate 内部）**：使用 `crate::` 全路径
   - 单个：`use crate::rollback::create_backup`
   - 多个：`use crate::rollback::{create_backup, rollback, BackupInfo}`
 - [ ] **crate 外部**：从 crate 根导入

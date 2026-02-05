@@ -15,6 +15,12 @@ use std::time::{Duration, Instant};
 #[cfg(feature = "testing")]
 use storage::git::{services::*, testing::*};
 
+/// 创建 CommitServiceImpl 的辅助函数
+#[cfg(feature = "testing")]
+fn create_commit_service(ctx: GitContext) -> CommitServiceImpl {
+    CommitServiceImpl::new(ctx, noop_hook_service())
+}
+
 // ============================================================
 // 并发访问测试
 // ============================================================
@@ -41,7 +47,7 @@ fn test_concurrent_read_access() {
             // 等待所有线程准备就绪
             barrier_clone.wait();
 
-            let service = CommitServiceImpl::new((*ctx_clone).clone());
+            let service = create_commit_service((*ctx_clone).clone());
 
             // 执行多次读取操作
             for _ in 0..10 {
@@ -90,7 +96,7 @@ fn test_concurrent_mixed_operations() {
     for i in 0..thread_count / 2 {
         let ctx_clone = Arc::clone(&ctx);
         let handle = thread::spawn(move || {
-            let service = CommitServiceImpl::new((*ctx_clone).clone());
+            let service = create_commit_service((*ctx_clone).clone());
             for _ in 0..5 {
                 service.get_commit_info("HEAD").unwrap();
                 thread::sleep(Duration::from_millis(10));
@@ -104,7 +110,7 @@ fn test_concurrent_mixed_operations() {
     for i in 0..thread_count / 2 {
         let ctx_clone = Arc::clone(&ctx);
         let handle = thread::spawn(move || {
-            let service = CommitServiceImpl::new((*ctx_clone).clone());
+            let service = create_commit_service((*ctx_clone).clone());
             for _ in 0..5 {
                 service.get_working_tree_status().unwrap();
                 thread::sleep(Duration::from_millis(10));
@@ -146,7 +152,7 @@ fn test_large_file_count_performance() {
         let (_tmp, ctx) = setup_repo_with_files(count);
         let setup_time = start.elapsed();
 
-        let service = CommitServiceImpl::new(ctx);
+        let service = create_commit_service(ctx);
 
         // 测试获取状态的性能
         let status_start = Instant::now();
@@ -249,7 +255,7 @@ fn test_commit_all_performance() {
         println!("\n测试提交 {} 个文件 (--all)...", count);
 
         let (_tmp, ctx) = setup_repo_with_changes(count, count);
-        let service = CommitServiceImpl::new(ctx);
+        let service = create_commit_service(ctx);
 
         let start = Instant::now();
         service.commit("test commit", true).unwrap();
@@ -281,7 +287,7 @@ fn test_lock_contention() {
     let thread_count = 50;
     let barrier = Arc::new(Barrier::new(thread_count));
     let mut handles = vec![];
-    let mut lock_wait_times = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let lock_wait_times = Arc::new(std::sync::Mutex::new(Vec::new()));
 
     for i in 0..thread_count {
         let ctx_clone = Arc::clone(&ctx);
@@ -292,7 +298,7 @@ fn test_lock_contention() {
             barrier_clone.wait();
 
             let start = Instant::now();
-            let service = CommitServiceImpl::new((*ctx_clone).clone());
+            let service = create_commit_service((*ctx_clone).clone());
             service.get_commit_info("HEAD").unwrap();
             let duration = start.elapsed();
 
@@ -344,7 +350,7 @@ fn test_memory_stability() {
 
     // 执行 1000 次操作，确保没有内存泄漏
     for i in 0..1000 {
-        let service = CommitServiceImpl::new(ctx.clone());
+        let service = create_commit_service(ctx.clone());
         service.get_commit_info("HEAD").unwrap();
         service.get_working_tree_status().unwrap();
 
@@ -370,7 +376,7 @@ fn test_realistic_workflow() {
     // 1. 创建仓库
     let (_tmp, ctx) = setup_repo_with_files(50);
 
-    let commit_service = CommitServiceImpl::new(ctx.clone());
+    let commit_service = create_commit_service(ctx.clone());
     let branch_service = BranchServiceImpl::new(ctx.clone());
 
     let start = Instant::now();
