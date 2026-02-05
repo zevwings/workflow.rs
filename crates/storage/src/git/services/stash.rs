@@ -70,25 +70,26 @@ impl StashServiceImpl {
     ///
     /// 通过比较 stash commit 与其父 commit 的 diff 来获取统计信息。
     fn get_stash_stat(&self, index: usize) -> Option<StashStat> {
+        // 第一步：获取 stash commit 的 oid
+        let stash_oid = {
+            let mut repo_mut = self.ctx.repository_mut();
+            let mut oid = None;
+            let _ = repo_mut.stash_foreach(|idx, _, stash_oid| {
+                if idx == index {
+                    oid = Some(*stash_oid);
+                    false // 找到后停止遍历
+                } else {
+                    true
+                }
+            });
+            oid
+        }?; // 释放 repo_mut 锁
+
+        // 第二步：使用 oid 获取统计信息
         let repo = self.ctx.repository();
 
-        // 获取 stash commit 的 oid
-        let mut stash_oid = None;
-        let mut repo_mut = self.ctx.repository_mut();
-        let _ = repo_mut.stash_foreach(|idx, _, oid| {
-            if idx == index {
-                stash_oid = Some(*oid);
-                false // 找到后停止遍历
-            } else {
-                true
-            }
-        });
-        drop(repo_mut);
-
-        let oid = stash_oid?;
-
         // 获取 stash commit
-        let stash_commit = repo.find_commit(oid).ok()?;
+        let stash_commit = repo.find_commit(stash_oid).ok()?;
 
         // stash commit 的第一个父 commit 是原始 HEAD
         let parent_commit = stash_commit.parent(0).ok()?;
@@ -244,29 +245,30 @@ impl StashService for StashServiceImpl {
     }
 
     fn stash_list(&self) -> Result<Vec<StashEntry>, GitError> {
+        // 第一步：收集所有 stash 的基本信息（OID 和消息）
+        let mut stash_info = Vec::new();
+        {
+            let mut repo = self.ctx.repository_mut();
+            repo.stash_foreach(|index, message, oid| {
+                stash_info.push((index, message.to_string(), *oid));
+                true // 继续遍历
+            })
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        } // 释放 repo 锁
+
+        // 第二步：处理收集到的信息，查询 commit 详情
         let mut entries = Vec::new();
-        let mut repo = self.ctx.repository_mut();
-
-        // 使用 stash_foreach 遍历所有 stash
-        let mut error: Option<GitError> = None;
-
-        repo.stash_foreach(|index, message, oid| {
-            // 获取 commit 信息
-            let repo_ref = self.ctx.repository();
-            let commit = match repo_ref.find_commit(*oid) {
-                Ok(c) => c,
-                Err(e) => {
-                    error = Some(GitError::OperationFailed(e.to_string()));
-                    return false; // 停止遍历
-                }
-            };
+        let repo = self.ctx.repository();
+        for (index, message, oid) in stash_info {
+            let commit =
+                repo.find_commit(oid).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
             // 获取时间戳
             let time = commit.time();
             let timestamp = Local.timestamp_opt(time.seconds(), 0).single();
 
             // 从消息中提取分支名和消息
-            let (branch, msg) = Self::extract_branch_and_message(message);
+            let (branch, msg) = Self::extract_branch_and_message(&message);
 
             entries.push(StashEntry {
                 index,
@@ -275,13 +277,6 @@ impl StashService for StashServiceImpl {
                 commit_hash: oid.to_string(),
                 timestamp,
             });
-
-            true // 继续遍历
-        })
-        .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-
-        if let Some(e) = error {
-            return Err(e);
         }
 
         // 按索引排序（从新到旧）

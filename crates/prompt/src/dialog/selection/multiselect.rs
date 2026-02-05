@@ -98,20 +98,6 @@ where
             return Err(PromptError::InvalidInput("选项列表不能为空".to_string()));
         }
 
-        // 检查是否在交互式终端中运行
-        use std::io::IsTerminal;
-        if !std::io::stdin().is_terminal() {
-            // 不是交互式终端，使用默认选项或返回空
-            let default_selections: Vec<T> = self
-                .default
-                .iter()
-                .copied()
-                .filter(|&idx| idx < self.options.len())
-                .map(|idx| self.options[idx].clone())
-                .collect();
-            return Ok(default_selections);
-        }
-
         let theme = get_theme();
         let filter = FuzzyFilter::new();
 
@@ -124,11 +110,6 @@ where
         let styled_text = self.format_message(&theme);
         backend.writeln(&format!("{}{}", question_prefix, styled_text))?;
         backend.flush()?;
-
-        // 强制同步 stderr 和 stdout
-        use std::io::Write;
-        let _ = std::io::stderr().flush();
-        let _ = std::io::stdout().flush();
 
         // 进入原始模式
         backend.enable_raw_mode()?;
