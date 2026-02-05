@@ -195,15 +195,25 @@ impl CommitService for CommitServiceImpl {
 
         // 添加更改到暂存区
         if all {
-            // 使用 git2 的批量更新方法，比逐个文件添加更快
-            // update_all 会自动处理修改、删除、新增的文件，并尊重 .gitignore
-            index
-                .update_all(["*"].iter(), None)
-                .map_err(|e| GitError::IndexError(e.to_string()))?;
+            // 获取需要跳过的目录模式（从 .gitignore 和常见大型目录）
+            // 即使这些目录在 .gitignore 中，扫描它们仍然很慢，
+            // 所以使用回调函数提前跳过以提高性能
+            let ignore_patterns = self.ctx.get_ignore_directory_patterns();
 
-            // 添加新文件（update_all 不会添加新文件）
             index
-                .add_all(["*"].iter(), git2::IndexAddOption::DEFAULT, None)
+                .add_all(
+                    ["."].iter(),
+                    git2::IndexAddOption::DEFAULT,
+                    Some(&mut |path, _| {
+                        // 跳过大型目录以提高性能
+                        if let Some(path_str) = path.to_str() {
+                            if ignore_patterns.iter().any(|pattern| path_str.starts_with(pattern)) {
+                                return 1; // Skip this path
+                            }
+                        }
+                        0 // Add this path (git2 会自动处理 .gitignore)
+                    }),
+                )
                 .map_err(|e| GitError::IndexError(e.to_string()))?;
         }
         // 如果 all=false，直接使用已暂存的文件进行提交

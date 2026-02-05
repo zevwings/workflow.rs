@@ -1,6 +1,7 @@
 use prompt::{info, success};
-use storage::git::GitContext;
-use toolkit::{log_debug, log_info};
+use toolkit::log_debug;
+
+use crate::registry;
 
 /// Push 命令
 pub struct PushCommand;
@@ -17,39 +18,23 @@ impl PushCommand {
     }
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        log_debug!("push: discovering repository");
-        let ctx =
-            GitContext::discover().map_err(|e| format!("Failed to open repository: {}", e))?;
-        log_debug!("push: repository discovered");
+        log_debug!("push: getting git repository");
+        let git_repo = registry::get_git_repository();
 
-        let repo = ctx.repository();
-
-        log_debug!("push: resolving HEAD");
-        let head = repo.head().map_err(|e| format!("Failed to get HEAD: {}", e))?;
-        let branch_name = head.shorthand().ok_or("Failed to get branch name")?;
+        log_debug!("push: getting current branch");
+        let branch_name = git_repo
+            .get_current_branch()
+            .map_err(|e| format!("Failed to get current branch: {}", e))?;
         log_debug!("push: branch = {}", branch_name);
-
-        log_debug!("push: finding remote origin");
-        let mut remote = repo
-            .find_remote("origin")
-            .map_err(|e| format!("Failed to find remote 'origin': {}", e))?;
-        log_debug!("push: remote origin found");
-
-        let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
 
         info!("Pushing to origin/{}...", branch_name);
 
-        log_info!("push: creating callbacks and push options");
-        let callbacks = GitContext::create_callbacks();
-        let mut opts = git2::PushOptions::new();
-        opts.remote_callbacks(callbacks);
-        log_info!("push: calling remote.push (refspec = {})", refspec);
-
-        remote
-            .push(&[&refspec], Some(&mut opts))
+        log_debug!("push: calling git_repo.push");
+        git_repo
+            .push(&branch_name, false)
             .map_err(|e| format!("Failed to push: {}", e))?;
 
-        log_debug!("push: remote.push returned");
+        log_debug!("push: done");
         success!("Successfully pushed to origin/{}", branch_name);
         Ok(())
     }

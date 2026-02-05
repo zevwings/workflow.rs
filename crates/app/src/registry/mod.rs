@@ -2,6 +2,8 @@
 //!
 //! 负责组合各个 crate 的依赖注入容器，统一管理所有服务。
 
+mod app;
+
 use std::sync::{Arc, LazyLock};
 
 /// 应用程序初始化标记
@@ -10,11 +12,20 @@ use std::sync::{Arc, LazyLock};
 static APP_INITIALIZED: LazyLock<()> = LazyLock::new(|| {
     // 按依赖顺序初始化模块
     // 注意：这些是启动时的关键初始化，失败时程序无法继续运行
+
+    // 1. 首先注册 storage 层服务（基础仓储实现）
     if let Err(e) = storage::register_storage() {
         panic!("Failed to register storage module: {e}");
     }
+
+    // 2. 然后注册 services 层服务（应用服务，依赖 storage）
     if let Err(e) = services::register_services() {
         panic!("Failed to register services module: {e}");
+    }
+
+    // 3. 最后注册 app 层服务（应用层特有服务，可依赖 storage 和 services）
+    if let Err(e) = app::register_app() {
+        panic!("Failed to register app module: {e}");
     }
 });
 
@@ -26,7 +37,7 @@ fn ensure_initialized() {
 /// 从全局容器获取服务
 ///
 /// 这是依赖注入的核心函数，用于获取已注册的服务实例。
-/// 首次调用时会自动初始化所有模块（storage, services）。
+/// 首次调用时会自动初始化所有模块（storage, services, app）。
 ///
 /// # 类型参数
 ///
