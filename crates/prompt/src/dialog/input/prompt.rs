@@ -546,7 +546,7 @@ fn print_cancelled_message_multiline<B: Backend>(
             }
             // 移回到第2行（取消消息将显示的位置）
             if lines > 2 {
-                backend.move_up((lines - 2) as u16)?;
+                backend.move_up(lines - 2)?;
                 backend.move_to_column(0)?;
             }
         }
