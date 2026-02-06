@@ -88,9 +88,10 @@ pub use errors::ServiceError;
 
 // Re-export git types
 pub use git::{
-    BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitInfo, FileStatusInfo,
-    FileStatusType, GitError, GitRepoRepository, GitRepository, MergeStrategy, RemoteInfo,
-    RepoInfo, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+    BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitChangeType, CommitFileChange,
+    CommitInfo, FileStatusInfo, FileStatusType, GitError, GitRepoRepository, GitRepository,
+    MergeStrategy, RemoteInfo, RepoInfo, TagCreateInfo, TagCreateScope, TagDeleteInfo,
+    TagDeleteScope, WorkingTreeStatus,
 };
 
 // Re-export external service types

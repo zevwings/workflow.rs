@@ -26,7 +26,7 @@ pub use alias::AliasCommand;
 pub use args::{DryRunArgs, ForceArgs, JiraIdArg};
 pub use branch::{BranchSubcommand, IgnoreSubcommand};
 #[cfg(feature = "develop")]
-pub use commit::CommitCommand;
+pub use commit::{CommitCommand, CommitSubcommand};
 pub use completion::CompletionCommand;
 pub use github::GithubCommand;
 pub use jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand};

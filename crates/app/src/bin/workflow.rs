@@ -6,13 +6,13 @@ use clap::Parser;
 use prompt::{terminal_resume, terminal_suspend};
 use toolkit::{logger, register_spinner_handlers, LoggerConfig};
 
-#[cfg(feature = "develop")]
-use app::cli::RollbackCommand;
 use app::cli::{
     AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
     IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
     StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
 };
+#[cfg(feature = "develop")]
+use app::cli::{CommitSubcommand, RollbackCommand};
 use app::commands;
 use app::registry::{get_global_config_repository, get_path_service};
 
@@ -262,8 +262,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         #[cfg(feature = "develop")]
         Command::Commit(commit_cmd) => {
-            if let Some(message) = commit_cmd.message {
-                let cmd = commands::commit::CommitCreateCommand::new(message, commit_cmd.all);
+            if let Some(sub) = &commit_cmd.subcommand {
+                match sub {
+                    CommitSubcommand::CommitsToMerge {
+                        source_branch,
+                        target_branch,
+                    } => {
+                        let cmd = commands::commit::CommitsToMergeCommand::new(
+                            source_branch.clone(),
+                            target_branch.clone(),
+                        );
+                        cmd.run()?;
+                    }
+                    CommitSubcommand::CommitChangedFiles { ref_or_sha } => {
+                        let cmd =
+                            commands::commit::CommitChangedFilesCommand::new(ref_or_sha.clone());
+                        cmd.run()?;
+                    }
+                    CommitSubcommand::CommitDiff { ref_or_sha } => {
+                        let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
+                        cmd.run()?;
+                    }
+                }
+            } else if let Some(message) = &commit_cmd.message {
+                let cmd =
+                    commands::commit::CommitCreateCommand::new(message.clone(), commit_cmd.all);
                 cmd.run()?;
             } else {
                 eprintln!("Error: commit message is required. Use -m/--message.");

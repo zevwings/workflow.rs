@@ -40,6 +40,16 @@ pub trait MergeService: Send + Sync {
 
     /// 获取合并基础
     fn merge_base(&self, branch1: &str, branch2: &str) -> Result<String, GitError>;
+
+    /// 获取将源分支合并到目标分支时会引入的 commit 列表
+    ///
+    /// 即「源分支上有而目标分支上没有」的 commit（从源分支尖端到两分支 merge base 之间）。
+    /// 例如：`commits_to_merge("feature/path", "master")` 返回将 feature/path 合并到 master 时会带入的 commit SHA 列表。
+    fn commits_to_merge(
+        &self,
+        source_branch: &str,
+        target_branch: &str,
+    ) -> Result<Vec<String>, GitError>;
 }
 
 /// Merge 服务实现
@@ -325,5 +335,36 @@ impl MergeService for MergeServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(merge_base_oid.to_string())
+    }
+
+    fn commits_to_merge(
+        &self,
+        source_branch: &str,
+        target_branch: &str,
+    ) -> Result<Vec<String>, GitError> {
+        let repo = self.ctx.repository();
+
+        let source_commit = repo
+            .revparse_single(source_branch)
+            .map_err(|_| GitError::BranchNotFound(source_branch.to_string()))?
+            .peel_to_commit()
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        let target_commit = repo
+            .revparse_single(target_branch)
+            .map_err(|_| GitError::BranchNotFound(target_branch.to_string()))?
+            .peel_to_commit()
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        let mut revwalk = repo.revwalk().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        revwalk
+            .push(source_commit.id())
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        revwalk
+            .hide(target_commit.id())
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        let commits: Vec<String> = revwalk.flatten().map(|oid| oid.to_string()).collect();
+        Ok(commits)
     }
 }

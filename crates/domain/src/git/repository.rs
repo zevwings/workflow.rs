@@ -3,8 +3,8 @@
 //! 提供 Git 仓库的完整操作接口定义。
 
 use crate::git::entity::{
-    BlameLineInfo, CommitInfo, MergeStrategy, RepoInfo, StashApplyResult, StashEntry,
-    StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
+    BlameLineInfo, CommitFileChange, CommitInfo, MergeStrategy, RepoInfo, StashApplyResult,
+    StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
     WorkingTreeStatus,
 };
 use crate::git::error::GitError;
@@ -149,6 +149,17 @@ pub trait GitRepository: Send + Sync {
     /// - 相对引用: `"HEAD~1"`, `"main^"`
     fn get_commit_info(&self, ref_or_sha: &str) -> Result<CommitInfo, GitError>;
 
+    /// 获取指定 commit 变更的文件列表
+    ///
+    /// 与 `get_commit_info` 相同的 ref 格式。根 commit 或无变更时返回空列表；合并 commit 与第一父提交做 diff。
+    fn get_commit_changed_files(&self, ref_or_sha: &str)
+        -> Result<Vec<CommitFileChange>, GitError>;
+
+    /// 获取指定 commit 的 diff 内容（patch 字符串）
+    ///
+    /// 与 `get_commit_info` 相同的 ref 格式。根 commit 返回 `None`；有父提交时返回相对第一父的 patch。
+    fn get_commit_diff(&self, ref_or_sha: &str) -> Result<Option<String>, GitError>;
+
     /// 获取工作树状态
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError>;
 
@@ -175,6 +186,15 @@ pub trait GitRepository: Send + Sync {
 
     /// 获取两个分支的共同祖先（merge base）
     fn merge_base(&self, branch1: &str, branch2: &str) -> Result<String, GitError>;
+
+    /// 获取将源分支合并到目标分支时会引入的 commit 列表
+    ///
+    /// 即源分支上有而目标分支上没有的 commit（从源分支尖端到两分支 merge base 之间）。
+    fn commits_to_merge(
+        &self,
+        source_branch: &str,
+        target_branch: &str,
+    ) -> Result<Vec<String>, GitError>;
 
     // ========== Rebase 操作 ==========
 

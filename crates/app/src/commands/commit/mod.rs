@@ -1,6 +1,19 @@
 //! 提交操作命令
 
-pub mod command;
+#[cfg(feature = "develop")]
+pub mod commit_changed_files;
+#[cfg(feature = "develop")]
+pub mod commit_diff;
+#[cfg(feature = "develop")]
+pub mod commits_to_merge;
+#[cfg(feature = "develop")]
+pub mod create;
 
-// 重新导出常用类型
-pub use command::CommitCreateCommand;
+#[cfg(feature = "develop")]
+pub use commit_changed_files::CommitChangedFilesCommand;
+#[cfg(feature = "develop")]
+pub use commit_diff::CommitDiffCommand;
+#[cfg(feature = "develop")]
+pub use commits_to_merge::CommitsToMergeCommand;
+#[cfg(feature = "develop")]
+pub use create::CommitCreateCommand;

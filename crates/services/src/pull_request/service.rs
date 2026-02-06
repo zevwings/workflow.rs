@@ -340,6 +340,17 @@ mod tests {
             unimplemented!("test-only")
         }
 
+        fn get_commit_changed_files(
+            &self,
+            _ref_or_sha: &str,
+        ) -> Result<Vec<domain::CommitFileChange>, GitError> {
+            unimplemented!("test-only")
+        }
+
+        fn get_commit_diff(&self, _ref_or_sha: &str) -> Result<Option<String>, GitError> {
+            unimplemented!("test-only")
+        }
+
         fn get_working_tree_status(&self) -> Result<domain::WorkingTreeStatus, GitError> {
             unimplemented!("test-only")
         }
@@ -365,6 +376,14 @@ mod tests {
         }
 
         fn merge_base(&self, _branch1: &str, _branch2: &str) -> Result<String, GitError> {
+            unimplemented!("test-only")
+        }
+
+        fn commits_to_merge(
+            &self,
+            _source_branch: &str,
+            _target_branch: &str,
+        ) -> Result<Vec<String>, GitError> {
             unimplemented!("test-only")
         }
 
@@ -1811,6 +1830,17 @@ mod tests {
                 unimplemented!("test-only")
             }
 
+            fn get_commit_changed_files(
+                &self,
+                _ref_or_sha: &str,
+            ) -> Result<Vec<domain::CommitFileChange>, GitError> {
+                unimplemented!("test-only")
+            }
+
+            fn get_commit_diff(&self, _ref_or_sha: &str) -> Result<Option<String>, GitError> {
+                unimplemented!("test-only")
+            }
+
             fn get_working_tree_status(&self) -> Result<domain::WorkingTreeStatus, GitError> {
                 unimplemented!("test-only")
             }
@@ -1840,6 +1870,14 @@ mod tests {
             }
 
             fn merge_base(&self, _branch1: &str, _branch2: &str) -> Result<String, GitError> {
+                unimplemented!("test-only")
+            }
+
+            fn commits_to_merge(
+                &self,
+                _source_branch: &str,
+                _target_branch: &str,
+            ) -> Result<Vec<String>, GitError> {
                 unimplemented!("test-only")
             }
 
@@ -2044,6 +2082,17 @@ mod tests {
                 unimplemented!("test-only")
             }
 
+            fn get_commit_changed_files(
+                &self,
+                _ref_or_sha: &str,
+            ) -> Result<Vec<domain::CommitFileChange>, GitError> {
+                unimplemented!("test-only")
+            }
+
+            fn get_commit_diff(&self, _ref_or_sha: &str) -> Result<Option<String>, GitError> {
+                unimplemented!("test-only")
+            }
+
             fn get_working_tree_status(&self) -> Result<domain::WorkingTreeStatus, GitError> {
                 unimplemented!("test-only")
             }
@@ -2073,6 +2122,14 @@ mod tests {
             }
 
             fn merge_base(&self, _branch1: &str, _branch2: &str) -> Result<String, GitError> {
+                unimplemented!("test-only")
+            }
+
+            fn commits_to_merge(
+                &self,
+                _source_branch: &str,
+                _target_branch: &str,
+            ) -> Result<Vec<String>, GitError> {
                 unimplemented!("test-only")
             }
 
