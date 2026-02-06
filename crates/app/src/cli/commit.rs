@@ -29,18 +29,21 @@ pub struct CommitCommand {
 #[derive(Subcommand)]
 pub enum CommitSubcommand {
     /// 列出将源分支合并到目标分支时会引入的 commit SHA 列表
-    CommitsToMerge {
+    #[command(name = "to-merge")]
+    CommitToMerge {
         #[arg(value_name = "SOURCE")]
         source_branch: String,
         #[arg(value_name = "TARGET")]
         target_branch: String,
     },
     /// 获取指定 commit 变更的文件列表
-    CommitChangedFiles {
+    #[command(name = "files")]
+    CommitFiles {
         #[arg(value_name = "REF")]
         ref_or_sha: String,
     },
     /// 获取指定 commit 的 diff 内容（patch）
+    #[command(name = "diff")]
     CommitDiff {
         #[arg(value_name = "REF")]
         ref_or_sha: String,

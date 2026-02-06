@@ -264,19 +264,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Commit(commit_cmd) => {
             if let Some(sub) = &commit_cmd.subcommand {
                 match sub {
-                    CommitSubcommand::CommitsToMerge {
+                    CommitSubcommand::CommitToMerge {
                         source_branch,
                         target_branch,
                     } => {
-                        let cmd = commands::commit::CommitsToMergeCommand::new(
+                        let cmd = commands::commit::CommitToMergeCommand::new(
                             source_branch.clone(),
                             target_branch.clone(),
                         );
                         cmd.run()?;
                     }
-                    CommitSubcommand::CommitChangedFiles { ref_or_sha } => {
-                        let cmd =
-                            commands::commit::CommitChangedFilesCommand::new(ref_or_sha.clone());
+                    CommitSubcommand::CommitFiles { ref_or_sha } => {
+                        let cmd = commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
                         cmd.run()?;
                     }
                     CommitSubcommand::CommitDiff { ref_or_sha } => {

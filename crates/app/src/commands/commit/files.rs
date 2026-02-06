@@ -1,4 +1,4 @@
-//! workflow commit commit-changed-files：测试 GitRepository::get_commit_changed_files
+//! workflow commit files：测试 GitRepository::get_commit_changed_files
 
 use domain::git::entity::CommitChangeType;
 use prompt::info;
@@ -6,11 +6,11 @@ use prompt::info;
 use crate::registry::get_git_repository;
 
 /// 获取指定 commit 变更的文件列表
-pub struct CommitChangedFilesCommand {
+pub struct CommitFilesCommand {
     ref_or_sha: String,
 }
 
-impl CommitChangedFilesCommand {
+impl CommitFilesCommand {
     pub fn new(ref_or_sha: String) -> Self {
         Self { ref_or_sha }
     }
