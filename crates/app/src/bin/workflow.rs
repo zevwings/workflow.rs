@@ -30,11 +30,14 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Github(_) => Some("github"),
         Command::Jira(_) => Some("jira"),
         Command::Branch(_) => Some("branch"),
+        #[cfg(feature = "develop")]
         Command::Commit(_) => Some("commit"),
         Command::Stash(_) => Some("stash"),
         Command::Tag(_) => Some("tag"),
         Command::Pr(_) => Some("pr"),
+        #[cfg(feature = "develop")]
         Command::Push => Some("push"),
+        #[cfg(feature = "develop")]
         Command::Pull => Some("pull"),
         Command::Completion(_) => Some("completion"),
         Command::Alias(_) => Some("alias"),
@@ -181,6 +184,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     commands::jira::JiraCleanCommand::new(args.jira_id.into_option(), args.all);
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
             JiraCommand::Status(args) => {
                 let cmd = commands::jira::JiraStatusCommand::new(args.jira_id);
                 cmd.run()?;
@@ -219,6 +223,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let cmd = commands::branch::clean::BranchCleanCommand::new(dry_run.is_dry_run());
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
             BranchSubcommand::InferSource => {
                 let cmd = commands::branch::infer_source::BranchInferSourceCommand::new();
                 cmd.run()?;
@@ -255,6 +260,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
         },
+        #[cfg(feature = "develop")]
         Command::Commit(commit_cmd) => {
             if let Some(message) = commit_cmd.message {
                 let cmd = commands::commit::CommitCreateCommand::new(message, commit_cmd.all);
@@ -265,10 +271,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 std::process::exit(1);
             }
         }
+        #[cfg(feature = "develop")]
         Command::Push => {
             let cmd = commands::sync::push::PushCommand::new();
             cmd.run()?;
         }
+        #[cfg(feature = "develop")]
         Command::Pull => {
             let cmd = commands::sync::pull::PullCommand::new();
             cmd.run()?;

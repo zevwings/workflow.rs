@@ -6,6 +6,7 @@
 pub mod alias;
 pub mod branch;
 pub mod check;
+#[cfg(feature = "develop")]
 pub mod commit;
 pub mod completion;
 pub mod github;
@@ -19,6 +20,7 @@ pub mod repo;
 pub mod rollback;
 pub mod setup;
 pub mod stash;
+#[cfg(feature = "develop")]
 pub mod sync;
 pub mod tag;
 pub mod uninstall;

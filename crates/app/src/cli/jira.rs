@@ -20,6 +20,7 @@ pub enum JiraCommand {
     /// 清理 Jira 附件目录
     Clean(CleanArgs),
     /// 设置 Jira 状态配置
+    #[cfg(feature = "develop")]
     Status(JiraIdArg),
     /// 过渡 Jira 状态
     Transition(JiraIdArg),

@@ -47,6 +47,7 @@ pub enum BranchSubcommand {
     /// 推断当前分支的源分支
     ///
     /// Infer the source branch of the current branch (from reflog or merge base).
+    #[cfg(feature = "develop")]
     InferSource,
     /// 管理分支忽略列表
     ///

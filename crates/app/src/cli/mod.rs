@@ -6,6 +6,7 @@
 mod alias;
 mod args;
 mod branch;
+#[cfg(feature = "develop")]
 mod commit;
 mod completion;
 mod github;
@@ -24,6 +25,7 @@ mod tag;
 pub use alias::AliasCommand;
 pub use args::{DryRunArgs, ForceArgs, JiraIdArg};
 pub use branch::{BranchSubcommand, IgnoreSubcommand};
+#[cfg(feature = "develop")]
 pub use commit::CommitCommand;
 pub use completion::CompletionCommand;
 pub use github::GithubCommand;

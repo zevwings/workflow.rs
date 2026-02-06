@@ -1,8 +1,6 @@
 use domain::jira::validate_jira_ticket_format;
-use domain::{extract_jira_project, JiraRepository, JiraStatusConfig, JiraWorkHistoryRepository};
+use domain::{extract_jira_project, JiraRepository, JiraStatusConfig};
 use prompt::{info, input, select, spinner, success};
-
-use crate::registry;
 
 /// 交互式获取 JIRA ID（必填）
 ///
@@ -194,76 +192,6 @@ fn configure_jira_status_interactive(
     })
 }
 
-/// PR 创建后更新 Jira ticket
-///
-/// 如果有 Jira ticket 和状态配置，更新 ticket：
-/// - 更新状态到 "PR 创建" 状态
-/// - 添加评论（PR URL）
-/// - 写入工作历史记录
-///
-/// # 参数
-///
-/// * `jira_repo` - Jira 仓储
-/// * `work_history_repo` - 工作历史记录仓储
-/// * `jira_ticket` - 可选的 Jira ticket ID
-/// * `created_status` - 可选的 PR 创建状态
-/// * `pr_id` - PR ID
-/// * `pr_url` - PR URL
-/// * `repository_url` - 仓库 URL
-/// * `branch_name` - 分支名称
-pub fn update_jira_after_pr_created(
-    jira_repo: &dyn JiraRepository,
-    work_history_repo: &dyn JiraWorkHistoryRepository,
-    jira_ticket: &Option<String>,
-    created_status: &Option<String>,
-    pr_id: &str,
-    pr_url: &str,
-    repository_url: &str,
-    branch_name: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let Some(ref ticket) = jira_ticket else {
-        return Ok(());
-    };
-
-    let Some(ref status) = created_status else {
-        return Ok(());
-    };
-
-    // 更新 Jira ticket
-    spinner!("Updating Jira ticket {}...", ticket).with(
-        || -> Result<(), Box<dyn std::error::Error>> {
-            // 更新状态
-            jira_repo
-                .update_issue_status(ticket, status)
-                .map_err(|e| format!("Failed to update issue status: {}", e))?;
-
-            // 添加评论（PR URL）
-            jira_repo
-                .add_comment(ticket, pr_url)
-                .map_err(|e| format!("Failed to add comment: {}", e))?;
-
-            Ok(())
-        },
-    )?;
-
-    success!("Updated Jira ticket {} to status: {}", ticket, status);
-
-    // 写入工作历史记录
-    work_history_repo
-        .write_work_history(
-            ticket,
-            pr_id,
-            Some(pr_url),
-            repository_url,
-            Some(branch_name),
-        )
-        .map_err(|e| format!("Failed to write work history: {}", e))?;
-
-    info!("Work history recorded for PR #{}", pr_id);
-
-    Ok(())
-}
-
 /// 从 PR URL 提取 PR ID
 ///
 /// 支持 GitHub PR URL 格式：`https://github.com/owner/repo/pull/123`
@@ -284,83 +212,4 @@ pub fn extract_pr_id_from_url(pr_url: &str) -> Option<String> {
     }
 
     None
-}
-
-/// PR 合并后更新 Jira ticket
-///
-/// 尝试从工作历史或 PR 标题获取关联的 Jira ticket，更新状态到"已合并"，
-/// 并清理工作历史记录。
-///
-/// # 参数
-///
-/// * `jira_repo` - Jira 仓储
-/// * `work_history_repo` - 工作历史记录仓储
-/// * `pr_id` - PR ID
-/// * `pr_title` - PR 标题（用于提取 Jira ticket）
-/// * `repository_url` - 仓库 URL（可选）
-pub fn update_jira_after_pr_merged(
-    pr_id: &str,
-    pr_title: Option<&str>,
-    repository_url: Option<&str>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use domain::extract_jira_ticket_id;
-    use prompt::warning;
-
-    let jira_repo = registry::get_jira_repository();
-    let work_history_repo = registry::get_jira_work_history_repository();
-
-    // 如果没有仓库 URL，跳过工作历史相关操作
-    let repo_url = repository_url.unwrap_or("");
-
-    // 1. 尝试从工作历史读取 Jira ticket
-    let mut jira_ticket = if !repo_url.is_empty() {
-        work_history_repo.read_work_history(pr_id, repo_url).ok().flatten()
-    } else {
-        None
-    };
-
-    // 2. 如果工作历史中没有，尝试从 PR 标题提取
-    if jira_ticket.is_none() {
-        if let Some(title) = pr_title {
-            jira_ticket = extract_jira_ticket_id(title);
-        }
-    }
-
-    // 3. 如果有 Jira ticket，更新状态
-    if let Some(ref ticket) = jira_ticket {
-        // 读取合并时的状态配置
-        if let Ok(Some(status)) = jira_repo.read_pull_request_merged_status(ticket) {
-            spinner!("Updating Jira ticket {} to status: {}...", ticket, status)
-                .with(|| jira_repo.update_issue_status(ticket, &status))
-                .map_err(|e| format!("Failed to update Jira status: {}", e))?;
-
-            success!("Jira ticket {} updated to: {}", ticket, status);
-        } else {
-            warning!(
-                "No Jira merged status configuration found for ticket: {}",
-                ticket
-            );
-        }
-    } else {
-        info!("No Jira ticket associated with this PR");
-    }
-
-    // 4. 删除工作历史记录中的 PR 条目（仅当有仓库 URL 时）
-    if !repo_url.is_empty() {
-        let delete_result = work_history_repo
-            .delete_work_history_entry(pr_id, repo_url)
-            .map_err(|e| format!("Failed to delete work history entry: {}", e))?;
-
-        // 显示删除消息
-        for message in &delete_result.messages {
-            info!("{}", message);
-        }
-
-        // 显示警告信息
-        for warning_msg in &delete_result.warnings {
-            warning!("{}", warning_msg);
-        }
-    }
-
-    Ok(())
 }

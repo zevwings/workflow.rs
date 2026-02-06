@@ -6,6 +6,7 @@ use clap::{Parser, Subcommand};
 
 use super::alias::AliasCommand;
 use super::branch::BranchSubcommand;
+#[cfg(feature = "develop")]
 use super::commit::CommitCommand;
 use super::completion::CompletionCommand;
 use super::github::GithubCommand;
@@ -66,6 +67,7 @@ pub enum Command {
     #[command(subcommand)]
     Branch(BranchSubcommand),
     /// 提交管理命令
+    #[cfg(feature = "develop")]
     Commit(CommitCommand),
     /// Stash 管理命令
     #[command(subcommand)]
@@ -77,8 +79,10 @@ pub enum Command {
     #[command(subcommand)]
     Pr(PrSubcommand),
     /// 推送当前分支到远程
+    #[cfg(feature = "develop")]
     Push,
     /// 从远程拉取当前分支
+    #[cfg(feature = "develop")]
     Pull,
     /// Shell Completion 管理命令
     #[command(subcommand)]

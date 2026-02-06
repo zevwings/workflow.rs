@@ -11,6 +11,6 @@
 //! - 支持 Unix 和 Windows 平台
 //! - 自动使用 sudo（Unix）处理权限问题
 
-mod cleanup;
+mod command;
 
-pub use cleanup::UninstallCommand;
+pub use command::UninstallCommand;

@@ -5,9 +5,7 @@ use crate::registry;
 use crate::workflows::utils::branch::{
     generate_branch_name_from_jira, generate_branch_name_from_template,
 };
-use crate::workflows::utils::jira::{
-    ensure_jira_status_config, get_jira_id_interactive_optional, update_jira_after_pr_created,
-};
+use crate::workflows::utils::jira::{ensure_jira_status_config, get_jira_id_interactive_optional};
 
 use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
 use crate::commands::pr::create::commit::commit_changes;
@@ -236,16 +234,11 @@ impl PullRequestCreateCommand {
             // 如果 PR 创建成功，更新 Jira ticket
             if let Some(pr_result) = pr_result {
                 if jira_id.is_some() && jira_created_status.is_some() {
-                    let jira_repo = registry::get_jira_repository();
-                    let work_history_repo = registry::get_jira_work_history_repository();
-
                     // 获取仓库 URL
                     let repo_info = branch_repo.get_repo_info();
                     let repository_url = repo_info.origin_url.as_deref().unwrap_or("");
 
-                    update_jira_after_pr_created(
-                        jira_repo.as_ref(),
-                        work_history_repo.as_ref(),
+                    self.update_jira_after_pr_created(
                         jira_id,
                         jira_created_status,
                         &pr_result.pr_id,
@@ -256,6 +249,78 @@ impl PullRequestCreateCommand {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    /// PR 创建后更新 Jira ticket
+    ///
+    /// 如果有 Jira ticket 和状态配置，更新 ticket：
+    /// - 更新状态到 "PR 创建" 状态
+    /// - 添加评论（PR URL）
+    /// - 写入工作历史记录
+    ///
+    /// # 参数
+    ///
+    /// * `jira_repo` - Jira 仓储
+    /// * `work_history_repo` - 工作历史记录仓储
+    /// * `jira_ticket` - 可选的 Jira ticket ID
+    /// * `created_status` - 可选的 PR 创建状态
+    /// * `pr_id` - PR ID
+    /// * `pr_url` - PR URL
+    /// * `repository_url` - 仓库 URL
+    /// * `branch_name` - 分支名称
+    pub fn update_jira_after_pr_created(
+        &self,
+        jira_ticket: &Option<String>,
+        created_status: &Option<String>,
+        pr_id: &str,
+        pr_url: &str,
+        repository_url: &str,
+        branch_name: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let Some(ref ticket) = jira_ticket else {
+            return Ok(());
+        };
+
+        let Some(ref status) = created_status else {
+            return Ok(());
+        };
+
+        let jira_repo = registry::get_jira_repository();
+        let work_history_repo = registry::get_jira_work_history_repository();
+
+        // 更新 Jira ticket
+        spinner!("Updating Jira ticket {}...", ticket).with(
+            || -> Result<(), Box<dyn std::error::Error>> {
+                // 更新状态
+                jira_repo
+                    .update_issue_status(ticket, status)
+                    .map_err(|e| format!("Failed to update issue status: {}", e))?;
+
+                // 添加评论（PR URL）
+                jira_repo
+                    .add_comment(ticket, pr_url)
+                    .map_err(|e| format!("Failed to add comment: {}", e))?;
+
+                Ok(())
+            },
+        )?;
+
+        success!("Updated Jira ticket {} to status: {}", ticket, status);
+
+        // 写入工作历史记录
+        work_history_repo
+            .write_work_history(
+                ticket,
+                pr_id,
+                Some(pr_url),
+                repository_url,
+                Some(branch_name),
+            )
+            .map_err(|e| format!("Failed to write work history: {}", e))?;
+
+        info!("Work history recorded for PR #{}", pr_id);
 
         Ok(())
     }

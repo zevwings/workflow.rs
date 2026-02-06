@@ -68,6 +68,9 @@ jobs:
 
       - name: ✅ Verify compilation
         run: cargo check
+
+      - name: ✅ Verify release profile (app without develop feature)
+        run: cargo check -p app --no-default-features
   #
   # 运行测试
   tests:
@@ -447,10 +450,10 @@ jobs:
             python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
             pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
           fi
-          # 构建项目
+          # 构建项目（--no-default-features 排除 develop 以减小发布体积）
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
             # Linux x86_64 使用详细输出以便调试
-            if cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install -vv 2>&1 | tee build.log; then
+            if cargo build --release --no-default-features --target ${{ matrix.target }} -p app --bin workflow --bin install -vv 2>&1 | tee build.log; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false
@@ -463,7 +466,7 @@ jobs:
             # 确保环境变量已设置
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            if cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install; then
+            if cargo build --release --no-default-features --target ${{ matrix.target }} -p app --bin workflow --bin install; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false
@@ -471,7 +474,7 @@ jobs:
             fi
           else
             # 其他目标（macOS, Windows, musl）
-            if cargo build --release --target ${{ matrix.target }} -p app --bin workflow --bin install; then
+            if cargo build --release --no-default-features --target ${{ matrix.target }} -p app --bin workflow --bin install; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false

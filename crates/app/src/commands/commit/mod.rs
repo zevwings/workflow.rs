@@ -1,6 +1,6 @@
 //! 提交操作命令
 
-pub mod create;
+pub mod command;
 
 // 重新导出常用类型
-pub use create::CommitCreateCommand;
+pub use command::CommitCreateCommand;
