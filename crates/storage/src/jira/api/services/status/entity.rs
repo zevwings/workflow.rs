@@ -4,19 +4,6 @@ use domain::ProjectStatusConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Jira 用户条目（TOML）
-///
-/// 用于存储单个用户的 Jira 信息。
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JiraUserEntry {
-    /// 用户邮箱（必需，用于查找）
-    pub email: String,
-    /// 账户 ID
-    pub account_id: String,
-    /// 显示名称
-    pub display_name: String,
-}
-
 /// 合并后的 Jira 配置
 ///
 /// 将 `jira-users.toml` 和 `jira-status.toml` 合并为 `jira.toml`。
@@ -38,12 +25,8 @@ pub struct JiraUserEntry {
 /// ```
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct JiraConfig {
-    /// 用户列表
-    #[serde(default)]
-    pub users: Vec<JiraUserEntry>,
-
     /// 项目状态配置映射
     /// 使用 `[status.PROJECT_KEY]` 格式存储每个项目的状态配置
-    #[serde(default, rename = "status")]
+    #[serde(default, rename = "status", skip_serializing_if = "HashMap::is_empty")]
     pub status: HashMap<String, ProjectStatusConfig>,
 }

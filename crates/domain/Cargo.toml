@@ -13,3 +13,6 @@ toml.workspace = true
 thiserror.workspace = true
 chrono.workspace = true
 regex.workspace = true
+
+# 路径常量（仅用于 paths::constants）
+toolkit = { path = "../toolkit" }
