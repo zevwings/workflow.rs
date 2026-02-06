@@ -63,9 +63,10 @@ pub use branch::{
     BranchType, SourceBranchInfo, SyncStrategy,
 };
 pub use completion::{
-    get_all_completion_filenames, get_completion_filename, get_shell_source_path,
-    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
-    ShellCompletionStatus,
+    get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
+    get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,
+    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
+    CompletionService, ShellCompletionStatus,
 };
 pub use path::{Dir, PathError, PathService};
 pub use path::{

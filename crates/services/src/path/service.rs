@@ -3,11 +3,11 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::{fs, path::Path};
 
-use super::{
+use domain::{Dir, PathError, PathService};
+use domain::{
     COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR, JIRA_CONFIG_FILE, MAIN_DIR,
     PROJECT_CONFIG_FILE, USER_CONFIG_FILE, WORKFLOW_CONFIG_DIR, WORKFLOW_CONFIG_FILE,
 };
-use domain::{Dir, PathError, PathService};
 
 pub struct PathServiceImpl {
     is_icloud_available: bool,
@@ -264,20 +264,9 @@ impl PathService for PathServiceImpl {
         Ok(cache_dir)
     }
 
-    fn get_completion_shell_dir(&self) -> String {
-        format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_DIR)
-    }
-
-    fn get_completion_cache_shell_dir(&self) -> String {
-        format!("$HOME/{}/{}", MAIN_DIR, COMPLETION_CACHE_DIR)
-    }
-
-    fn get_completion_source_shell_path(&self) -> String {
-        format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE)
-    }
-
-    fn get_completion_shell_path(&self, filename: &str) -> String {
-        format!("{}/{}", self.get_completion_shell_dir(), filename)
+    fn get_completion_config_filepath(&self) -> Result<PathBuf, PathError> {
+        let config_file = self.try_local_base_dir()?.join(COMPLETIONS_FILE);
+        Ok(config_file)
     }
 
     fn get_logs_dir(&self) -> Result<PathBuf, PathError> {

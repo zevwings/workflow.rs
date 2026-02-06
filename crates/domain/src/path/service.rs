@@ -71,17 +71,8 @@ pub trait PathService: Send + Sync {
     /// 获取补全缓存目录（强制本地，如 `~/.workflow/.completion_cache/`），返回 [`PathBuf`] 供程序内使用。
     fn get_completion_cache_dir(&self) -> Result<PathBuf, PathError>;
 
-    /// 获取补全脚本目录的 shell 路径字符串（如 `$HOME/.workflow/completions`），用于写入 shell 配置或脚本。
-    fn get_completion_shell_dir(&self) -> String;
-
-    /// 获取补全缓存目录的 shell 路径字符串（如 `$HOME/.workflow/.completion_cache`），用于写入 shell 配置或脚本。
-    fn get_completion_cache_shell_dir(&self) -> String;
-
-    /// 获取补全 source 配置文件的 shell 路径（如 `$HOME/.workflow/.completions`），供用户 `source` 加载补全。
-    fn get_completion_source_shell_path(&self) -> String;
-
-    /// 获取指定补全文件的 shell 路径（如 `$HOME/.workflow/completions/<filename>`）。
-    fn get_completion_shell_path(&self, filename: &str) -> String;
+    /// 获取补全配置文件路径（如 `~/.workflow/completions/.completions`），返回 [`PathBuf`] 供程序内使用。
+    fn get_completion_config_filepath(&self) -> Result<PathBuf, PathError>;
 
     // ----------- logs 相关路径（均使用本地目录，不随 iCloud 同步） -----------
 

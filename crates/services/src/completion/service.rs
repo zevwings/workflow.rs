@@ -5,10 +5,12 @@
 use std::path::PathBuf;
 use std::{fs, sync::Arc};
 
+use domain::get_completion_source_shell_path;
 use domain::{
     errors::ServiceError, get_all_completion_filenames, get_completion_filename,
-    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
-    CompletionService, PathService, ShellCompletionStatus, COMPLETIONS_FILE,
+    get_completion_shell_dir, get_completion_shell_path, get_shell_source_path,
+    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
+    PathService, ShellCompletionStatus,
 };
 use toolkit::{
     add_source, config_file_path, detect_shell, directory, file, has_source, reload_hint,
@@ -27,14 +29,14 @@ impl CompletionServiceImpl {
     }
 
     /// 创建 workflow completion 配置文件（用于 zsh/bash）
+    /// 使用本地路径（~/.workflow/.completions），不随 iCloud 同步。
     fn create_completion_config_file(&self, shell_str: &str) -> Result<PathBuf, ServiceError> {
-        let workflow_dir = self
+        let config_file = self
             .path_service
-            .get_workflow_config_dir()
+            .get_completion_config_filepath()
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let config_file = workflow_dir.join(COMPLETIONS_FILE);
 
-        let completions_path = self.path_service.get_completion_shell_dir();
+        let completions_path = get_completion_shell_dir();
         let config_content = match shell_str.to_lowercase().as_str() {
             "zsh" => {
                 format!(
@@ -82,7 +84,7 @@ impl CompletionServiceImpl {
         match shell_str.to_lowercase().as_str() {
             "zsh" | "bash" => {
                 // 添加 source 语句到 shell 配置文件
-                let source_path = self.path_service.get_completion_source_shell_path();
+                let source_path = get_completion_source_shell_path();
                 let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))
                     .map_err(|e| ServiceError::Other(e.to_string()))?;
 
@@ -91,7 +93,7 @@ impl CompletionServiceImpl {
             "fish" | "powershell" | "pwsh" | "elvish" => {
                 // 直接在各自配置文件中添加 source 语句
                 let filename = get_completion_filename(shell_str);
-                let source_path = self.path_service.get_completion_shell_path(&filename);
+                let source_path = get_completion_shell_path(&filename);
 
                 let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))
                     .map_err(|e| ServiceError::Other(e.to_string()))?;
@@ -271,22 +273,22 @@ impl CompletionService for CompletionServiceImpl {
         }
 
         // 3. 移除 completion 配置文件
-        let removed_config_file = if let Ok(wf_dir) = self.path_service.get_workflow_config_dir() {
-            let config_file = wf_dir.join(COMPLETIONS_FILE);
-            if config_file.exists() {
-                match fs::remove_file(&config_file) {
-                    Ok(_) => Some(config_file),
-                    Err(e) => {
-                        failures.push((config_file.display().to_string(), e.to_string()));
-                        None
+        let removed_config_file =
+            if let Ok(config_file) = self.path_service.get_completion_config_filepath() {
+                if config_file.exists() {
+                    match fs::remove_file(&config_file) {
+                        Ok(_) => Some(config_file),
+                        Err(e) => {
+                            failures.push((config_file.display().to_string(), e.to_string()));
+                            None
+                        }
                     }
+                } else {
+                    None
                 }
             } else {
                 None
-            }
-        } else {
-            None
-        };
+            };
 
         Ok(CompletionRemoveResult {
             removed_configs,
@@ -307,6 +309,7 @@ mod tests {
     use std::sync::Mutex;
 
     use crate::path::PathServiceImpl;
+    use domain::{get_completion_shell_dir, get_completion_shell_path};
     use once_cell::sync::Lazy;
     use tempfile::tempdir;
     use toolkit::shell::{config_file_path, shell_from_string};
@@ -376,7 +379,7 @@ mod tests {
             assert!(config_file.exists());
             let config_content = fs::read_to_string(&config_file).unwrap();
             assert!(config_content.contains("Workflow CLI completions"));
-            assert!(config_content.contains(&path_service.get_completion_shell_dir()));
+            assert!(config_content.contains(&get_completion_shell_dir()));
             assert!(result.config_added);
         });
     }
@@ -397,7 +400,7 @@ mod tests {
             let config_path = config_file_path(&shell).expect("config path");
             let config_content = fs::read_to_string(config_path).unwrap();
             let filename = get_completion_filename("fish");
-            let expected = path_service.get_completion_shell_path(&filename);
+            let expected = get_completion_shell_path(&filename);
             assert!(config_content.contains(&expected));
         });
     }
@@ -472,7 +475,7 @@ mod tests {
             let config_path = config_file_path(&shell).expect("config path");
             let config_content = fs::read_to_string(config_path).unwrap();
             let filename = get_completion_filename("powershell");
-            let expected = path_service.get_completion_shell_path(&filename);
+            let expected = get_completion_shell_path(&filename);
             assert!(config_content.contains(&expected));
         });
     }

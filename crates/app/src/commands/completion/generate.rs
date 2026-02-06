@@ -5,11 +5,12 @@
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use color_eyre::{eyre::WrapErr, Result};
+use domain::get_completion_cache_shell_dir;
 use prompt::{info, success};
 use toolkit::{detect_shell, shell_from_string, shell_to_string};
 
 use crate::cli::Cli;
-use crate::registry::{get_completion_service, get_path_service};
+use crate::registry::get_completion_service;
 
 /// Completion 生成命令
 pub struct CompletionGenerateCommand {
@@ -104,8 +105,7 @@ impl CompletionGenerateCommand {
 
     /// 生成 zsh 动态补全代码
     fn generate_zsh_dynamic_completion(&self) -> String {
-        let path_service = get_path_service();
-        let cache_dir = path_service.get_completion_cache_shell_dir();
+        let cache_dir = get_completion_cache_shell_dir();
         format!(
             r#"
 # Dynamic completion support
@@ -179,8 +179,7 @@ _workflow_complete_pr_ids() {{
 
     /// 生成 bash 动态补全代码
     fn generate_bash_dynamic_completion(&self) -> String {
-        let path_service = get_path_service();
-        let cache_dir = path_service.get_completion_cache_shell_dir();
+        let cache_dir = get_completion_cache_shell_dir();
         format!(
             r#"
 # Dynamic completion support for bash

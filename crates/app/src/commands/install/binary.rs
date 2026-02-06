@@ -14,6 +14,7 @@ use std::fs;
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use color_eyre::{eyre::eyre, eyre::ContextCompat, eyre::WrapErr, Result};
+use domain::get_completion_cache_shell_dir;
 use prompt::{br, info, print, success, warning};
 use toolkit::{detect_shell, directory, shell_to_string};
 
@@ -225,8 +226,7 @@ impl InstallCommand {
 
     /// 生成 zsh 动态补全代码
     fn generate_zsh_dynamic_completion() -> String {
-        let path_service = get_path_service();
-        let cache_dir = path_service.get_completion_cache_shell_dir();
+        let cache_dir = get_completion_cache_shell_dir();
         format!(
             r#"
 # Dynamic completion support
@@ -275,8 +275,7 @@ _workflow_complete_branches() {{
 
     /// 生成 bash 动态补全代码
     fn generate_bash_dynamic_completion() -> String {
-        let path_service = get_path_service();
-        let cache_dir = path_service.get_completion_cache_shell_dir();
+        let cache_dir = get_completion_cache_shell_dir();
         format!(
             r#"
 # Dynamic completion support for bash
