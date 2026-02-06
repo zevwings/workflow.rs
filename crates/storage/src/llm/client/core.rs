@@ -217,8 +217,24 @@ impl LLMClient for LLMClientImpl {
         // 获取 provider 名称用于错误消息
         let provider = self.context.get_provider();
 
+        /// DEBUG 时单条 payload 最多打印的字符数，避免超大 diff 刷屏导致终端卡顿
+        const MAX_PAYLOAD_LOG_LEN: usize = 800;
+        let payload_str = payload.to_string();
         toolkit::log_debug!("LLM url: {}", url);
-        toolkit::log_debug!("LLM payload: {}", payload);
+        if payload_str.len() <= MAX_PAYLOAD_LOG_LEN {
+            toolkit::log_debug!("LLM payload: {}", payload_str);
+        } else {
+            let trunc_at = payload_str
+                .char_indices()
+                .nth(MAX_PAYLOAD_LOG_LEN)
+                .map(|(i, _)| i)
+                .unwrap_or(payload_str.len());
+            toolkit::log_debug!(
+                "LLM payload (truncated, {} chars total): {}...",
+                payload_str.len(),
+                &payload_str[..trunc_at]
+            );
+        }
         toolkit::log_debug!("LLM provider: {}", provider);
 
         // 发送请求

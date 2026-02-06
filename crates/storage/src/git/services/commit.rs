@@ -26,9 +26,6 @@ pub trait CommitService: Send + Sync {
     fn get_commit_changed_files(&self, ref_or_sha: &str)
         -> Result<Vec<CommitFileChange>, GitError>;
 
-    /// 获取指定 commit 的 diff 内容（patch 字符串）
-    fn get_commit_diff(&self, ref_or_sha: &str) -> Result<Option<String>, GitError>;
-
     /// 获取工作树状态
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError>;
 
@@ -127,41 +124,6 @@ impl CommitService for CommitServiceImpl {
             })
             .collect();
         Ok(files)
-    }
-
-    fn get_commit_diff(&self, ref_or_sha: &str) -> Result<Option<String>, GitError> {
-        let repo = self.ctx.repository();
-        let commit = repo
-            .revparse_single(ref_or_sha)
-            .map_err(|_| GitError::CommitNotFound(ref_or_sha.to_string()))?
-            .peel_to_commit()
-            .map_err(|_| GitError::CommitNotFound(ref_or_sha.to_string()))?;
-
-        let parent = match commit.parent(0) {
-            Ok(p) => p,
-            Err(_) => return Ok(None),
-        };
-        let parent_tree = parent.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
-        let commit_tree = commit.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
-
-        let diff = repo
-            .diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
-            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-
-        let mut patch = String::new();
-        diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
-            if let Ok(s) = std::str::from_utf8(line.content()) {
-                patch.push_str(s);
-            }
-            true
-        })
-        .map_err(|e| GitError::OperationFailed(e.to_string()))?;
-
-        if patch.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(patch))
-        }
     }
 
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError> {

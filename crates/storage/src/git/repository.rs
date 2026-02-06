@@ -117,7 +117,7 @@ impl GitRepository for GitRepositoryImpl {
     }
 
     fn get_commit_diff(&self, ref_or_sha: &str) -> Result<Option<String>, GitError> {
-        self.services.commit.get_commit_diff(ref_or_sha)
+        self.services.diff.get_commit_diff(ref_or_sha)
     }
 
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError> {
