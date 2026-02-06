@@ -3,12 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-// ============================================================================
-// 常量定义
-// ============================================================================
-
-/// Completion 配置文件名
-pub const COMPLETIONS_FILE: &str = ".completions";
+// 从 toolkit 统一导入路径常量
+pub use toolkit::paths::{COMPLETIONS_DIR, COMPLETIONS_FILE, WORKFLOW_DIR};
 
 // ============================================================================
 // 生成结果
@@ -109,13 +105,8 @@ pub fn get_all_completion_filenames() -> Vec<String> {
 /// 实际路径应使用 `toolkit::completion_source_shell_path()` 和
 /// `toolkit::completion_file_shell_path()` 获取。
 pub fn get_shell_source_path(shell: &str) -> String {
-    // 使用常量避免硬编码
-    const WORKFLOW_DIR: &str = ".workflow";
-    const COMPLETIONS_DIR: &str = "completions";
-    const COMPLETIONS_CONFIG: &str = ".completions";
-
     match shell.to_lowercase().as_str() {
-        "zsh" | "bash" => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_CONFIG),
+        "zsh" | "bash" => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_FILE),
         "fish" => format!(
             "$HOME/{}/{}/{}",
             WORKFLOW_DIR,
@@ -134,7 +125,7 @@ pub fn get_shell_source_path(shell: &str) -> String {
             COMPLETIONS_DIR,
             get_completion_filename("elvish")
         ),
-        _ => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_CONFIG),
+        _ => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_FILE),
     }
 }
 
