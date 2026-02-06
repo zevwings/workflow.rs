@@ -65,15 +65,14 @@ pub use download::default_download_base_dir;
 pub use config::{
     commands_config_path, config_dir, jira_config_path, llm_config_path, logs_dir,
     project_config_file, project_config_path, repo_dir, repo_workflow_dir, repository_config_path,
-    user_config_file, work_history_dir, workflow_config_path, workflow_dir,
+    user_config_file, work_history_dir, workflow_dir,
 };
 
 // ==================== 安装路径相关方法 ====================
 
 pub use install::{
-    binary_install_dir, binary_name, binary_paths, command_names, completion_cache_dir,
-    completion_cache_dir_shell_path, completion_dir, completion_dir_shell_path,
-    completion_file_shell_path, completion_source_shell_path,
+    completion_cache_dir, completion_cache_dir_shell_path, completion_dir,
+    completion_dir_shell_path, completion_file_shell_path, completion_source_shell_path,
 };
 
 // ==================== 信息查询 API ====================

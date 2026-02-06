@@ -6,9 +6,8 @@ use std::error::Error;
 
 use domain::{GlobalConfig, ServiceError};
 use prompt::{br, success};
-use toolkit::workflow_config_path;
 
-use crate::registry;
+use crate::registry::{get_global_config_repository, get_path_service};
 
 /// 工作流执行模式
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -28,7 +27,7 @@ pub struct WorkflowContext {
 impl WorkflowContext {
     /// 从默认路径加载配置，使用指定的模式
     pub fn load(mode: WorkflowMode) -> Result<Self, Box<dyn Error>> {
-        let config_service = registry::get_global_config_repository();
+        let config_service = get_global_config_repository();
         let settings =
             config_service.load().map_err(|e: ServiceError| Box::new(e) as Box<dyn Error>)?;
 
@@ -60,16 +59,19 @@ impl WorkflowContext {
 
     /// 保存配置到默认路径
     pub fn save(&self) -> Result<(), Box<dyn Error>> {
-        let config_service = registry::get_global_config_repository();
+        let config_service = get_global_config_repository();
         config_service
             .save(&self.settings)
             .map_err(|e| format!("Failed to save configuration: {}", e))?;
 
-        let config_path =
-            workflow_config_path().map_err(|e| format!("Failed to get config path: {}", e))?;
+        let path_service = get_path_service();
+        let workflow_config_filepath = path_service.get_workflow_config_filepath()?;
 
         br!();
-        success!("Configuration saved to: {}", config_path.display());
+        success!(
+            "Configuration saved to: {}",
+            workflow_config_filepath.display()
+        );
 
         Ok(())
     }

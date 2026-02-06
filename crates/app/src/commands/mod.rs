@@ -15,6 +15,8 @@ pub mod llm;
 pub mod log;
 pub mod pr;
 pub mod repo;
+#[cfg(feature = "develop")]
+pub mod rollback;
 pub mod setup;
 pub mod stash;
 pub mod sync;

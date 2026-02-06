@@ -11,9 +11,8 @@ mod error;
 mod helpers;
 mod reload;
 mod restore;
-mod types;
 
-pub use backup::create_backup;
+pub use backup::backup;
 pub use error::RollbackError;
 pub use helpers::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
@@ -21,4 +20,3 @@ pub use helpers::{
 };
 pub use reload::{reload_shell, ReloadError, ReloadResult};
 pub use restore::{cleanup_backup, rollback};
-pub use types::{BackupInfo, BackupResult, RollbackResult};

@@ -45,13 +45,12 @@ pub use logger::{LoggerConfig, LoggerError};
 
 // Paths 模块 - 导出路径相关函数
 pub use paths::{
-    binary_install_dir, binary_name, binary_paths, command_names, commands_config_path,
-    completion_cache_dir, completion_cache_dir_shell_path, completion_dir,
+    commands_config_path, completion_cache_dir, completion_cache_dir_shell_path, completion_dir,
     completion_dir_shell_path, completion_file_shell_path, completion_source_shell_path,
     config_dir, default_download_base_dir, expand, is_config_in_icloud, jira_config_path,
     llm_config_path, logs_dir, project_config_file, project_config_path, repo_dir,
     repo_workflow_dir, repository_config_path, storage_info, storage_location, user_config_file,
-    work_history_dir, workflow_config_path, workflow_dir, PathError,
+    work_history_dir, workflow_dir, PathError,
 };
 
 // Template 模块
@@ -75,9 +74,9 @@ pub use util::fs::{archive, directory, file};
 
 // Rollback 模块 - 导出回滚相关类型和函数
 pub use rollback::{
-    cleanup_backup, create_backup, get_all_completion_files, get_completion_filename,
-    get_completion_files_for_shell, reload_shell, rollback, BackupInfo, BackupResult,
-    CompletionHelperError, ReloadError, ReloadResult, RollbackError, RollbackResult,
+    backup, cleanup_backup, get_all_completion_files, get_completion_filename,
+    get_completion_files_for_shell, reload_shell, rollback, CompletionHelperError, ReloadError,
+    ReloadResult, RollbackError,
 };
 
 // Terminal 模块 - 导出终端协调相关类型和函数

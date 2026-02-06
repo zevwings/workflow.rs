@@ -15,6 +15,8 @@ mod log;
 mod main;
 mod pr;
 mod repo;
+#[cfg(feature = "develop")]
+mod rollback;
 mod stash;
 mod tag;
 
@@ -31,5 +33,7 @@ pub use log::LogCommand;
 pub use main::{Cli, Command, UninstallArgs, UpdateArgs};
 pub use pr::PrSubcommand;
 pub use repo::RepoCommand;
+#[cfg(feature = "develop")]
+pub use rollback::RollbackCommand;
 pub use stash::StashSubcommand;
 pub use tag::TagSubcommand;

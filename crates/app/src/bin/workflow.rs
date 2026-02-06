@@ -6,6 +6,8 @@ use clap::Parser;
 use prompt::{terminal_resume, terminal_suspend};
 use toolkit::{logger, logs_dir, register_spinner_handlers, LoggerConfig};
 
+#[cfg(feature = "develop")]
+use app::cli::RollbackCommand;
 use app::cli::{
     AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
     IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
@@ -36,6 +38,8 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Pull => Some("pull"),
         Command::Completion(_) => Some("completion"),
         Command::Alias(_) => Some("alias"),
+        #[cfg(feature = "develop")]
+        Command::Rollback(_) => Some("rollback"),
     }
 }
 
@@ -104,8 +108,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let cmd = commands::update::UpdateCommand::new(target_version, force, token);
             cmd.run()?;
         }
-        Command::Uninstall(UninstallArgs { force, keep_config }) => {
-            let cmd = commands::uninstall::UninstallCommand::new(force, keep_config);
+        Command::Uninstall(UninstallArgs { keep_config, .. }) => {
+            let cmd = commands::uninstall::UninstallCommand::new(keep_config);
             cmd.run()?;
         }
         Command::Repo(repo_cmd) => match repo_cmd {
@@ -342,8 +346,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             PrSubcommand::Merge { pr_id, force } => {
-                let cmd =
-                    commands::pr::PullRequestMergeCommand::new(pr_id.clone(), force.is_force());
+                let cmd = commands::pr::PullRequestMergeCommand::new(
+                    Some(pr_id.clone()),
+                    force.is_force(),
+                );
                 cmd.run()?;
             }
             PrSubcommand::Close { pr_id } => {
@@ -391,6 +397,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             AliasCommand::Remove { name } => {
                 let cmd = commands::alias::AliasRemoveCommand::new(name);
+                cmd.run()?;
+            }
+        },
+        #[cfg(feature = "develop")]
+        Command::Rollback(rollback_cmd) => match rollback_cmd {
+            RollbackCommand::Backup => {
+                let cmd = commands::rollback::BackupCommand::new();
+                cmd.run()?;
+            }
+            RollbackCommand::Restore { backup_dir } => {
+                let cmd = commands::rollback::RestoreCommand::new(backup_dir);
                 cmd.run()?;
             }
         },

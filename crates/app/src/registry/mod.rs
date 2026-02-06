@@ -91,11 +91,6 @@ pub fn get_verification_service() -> Arc<dyn domain::VerificationService> {
     get_service::<dyn domain::VerificationService>()
 }
 
-/// 获取 GitRepoRepository（仅 get_repo_info，供 GitHub 等使用）
-pub fn get_git_repo_repository() -> Arc<dyn domain::GitRepoRepository> {
-    get_service::<dyn domain::GitRepoRepository>()
-}
-
 /// 获取 GitRepository（完整 Git 操作）
 pub fn get_git_repository() -> Arc<dyn domain::GitRepository> {
     get_service::<dyn domain::GitRepository>()
@@ -129,4 +124,9 @@ pub fn get_pull_request_service() -> Arc<dyn domain::pr::service::PullRequestSer
 /// 获取 CompletionService
 pub fn get_completion_service() -> Arc<dyn domain::completion::service::CompletionService> {
     get_service::<dyn domain::completion::service::CompletionService>()
+}
+
+/// 获取 PathService
+pub fn get_path_service() -> Arc<dyn domain::path::service::PathService> {
+    get_service::<dyn domain::path::service::PathService>()
 }

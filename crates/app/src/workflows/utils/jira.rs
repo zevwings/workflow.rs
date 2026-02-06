@@ -2,6 +2,8 @@ use domain::jira::validate_jira_ticket_format;
 use domain::{extract_jira_project, JiraRepository, JiraStatusConfig, JiraWorkHistoryRepository};
 use prompt::{info, input, select, spinner, success};
 
+use crate::registry;
+
 /// 交互式获取 JIRA ID（必填）
 ///
 /// 如果提供了 JIRA ID，直接返回；否则提示用户输入。
@@ -297,14 +299,15 @@ pub fn extract_pr_id_from_url(pr_url: &str) -> Option<String> {
 /// * `pr_title` - PR 标题（用于提取 Jira ticket）
 /// * `repository_url` - 仓库 URL（可选）
 pub fn update_jira_after_pr_merged(
-    jira_repo: &dyn JiraRepository,
-    work_history_repo: &dyn JiraWorkHistoryRepository,
     pr_id: &str,
     pr_title: Option<&str>,
     repository_url: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use domain::extract_jira_ticket_id;
     use prompt::warning;
+
+    let jira_repo = registry::get_jira_repository();
+    let work_history_repo = registry::get_jira_work_history_repository();
 
     // 如果没有仓库 URL，跳过工作历史相关操作
     let repo_url = repository_url.unwrap_or("");

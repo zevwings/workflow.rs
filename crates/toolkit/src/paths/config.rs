@@ -11,7 +11,7 @@ use std::os::unix::fs::PermissionsExt;
 use crate::paths::base::{config_base_dir, local_base_dir};
 use crate::paths::constants::{
     CONFIG_DIR, JIRA_CONFIG_FILE, LLM_CONFIG_FILE, PROJECT_CONFIG_FILE, USER_CONFIG_FILE,
-    WORKFLOW_CONFIG_FILE, WORKFLOW_DIR,
+    WORKFLOW_DIR,
 };
 use crate::paths::PathError;
 use crate::util::fs::directory;
@@ -65,12 +65,12 @@ pub fn config_dir() -> Result<PathBuf, PathError> {
     Ok(config_dir)
 }
 
-/// 获取主配置文件路径
-///
-/// 返回 `~/.workflow/config/workflow.toml` 的路径。
-pub fn workflow_config_path() -> Result<PathBuf, PathError> {
-    Ok(config_dir()?.join(WORKFLOW_CONFIG_FILE))
-}
+// /// 获取主配置文件路径
+// ///
+// /// 返回 `~/.workflow/config/workflow.toml` 的路径。
+// pub fn workflow_config_path() -> Result<PathBuf, PathError> {
+//     Ok(config_dir()?.join(WORKFLOW_CONFIG_FILE))
+// }
 
 /// 获取 LLM 配置文件路径
 ///

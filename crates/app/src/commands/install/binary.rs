@@ -13,15 +13,12 @@ use std::fs;
 
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
-use color_eyre::{eyre::ContextCompat, eyre::WrapErr, Result};
+use color_eyre::{eyre::eyre, eyre::ContextCompat, eyre::WrapErr, Result};
 use prompt::{br, info, print, success, warning};
-use toolkit::{
-    binary_install_dir, binary_name, command_names, completion_cache_dir_shell_path, detect_shell,
-    directory, shell_to_string,
-};
+use toolkit::{completion_cache_dir_shell_path, detect_shell, directory, shell_to_string};
 
 use crate::cli::Cli;
-use crate::registry::get_completion_service;
+use crate::registry::{get_completion_service, get_path_service};
 
 /// 安装命令
 pub struct InstallCommand {
@@ -69,8 +66,8 @@ impl InstallCommand {
     /// 在当前可执行文件所在目录查找 workflow 二进制文件，
     /// 并将其复制到系统二进制目录（通常是 /usr/local/bin）。
     fn install_binaries(&self) -> Result<()> {
-        let install_dir = binary_install_dir();
-        info!("Installing binaries to {}...", install_dir);
+        let install_dir = get_path_service().get_binary_install_dir()?;
+        info!("Installing binaries to {}...", install_dir.display());
 
         // 创建安装目录（Windows 需要）
         let install_path = PathBuf::from(&install_dir);
@@ -82,84 +79,67 @@ impl InstallCommand {
             current_exe.parent().wrap_err("Failed to get parent directory of executable")?;
 
         toolkit::log_debug!("Current directory: {}", current_dir.display());
-        toolkit::log_debug!("Install directory: {}", install_dir);
+        toolkit::log_debug!("Install directory: {}", install_dir.display());
 
-        let binaries = command_names();
-        let mut installed_count = 0;
+        let bin_name = get_path_service().get_binary_name()?;
 
-        for binary in binaries {
-            let bin_name = binary_name(binary);
+        let source = current_dir.join(&bin_name);
+        let target = install_path.join(&bin_name);
 
-            let source = current_dir.join(&bin_name);
-            let target = install_path.join(&bin_name);
+        if !source.exists() {
+            warning!("Binary file {} does not exist, skipping", source.display());
+            return Err(eyre!("Binary file {} does not exist", source.display()));
+        }
 
-            if !source.exists() {
-                warning!("Binary file {} does not exist, skipping", source.display());
-                continue;
-            }
+        info!("  Installing {} -> {}", bin_name, target.display());
 
-            info!("  Installing {} -> {}", bin_name, target.display());
-
-            // Unix: 使用 sudo 复制文件
-            // Windows: 直接复制文件
-            #[cfg(unix)]
-            {
-                let status = Command::new("sudo")
-                    .arg("cp")
-                    .arg(&source)
-                    .arg(&target)
-                    .status()
-                    .wrap_err_with(|| {
-                        format!(
-                            "Failed to copy {} to {}",
-                            source.display(),
-                            target.display()
-                        )
-                    })?;
-
-                if !status.success() {
-                    color_eyre::eyre::bail!("Failed to install {}", binary);
-                }
-
-                // 设置执行权限
-                Command::new("sudo")
-                    .arg("chmod")
-                    .arg("+x")
-                    .arg(&target)
-                    .status()
-                    .wrap_err_with(|| {
-                        format!(
-                            "Failed to set executable permission for {}",
-                            target.display()
-                        )
-                    })?;
-            }
-
-            #[cfg(windows)]
-            {
-                fs::copy(&source, &target).wrap_err_with(|| {
+        // Unix: 使用 sudo 复制文件
+        // Windows: 直接复制文件
+        #[cfg(unix)]
+        {
+            let status = Command::new("sudo")
+                .arg("cp")
+                .arg(&source)
+                .arg(&target)
+                .status()
+                .wrap_err_with(|| {
                     format!(
                         "Failed to copy {} to {}",
                         source.display(),
                         target.display()
                     )
                 })?;
+
+            if !status.success() {
+                return Err(eyre!("Failed to install {}", bin_name));
             }
 
-            success!("  {} installed", bin_name);
-            installed_count += 1;
+            // 设置执行权限
+            Command::new("sudo")
+                .arg("chmod")
+                .arg("+x")
+                .arg(&target)
+                .status()
+                .wrap_err_with(|| {
+                    format!(
+                        "Failed to set executable permission for {}",
+                        target.display()
+                    )
+                })?;
         }
 
-        if installed_count > 0 {
-            success!(
-                "Binary files installation complete ({} installed)",
-                installed_count
-            );
-            info!("Installed commands:");
-            info!("  - workflow (main command with subcommands: pr, log, jira, etc.)");
-        } else {
-            color_eyre::eyre::bail!("No installable binary files found");
+        #[cfg(windows)]
+        {
+            fs::copy(&source, &target).wrap_err_with(|| {
+                format!(
+                    "Failed to copy {} to {}",
+                    source.display(),
+                    target.display()
+                )
+            })?;
         }
+
+        success!("  {} installed", bin_name);
 
         Ok(())
     }

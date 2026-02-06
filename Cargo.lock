@@ -728,6 +728,7 @@ name = "domain"
 version = "0.0.1"
 dependencies = [
  "chrono",
+ "dirs 5.0.1",
  "regex",
  "serde",
  "serde_json",

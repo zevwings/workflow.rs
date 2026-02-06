@@ -8,7 +8,7 @@ use domain::{BranchTemplates, CommitTemplates, PullRequestsTemplates};
 use prompt::{br, info, print, separator, success, warning, TableBuilder};
 use toolkit::{project_config_file, user_config_file};
 
-use crate::registry;
+use crate::registry::{get_git_repository, get_repo_config_repository};
 
 /// Repo Check 命令
 pub struct RepoCheckCommand;
@@ -32,7 +32,7 @@ impl RepoCheckCommand {
 
         // 1. 检查是否在 Git 仓库中
         let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
-        let repo_repo = registry::get_git_repo_repository();
+        let repo_repo = get_git_repository();
 
         let repo_info = repo_repo.get_repo_info();
         if !repo_info.is_valid {
@@ -62,7 +62,7 @@ impl RepoCheckCommand {
 
     /// 验证仓库配置文件及内容
     fn verify_repo_config(&self, repo_path: &std::path::Path) -> Result<()> {
-        let config_repo = registry::get_repo_config_repository();
+        let config_repo = get_repo_config_repository();
 
         // repo_path 仅用于显示路径，实际加载配置时不需要传入
 

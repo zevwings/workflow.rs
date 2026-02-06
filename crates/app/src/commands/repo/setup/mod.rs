@@ -1,3 +1,3 @@
-mod logic;
+mod command;
 
-pub use logic::{ensure, RepoSetupCommand};
+pub use command::{ensure, RepoSetupCommand};

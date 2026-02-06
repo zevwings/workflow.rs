@@ -92,29 +92,17 @@ impl WorkflowStage for JiraStage {
         }
 
         // Handle mode-specific interaction
-        if mode == WorkflowMode::Setup {
-            if has_jira {
-                let keep = confirm!(
-                    "Existing Jira configuration detected. Do you want to keep the current values?"
-                )
-                .default(true)
-                .result_title("Keep Jira configuration")
-                .prompt()
-                .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
+        if mode == WorkflowMode::Setup && has_jira {
+            let keep = confirm!(
+                "Existing Jira configuration detected. Do you want to keep the current values?"
+            )
+            .default(true)
+            .result_title("Keep Jira configuration")
+            .prompt()
+            .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
 
-                if keep {
-                    return Ok(());
-                }
-            } else {
-                let configure = confirm!("Do you want to configure Jira?")
-                    .default(false)
-                    .result_title("Configure Jira")
-                    .prompt()
-                    .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
-
-                if !configure {
-                    return Ok(());
-                }
+            if keep {
+                return Ok(());
             }
         }
 

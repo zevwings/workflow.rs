@@ -14,7 +14,7 @@ use prompt::{br, confirm, info, success, warning};
 use prompt::{ConfirmFormField, FormBuilder, FormResult, GroupConfig, InputFormField};
 use toolkit::{project_config_file, user_config_file};
 
-use crate::registry;
+use crate::registry::{get_git_repository, get_repo_config_repository};
 
 /// 确保仓库配置存在
 ///
@@ -99,7 +99,7 @@ impl RepoSetupCommand {
 
         // 1. 检查是否在 Git 仓库中
         let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
-        let repo_repo = registry::get_git_repo_repository();
+        let repo_repo = get_git_repository();
 
         let repo_info = repo_repo.get_repo_info();
         if !repo_info.is_valid {
@@ -115,7 +115,7 @@ impl RepoSetupCommand {
         br!();
 
         // 2. 加载现有配置（如果存在）
-        let config_repo = registry::get_repo_config_repository();
+        let config_repo = get_repo_config_repository();
 
         let existing_project_config = config_repo.load_project_config().ok();
         let existing_user_config = config_repo.load_user_config().ok();
@@ -422,7 +422,7 @@ impl RepoSetupCommand {
     ///
     /// 检查用户配置中是否有 prefix 或 ignore 配置。
     pub fn check_config_exists() -> Result<bool> {
-        let config_repo = registry::get_repo_config_repository();
+        let config_repo = get_repo_config_repository();
 
         let user_config = config_repo
             .load_user_config()

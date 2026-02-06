@@ -1,22 +1,32 @@
 //! 验证模块
 //!
-//! 提供安装验证功能。
+//! 提供安装验证功能。路径从 pathService 获取，单文件验证。
 
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
 use color_eyre::{eyre::WrapErr, Result};
 
 use prompt::{success, warning, Spinner};
-use toolkit::{
-    binary_install_dir, binary_name, command_names, completion_dir, detect_shell,
-    get_completion_files_for_shell, shell_to_string,
-};
+use toolkit::{completion_dir, detect_shell, get_completion_files_for_shell, shell_to_string};
 
 use super::types::VerificationResult;
+use crate::registry::get_path_service;
+
+/// 补全脚本对应的命令名（与 pathService 的 binary 一致，单命令）
+const COMMAND_NAME: &str = "workflow";
+
+/// 解压目录中 install 二进制文件名（平台相关）
+fn install_binary_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "install.exe"
+    } else {
+        "install"
+    }
+}
 
 /// 二进制文件状态（内部使用）
 struct BinaryStatus {
@@ -87,26 +97,20 @@ fn verify_single_binary(path: &str, name: &str) -> Result<BinaryStatus> {
     })
 }
 
-/// 验证所有二进制文件
+/// 验证二进制文件（从 pathService 获取单文件路径）
 fn verify_binaries() -> Result<Vec<BinaryStatus>> {
-    let install_dir = binary_install_dir();
-    let install_path = PathBuf::from(&install_dir);
-    let binaries = command_names();
-    let mut results = Vec::new();
+    let path_service = get_path_service();
+    let install_dir = path_service.get_binary_install_dir()?;
+    let bin_name = path_service.get_binary_name()?;
+    let path = install_dir.join(&bin_name);
 
     let spinner = Spinner::new("Verifying binaries...");
     let spinner_instance = spinner.start();
 
-    for binary in binaries {
-        let bin_name = binary_name(binary);
-        let path = install_path.join(&bin_name);
-        let status = verify_single_binary(&path.to_string_lossy(), &bin_name)?;
-        results.push(status);
-    }
-
+    let status = verify_single_binary(&path.to_string_lossy(), &bin_name)?;
     spinner_instance.stop();
 
-    Ok(results)
+    Ok(vec![status])
 }
 
 /// 验证补全脚本
@@ -129,7 +133,7 @@ fn verify_completions() -> Result<bool> {
         return Ok(false);
     }
 
-    let commands = command_names();
+    let commands: &[&str] = &[COMMAND_NAME];
     let shell_str = shell_to_string(&shell);
     let files = get_completion_files_for_shell(shell_str, commands).unwrap_or_default();
 
@@ -201,7 +205,7 @@ pub fn verify_installation() -> Result<VerificationResult> {
 ///
 /// 在解压目录中运行 ./install 来安装二进制文件和补全脚本。
 pub fn run_installer(extract_dir: &Path) -> Result<()> {
-    let install_binary = extract_dir.join(binary_name("install"));
+    let install_binary = extract_dir.join(install_binary_name());
 
     if !install_binary.exists() {
         color_eyre::eyre::bail!(

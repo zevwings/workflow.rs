@@ -1,10 +1,13 @@
 //! 更新命令实现
 //!
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能。
+//! 备份与回滚路径从 pathService 获取，参考 toolkit rollback 单文件流程。
+
+use std::path::PathBuf;
 
 use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
-use toolkit::{cleanup_backup, create_backup, rollback, BackupResult, Platform};
+use toolkit::{backup, cleanup_backup, rollback, Platform};
 
 use super::download::{build_download_url, download_file, extract_archive, verify_checksum};
 use super::types::TempDirManager;
@@ -12,6 +15,7 @@ use super::verify::{run_installer, verify_installation};
 use super::version::{
     compare_versions, get_current_version, get_target_version, VersionComparison,
 };
+use crate::registry::get_path_service;
 
 /// 更新命令
 pub struct UpdateCommand {
@@ -107,7 +111,7 @@ impl UpdateCommand {
         }
 
         // 创建备份
-        let backup_info = self.create_backup();
+        let backup_dir = self.create_backup();
         br!();
 
         // 准备临时目录
@@ -119,19 +123,54 @@ impl UpdateCommand {
         // 执行更新操作
         let update_result = self.perform_update(&temp_manager, &download_url, &target_version);
 
-        // 处理更新结果
-        self.handle_update_result(update_result, backup_info.as_ref(), &temp_manager)
+        if let Some(backup_dir) = backup_dir {
+            match update_result {
+                Ok(()) => {
+                    // 更新成功，清理资源
+                    success!("Workflow CLI update complete! All verifications passed.");
+                    Ok(())
+                }
+                Err(e) => {
+                    // 更新失败，执行回滚
+                    error!("Update failed: {}", e);
+                    br!();
+
+                    self.perform_rollback(backup_dir);
+
+                    Err(e.wrap_err("Update failed"))
+                }
+            }
+        } else {
+            error!("Failed to create backup");
+            Err(color_eyre::eyre::eyre!("Failed to create backup"))
+        }
     }
 
-    /// 创建备份
-    fn create_backup(&self) -> Option<BackupResult> {
-        match create_backup() {
-            Ok(backup) => {
+    /// 创建备份（从 pathService 获取二进制路径，单文件备份）
+    fn create_backup(&self) -> Option<PathBuf> {
+        let path_service = get_path_service();
+        let install_dir = match path_service.get_binary_install_dir() {
+            Ok(d) => d,
+            Err(e) => {
+                warning!("Failed to get install dir: {}", e);
+                return None;
+            }
+        };
+        let bin_name = match path_service.get_binary_name() {
+            Ok(n) => n,
+            Err(e) => {
+                warning!("Failed to get binary name: {}", e);
+                return None;
+            }
+        };
+        match backup(bin_name.as_str(), install_dir.clone()) {
+            Ok(backup_dir) => {
                 info!(
-                    "Backup created: {} binary(ies), {} completion(s)",
-                    backup.binary_count, backup.completion_count
+                    "Backup created: {} -> {}",
+                    install_dir.display(),
+                    backup_dir.display()
                 );
-                Some(backup)
+                Some(backup_dir)
             }
             Err(e) => {
                 warning!("Failed to create backup: {}", e);
@@ -176,103 +215,35 @@ impl UpdateCommand {
         Ok(())
     }
 
-    /// 处理更新结果
-    fn handle_update_result(
-        &self,
-        update_result: Result<()>,
-        backup_info: Option<&BackupResult>,
-        temp_manager: &TempDirManager,
-    ) -> Result<()> {
-        match update_result {
-            Ok(()) => {
-                // 更新成功，清理资源
-                self.cleanup_resources(temp_manager, backup_info);
-                success!("Workflow CLI update complete! All verifications passed.");
-                Ok(())
-            }
-            Err(e) => {
-                // 更新失败，执行回滚
-                error!("Update failed: {}", e);
-                br!();
-
-                if let Some(backup) = backup_info {
-                    self.perform_rollback(backup);
-                } else {
-                    error!("Unable to rollback: no available backup");
-                    error!("Please manually check and restore files");
-                }
-
-                // 清理临时资源
-                self.cleanup_resources(temp_manager, backup_info);
-                Err(e.wrap_err("Update failed"))
-            }
-        }
-    }
-
-    /// 执行回滚
-    fn perform_rollback(&self, backup: &BackupResult) {
+    /// 执行回滚（使用 pathService 的 install_dir，单文件恢复）
+    fn perform_rollback(&self, backup_dir: PathBuf) {
         warning!("Update failed, rolling back to previous version...");
         br!();
 
-        match rollback(&backup.backup_info) {
-            Ok(rollback_result) => {
-                // 显示恢复的二进制文件
-                if !rollback_result.restored_binaries.is_empty() {
-                    info!("Restoring binary files...");
-                    for binary in &rollback_result.restored_binaries {
-                        info!("  Restored: {}", binary);
-                    }
-                }
+        let install_dir = match get_path_service().get_binary_install_dir() {
+            Ok(d) => d,
+            Err(e) => {
+                error!("Cannot get install dir for rollback: {}", e);
+                error!("Backup location: {}", backup_dir.display());
+                return;
+            }
+        };
 
-                // 显示失败的二进制文件
-                if !rollback_result.failed_binaries.is_empty() {
-                    warning!("Failed to restore some binary files:");
-                    for (binary, err) in &rollback_result.failed_binaries {
-                        warning!("  {}: {}", binary, err);
-                    }
-                }
+        let bin_name = match get_path_service().get_binary_name() {
+            Ok(n) => n,
+            Err(e) => {
+                error!("Cannot get binary name for rollback: {}", e);
+                error!("Backup location: {}", backup_dir.display());
+                return;
+            }
+        };
 
-                // 显示恢复的补全脚本
-                if !rollback_result.restored_completions.is_empty() {
-                    info!("Restoring completion scripts...");
-                    for completion in &rollback_result.restored_completions {
-                        info!("  Restored: {}", completion);
-                    }
-                }
-
-                // 显示失败的补全脚本
-                if !rollback_result.failed_completions.is_empty() {
-                    warning!("Failed to restore some completion scripts:");
-                    for (completion, err) in &rollback_result.failed_completions {
-                        warning!("  {}: {}", completion, err);
-                    }
-                }
-
-                // 处理 shell 重新加载
-                if let Some(reload_success) = rollback_result.shell_reload_success {
-                    if reload_success {
-                        info!("Note: Configuration has been reloaded in subprocess");
-                        if let Some(ref config_file) = rollback_result.shell_config_file {
-                            info!(
-                                "If completion is not working, please run manually: source {}",
-                                config_file.display()
-                            );
-                        }
-                    } else {
-                        warning!("Failed to reload shell configuration");
-                        if let Some(ref config_file) = rollback_result.shell_config_file {
-                            info!("Please run manually: source {}", config_file.display());
-                        }
-                    }
-                } else {
-                    info!("Please manually reload shell config file to enable completion");
-                }
-
+        match rollback(bin_name.as_str(), backup_dir.clone(), install_dir) {
+            Ok(()) => {
+                info!("  Restored: {}", bin_name);
                 success!("Rollback completed");
                 br!();
-
-                // 回滚成功后清理备份
-                if let Err(cleanup_err) = cleanup_backup(&backup.backup_info) {
+                if let Err(cleanup_err) = cleanup_backup(backup_dir) {
                     warning!("Failed to clean up backup: {}", cleanup_err);
                 }
             }
@@ -280,25 +251,7 @@ impl UpdateCommand {
                 error!("Rollback failed: {}", rollback_err);
                 error!("System may be in an inconsistent state");
                 error!("Please manually check and restore files");
-                error!(
-                    "Backup location: {}",
-                    backup.backup_info.backup_dir.display()
-                );
-            }
-        }
-    }
-
-    /// 清理资源
-    fn cleanup_resources(&self, temp_manager: &TempDirManager, backup_info: Option<&BackupResult>) {
-        // 清理临时文件
-        if let Err(e) = temp_manager.cleanup() {
-            warning!("Failed to clean up temporary files: {}", e);
-        }
-
-        // 清理备份（成功时）
-        if let Some(backup) = backup_info {
-            if let Err(e) = cleanup_backup(&backup.backup_info) {
-                warning!("Failed to clean up backup: {}", e);
+                error!("Backup location: {}", backup_dir.display());
             }
         }
     }

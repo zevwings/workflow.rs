@@ -13,6 +13,7 @@ pub mod git;
 pub mod github;
 pub mod jira;
 pub mod llm;
+pub mod path;
 pub mod pr;
 pub mod template;
 
@@ -66,6 +67,7 @@ pub use completion::{
     CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
     ShellCompletionStatus, COMPLETIONS_FILE,
 };
+pub use path::{Dir, PathError, PathService};
 pub use pr::{
     get_all_change_types, get_change_type_by_index, get_change_type_by_name, ChangeType, PrContent,
     PrStatus, PullRequestInfo, PullRequestService, PullRequestStatus, CHANGE_TYPES,

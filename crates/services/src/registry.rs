@@ -6,12 +6,6 @@ use std::sync::Arc;
 
 use registry::{bind, try_bind, Container, Scope};
 
-/// Services 模块标记类型
-///
-/// 用于标识 services 层服务的注册状态
-#[derive(Debug, Clone, Copy)]
-pub struct ServicesModule;
-
 /// 构建 Services 模块
 ///
 /// 注册所有 services 层的服务，包括：
@@ -22,7 +16,7 @@ pub struct ServicesModule;
 /// # 错误
 ///
 /// 如果服务注册失败，返回 `registry::Error`。
-pub fn register_services() -> registry::Result<ServicesModule> {
+pub fn register_services() -> registry::Result<()> {
     // AliasService - 依赖 GlobalConfigRepository
     try_bind!(dyn domain::AliasService, |c: &Container| {
         let config_repo = c.get::<dyn domain::GlobalConfigRepository>()?;
@@ -50,5 +44,10 @@ pub fn register_services() -> registry::Result<ServicesModule> {
     })
     .in_scope(Scope::Singleton)?;
 
-    Ok(ServicesModule)
+    bind!(dyn domain::PathService, |_c: &Container| {
+        Arc::new(crate::path::PathServiceImpl::new())
+    })
+    .in_scope(Scope::Singleton)?;
+
+    Ok(())
 }

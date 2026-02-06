@@ -1,34 +1,29 @@
 //! 卸载命令实现
 //!
 //! 删除 Workflow CLI 的所有配置和二进制文件。
+//! 路径统一从 pathService 获取；若路径不存在则需确认后再加入操作列表。
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{fs, path::PathBuf};
 
 #[cfg(unix)]
 use std::process::Command;
 
-use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, info, print, success, warning, ConfirmBuilder};
-use toolkit::{
-    binary_install_dir, binary_name, binary_paths, completion_dir, detect_shell, jira_config_path,
-    llm_config_path, reload_shell, workflow_config_path,
-};
+use toolkit::{completion_dir, detect_shell, reload_shell};
 
-use crate::registry::get_completion_service;
+use crate::registry::{get_completion_service, get_path_service};
 
 /// 卸载命令
 pub struct UninstallCommand {
-    /// 是否跳过确认
-    force: bool,
     /// 是否保留配置文件
     keep_config: bool,
 }
 
 impl UninstallCommand {
     /// 创建新的 UninstallCommand 实例
-    pub fn new(force: bool, keep_config: bool) -> Self {
-        Self { force, keep_config }
+    pub fn new(keep_config: bool) -> Self {
+        Self { keep_config }
     }
 
     /// 运行卸载流程
@@ -44,239 +39,142 @@ impl UninstallCommand {
         }
         br!();
 
-        // 显示将要删除的二进制文件
-        let existing_binaries = self.find_existing_binaries();
+        // 仅卸载 workflow 主二进制（从 pathService 获取路径，不存在则确认后再加入）
+        let binary_to_remove = self.get_workflow_binary_path()?;
+        if let Some(path) = binary_to_remove {
+            self.remove_binary(path)?;
 
-        if !existing_binaries.is_empty() {
-            print!("Binary files to be removed:");
-            for binary_path in &existing_binaries {
-                print!("  - {}", binary_path);
-            }
-            br!();
-        }
-
-        // 确认删除
-        if !self.force {
-            let confirmed =
-                ConfirmBuilder::new("Remove binary files and shell completion scripts?")
-                    .default(false)
+            // 是否删除配置文件
+            let remove_config = if self.keep_config {
+                false
+            } else {
+                ConfirmBuilder::new("Remove TOML config file (workflow.toml)?")
+                    .default(true)
                     .prompt()
-                    .wrap_err("Failed to get confirmation")?;
+                    .wrap_err("Failed to get confirmation")?
+            };
 
-            if !confirmed {
-                print!("Uninstall cancelled.");
-                return Ok(());
-            }
-        }
-
-        // 是否删除配置文件
-        let remove_config = if self.keep_config {
-            false
-        } else if self.force {
-            true
-        } else {
-            ConfirmBuilder::new("Remove TOML config file (workflow.toml)?")
-                .default(true)
-                .prompt()
-                .wrap_err("Failed to get confirmation")?
-        };
-
-        // 删除二进制文件
-        if !existing_binaries.is_empty() {
+            // 删除 shell completion
             br!();
-            print!("Removing binary files...");
-            self.remove_binaries(&existing_binaries)?;
-        }
+            print!("Removing shell completion scripts...");
+            self.remove_completions()?;
 
-        // 删除 shell completion
-        br!();
-        print!("Removing shell completion scripts...");
-        self.remove_completions()?;
-
-        // 删除配置文件
-        if remove_config {
-            br!();
-            print!("Removing configuration...");
-            let removed_files = self.remove_config_files()?;
-            if !removed_files.is_empty() {
-                success!("Configuration removed successfully");
-                for file in &removed_files {
-                    print!("  - {} removed", file);
+            // 删除配置文件
+            if remove_config {
+                br!();
+                print!("Removing configuration...");
+                let removed_files = self.remove_config_files()?;
+                if !removed_files.is_empty() {
+                    success!("Configuration removed successfully");
+                    for file in &removed_files {
+                        print!("  - {} removed", file);
+                    }
                 }
+            } else {
+                br!();
+                print!("Configuration will be kept (not removed).");
             }
-        } else {
+
             br!();
-            print!("Configuration will be kept (not removed).");
-        }
+            success!("Uninstall completed successfully!");
 
-        br!();
-        success!("Uninstall completed successfully!");
+            if remove_config {
+                print!("All Workflow CLI configuration has been removed.");
+            } else {
+                print!("Workflow CLI configuration has been kept (not removed).");
+            }
 
-        if remove_config {
-            print!("All Workflow CLI configuration has been removed.");
+            print!("All Workflow CLI shell completion scripts have been removed.");
+
+            // 尝试重新加载 shell 配置
+            br!();
+            print!("Reloading shell configuration...");
+            self.reload_shell_config();
         } else {
-            print!("Workflow CLI configuration has been kept (not removed).");
+            warning!("Workflow binary not found.");
         }
-
-        if !existing_binaries.is_empty() {
-            print!("All Workflow CLI binary files have been removed.");
-        }
-
-        print!("All Workflow CLI shell completion scripts have been removed.");
-
-        // 尝试重新加载 shell 配置
-        br!();
-        print!("Reloading shell configuration...");
-        self.reload_shell_config();
-
         Ok(())
     }
 
-    /// 查找存在的二进制文件
-    fn find_existing_binaries(&self) -> Vec<String> {
-        let bin_paths = binary_paths();
-        let mut existing = Vec::new();
+    /// 返回待删除的 workflow 主二进制路径（仅此一个）；若路径不存在则确认后再返回。
+    fn get_workflow_binary_path(&self) -> Result<Option<PathBuf>> {
+        let path_service = get_path_service();
+        let install_dir = path_service
+            .get_binary_install_dir()
+            .wrap_err("Failed to get binary install dir")?;
+        let bin_name = path_service.get_binary_name().wrap_err("Failed to get binary name")?;
 
-        for binary_path in bin_paths {
-            let path = Path::new(&binary_path);
-            if path.exists() {
-                existing.push(binary_path);
-            }
-        }
+        let workflow_binary = install_dir.join(&bin_name);
 
-        // 检查 install 二进制
-        let install_dir = binary_install_dir();
-        let install_path = PathBuf::from(&install_dir);
-        let install_name = binary_name("install");
-        let install_binary = install_path.join(install_name);
-        if install_binary.exists() {
-            existing.push(install_binary.to_string_lossy().to_string());
-        }
-
-        existing
+        let include = workflow_binary.exists()
+            || self.should_include_missing_path(
+                &workflow_binary.display().to_string(),
+                "workflow binary",
+            )?;
+        Ok(include.then_some(workflow_binary))
     }
 
-    /// 删除二进制文件
-    fn remove_binaries(&self, _binaries: &[String]) -> Result<()> {
-        let (removed, need_sudo) = self.try_remove_binaries()?;
+    /// 路径不存在时询问是否仍加入操作列表
+    fn should_include_missing_path(&self, path: &str, kind: &str) -> Result<bool> {
+        let confirmed = ConfirmBuilder::new(format!(
+            "Path does not exist: {} ({}). Include it anyway?",
+            path, kind
+        ))
+        .default(false)
+        .prompt()
+        .wrap_err("Failed to get confirmation")?;
+        Ok(confirmed)
+    }
 
-        // 显示已删除的文件
-        for binary_path in &removed {
-            print!("  Removed: {}", binary_path);
-        }
-
-        // 处理需要 sudo 的文件
-        if !need_sudo.is_empty() {
-            #[cfg(unix)]
-            {
-                toolkit::log_debug!("Some files require sudo privileges, using sudo to remove...");
-                for binary_path in &need_sudo {
-                    match Command::new("sudo").arg("rm").arg("-f").arg(binary_path).status() {
+    /// 删除二进制文件（列表来自 pathService 收集的路径）
+    fn remove_binary(&self, binary_path: PathBuf) -> Result<()> {
+        match self.try_remove_binary(binary_path.clone()) {
+            Ok(()) => {
+                success!("Workflow binary removed successfully");
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                #[cfg(unix)]
+                {
+                    toolkit::log_debug!(
+                        "Some files require sudo privileges, using sudo to remove..."
+                    );
+                    match Command::new("sudo").arg("rm").arg("-f").arg(&binary_path).status() {
                         Ok(status) if status.success() => {
-                            print!("  Removed: {}", binary_path);
+                            success!("Workflow binary removed successfully");
                         }
                         Ok(_) | Err(_) => {
-                            warning!("Failed to remove {} with sudo", binary_path);
+                            warning!("Failed to remove {} with sudo", binary_path.display());
                             print!(
                                 "  You may need to manually remove it with: sudo rm {}",
-                                binary_path
+                                binary_path.display()
                             );
                         }
                     }
                 }
-            }
-
-            #[cfg(windows)]
-            {
-                warning!("Some files require administrator privileges.");
-                print!("Please run this command as administrator or manually remove:");
-                for binary_path in &need_sudo {
-                    print!("  {}", binary_path);
-                }
-            }
-        }
-
-        // 删除 install 二进制（如果存在）
-        let install_dir = binary_install_dir();
-        let install_path = PathBuf::from(&install_dir);
-        let install_name = binary_name("install");
-        let install_binary = install_path.join(install_name);
-
-        if install_binary.exists() {
-            let install_binary_str = install_binary.to_string_lossy();
-
-            #[cfg(unix)]
-            {
-                match Command::new("sudo")
-                    .arg("rm")
-                    .arg("-f")
-                    .arg(install_binary_str.as_ref())
-                    .status()
+                #[cfg(windows)]
                 {
-                    Ok(status) if status.success() => {
-                        print!("  Removed: {}", install_binary_str);
-                    }
-                    Ok(_) | Err(_) => {
-                        warning!("Failed to remove {} with sudo", install_binary_str);
-                        print!(
-                            "  You may need to manually remove it with: sudo rm {}",
-                            install_binary_str
-                        );
-                    }
+                    let _ = e;
+                    warning!("Some files require administrator privileges.");
+                    print!("Please run this command as administrator or manually remove:");
+                    print!("  {}", binary_path.display());
                 }
             }
-
-            #[cfg(windows)]
-            {
-                match fs::remove_file(&install_binary) {
-                    Ok(_) => {
-                        print!("  Removed: {}", install_binary_str);
-                    }
-                    Err(e) => {
-                        warning!("Failed to remove {}: {}", install_binary_str, e);
-                        print!(
-                            "  You may need to manually remove it: {}",
-                            install_binary_str
-                        );
-                    }
-                }
-            }
+            Err(e) => return Err(e.into()),
         }
 
         Ok(())
     }
 
-    /// 尝试删除二进制文件
-    ///
-    /// 返回 (已删除列表, 需要sudo列表)
-    fn try_remove_binaries(&self) -> Result<(Vec<String>, Vec<String>)> {
-        let bin_paths = binary_paths();
-        let mut removed = Vec::new();
-        let mut need_sudo = Vec::new();
-
-        for binary_path in bin_paths {
-            let path = Path::new(&binary_path);
-            if path.exists() {
-                match fs::remove_file(path) {
-                    Ok(_) => {
-                        removed.push(binary_path);
-                    }
-                    Err(e) => {
-                        if e.kind() == std::io::ErrorKind::PermissionDenied {
-                            need_sudo.push(binary_path);
-                        } else {
-                            return Err(eyre!(
-                                "Failed to remove binary file: {}: {}",
-                                binary_path,
-                                e
-                            ));
-                        }
-                    }
-                }
+    /// 尝试删除二进制文件（若路径存在则删除，否则静默成功）
+    fn try_remove_binary(&self, bin_path: PathBuf) -> Result<(), std::io::Error> {
+        if bin_path.exists() {
+            match fs::remove_file(bin_path) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(e),
             }
+        } else {
+            Ok(())
         }
-
-        Ok((removed, need_sudo))
     }
 
     /// 删除 shell completion
@@ -340,29 +238,24 @@ impl UninstallCommand {
 
     /// 删除配置文件
     fn remove_config_files(&self) -> Result<Vec<String>> {
-        let mut removed = Vec::new();
+        let mut removed: Vec<String> = Vec::new();
+        let path_service = get_path_service();
 
         // 删除 workflow.toml
-        if let Ok(wf_config_path) = workflow_config_path() {
-            if wf_config_path.exists() {
-                fs::remove_file(&wf_config_path).wrap_err("Failed to remove workflow.toml")?;
+        if let Ok(workflow_config_filepath) = path_service.get_workflow_config_filepath() {
+            // let wf_config_path = config_dir.join(WORKFLOW_CONFIG_FILE);
+            if workflow_config_filepath.exists() {
+                fs::remove_file(workflow_config_filepath)
+                    .wrap_err("Failed to remove workflow.toml")?;
                 removed.push("workflow.toml".to_string());
             }
         }
 
         // 删除 jira.toml
-        if let Ok(jira_config_path) = jira_config_path() {
+        if let Ok(jira_config_path) = path_service.get_jira_config_filepath() {
             if jira_config_path.exists() {
                 fs::remove_file(&jira_config_path).wrap_err("Failed to remove jira.toml")?;
                 removed.push("jira.toml".to_string());
-            }
-        }
-
-        // 删除 llm.toml
-        if let Ok(llm_config_path) = llm_config_path() {
-            if llm_config_path.exists() {
-                fs::remove_file(&llm_config_path).wrap_err("Failed to remove llm.toml")?;
-                removed.push("llm.toml".to_string());
             }
         }
 

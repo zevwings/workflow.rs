@@ -485,7 +485,6 @@ mod tests {
     fn test_save_and_configure_with_custom_output_dir() {
         with_test_home(|temp| {
             let custom_dir = temp.path().join("custom_completions");
-            fs::create_dir_all(&custom_dir).unwrap();
 
             let service = CompletionServiceImpl::new();
             let result = service

@@ -33,12 +33,9 @@ impl AliasAddCommand {
     /// 运行添加命令
     pub fn run(&self) -> Result<()> {
         // 获取别名名称和命令
-        let (name, command) = if self.name.is_some() && self.command.is_some() {
-            // 直接模式
-            (self.name.clone().unwrap(), self.command.clone().unwrap())
-        } else {
-            // 交互模式
-            self.interactive_input()?
+        let (name, command) = match (&self.name, &self.command) {
+            (Some(n), Some(c)) => (n.clone(), c.clone()),
+            _ => self.interactive_input()?,
         };
 
         // 添加别名

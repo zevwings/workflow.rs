@@ -8,8 +8,8 @@ pub const WORKFLOW_DIR: &str = ".workflow";
 /// 配置目录名称
 pub const CONFIG_DIR: &str = "config";
 
-/// 主配置文件名称
-pub const WORKFLOW_CONFIG_FILE: &str = "workflow.toml";
+// /// 主配置文件名称
+// pub const WORKFLOW_CONFIG_FILE: &str = "workflow.toml";
 
 /// Jira 配置文件名称
 pub const JIRA_CONFIG_FILE: &str = "jira.toml";
