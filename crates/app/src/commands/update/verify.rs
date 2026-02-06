@@ -11,7 +11,7 @@ use std::process::{Command, Stdio};
 use color_eyre::{eyre::WrapErr, Result};
 
 use prompt::{success, warning, Spinner};
-use toolkit::{completion_dir, detect_shell, get_completion_files_for_shell, shell_to_string};
+use toolkit::{detect_shell, get_completion_files_for_shell, shell_to_string};
 
 use super::types::VerificationResult;
 use crate::registry::get_path_service;
@@ -123,7 +123,8 @@ fn verify_completions() -> Result<bool> {
         }
     };
 
-    let comp_dir = completion_dir()?;
+    let path_service = get_path_service();
+    let comp_dir = path_service.get_completion_dir()?;
 
     if !comp_dir.exists() {
         warning!(

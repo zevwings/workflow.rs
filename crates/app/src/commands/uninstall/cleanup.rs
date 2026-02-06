@@ -10,7 +10,7 @@ use std::process::Command;
 
 use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, info, print, success, warning, ConfirmBuilder};
-use toolkit::{completion_dir, detect_shell, reload_shell};
+use toolkit::{detect_shell, reload_shell};
 
 use crate::registry::{get_completion_service, get_path_service};
 
@@ -206,7 +206,8 @@ impl UninstallCommand {
         }
 
         // 删除 completions 文件夹
-        if let Ok(comp_dir) = completion_dir() {
+        let path_service = get_path_service();
+        if let Ok(comp_dir) = path_service.get_completion_dir() {
             if comp_dir.exists() {
                 // 先尝试删除空文件夹
                 match fs::remove_dir(&comp_dir) {

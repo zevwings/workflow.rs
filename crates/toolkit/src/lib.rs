@@ -44,14 +44,7 @@ pub use logger::init as logger_init;
 pub use logger::{LoggerConfig, LoggerError};
 
 // Paths 模块 - 导出路径相关函数
-pub use paths::{
-    commands_config_path, completion_cache_dir, completion_cache_dir_shell_path, completion_dir,
-    completion_dir_shell_path, completion_file_shell_path, completion_source_shell_path,
-    config_dir, default_download_base_dir, expand, is_config_in_icloud, jira_config_path,
-    llm_config_path, logs_dir, project_config_file, project_config_path, repo_dir,
-    repo_workflow_dir, repository_config_path, storage_info, storage_location, user_config_file,
-    work_history_dir, workflow_dir, PathError,
-};
+pub use paths::{expand, PathExpandError};
 
 // Template 模块
 pub use template::{TemplateEngine, TemplateEngineType, TemplateError};

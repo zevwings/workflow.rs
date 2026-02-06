@@ -2,35 +2,39 @@
 //!
 //! 实现 `CompletionService` trait，负责 Completion 脚本的保存、配置和管理。
 
-use std::fs;
 use std::path::PathBuf;
+use std::{fs, sync::Arc};
 
 use domain::{
     errors::ServiceError, get_all_completion_filenames, get_completion_filename,
     get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
-    CompletionService, ShellCompletionStatus, COMPLETIONS_FILE,
+    CompletionService, PathService, ShellCompletionStatus, COMPLETIONS_FILE,
 };
 use toolkit::{
-    add_source, completion_dir, completion_dir_shell_path, completion_file_shell_path,
-    completion_source_shell_path, config_file_path, detect_shell, directory, file, has_source,
-    reload_hint, remove_source, shell_from_string, shell_to_string, supported_shells, workflow_dir,
+    add_source, config_file_path, detect_shell, directory, file, has_source, reload_hint,
+    remove_source, shell_from_string, shell_to_string, supported_shells,
 };
 
 /// Shell Completion 服务实现
-pub struct CompletionServiceImpl;
+pub struct CompletionServiceImpl {
+    path_service: Arc<dyn PathService>,
+}
 
 impl CompletionServiceImpl {
     /// 创建新的 CompletionServiceImpl 实例
-    pub fn new() -> Self {
-        Self
+    pub fn new(path_service: Arc<dyn PathService>) -> Self {
+        Self { path_service }
     }
 
     /// 创建 workflow completion 配置文件（用于 zsh/bash）
     fn create_completion_config_file(&self, shell_str: &str) -> Result<PathBuf, ServiceError> {
-        let workflow_dir = workflow_dir().map_err(|e| ServiceError::Other(e.to_string()))?;
+        let workflow_dir = self
+            .path_service
+            .get_workflow_config_dir()
+            .map_err(|e| ServiceError::Other(e.to_string()))?;
         let config_file = workflow_dir.join(COMPLETIONS_FILE);
 
-        let completions_path = completion_dir_shell_path();
+        let completions_path = self.path_service.get_completion_shell_dir();
         let config_content = match shell_str.to_lowercase().as_str() {
             "zsh" => {
                 format!(
@@ -78,7 +82,7 @@ impl CompletionServiceImpl {
         match shell_str.to_lowercase().as_str() {
             "zsh" | "bash" => {
                 // 添加 source 语句到 shell 配置文件
-                let source_path = completion_source_shell_path();
+                let source_path = self.path_service.get_completion_source_shell_path();
                 let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))
                     .map_err(|e| ServiceError::Other(e.to_string()))?;
 
@@ -87,7 +91,7 @@ impl CompletionServiceImpl {
             "fish" | "powershell" | "pwsh" | "elvish" => {
                 // 直接在各自配置文件中添加 source 语句
                 let filename = get_completion_filename(shell_str);
-                let source_path = completion_file_shell_path(&filename);
+                let source_path = self.path_service.get_completion_shell_path(&filename);
 
                 let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))
                     .map_err(|e| ServiceError::Other(e.to_string()))?;
@@ -114,12 +118,6 @@ impl CompletionServiceImpl {
     }
 }
 
-impl Default for CompletionServiceImpl {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl CompletionService for CompletionServiceImpl {
     fn save_and_configure(
         &self,
@@ -135,7 +133,10 @@ impl CompletionService for CompletionServiceImpl {
         // 2. 确定输出目录
         let output_path = match output_dir {
             Some(dir) => PathBuf::from(dir),
-            None => completion_dir().map_err(|e| ServiceError::Other(e.to_string()))?,
+            None => self
+                .path_service
+                .get_completion_dir()
+                .map_err(|e| ServiceError::Other(e.to_string()))?,
         };
 
         // 3. 确保输出目录存在
@@ -180,7 +181,7 @@ impl CompletionService for CompletionServiceImpl {
         let current_shell_str = current_shell.as_ref().map(|s| shell_to_string(s).to_string());
 
         // 获取 completion 目录
-        let comp_dir = completion_dir().ok();
+        let comp_dir = self.path_service.get_completion_dir().ok();
 
         // 检查各个 shell 的状态
         let mut shell_statuses = Vec::new();
@@ -251,7 +252,7 @@ impl CompletionService for CompletionServiceImpl {
         }
 
         // 2. 移除 completion 脚本文件
-        if let Ok(comp_dir) = completion_dir() {
+        if let Ok(comp_dir) = self.path_service.get_completion_dir() {
             if comp_dir.exists() {
                 let filenames = get_all_completion_filenames();
 
@@ -270,7 +271,7 @@ impl CompletionService for CompletionServiceImpl {
         }
 
         // 3. 移除 completion 配置文件
-        let removed_config_file = if let Ok(wf_dir) = workflow_dir() {
+        let removed_config_file = if let Ok(wf_dir) = self.path_service.get_workflow_config_dir() {
             let config_file = wf_dir.join(COMPLETIONS_FILE);
             if config_file.exists() {
                 match fs::remove_file(&config_file) {
@@ -305,6 +306,7 @@ mod tests {
     use std::path::PathBuf;
     use std::sync::Mutex;
 
+    use crate::path::PathServiceImpl;
     use once_cell::sync::Lazy;
     use tempfile::tempdir;
     use toolkit::shell::{config_file_path, shell_from_string};
@@ -352,7 +354,8 @@ mod tests {
     #[test]
     fn test_save_and_configure_rejects_invalid_shell() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             let err = service.save_and_configure("invalid-shell", b"", None).unwrap_err();
             assert!(matches!(err, ServiceError::InvalidInput(_)));
         });
@@ -361,7 +364,8 @@ mod tests {
     #[test]
     fn test_save_and_configure_zsh_creates_script_and_config() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service: Arc<dyn PathService> = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(Arc::clone(&path_service));
             let result = service.save_and_configure("zsh", b"content", None).unwrap();
 
             assert_eq!(result.shell, "zsh");
@@ -372,7 +376,7 @@ mod tests {
             assert!(config_file.exists());
             let config_content = fs::read_to_string(&config_file).unwrap();
             assert!(config_content.contains("Workflow CLI completions"));
-            assert!(config_content.contains(&completion_dir_shell_path()));
+            assert!(config_content.contains(&path_service.get_completion_shell_dir()));
             assert!(result.config_added);
         });
     }
@@ -380,7 +384,8 @@ mod tests {
     #[test]
     fn test_save_and_configure_fish_writes_source_to_config() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service: Arc<dyn PathService> = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(Arc::clone(&path_service));
             let result = service.save_and_configure("fish", b"content", None).unwrap();
 
             assert_eq!(result.shell, "fish");
@@ -392,7 +397,7 @@ mod tests {
             let config_path = config_file_path(&shell).expect("config path");
             let config_content = fs::read_to_string(config_path).unwrap();
             let filename = get_completion_filename("fish");
-            let expected = completion_file_shell_path(&filename);
+            let expected = path_service.get_completion_shell_path(&filename);
             assert!(config_content.contains(&expected));
         });
     }
@@ -400,7 +405,8 @@ mod tests {
     #[test]
     fn test_check_status_marks_existing_script() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             let _ = service.save_and_configure("zsh", b"content", None).unwrap();
 
             let status = service.check_status().unwrap();
@@ -414,7 +420,8 @@ mod tests {
     #[test]
     fn test_remove_all_removes_scripts_and_config() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             let result = service.save_and_configure("zsh", b"content", None).unwrap();
             let script_path = result.script_path.clone();
             let config_path = result.config_file.clone().expect("config file");
@@ -432,7 +439,8 @@ mod tests {
     #[test]
     fn test_save_and_configure_bash_creates_script_and_config() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             let result = service.save_and_configure("bash", b"bash content", None).unwrap();
 
             assert_eq!(result.shell, "bash");
@@ -451,7 +459,8 @@ mod tests {
     #[test]
     fn test_save_and_configure_powershell_writes_source_to_config() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service: Arc<dyn PathService> = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(Arc::clone(&path_service));
             let result = service.save_and_configure("powershell", b"pwsh content", None).unwrap();
 
             assert_eq!(result.shell, "powershell");
@@ -463,7 +472,7 @@ mod tests {
             let config_path = config_file_path(&shell).expect("config path");
             let config_content = fs::read_to_string(config_path).unwrap();
             let filename = get_completion_filename("powershell");
-            let expected = completion_file_shell_path(&filename);
+            let expected = path_service.get_completion_shell_path(&filename);
             assert!(config_content.contains(&expected));
         });
     }
@@ -471,7 +480,8 @@ mod tests {
     #[test]
     fn test_save_and_configure_idempotent() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             let result1 = service.save_and_configure("zsh", b"content1", None).unwrap();
             let script_path = result1.script_path.clone();
 
@@ -484,9 +494,10 @@ mod tests {
     #[test]
     fn test_save_and_configure_with_custom_output_dir() {
         with_test_home(|temp| {
+            let path_service = Arc::new(PathServiceImpl::new());
             let custom_dir = temp.path().join("custom_completions");
 
-            let service = CompletionServiceImpl::new();
+            let service = CompletionServiceImpl::new(path_service);
             let result = service
                 .save_and_configure("zsh", b"content", Some(custom_dir.to_str().unwrap()))
                 .unwrap();
@@ -499,7 +510,8 @@ mod tests {
     #[test]
     fn test_check_status_when_no_scripts_exist() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             let status = service.check_status().unwrap();
 
             assert!(status.shell_statuses.iter().all(|s| !s.script_exists));
@@ -509,7 +521,8 @@ mod tests {
     #[test]
     fn test_remove_when_nothing_exists() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             let result = service.remove(true).unwrap();
 
             assert!(result.removed_configs.is_empty());
@@ -522,7 +535,8 @@ mod tests {
     #[test]
     fn test_remove_current_shell_only() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             service.save_and_configure("zsh", b"zsh content", None).unwrap();
             service.save_and_configure("fish", b"fish content", None).unwrap();
 
@@ -535,7 +549,8 @@ mod tests {
     #[test]
     fn test_check_status_detects_multiple_shells() {
         with_test_home(|_| {
-            let service = CompletionServiceImpl::new();
+            let path_service = Arc::new(PathServiceImpl::new());
+            let service = CompletionServiceImpl::new(path_service);
             service.save_and_configure("zsh", b"zsh", None).unwrap();
             service.save_and_configure("bash", b"bash", None).unwrap();
 

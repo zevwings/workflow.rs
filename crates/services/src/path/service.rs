@@ -1,11 +1,13 @@
-use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::{fs, path::Path};
 
+use super::{
+    COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR, JIRA_CONFIG_FILE, MAIN_DIR,
+    PROJECT_CONFIG_FILE, USER_CONFIG_FILE, WORKFLOW_CONFIG_DIR, WORKFLOW_CONFIG_FILE,
+};
 use domain::{Dir, PathError, PathService};
-
-use super::{JIRA_CONFIG_FILE, MAIN_DIR, WORKFLOW_CONFIG_FILE};
 
 pub struct PathServiceImpl {
     is_icloud_available: bool,
@@ -127,27 +129,87 @@ impl PathServiceImpl {
             local_base_dir,
         })
     }
+
+    /// 创建目录并设置权限（700，仅用户可访问）
+    ///
+    /// 这是一个辅助函数，用于统一处理目录创建和权限设置。
+    fn create_dir_with_permissions(&self, dir: &Path, name: &str) -> Result<(), PathError> {
+        // 确保目录存在
+        fs::create_dir_all(dir).map_err(PathError::Io)?;
+
+        // 设置目录权限为 700（仅用户可访问，仅 Unix）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(dir, fs::Permissions::from_mode(0o700)).map_err(|e| {
+                PathError::Permission(format!(
+                    "Failed to set {} directory permissions: {}",
+                    name, e
+                ))
+            })?;
+        }
+
+        // Windows 不需要显式设置权限
+        #[cfg(not(unix))]
+        let _ = name;
+
+        Ok(())
+    }
 }
 
 impl PathService for PathServiceImpl {
-    fn get_workflow_config_filepath(&self) -> Result<PathBuf, PathError> {
+    fn get_workflow_config_dir(&self) -> Result<PathBuf, PathError> {
         let base_dir = self.get_base_dir()?;
         let config_dir = if base_dir.is_icloud_available {
-            base_dir.icloud_base_dir.join(WORKFLOW_CONFIG_FILE)
+            base_dir.icloud_base_dir.join(WORKFLOW_CONFIG_DIR)
         } else {
-            base_dir.local_base_dir.join(WORKFLOW_CONFIG_FILE)
+            base_dir.local_base_dir.join(WORKFLOW_CONFIG_DIR)
         };
+        self.create_dir_with_permissions(&config_dir, WORKFLOW_CONFIG_DIR)?;
         Ok(config_dir)
     }
 
+    fn get_workflow_config_filepath(&self) -> Result<PathBuf, PathError> {
+        let config_dir = self.get_workflow_config_dir()?;
+        let config_filepath = config_dir.join(WORKFLOW_CONFIG_FILE);
+        Ok(config_filepath)
+    }
+
     fn get_jira_config_filepath(&self) -> Result<PathBuf, PathError> {
-        let base_dir = self.get_base_dir()?;
-        let config_dir = if base_dir.is_icloud_available {
-            base_dir.icloud_base_dir.join(JIRA_CONFIG_FILE)
-        } else {
-            base_dir.local_base_dir.join(JIRA_CONFIG_FILE)
-        };
-        Ok(config_dir)
+        let config_dir = self.get_workflow_config_dir()?;
+        let config_filepath = config_dir.join(JIRA_CONFIG_FILE);
+        Ok(config_filepath)
+    }
+
+    fn get_jira_work_history_dir(&self) -> Result<PathBuf, PathError> {
+        // 强制使用本地路径，不使用 iCloud
+        let history_dir = self.try_local_base_dir()?.join("work-history");
+        self.create_dir_with_permissions(&history_dir, "work-history")?;
+        Ok(history_dir)
+    }
+
+    fn get_project_config_dir(&self) -> Result<PathBuf, PathError> {
+        let base_dir =
+            std::env::current_dir().map_err(PathError::Io).map(|path| path.join(MAIN_DIR))?;
+        self.create_dir_with_permissions(&base_dir, MAIN_DIR)?;
+        Ok(base_dir)
+    }
+
+    fn get_project_config_filepath(&self) -> Result<PathBuf, PathError> {
+        let config_dir = self.get_project_config_dir()?;
+        let config_filepath = config_dir.join(PROJECT_CONFIG_FILE);
+        Ok(config_filepath)
+    }
+
+    fn get_user_config_filepath(&self) -> Result<PathBuf, PathError> {
+        let config_dir = self.get_project_config_dir()?;
+        let config_filepath = config_dir.join(USER_CONFIG_FILE);
+        Ok(config_filepath)
+    }
+
+    fn get_mcp_config_filepath(&self) -> Result<PathBuf, PathError> {
+        let config_dir = self.get_project_config_dir()?;
+        let config_filepath = config_dir.join(".cursor").join("mcp.json");
+        Ok(config_filepath)
     }
 
     fn get_binary_install_dir(&self) -> Result<PathBuf, PathError> {
@@ -172,5 +234,56 @@ impl PathService for PathServiceImpl {
             name.to_string()
         };
         Ok(binary_name)
+    }
+
+    fn get_download_dir(&self) -> Result<PathBuf, PathError> {
+        let download_base_dir = dirs::document_dir()
+            .map(|h| h.join("Workflow").to_string_lossy().to_string())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                if cfg!(target_os = "windows") {
+                    PathBuf::from("C:\\Users\\User\\Documents\\Workflow")
+                } else {
+                    PathBuf::from("~/Documents/Workflow")
+                }
+            });
+        Ok(download_base_dir)
+    }
+
+    fn get_completion_dir(&self) -> Result<PathBuf, PathError> {
+        let local_base_dir = self.try_local_base_dir()?;
+        let completion_dir = local_base_dir.join(COMPLETIONS_DIR);
+        fs::create_dir_all(&completion_dir).map_err(PathError::Io)?;
+        Ok(completion_dir)
+    }
+
+    fn get_completion_cache_dir(&self) -> Result<PathBuf, PathError> {
+        let local_base_dir = self.try_local_base_dir()?;
+        let cache_dir = local_base_dir.join(COMPLETION_CACHE_DIR);
+        fs::create_dir_all(&cache_dir).map_err(PathError::Io)?;
+        Ok(cache_dir)
+    }
+
+    fn get_completion_shell_dir(&self) -> String {
+        format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_DIR)
+    }
+
+    fn get_completion_cache_shell_dir(&self) -> String {
+        format!("$HOME/{}/{}", MAIN_DIR, COMPLETION_CACHE_DIR)
+    }
+
+    fn get_completion_source_shell_path(&self) -> String {
+        format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE)
+    }
+
+    fn get_completion_shell_path(&self, filename: &str) -> String {
+        format!("{}/{}", self.get_completion_shell_dir(), filename)
+    }
+
+    fn get_logs_dir(&self) -> Result<PathBuf, PathError> {
+        // 强制使用本地路径，不使用 iCloud
+        let logs_dir = self.try_local_base_dir()?.join("logs");
+        self.create_dir_with_permissions(&logs_dir, "logs")?;
+        Ok(logs_dir)
     }
 }

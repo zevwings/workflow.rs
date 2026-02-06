@@ -12,9 +12,8 @@ use domain::{
 };
 use prompt::{br, confirm, info, success, warning};
 use prompt::{ConfirmFormField, FormBuilder, FormResult, GroupConfig, InputFormField};
-use toolkit::{project_config_file, user_config_file};
 
-use crate::registry::{get_git_repository, get_repo_config_repository};
+use crate::registry::{get_git_repository, get_path_service, get_repo_config_repository};
 
 /// 确保仓库配置存在
 ///
@@ -98,7 +97,6 @@ impl RepoSetupCommand {
         info!("Starting repository configuration setup...");
 
         // 1. 检查是否在 Git 仓库中
-        let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
         let repo_repo = get_git_repository();
 
         let repo_info = repo_repo.get_repo_info();
@@ -132,14 +130,16 @@ impl RepoSetupCommand {
             .save_user_config(&user_config)
             .map_err(|e| color_eyre::eyre::eyre!("Failed to save user config: {}", e))?;
 
+        let path_service = get_path_service();
+
         br!();
         success!(
             "Project configuration saved to: {}",
-            project_config_file(&repo_path).display()
+            path_service.get_project_config_filepath()?.display()
         );
         success!(
             "Personal configuration saved to: {}",
-            user_config_file(&repo_path).display()
+            path_service.get_user_config_filepath()?.display()
         );
         br!();
         success!("Repository configuration completed successfully!");

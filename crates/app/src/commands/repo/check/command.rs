@@ -2,13 +2,12 @@
 //!
 //! 验证仓库级别的配置文件并运行验证检查。
 
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::Result;
 
 use domain::{BranchTemplates, CommitTemplates, PullRequestsTemplates};
 use prompt::{br, info, print, separator, success, warning, TableBuilder};
-use toolkit::{project_config_file, user_config_file};
 
-use crate::registry::{get_git_repository, get_repo_config_repository};
+use crate::registry::{get_git_repository, get_path_service, get_repo_config_repository};
 
 /// Repo Check 命令
 pub struct RepoCheckCommand;
@@ -31,7 +30,6 @@ impl RepoCheckCommand {
         br!();
 
         // 1. 检查是否在 Git 仓库中
-        let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
         let repo_repo = get_git_repository();
 
         let repo_info = repo_repo.get_repo_info();
@@ -48,20 +46,22 @@ impl RepoCheckCommand {
         // 2. 显示配置路径
         separator!('=', 80, "Repository Configuration");
         br!();
-        let project_config_path = project_config_file(&repo_path);
-        let user_config_path = user_config_file(&repo_path);
+
+        let path_service = get_path_service();
+        let project_config_path = path_service.get_project_config_filepath()?;
+        let user_config_path = path_service.get_user_config_filepath()?;
         info!("Project config: {:?}", project_config_path);
         info!("User config: {:?}", user_config_path);
         br!();
 
         // 3. 验证配置文件
-        self.verify_repo_config(&repo_path)?;
+        self.verify_repo_config()?;
 
         Ok(())
     }
 
     /// 验证仓库配置文件及内容
-    fn verify_repo_config(&self, repo_path: &std::path::Path) -> Result<()> {
+    fn verify_repo_config(&self) -> Result<()> {
         let config_repo = get_repo_config_repository();
 
         // repo_path 仅用于显示路径，实际加载配置时不需要传入
@@ -69,8 +69,9 @@ impl RepoCheckCommand {
         // 创建验证表格
         let mut table = TableBuilder::new(vec!["Check Item", "Status", "Description"]);
 
-        let project_config_path = project_config_file(repo_path);
-        let user_config_path = user_config_file(repo_path);
+        let path_service = get_path_service();
+        let project_config_path = path_service.get_project_config_filepath()?;
+        let user_config_path = path_service.get_user_config_filepath()?;
 
         // 检查项目配置文件
         let mut public_config_valid = false;

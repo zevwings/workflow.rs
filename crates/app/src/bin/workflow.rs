@@ -4,7 +4,7 @@
 
 use clap::Parser;
 use prompt::{terminal_resume, terminal_suspend};
-use toolkit::{logger, logs_dir, register_spinner_handlers, LoggerConfig};
+use toolkit::{logger, register_spinner_handlers, LoggerConfig};
 
 #[cfg(feature = "develop")]
 use app::cli::RollbackCommand;
@@ -14,7 +14,7 @@ use app::cli::{
     StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
 };
 use app::commands;
-use app::registry;
+use app::registry::{get_global_config_repository, get_path_service};
 
 /// 获取命令名称字符串（用于日志文件名）
 fn get_command_name(command: &Command) -> Option<&'static str> {
@@ -50,7 +50,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
 
-    if let Ok(global_config) = registry::get_global_config_repository().load() {
+    let global_config_repository = get_global_config_repository();
+    let path_service = get_path_service();
+
+    if let Ok(global_config) = global_config_repository.load() {
         // RUST_LOG 优先于配置文件，便于调试时用 RUST_LOG=debug 看详细日志
         let level = std::env::var("RUST_LOG")
             .ok()
@@ -60,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             level,
             global_config.log.format.clone(),
             global_config.log.enable_trace_console.unwrap_or(false),
-            logs_dir()?,
+            path_service.get_logs_dir()?,
         );
 
         // 初始化 logger（从配置文件读取 LogSettings 并转换为 LoggerConfig）

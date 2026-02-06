@@ -1,10 +1,11 @@
 //! Shell Completion 实体
 
+use crate::path::{COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR, MAIN_DIR};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 // 从 toolkit 统一导入路径常量
-pub use toolkit::paths::{COMPLETIONS_DIR, COMPLETIONS_FILE, WORKFLOW_DIR};
+// pub use toolkit::paths::{COMPLETIONS_DIR, COMPLETIONS_FILE, WORKFLOW_DIR};
 
 // ============================================================================
 // 生成结果
@@ -106,27 +107,43 @@ pub fn get_all_completion_filenames() -> Vec<String> {
 /// `toolkit::completion_file_shell_path()` 获取。
 pub fn get_shell_source_path(shell: &str) -> String {
     match shell.to_lowercase().as_str() {
-        "zsh" | "bash" => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_FILE),
+        "zsh" | "bash" => format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE),
         "fish" => format!(
             "$HOME/{}/{}/{}",
-            WORKFLOW_DIR,
+            MAIN_DIR,
             COMPLETIONS_DIR,
             get_completion_filename("fish")
         ),
         "powershell" | "pwsh" => format!(
             "$HOME/{}/{}/{}",
-            WORKFLOW_DIR,
+            MAIN_DIR,
             COMPLETIONS_DIR,
             get_completion_filename("powershell")
         ),
         "elvish" => format!(
             "$HOME/{}/{}/{}",
-            WORKFLOW_DIR,
+            MAIN_DIR,
             COMPLETIONS_DIR,
             get_completion_filename("elvish")
         ),
-        _ => format!("$HOME/{}/{}", WORKFLOW_DIR, COMPLETIONS_FILE),
+        _ => format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE),
     }
+}
+
+pub fn get_completion_shell_dir() -> String {
+    format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_DIR)
+}
+
+pub fn get_completion_cache_shell_dir() -> String {
+    format!("$HOME/{}/{}", MAIN_DIR, COMPLETION_CACHE_DIR)
+}
+
+pub fn get_completion_source_shell_path() -> String {
+    format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE)
+}
+
+pub fn get_completion_shell_path(filename: &str) -> String {
+    format!("$HOME/{}/{}/{}", MAIN_DIR, COMPLETIONS_DIR, filename)
 }
 
 #[cfg(test)]

@@ -11,6 +11,7 @@ use crate::jira::{
 };
 use domain::{
     GlobalConfigRepository, JiraConfigContext, JiraRepository, JiraWorkHistoryRepository,
+    PathService,
 };
 
 /// 注册 Jira 相关服务
@@ -47,7 +48,10 @@ pub fn register_jira() -> registry::Result<()> {
         let jira_client = c
             .get::<dyn JiraClient>()
             .expect("JiraClient must be registered before StatusService");
-        Arc::new(StatusServiceImpl::new(jira_client))
+        let path_service = c
+            .get::<dyn PathService>()
+            .expect("PathService must be registered before StatusService");
+        Arc::new(StatusServiceImpl::new(jira_client, path_service))
     })
     .in_scope(Scope::Singleton)?;
 
@@ -80,8 +84,11 @@ pub fn register_jira() -> registry::Result<()> {
     .in_scope(Scope::Singleton)?;
 
     // Work History Service（不依赖 JiraClient，独立运行）
-    bind!(dyn WorkHistoryService, |_c: &Container| {
-        Arc::new(WorkHistoryServiceImpl::new())
+    bind!(dyn WorkHistoryService, |c: &Container| {
+        let path_service = c
+            .get::<dyn PathService>()
+            .expect("PathService must be registered before WorkHistoryService");
+        Arc::new(WorkHistoryServiceImpl::new(path_service))
     })
     .in_scope(Scope::Singleton)?;
 

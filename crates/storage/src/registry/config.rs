@@ -17,8 +17,11 @@ pub fn register_config() -> registry::Result<()> {
     })
     .in_scope(Scope::Singleton)?;
 
-    bind!(dyn RepoConfigRepository, |_: &Container| {
-        Arc::new(RepoConfigRepositoryImpl::new())
+    bind!(dyn RepoConfigRepository, |c: &Container| {
+        let path_service = c
+            .get::<dyn PathService>()
+            .expect("PathService must be registered before RepoConfigRepository");
+        Arc::new(RepoConfigRepositoryImpl::new(path_service))
     })
     .in_scope(Scope::Singleton)?;
 

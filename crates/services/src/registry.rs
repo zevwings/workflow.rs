@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 use registry::{bind, try_bind, Container, Scope};
 
+use crate::CompletionServiceImpl;
+
 /// 构建 Services 模块
 ///
 /// 注册所有 services 层的服务，包括：
@@ -39,8 +41,11 @@ pub fn register_services() -> registry::Result<()> {
     .in_scope(Scope::Singleton)?;
 
     // CompletionService - 无外部依赖
-    bind!(dyn domain::CompletionService, |_c: &Container| {
-        Arc::new(crate::CompletionServiceImpl::new())
+    bind!(dyn domain::CompletionService, |c: &Container| {
+        let path_service = c
+            .get::<dyn domain::PathService>()
+            .expect("PathService must be registered before CompletionService");
+        Arc::new(CompletionServiceImpl::new(path_service))
     })
     .in_scope(Scope::Singleton)?;
 

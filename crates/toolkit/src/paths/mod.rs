@@ -12,20 +12,15 @@
 //! use toolkit::paths::{config_dir, workflow_config_path, binary_install_dir};
 //! ```
 
-mod base;
-mod config;
 mod constants;
-mod download;
 mod error;
 mod expand;
-mod info;
-mod install;
 
 // 重新导出常量
-pub use constants::*;
+// pub use constants::*;
 
 // 重新导出错误类型
-pub use error::PathError;
+// pub use error::PathError;
 
 // ==================== 路径工具方法 ====================
 
@@ -54,27 +49,4 @@ pub use error::PathError;
 /// expand("/absolute/path") -> "/absolute/path"
 /// expand("C:\\absolute\\path") -> "C:\\absolute\\path"
 /// ```
-pub use expand::expand;
-
-// ==================== 下载路径相关方法 ====================
-
-pub use download::default_download_base_dir;
-
-// ==================== 配置路径相关方法 ====================
-
-pub use config::{
-    commands_config_path, config_dir, jira_config_path, llm_config_path, logs_dir,
-    project_config_file, project_config_path, repo_dir, repo_workflow_dir, repository_config_path,
-    user_config_file, work_history_dir, workflow_dir,
-};
-
-// ==================== 安装路径相关方法 ====================
-
-pub use install::{
-    completion_cache_dir, completion_cache_dir_shell_path, completion_dir,
-    completion_dir_shell_path, completion_file_shell_path, completion_source_shell_path,
-};
-
-// ==================== 信息查询 API ====================
-
-pub use info::{is_config_in_icloud, storage_info, storage_location};
+pub use expand::{expand, PathExpandError};
