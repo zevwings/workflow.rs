@@ -112,14 +112,19 @@ impl PathServiceImpl {
         Err(PathError::CannotDetermine("iCloud Drive".to_string()))
     }
 
+    /// 获取基础目录（iCloud + 本地）。
+    ///
+    /// - **iCloud**：可选；不可用时回退为空路径，不向调用方报错。
+    /// - **本地目录**：必须可用（如 `~/.workflow/`）；若无法解析或创建则返回错误并向上传播。
     fn get_base_dir(&self) -> Result<Dir, PathError> {
+        // iCloud 为可选：不可用时回退为空路径，不向调用方报错
         let icloud_base_dir = if self.is_icloud_available {
             self.try_icloud_base_dir().unwrap_or_default()
         } else {
             PathBuf::new()
         };
 
-        let local_base_dir = self.try_local_base_dir().unwrap_or_default();
+        let local_base_dir = self.try_local_base_dir()?;
         let is_icloud_available =
             !icloud_base_dir.as_os_str().is_empty() && icloud_base_dir.exists();
 

@@ -268,6 +268,25 @@ _workflow_complete_branches() {{
     _describe 'branches' branch_array
   fi
 }}
+
+# Dynamic PR ID completion
+_workflow_complete_pr_ids() {{
+  _workflow_ensure_cache_dir
+  local cache_file="$_WORKFLOW_CACHE_DIR/pr_ids"
+
+  if _workflow_is_cache_valid "$cache_file"; then
+    local pr_ids=(${{(f)"$(<$cache_file)"}})
+    _describe 'PR IDs' pr_ids
+    return
+  fi
+
+  local pr_ids
+  if command -v gh >/dev/null 2>&1 && pr_ids=$(timeout 3s gh pr list --limit 20 --json number --jq '.[].number' 2>/dev/null); then
+    echo "$pr_ids" > "$cache_file" 2>/dev/null
+    local pr_array=(${{(f)pr_ids}})
+    _describe 'PR IDs' pr_array
+  fi
+}}
 "#,
             cache_dir = cache_dir
         )
@@ -312,6 +331,21 @@ _workflow_get_branches() {{
   local branches
   if branches=$(timeout 2s git branch --format='%(refname:short)' 2>/dev/null); then
     echo "$branches" | tee "$cache_file" 2>/dev/null
+  fi
+}}
+
+# Get PR IDs for completion
+_workflow_get_pr_ids() {{
+  _workflow_ensure_cache_dir
+  local cache_file="$_WORKFLOW_CACHE_DIR/pr_ids"
+
+  if _workflow_is_cache_valid "$cache_file"; then
+    cat "$cache_file" 2>/dev/null
+    return
+  fi
+
+  if command -v gh >/dev/null 2>&1; then
+    timeout 3s gh pr list --limit 20 --json number --jq '.[].number' 2>/dev/null | tee "$cache_file" 2>/dev/null
   fi
 }}
 "#,
