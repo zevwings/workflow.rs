@@ -252,7 +252,7 @@ mod tests {
             headers: HeaderMap::new(),
             body: body.to_vec(),
             url: "https://example.com/test".to_string(),
-            method: HttpMethod::Get,
+            method: HttpMethod::GET,
             duration: Duration::from_millis(100),
         }
     }

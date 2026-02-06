@@ -8,10 +8,9 @@ use domain::{JiraError, JiraUser};
 
 use crate::jira::client::core::JiraClient;
 use crate::jira::client::types::JiraResponseSerializable;
-use crate::jira::types::JiraUser as StorageJiraUser;
 
 pub trait UserService: Send + Sync {
-    fn get_user_info(&self) -> Result<JiraUser, JiraError>;
+    fn me(&self) -> Result<JiraUser, JiraError>;
 }
 
 pub struct UserServiceImpl {
@@ -19,7 +18,7 @@ pub struct UserServiceImpl {
 }
 
 impl UserService for UserServiceImpl {
-    fn get_user_info(&self) -> Result<JiraUser, JiraError> {
+    fn me(&self) -> Result<JiraUser, JiraError> {
         // 1. 调用 API 获取用户信息
         let response = self
             .jira_client
@@ -27,15 +26,12 @@ impl UserService for UserServiceImpl {
             .map_err(|e| JiraError::ApiError(format!("Failed to get user info: {}", e)))?;
 
         // 2. 解析响应为 Storage DTO
-        let user_dto = response
-            .as_model::<StorageJiraUser>()
+        let user = response
+            .as_model::<JiraUser>()
             .map_err(|e| JiraError::ApiError(format!("Failed to parse user info: {}", e)))?;
 
         // 3. DTO → Domain 映射
-        Ok(JiraUser {
-            display_name: user_dto.display_name,
-            account_id: user_dto.account_id,
-        })
+        Ok(user)
     }
 }
 

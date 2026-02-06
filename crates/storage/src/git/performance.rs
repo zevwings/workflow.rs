@@ -2,6 +2,8 @@
 //!
 //! 提供性能监控、日志记录和分析工具。
 
+#![allow(dead_code)]
+
 use std::time::{Duration, Instant};
 
 /// 性能计时器

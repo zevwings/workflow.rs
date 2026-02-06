@@ -11,10 +11,10 @@
 // const LOG_EXTENSIONS: &[&str] = &[".log", ".txt", ".zip"];
 
 // use super::entity::UrlResolver;
-// use crate::jira::services::attachment::Downloader;
-// use crate::jira::services::traits::ProgressCallback;
-// use crate::jira::services::AttachmentService;
-// use crate::jira::services::IssueService;
+// use crate::jira::api::services::attachment::Downloader;
+// use crate::jira::api::services::traits::ProgressCallback;
+// use crate::jira::api::services::AttachmentService;
+// use crate::jira::api::services::IssueService;
 // use crate::jira::types::JiraAttachment;
 // use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 

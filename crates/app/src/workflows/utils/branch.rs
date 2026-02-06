@@ -204,7 +204,7 @@ pub fn generate_branch_name_from_jira(jira_id: &str) -> Result<String, Box<dyn s
         .with(|| jira_repo.get_issue_info(jira_id))
         .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
 
-    let summary = issue.summary.clone();
+    let summary = issue.fields.summary.clone();
 
     // 使用核心逻辑生成分支类型和基础分支名
     let (branch_type, base_branch_name) = generate_branch_name_by_summary(&summary)?;

@@ -24,20 +24,6 @@ pub mod git_hooks {
     pub const PRE_MERGE_COMMIT: &str = "pre-merge-commit";
     /// rebase/amend 后
     pub const POST_REWRITE: &str = "post-rewrite";
-
-    /// 所有标准 Git hooks 列表
-    pub const ALL: &[&str] = &[
-        PRE_COMMIT,
-        PREPARE_COMMIT_MSG,
-        COMMIT_MSG,
-        POST_COMMIT,
-        PRE_PUSH,
-        PRE_REBASE,
-        POST_MERGE,
-        POST_CHECKOUT,
-        PRE_MERGE_COMMIT,
-        POST_REWRITE,
-    ];
 }
 
 /// pre-commit/prek 工具支持的 hooks
@@ -95,6 +81,5 @@ mod tests {
     fn test_git_hooks_constants() {
         assert_eq!(git_hooks::PRE_COMMIT, "pre-commit");
         assert_eq!(git_hooks::COMMIT_MSG, "commit-msg");
-        assert!(git_hooks::ALL.contains(&"pre-commit"));
     }
 }

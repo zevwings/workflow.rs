@@ -1,6 +1,6 @@
 //! Status 服务实体定义
 
-use domain::ProjectStatusConfig as DomainProjectStatusConfig;
+use domain::ProjectStatusConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -45,5 +45,5 @@ pub struct JiraConfig {
     /// 项目状态配置映射
     /// 使用 `[status.PROJECT_KEY]` 格式存储每个项目的状态配置
     #[serde(default, rename = "status")]
-    pub status: HashMap<String, DomainProjectStatusConfig>,
+    pub status: HashMap<String, ProjectStatusConfig>,
 }

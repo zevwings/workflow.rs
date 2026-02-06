@@ -86,49 +86,49 @@ impl HttpClient {
     ///
     /// 如果设置了 `base_url`，可以只传入路径（如 `/users`）。
     pub fn get(&self, url: &str) -> Request<'_> {
-        Request::new(self, HttpMethod::Get, self.resolve_url(url))
+        Request::new(self, HttpMethod::GET, self.resolve_url(url))
     }
 
     /// POST 请求
     ///
     /// 如果设置了 `base_url`，可以只传入路径（如 `/users`）。
     pub fn post(&self, url: &str) -> Request<'_> {
-        Request::new(self, HttpMethod::Post, self.resolve_url(url))
+        Request::new(self, HttpMethod::POST, self.resolve_url(url))
     }
 
     /// PUT 请求
     ///
     /// 如果设置了 `base_url`，可以只传入路径（如 `/users/123`）。
     pub fn put(&self, url: &str) -> Request<'_> {
-        Request::new(self, HttpMethod::Put, self.resolve_url(url))
+        Request::new(self, HttpMethod::PUT, self.resolve_url(url))
     }
 
     /// DELETE 请求
     ///
     /// 如果设置了 `base_url`，可以只传入路径（如 `/users/123`）。
     pub fn delete(&self, url: &str) -> Request<'_> {
-        Request::new(self, HttpMethod::Delete, self.resolve_url(url))
+        Request::new(self, HttpMethod::DELETE, self.resolve_url(url))
     }
 
     /// PATCH 请求
     ///
     /// 如果设置了 `base_url`，可以只传入路径（如 `/users/123`）。
     pub fn patch(&self, url: &str) -> Request<'_> {
-        Request::new(self, HttpMethod::Patch, self.resolve_url(url))
+        Request::new(self, HttpMethod::PATCH, self.resolve_url(url))
     }
 
     /// HEAD 请求
     ///
     /// 如果设置了 `base_url`，可以只传入路径。
     pub fn head(&self, url: &str) -> Request<'_> {
-        Request::new(self, HttpMethod::Head, self.resolve_url(url))
+        Request::new(self, HttpMethod::HEAD, self.resolve_url(url))
     }
 
     /// OPTIONS 请求
     ///
     /// 如果设置了 `base_url`，可以只传入路径。
     pub fn options(&self, url: &str) -> Request<'_> {
-        Request::new(self, HttpMethod::Options, self.resolve_url(url))
+        Request::new(self, HttpMethod::OPTIONS, self.resolve_url(url))
     }
 }
 

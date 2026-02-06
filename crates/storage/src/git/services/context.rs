@@ -76,12 +76,6 @@ impl GitContext {
         }
     }
 
-    /// 打开指定路径的 Git 仓库
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, GitError> {
-        let repo = Repository::open(path).map_err(|_| GitError::NotGitRepo)?;
-        Ok(Self::new(repo))
-    }
-
     /// 从当前目录向上查找 Git 仓库
     pub fn discover() -> Result<Self, GitError> {
         let repo = Repository::discover(".").map_err(|_| GitError::NotGitRepo)?;
@@ -89,6 +83,8 @@ impl GitContext {
     }
 
     /// 初始化新的 Git 仓库
+    #[cfg(any(test, feature = "testing"))]
+    #[allow(dead_code)]
     pub fn init<P: AsRef<Path>>(path: P) -> Result<Self, GitError> {
         let repo = Repository::init(&path).map_err(|e| {
             GitError::OperationFailed(format!(
@@ -115,16 +111,6 @@ impl GitContext {
     /// 获取仓库的工作目录路径
     pub fn workdir(&self) -> &Path {
         &self.inner.path
-    }
-
-    /// 检查是否为空仓库（没有任何提交）
-    pub fn is_empty(&self) -> Result<bool, GitError> {
-        self.inner
-            .repo
-            .lock()
-            .expect("Failed to lock repository")
-            .is_empty()
-            .map_err(|e| GitError::OperationFailed(e.to_string()))
     }
 
     /// 检查是否为 bare 仓库
@@ -326,6 +312,7 @@ impl GitContext {
     ///
     /// # 返回
     /// 分支指向的 commit ID
+    #[allow(dead_code)]
     pub fn get_branch_commit(
         &self,
         name: &str,
@@ -349,6 +336,7 @@ impl GitContext {
     ///
     /// # 错误
     /// 如果 HEAD 处于 detached 状态，返回错误
+    #[allow(dead_code)]
     pub fn ensure_head_is_branch(&self) -> Result<String, GitError> {
         let repo = self.inner.repo.lock().expect("Failed to lock repository");
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;

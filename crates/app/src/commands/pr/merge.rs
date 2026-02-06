@@ -4,6 +4,7 @@ use domain::GitError;
 use prompt::{confirm, error, info, spinner, success, warning};
 
 use crate::registry;
+use crate::workflows::utils::update_jira_after_pr_merged;
 
 /// Pull Request Merge 命令
 pub struct PullRequestMergeCommand {
@@ -26,12 +27,13 @@ impl PullRequestMergeCommand {
             info!("Force mode enabled: remote branch will be deleted after merge");
         }
 
-        // 1. 获取 PR 信息（在合并前获取源分支和目标分支）
+        // 1. 获取 PR 信息（在合并前获取源分支、目标分支和标题）
         let pr_info = pr_service
             .get_pull_request(&self.pr_id)
             .map_err(|e| format!("Failed to get PR info: {}", e))?;
         let source_branch = pr_info.source_branch;
         let target_branch = pr_info.target_branch;
+        let pr_title = pr_info.title.clone();
 
         // 2. 合并 PR
         spinner!("Merging PR #{}...", self.pr_id)
@@ -161,6 +163,22 @@ impl PullRequestMergeCommand {
                 .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
             success!("Stashed changes restored");
         }
+
+        // 7. 更新 Jira 状态（如果关联了 ticket）
+        let jira_repo = registry::get_jira_repository();
+        let work_history_repo = registry::get_jira_work_history_repository();
+
+        // 获取仓库 URL
+        let repo_info = git_repo.get_repo_info();
+        let repository_url = repo_info.origin_url.as_deref();
+
+        update_jira_after_pr_merged(
+            jira_repo.as_ref(),
+            work_history_repo.as_ref(),
+            &self.pr_id,
+            Some(pr_title.as_str()),
+            repository_url,
+        )?;
 
         success!("PR merge workflow completed!");
 

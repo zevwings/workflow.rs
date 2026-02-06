@@ -111,6 +111,11 @@ pub fn get_jira_repository() -> Arc<dyn domain::JiraRepository> {
     get_service::<dyn domain::JiraRepository>()
 }
 
+/// 获取 JiraWorkHistoryRepository
+pub fn get_jira_work_history_repository() -> Arc<dyn domain::JiraWorkHistoryRepository> {
+    get_service::<dyn domain::JiraWorkHistoryRepository>()
+}
+
 /// 获取 LLMRepository
 pub fn get_llm_repository() -> Arc<dyn domain::llm::repository::LLMRepository> {
     get_service::<dyn domain::llm::repository::LLMRepository>()

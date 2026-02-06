@@ -9,19 +9,33 @@ use crate::registry;
 
 use super::types::TargetBranchOption;
 
+/// PR 创建结果
+#[derive(Debug, Clone)]
+pub struct PrCreateResult {
+    /// PR ID
+    pub pr_id: String,
+    /// PR URL
+    pub pr_url: String,
+}
+
 /// 创建 Pull Request
 ///
 /// 使用生成的 PR 内容创建 Pull Request
 ///
 /// # 参数
 /// - `target_branch`: 可选的目标分支，如果为 None 则使用默认分支
+///
+/// # 返回
+/// - `Ok(Some(PrCreateResult))` - PR 创建成功，返回 PR ID 和 URL
+/// - `Ok(None)` - dry_run 模式，未实际创建 PR
+/// - `Err(...)` - 创建失败
 pub fn create_pull_request(
     branch_repo: &dyn GitRepository,
     branch_name: &str,
     pr_content: &PullRequestContent,
     target_branch: Option<&str>,
     dry_run: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<Option<PrCreateResult>, Box<dyn std::error::Error>> {
     // 使用提供的目标分支或默认分支
     let default_branch = branch_repo
         .get_default_branch()
@@ -50,7 +64,7 @@ pub fn create_pull_request(
         if !pr_body.is_empty() {
             info!("  Description:\n{}", pr_body);
         }
-        return Ok(());
+        return Ok(None);
     }
 
     // 创建 PR
@@ -81,7 +95,7 @@ pub fn create_pull_request(
         _ => None,
     };
 
-    if let Some(url) = pr_url {
+    if let Some(ref url) = pr_url {
         info!("PR URL: {}", url);
 
         // 使用默认浏览器打开 PR 页面
@@ -94,15 +108,23 @@ pub fn create_pull_request(
                 error!("Failed to open PR in browser: {}", e);
             }
         }
+
+        Ok(Some(PrCreateResult {
+            pr_id: pr_id.clone(),
+            pr_url: url.clone(),
+        }))
     } else {
         warning!(
             "Could not generate PR URL. Platform: {:?}, Repo: {:?}",
             repo_info.kind,
             repo_info.name
         );
+        // 即使没有 URL，PR 也已经创建成功，返回 PR ID
+        Ok(Some(PrCreateResult {
+            pr_id: pr_id.clone(),
+            pr_url: String::new(),
+        }))
     }
-
-    Ok(())
 }
 
 /// 询问用户确认目标分支
@@ -190,7 +212,7 @@ pub fn generate_pr_summary(
         let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
             .with(|| jira_repo.get_issue_info(jira_id))
             .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
-        format!("{}: {}", jira_id, issue.summary)
+        format!("{}: {}", jira_id, issue.fields.summary)
     } else if let Some(desc) = description {
         desc.to_string()
     } else {

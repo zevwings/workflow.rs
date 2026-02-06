@@ -19,6 +19,12 @@ pub enum JiraCommand {
     Attachments(AttachmentsArgs),
     /// 清理 Jira 附件目录
     Clean(CleanArgs),
+    /// 设置 Jira 状态配置
+    Status(JiraIdArg),
+    /// 过渡 Jira 状态
+    Transition(JiraIdArg),
+    /// 分配 Jira ticket 给当前用户
+    Assign(JiraIdArg),
 }
 
 /// Info 命令参数

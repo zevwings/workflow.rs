@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use serde::Serialize;
 
-use domain::{jira::JiraConfigContext, JiraError};
+use domain::{JiraConfigContext, JiraError};
 use toolkit::{Authorization, HttpClient, HttpMethod};
 
 use crate::jira::client::types::JiraResponse;
@@ -43,6 +43,20 @@ pub trait JiraClient: Send + Sync {
         body: &serde_json::Value,
         query: Option<&[(String, String)]>,
     ) -> Result<JiraResponse, JiraError>;
+
+    /// 发送 PUT 请求到 Jira API
+    ///
+    /// # 参数
+    ///
+    /// * `path` - API 路径（相对于 base_url），如 `"issue/PROJ-123/assignee"`
+    /// * `body` - 请求体（JSON 值）
+    /// * `query` - 可选的查询参数
+    fn put(
+        &self,
+        path: &str,
+        body: &serde_json::Value,
+        query: Option<&[(String, String)]>,
+    ) -> Result<JiraResponse, JiraError>;
 }
 
 pub struct JiraClientImpl {
@@ -63,7 +77,7 @@ impl JiraClient for JiraClientImpl {
         path: &str,
         query: Option<&[(String, String)]>,
     ) -> Result<JiraResponse, JiraError> {
-        self.request(HttpMethod::Get, path, None::<&()>, query)
+        self.request(HttpMethod::GET, path, None::<&()>, query)
     }
 
     fn post(
@@ -72,7 +86,16 @@ impl JiraClient for JiraClientImpl {
         body: &serde_json::Value,
         query: Option<&[(String, String)]>,
     ) -> Result<JiraResponse, JiraError> {
-        self.request(HttpMethod::Post, path, Some(body), query)
+        self.request(HttpMethod::POST, path, Some(body), query)
+    }
+
+    fn put(
+        &self,
+        path: &str,
+        body: &serde_json::Value,
+        query: Option<&[(String, String)]>,
+    ) -> Result<JiraResponse, JiraError> {
+        self.request(HttpMethod::PUT, path, Some(body), query)
     }
 }
 
@@ -109,11 +132,11 @@ impl JiraClientImpl {
 
         // 构建请求并发送
         let response = match method {
-            HttpMethod::Get => {
+            HttpMethod::GET => {
                 toolkit::log_debug!("Jira request: {} {}", method, url);
                 client.get(&url).auth(auth).send()
             }
-            HttpMethod::Post => {
+            HttpMethod::POST => {
                 if let Some(body) = body {
                     let body_value = serde_json::to_value(body).map_err(|e| {
                         JiraError::ApiError(format!("Failed to serialize request body: {}", e))
@@ -124,6 +147,19 @@ impl JiraClientImpl {
                 } else {
                     toolkit::log_debug!("Jira request: {} {}", method, url);
                     client.post(&url).auth(auth).send()
+                }
+            }
+            HttpMethod::PUT => {
+                if let Some(body) = body {
+                    let body_value = serde_json::to_value(body).map_err(|e| {
+                        JiraError::ApiError(format!("Failed to serialize request body: {}", e))
+                    })?;
+                    toolkit::log_debug!("Jira request: {} {}", method, url);
+                    toolkit::log_debug!("Jira request body: {}", body_value);
+                    client.put(&url).auth(auth).body(&body_value).send()
+                } else {
+                    toolkit::log_debug!("Jira request: {} {}", method, url);
+                    client.put(&url).auth(auth).send()
                 }
             }
             _ => {
@@ -144,10 +180,15 @@ impl JiraClientImpl {
             )));
         }
 
+        // 处理 204 No Content 响应 - 不尝试解析 JSON
+        if response.status == 204 {
+            return Ok(JiraResponse::new(serde_json::Value::Null));
+        }
+
         // 解析 JSON 响应
         let data = response
             .json::<serde_json::Value>()
-            .map_err(|e| JiraError::ApiError(e.to_string()))?;
+            .map_err(|e| JiraError::ApiError(format!("Failed to parse JSON response: {}", e)))?;
         Ok(JiraResponse::new(data))
     }
 

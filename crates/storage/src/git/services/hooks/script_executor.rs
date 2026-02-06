@@ -28,14 +28,6 @@ impl Default for ScriptHookExecutor {
 }
 
 impl ScriptHookExecutor {
-    /// 创建新的原生脚本 Hook 执行器
-    ///
-    /// # 参数
-    /// - `timeout`: Hook 执行超时时间
-    pub fn new(timeout: Duration) -> Self {
-        Self { timeout }
-    }
-
     /// 执行 hook 脚本
     ///
     /// # 参数

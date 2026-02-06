@@ -4,6 +4,7 @@
 //! - 用户信息管理（获取、缓存）
 //! - Ticket/Issue 操作（查询、状态更新、分配、评论）
 //! - 项目状态管理（获取状态列表、配置状态映射）
+//! - 工作历史记录管理（PR 创建/合并记录）
 //! - 数据模型定义（Issue、User、Attachment 等）
 //! - 辅助工具函数（字符串处理、认证、URL 构建）
 //!
@@ -14,23 +15,27 @@
 //!
 //! ## 模块结构
 //!
-//! - `provider` - JiraConfigProvider trait（配置提供者接口）
 //! - `client` - 统一 HTTP 请求处理客户端（JiraClient）
-//! - `repository` - 仓储实现（JiraRepositoryImpl）
+//! - `api` - 远程 Jira API 交互领域
+//!   - `repository` - JiraRepositoryImpl（实现 JiraRepository trait）
+//!   - `services` - Issue、Status、User 服务
+//! - `history` - 本地工作历史记录领域
+//!   - `repository` - JiraWorkHistoryRepositoryImpl（实现 JiraWorkHistoryRepository trait）
+//!   - `services` - WorkHistory 服务
 //! - `types` - 数据模型定义（API 响应类型）
-//! - `helpers` - 辅助函数（字符串处理、认证、URL 构建）
-//! - `paths` - Jira 附件路径管理
 
+pub(crate) mod api;
 pub(crate) mod client;
-pub(crate) mod repository;
-pub(crate) mod services;
-pub(crate) mod types;
+pub(crate) mod history;
 
 // 重新导出 client
 pub use client::{JiraClient, JiraClientImpl, JiraConfigContextImpl};
 
-// 重新导出 repository 实现
-pub use repository::JiraRepositoryImpl;
-pub use services::{
-    IssueService, IssueServiceImpl, StatusService, StatusServiceImpl, UserService, UserServiceImpl,
+// 重新导出 API 领域
+pub use api::{
+    IssueService, IssueServiceImpl, JiraRepositoryImpl, StatusService, StatusServiceImpl,
+    UserService, UserServiceImpl,
 };
+
+// 重新导出 History 领域
+pub use history::{JiraWorkHistoryRepositoryImpl, WorkHistoryService, WorkHistoryServiceImpl};

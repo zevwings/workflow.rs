@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use crate::jira::services::{IssueService, StatusService, UserService};
+use crate::jira::api::services::{IssueService, StatusService, UserService};
 use domain::{
     AttachmentDownloadResult, JiraAttachment, JiraError, JiraIssue, JiraRepository,
     JiraStatusConfig, JiraUser,
@@ -36,7 +36,7 @@ impl JiraRepositoryImpl {
 
 impl JiraRepository for JiraRepositoryImpl {
     fn get_user_info(&self) -> Result<JiraUser, JiraError> {
-        self.user_service.get_user_info()
+        self.user_service.me()
     }
     fn get_issue_info(&self, issue_id: &str) -> Result<JiraIssue, JiraError> {
         self.issue_service.get_issue_info(issue_id)
@@ -44,6 +44,27 @@ impl JiraRepository for JiraRepositoryImpl {
 
     fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<(), JiraError> {
         self.issue_service.update_issue_status(issue_id, status)
+    }
+
+    fn assign_issue(
+        &self,
+        ticket: &str,
+        account_id: Option<String>,
+    ) -> Result<JiraUser, JiraError> {
+        let user = self
+            .user_service
+            .me()
+            .map_err(|e| JiraError::ApiError(format!("Failed to get user info: {}", e)))?;
+        // .map(|user| user.account_id).unwrap_or_default()
+        let account_id = if let Some(account_id) = account_id {
+            account_id
+        } else {
+            user.account_id.clone()
+        };
+        self.issue_service
+            .assign_issue(ticket, &account_id)
+            .map_err(|e| JiraError::ApiError(format!("Failed to assign issue: {}", e)))?;
+        Ok(user)
     }
 
     fn add_comment(&self, issue_id: &str, comment: &str) -> Result<(), JiraError> {
@@ -59,15 +80,11 @@ impl JiraRepository for JiraRepositoryImpl {
         _issue_id: &str,
         _base_dir: &std::path::Path,
     ) -> Result<AttachmentDownloadResult, JiraError> {
-        Err(JiraError::Other(
-            "Attachment download functionality is currently disabled. See jira/services/attachment/mod.rs for details.".to_string()
-        ))
+        unimplemented!()
     }
 
     fn clean_attachments(&self, _jira_id: Option<&str>) -> Result<(), JiraError> {
-        Err(JiraError::Other(
-            "Attachment cleanup functionality is currently disabled. See jira/services/attachment/mod.rs for details.".to_string()
-        ))
+        unimplemented!()
     }
 
     fn get_project_statuses(&self, project: &str) -> Result<Vec<String>, JiraError> {

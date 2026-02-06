@@ -6,9 +6,12 @@ use registry::{bind, Container, Scope};
 
 use crate::jira::{
     IssueService, IssueServiceImpl, JiraClient, JiraClientImpl, JiraConfigContextImpl,
-    JiraRepositoryImpl, StatusService, StatusServiceImpl, UserService, UserServiceImpl,
+    JiraRepositoryImpl, JiraWorkHistoryRepositoryImpl, StatusService, StatusServiceImpl,
+    UserService, UserServiceImpl, WorkHistoryService, WorkHistoryServiceImpl,
 };
-use domain::{GlobalConfigRepository, JiraConfigContext, JiraRepository};
+use domain::{
+    GlobalConfigRepository, JiraConfigContext, JiraRepository, JiraWorkHistoryRepository,
+};
 
 /// 注册 Jira 相关服务
 pub fn register_jira() -> registry::Result<()> {
@@ -73,6 +76,21 @@ pub fn register_jira() -> registry::Result<()> {
             status_service,
             user_service,
         ))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    // Work History Service（不依赖 JiraClient，独立运行）
+    bind!(dyn WorkHistoryService, |_c: &Container| {
+        Arc::new(WorkHistoryServiceImpl::new())
+    })
+    .in_scope(Scope::Singleton)?;
+
+    // Jira Work History Repository
+    bind!(dyn JiraWorkHistoryRepository, |c: &Container| {
+        let work_history_service = c
+            .get::<dyn WorkHistoryService>()
+            .expect("WorkHistoryService must be registered before JiraWorkHistoryRepository");
+        Arc::new(JiraWorkHistoryRepositoryImpl::new(work_history_service))
     })
     .in_scope(Scope::Singleton)?;
 
