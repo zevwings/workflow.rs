@@ -2,7 +2,6 @@
 //!
 //! 备份当前安装的二进制，用于更新前或回滚场景。
 
-use color_eyre::Result;
 use prompt::{br, info, warning};
 use toolkit::backup;
 
@@ -24,7 +23,7 @@ impl BackupCommand {
     }
 
     /// 运行备份
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting backup");
         br!();
 
@@ -33,7 +32,7 @@ impl BackupCommand {
             Ok(d) => d,
             Err(e) => {
                 warning!("Failed to get install dir: {}", e);
-                return Err(color_eyre::eyre::eyre!("Failed to get install dir"));
+                return Err("Failed to get install dir".into());
             }
         };
 
@@ -41,7 +40,7 @@ impl BackupCommand {
             Ok(n) => n,
             Err(e) => {
                 warning!("Failed to get binary name: {}", e);
-                return Err(color_eyre::eyre::eyre!("Failed to get binary name"));
+                return Err("Failed to get binary name".into());
             }
         };
 
@@ -51,7 +50,7 @@ impl BackupCommand {
             }
             Err(e) => {
                 warning!("Failed to create backup: {}", e);
-                return Err(color_eyre::eyre::eyre!("Failed to create backup"));
+                return Err("Failed to create backup".into());
             }
         }
         Ok(())

@@ -161,13 +161,12 @@ impl LLMClientImpl {
     /// 支持所有遵循 OpenAI Chat Completions API 标准的响应格式。
     fn extract_content(&self, response: Value) -> Result<String, LLMError> {
         // 解析为标准结构体 - 直接消费 Value，避免 clone
-        let completion: ChatCompletionResponse =
-            serde_json::from_value(response).map_err(|e| {
-                LLMError::ApiError(format!(
-                    "Failed to parse response as OpenAI ChatCompletion format: {}",
-                    e
-                ))
-            })?;
+        let completion: ChatCompletionResponse = serde_json::from_value(response).map_err(|e| {
+            LLMError::ApiError(format!(
+                "Failed to parse response as OpenAI ChatCompletion format: {}",
+                e
+            ))
+        })?;
 
         tracing::debug!(target: "llm", "LLM response: {:?}", completion);
 

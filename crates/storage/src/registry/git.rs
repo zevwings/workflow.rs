@@ -23,17 +23,31 @@ impl GitRepoRepository for GitRepoRepositoryWrapper {
 }
 
 /// 注册 Git 相关服务
+///
+/// # 注册顺序和依赖关系
+///
+/// 服务注册顺序很重要，必须先注册基础服务，再注册依赖它们的服务：
+/// 1. **GitContextHolder** (无依赖) - 必须最先注册
+/// 2. **HookService** (依赖 GitContextHolder)
+/// 3. **其他服务** (依赖 GitContextHolder, 部分依赖 HookService)
+///
+/// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），
+/// 而非运行时错误。如果触发 panic，说明注册顺序不正确。
 pub fn register_git() -> registry::Result<()> {
+    // 第一步：注册 GitContextHolder (基础服务，无依赖)
+    // 注意：GitContext::discover() 要求程序在 Git 仓库中运行
     bind!(dyn GitContextHolder, |_: &Container| {
-        let ctx = GitContext::discover().expect("must run in a git repo");
+        let ctx = GitContext::discover().expect("Application must run in a git repository");
         Arc::new(DiscoveredContext(ctx))
     })
     .in_scope(Scope::Singleton)?;
 
+    // 第二步：注册依赖 GitContextHolder 的服务
+    // 注意：以下 .expect() 表示依赖未注册（程序员错误），而非运行时错误
     bind!(dyn BlameService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before BlameService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before BlameService");
         Arc::new(BlameServiceImpl::new(holder.context()))
     })
     .in_scope(Scope::Singleton)?;
@@ -41,7 +55,7 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn BranchService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before BranchService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before BranchService");
         Arc::new(BranchServiceImpl::new(holder.context()))
     })
     .in_scope(Scope::Singleton)?;
@@ -49,7 +63,7 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn HookService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before HookService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before HookService");
         Arc::new(HookServiceImpl::new(holder.context()))
     })
     .in_scope(Scope::Singleton)?;
@@ -57,10 +71,10 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn CommitService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before CommitService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before CommitService");
         let hook_service = c
             .get::<dyn HookService>()
-            .expect("HookService must be registered before CommitService");
+            .expect("PROGRAMMER ERROR: HookService must be registered before CommitService");
         Arc::new(CommitServiceImpl::new(holder.context(), hook_service))
     })
     .in_scope(Scope::Singleton)?;
@@ -68,7 +82,7 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn DiffService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before DiffService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before DiffService");
         Arc::new(DiffServiceImpl::new(holder.context()))
     })
     .in_scope(Scope::Singleton)?;
@@ -76,7 +90,7 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn MergeService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before MergeService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before MergeService");
         Arc::new(MergeServiceImpl::new(holder.context()))
     })
     .in_scope(Scope::Singleton)?;
@@ -84,10 +98,10 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn RemoteService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before RemoteService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before RemoteService");
         let hook_service = c
             .get::<dyn HookService>()
-            .expect("HookService must be registered before RemoteService");
+            .expect("PROGRAMMER ERROR: HookService must be registered before RemoteService");
         Arc::new(RemoteServiceImpl::new(holder.context(), hook_service))
     })
     .in_scope(Scope::Singleton)?;
@@ -95,7 +109,7 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn TagService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before TagService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before TagService");
         Arc::new(TagServiceImpl::new(holder.context()))
     })
     .in_scope(Scope::Singleton)?;
@@ -103,7 +117,7 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn StashService, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before StashService");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before StashService");
         Arc::new(StashServiceImpl::new(holder.context()))
     })
     .in_scope(Scope::Singleton)?;
@@ -111,7 +125,7 @@ pub fn register_git() -> registry::Result<()> {
     bind!(dyn GitRepository, |c: &Container| {
         let holder = c
             .get::<dyn GitContextHolder>()
-            .expect("GitContextHolder must be registered before GitRepository");
+            .expect("PROGRAMMER ERROR: GitContextHolder must be registered before GitRepository");
         let ctx = holder.context();
         let blame = c
             .get::<dyn BlameService>()

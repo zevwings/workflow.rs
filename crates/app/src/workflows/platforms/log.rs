@@ -19,9 +19,9 @@ impl LogStage {
         let has_level = settings.log.level.is_some();
         let default_enable_logging = has_level;
 
-        if has_level {
+        if let Some(level) = &settings.log.level {
             info!("Log configuration is detected!");
-            info!("  - Log Level: {}", settings.log.level.as_ref().unwrap());
+            info!("  - Log Level: {}", level);
             br!();
         }
 

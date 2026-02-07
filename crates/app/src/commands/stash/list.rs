@@ -2,7 +2,6 @@
 //!
 //! 以表格形式列出所有 stash 条目。
 
-use color_eyre::Result;
 use prompt::{info, success, TableBuilder, TableStyle};
 
 use crate::registry;

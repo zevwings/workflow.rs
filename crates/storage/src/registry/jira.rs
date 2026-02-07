@@ -12,12 +12,16 @@ use crate::jira::{
 use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathService};
 
 /// 注册 Jira 相关服务
+///
+/// # 注册顺序和依赖关系
+///
+/// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
 pub fn register_jira() -> registry::Result<()> {
     // Jira Client
     bind!(dyn JiraClient, |c: &Container| {
         let context = c
             .get::<dyn JiraConfigContext>()
-            .expect("JiraConfigContext must be registered before JiraClient");
+            .expect("PROGRAMMER ERROR:JiraConfigContext must be registered before JiraClient");
         Arc::new(JiraClientImpl::new(context))
     })
     .in_scope(Scope::Singleton)?;
@@ -26,7 +30,7 @@ pub fn register_jira() -> registry::Result<()> {
     bind!(dyn IssueService, |c: &Container| {
         let jira_client = c
             .get::<dyn JiraClient>()
-            .expect("JiraClient must be registered before IssueService");
+            .expect("PROGRAMMER ERROR:JiraClient must be registered before IssueService");
         Arc::new(IssueServiceImpl::new(jira_client))
     })
     .in_scope(Scope::Singleton)?;
@@ -35,10 +39,10 @@ pub fn register_jira() -> registry::Result<()> {
     bind!(dyn StatusService, |c: &Container| {
         let jira_client = c
             .get::<dyn JiraClient>()
-            .expect("JiraClient must be registered before StatusService");
+            .expect("PROGRAMMER ERROR:JiraClient must be registered before StatusService");
         let path_service = c
             .get::<dyn PathService>()
-            .expect("PathService must be registered before StatusService");
+            .expect("PROGRAMMER ERROR:PathService must be registered before StatusService");
         Arc::new(StatusServiceImpl::new(jira_client, path_service))
     })
     .in_scope(Scope::Singleton)?;
@@ -47,7 +51,7 @@ pub fn register_jira() -> registry::Result<()> {
     bind!(dyn UserService, |c: &Container| {
         let jira_client = c
             .get::<dyn JiraClient>()
-            .expect("JiraClient must be registered before UserService");
+            .expect("PROGRAMMER ERROR:JiraClient must be registered before UserService");
         Arc::new(UserServiceImpl::new(jira_client))
     })
     .in_scope(Scope::Singleton)?;
@@ -56,13 +60,13 @@ pub fn register_jira() -> registry::Result<()> {
     bind!(dyn JiraRepository, |c: &Container| {
         let issue_service = c
             .get::<dyn IssueService>()
-            .expect("IssueService must be registered before JiraRepository");
+            .expect("PROGRAMMER ERROR:IssueService must be registered before JiraRepository");
         let status_service = c
             .get::<dyn StatusService>()
-            .expect("StatusService must be registered before JiraRepository");
+            .expect("PROGRAMMER ERROR:StatusService must be registered before JiraRepository");
         let user_service = c
             .get::<dyn UserService>()
-            .expect("UserService must be registered before JiraRepository");
+            .expect("PROGRAMMER ERROR:UserService must be registered before JiraRepository");
         Arc::new(JiraRepositoryImpl::new(
             issue_service,
             status_service,
@@ -75,7 +79,7 @@ pub fn register_jira() -> registry::Result<()> {
     bind!(dyn WorkHistoryService, |c: &Container| {
         let path_service = c
             .get::<dyn PathService>()
-            .expect("PathService must be registered before WorkHistoryService");
+            .expect("PROGRAMMER ERROR:PathService must be registered before WorkHistoryService");
         Arc::new(WorkHistoryServiceImpl::new(path_service))
     })
     .in_scope(Scope::Singleton)?;
@@ -84,7 +88,7 @@ pub fn register_jira() -> registry::Result<()> {
     bind!(dyn JiraWorkHistoryRepository, |c: &Container| {
         let work_history_service = c
             .get::<dyn WorkHistoryService>()
-            .expect("WorkHistoryService must be registered before JiraWorkHistoryRepository");
+            .expect("PROGRAMMER ERROR:WorkHistoryService must be registered before JiraWorkHistoryRepository");
         Arc::new(JiraWorkHistoryRepositoryImpl::new(work_history_service))
     })
     .in_scope(Scope::Singleton)?;

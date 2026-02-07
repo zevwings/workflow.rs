@@ -169,10 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             JiraCommand::Info(args) => {
                 let format = args.get_format();
-                let cmd = commands::jira::JiraInfoCommand::new(
-                    args.jira_id.into_option(),
-                    format,
-                );
+                let cmd = commands::jira::JiraInfoCommand::new(args.jira_id.into_option(), format);
                 cmd.run()?;
             }
             JiraCommand::Attachments(args) => {

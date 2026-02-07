@@ -2,7 +2,6 @@
 //!
 //! 保存当前工作目录的更改到 stash。
 
-use color_eyre::Result;
 use prompt::{info, input, success, warning};
 
 use crate::registry;

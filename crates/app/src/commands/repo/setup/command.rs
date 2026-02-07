@@ -4,8 +4,6 @@
 
 use std::io::{self, IsTerminal};
 
-use color_eyre::{eyre::WrapErr, Result};
-
 use domain::{
     BranchConfig, BranchTemplates, CommitTemplates, ProjectConfig, PullRequestsTemplates,
     TemplateConfig, UserConfig,
@@ -29,7 +27,7 @@ use crate::registry::{get_git_repository, get_path_service, get_repo_config_repo
 ///
 /// 如果配置存在或用户选择跳过，返回 `Ok(())`。
 /// 仅在 setup 必需且失败时返回错误。
-pub fn ensure() -> Result<()> {
+pub fn ensure() -> Result<(), Box<dyn std::error::Error>> {
     // 1. 检查是否在交互式环境
     if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
         return Ok(()); // 非交互式环境，跳过检查
@@ -53,7 +51,7 @@ pub fn ensure() -> Result<()> {
     let should_setup = confirm!("Run 'workflow repo setup' to configure this repository?")
         .default(true)
         .prompt()
-        .wrap_err("Failed to get user confirmation")?;
+        .map_err(|e| format!("Failed to get user confirmation: {}", e))?;
 
     if should_setup {
         // 5. 运行 setup
@@ -61,7 +59,9 @@ pub fn ensure() -> Result<()> {
         info!("Running repository setup...");
         br!();
 
-        RepoSetupCommand::new().run().wrap_err("Failed to run repository setup")?;
+        RepoSetupCommand::new()
+            .run()
+            .map_err(|e| format!("Failed to run repository setup: {}", e))?;
 
         br!();
         success!("Repository configuration completed!");
@@ -93,7 +93,7 @@ impl RepoSetupCommand {
     /// 此方法可以被：
     /// 1. 用户直接调用：`workflow repo setup`
     /// 2. 其他命令调用：`repo::setup::RepoSetupCommand::new().run()`
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting repository configuration setup...");
 
         // 1. 检查是否在 Git 仓库中
@@ -101,9 +101,9 @@ impl RepoSetupCommand {
 
         let repo_info = repo_repo.get_repo_info();
         if !repo_info.is_valid {
-            return Err(color_eyre::eyre::eyre!(
-                "Not in a Git repository. Please run this command in a Git repository."
-            ));
+            return Err(
+                "Not in a Git repository. Please run this command in a Git repository.".into(),
+            );
         }
 
         // 获取仓库名
@@ -123,12 +123,16 @@ impl RepoSetupCommand {
             self.collect_config(&existing_project_config, &existing_user_config)?;
 
         // 4. 保存配置
-        config_repo
-            .save_project_config(&project_config)
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to save project config: {}", e))?;
+        config_repo.save_project_config(&project_config).map_err(
+            |e| -> Box<dyn std::error::Error> {
+                format!("Failed to save project config: {}", e).into()
+            },
+        )?;
         config_repo
             .save_user_config(&user_config)
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to save user config: {}", e))?;
+            .map_err(|e| -> Box<dyn std::error::Error> {
+                format!("Failed to save user config: {}", e).into()
+            })?;
 
         let path_service = get_path_service();
 
@@ -154,7 +158,7 @@ impl RepoSetupCommand {
         &self,
         existing_project: &Option<ProjectConfig>,
         existing_user: &Option<UserConfig>,
-    ) -> Result<(ProjectConfig, UserConfig)> {
+    ) -> Result<(ProjectConfig, UserConfig), Box<dyn std::error::Error>> {
         // 准备现有值
         let current_prefix = existing_user.as_ref().and_then(|c| {
             if c.branch.prefix.is_empty() {
@@ -359,7 +363,7 @@ impl RepoSetupCommand {
                 .with_description("These settings are project standards and will be saved to .workflow/config.toml (can be committed to Git)."),
         )
         .run()
-        .wrap_err("Failed to collect repository configuration")?;
+        .map_err(|e| -> Box<dyn std::error::Error> { format!("Failed to collect repository configuration: {}", e).into() })?;
 
         // 处理结果：构建 UserConfig
         let branch_prefix = {
@@ -421,12 +425,13 @@ impl RepoSetupCommand {
     /// 检查配置是否存在
     ///
     /// 检查用户配置中是否有 prefix 或 ignore 配置。
-    pub fn check_config_exists() -> Result<bool> {
+    pub fn check_config_exists() -> Result<bool, Box<dyn std::error::Error>> {
         let config_repo = get_repo_config_repository();
 
-        let user_config = config_repo
-            .load_user_config()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to load user config: {}", e))?;
+        let user_config =
+            config_repo.load_user_config().map_err(|e| -> Box<dyn std::error::Error> {
+                format!("Failed to load user config: {}", e).into()
+            })?;
 
         Ok(!user_config.branch.prefix.is_empty() || !user_config.branch.ignore.is_empty())
     }

@@ -7,20 +7,15 @@ use crate::registry;
 use crate::workflows::utils::jira::get_jira_id_interactive;
 
 /// 输出格式
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum OutputFormat {
     /// 人类可读格式（默认）
+    #[default]
     HumanReadable,
     /// JSON 格式
     Json,
     /// Markdown 格式
     Markdown,
-}
-
-impl Default for OutputFormat {
-    fn default() -> Self {
-        Self::HumanReadable
-    }
 }
 
 /// Jira Info 命令

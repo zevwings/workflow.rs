@@ -12,31 +12,35 @@ use domain::{GitHubContext, GlobalConfigRepository, JiraConfigContext};
 use llm::LLMConfigContext;
 use registry::{bind, Container, Scope};
 
-/// 注册 LLM 相关服务
+/// 注册配置上下文服务
+///
+/// # 注册顺序和依赖关系
+///
+/// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
 pub fn register_context() -> registry::Result<()> {
     // LLM Config Context
     bind!(dyn LLMConfigContext, |c: &Container| {
-        let global_config = c
-            .get::<dyn GlobalConfigRepository>()
-            .expect("GlobalConfigRepository must be registered before LLMConfigContext");
+        let global_config = c.get::<dyn GlobalConfigRepository>().expect(
+            "PROGRAMMER ERROR:GlobalConfigRepository must be registered before LLMConfigContext",
+        );
         Arc::new(LLMConfigContextImpl::new(global_config))
     })
     .in_scope(Scope::Singleton)?;
 
     // Jira Config Context
     bind!(dyn JiraConfigContext, |c: &Container| {
-        let global_config = c
-            .get::<dyn GlobalConfigRepository>()
-            .expect("GlobalConfigRepository must be registered before JiraConfigContext");
+        let global_config = c.get::<dyn GlobalConfigRepository>().expect(
+            "PROGRAMMER ERROR:GlobalConfigRepository must be registered before JiraConfigContext",
+        );
         Arc::new(JiraConfigContextImpl::new(global_config))
     })
     .in_scope(Scope::Singleton)?;
 
     // GitHub Config Context
     bind!(dyn GitHubContext, |c: &Container| {
-        let global_config = c
-            .get::<dyn GlobalConfigRepository>()
-            .expect("GlobalConfigRepository must be registered before GitHubContext");
+        let global_config = c.get::<dyn GlobalConfigRepository>().expect(
+            "PROGRAMMER ERROR:GlobalConfigRepository must be registered before GitHubContext",
+        );
         Arc::new(GitHubContextImpl::new(global_config))
     })
     .in_scope(Scope::Singleton)?;

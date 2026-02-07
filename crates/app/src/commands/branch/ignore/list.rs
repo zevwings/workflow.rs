@@ -1,7 +1,6 @@
 //! 列出忽略分支
 
 use crate::registry;
-use color_eyre::Result;
 use prompt::info;
 
 /// Branch Ignore List 命令

@@ -108,15 +108,24 @@ impl GitContext {
     }
 
     /// 获取底层的 git2::Repository 引用
+    ///
+    /// 如果 Mutex 被毒化（持有锁的线程 panic），会尝试恢复并继续使用。
     pub fn repository(&self) -> std::sync::MutexGuard<'_, Repository> {
-        self.inner.repo.lock().expect("Failed to lock repository")
+        self.inner.repo.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Warning: Repository mutex was poisoned, attempting recovery");
+            poisoned.into_inner()
+        })
     }
 
     /// 获取底层的 git2::Repository 可变引用
     ///
     /// 用于需要 `&mut Repository` 的操作（如 stash 操作）。
+    /// 如果 Mutex 被毒化（持有锁的线程 panic），会尝试恢复并继续使用。
     pub fn repository_mut(&self) -> std::sync::MutexGuard<'_, Repository> {
-        self.inner.repo.lock().expect("Failed to lock repository")
+        self.inner.repo.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Warning: Repository mutex was poisoned, attempting recovery");
+            poisoned.into_inner()
+        })
     }
 
     /// 获取仓库的工作目录路径
@@ -126,12 +135,12 @@ impl GitContext {
 
     /// 检查是否为 bare 仓库
     pub fn is_bare(&self) -> bool {
-        self.inner.repo.lock().expect("Failed to lock repository").is_bare()
+        self.repository().is_bare()
     }
 
     /// 获取仓库信息
     pub fn info(&self) -> RepoInfo {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         // 尝试获取 origin URL
         let origin_url = repo
             .find_remote("origin")
@@ -230,7 +239,10 @@ impl GitContext {
 
         callbacks.credentials(move |url, username_from_url, allowed_types| {
             // 检查重试次数，防止无限循环
-            let mut count = retry_count.lock().expect("retry_count lock poisoned");
+            let mut count = retry_count.lock().unwrap_or_else(|poisoned| {
+                eprintln!("Warning: retry_count mutex was poisoned, attempting recovery");
+                poisoned.into_inner()
+            });
             *count += 1;
 
             const MAX_RETRIES: u32 = 3;
@@ -299,7 +311,7 @@ impl GitContext {
     ///
     /// 支持分支名、tag 名、SHA 等各种引用格式。
     pub fn resolve_commit(&self, reference: &str) -> Result<git2::Oid, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         let obj = repo
             .revparse_single(reference)
             .map_err(|_| GitError::InvalidReference(reference.to_string()))?;
@@ -309,7 +321,7 @@ impl GitContext {
 
     /// 获取 HEAD 指向的 commit
     pub fn head_commit(&self) -> Result<git2::Oid, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let commit = head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(commit.id())
@@ -329,7 +341,7 @@ impl GitContext {
         name: &str,
         branch_type: git2::BranchType,
     ) -> Result<git2::Oid, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         let branch = repo
             .find_branch(name, branch_type)
             .map_err(|_| GitError::BranchNotFound(name.to_string()))?;
@@ -349,7 +361,7 @@ impl GitContext {
     /// 如果 HEAD 处于 detached 状态，返回错误
     #[allow(dead_code)]
     pub fn ensure_head_is_branch(&self) -> Result<String, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         if !head.is_branch() {
             return Err(GitError::OperationFailed(

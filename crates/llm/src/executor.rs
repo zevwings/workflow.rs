@@ -61,9 +61,7 @@ impl LLMExecutor for LLMExecutorImpl {
         let response = self.client.call(&params).map_err(|e| {
             // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
             let original_msg = match &e {
-                LLMError::ApiError(msg) => {
-                    msg.strip_prefix("LLM API call failed: ").unwrap_or(msg)
-                }
+                LLMError::ApiError(msg) => msg.strip_prefix("LLM API call failed: ").unwrap_or(msg),
                 _ => {
                     // 只在需要时分配字符串
                     return LLMError::ApiError(format!(

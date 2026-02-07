@@ -31,6 +31,5 @@ registry = { path = "../registry" }
 once_cell.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
-color-eyre = "0.6"
 serde_json.workspace = true
 git2.workspace = true

@@ -2,8 +2,6 @@
 //!
 //! 验证仓库级别的配置文件并运行验证检查。
 
-use color_eyre::Result;
-
 use domain::{BranchTemplates, CommitTemplates, PullRequestsTemplates};
 use prompt::{br, info, print, separator, success, warning, TableBuilder};
 
@@ -25,7 +23,7 @@ impl RepoCheckCommand {
     }
 
     /// 运行仓库配置检查
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting repository check");
         br!();
 
@@ -34,7 +32,7 @@ impl RepoCheckCommand {
 
         let repo_info = repo_repo.get_repo_info();
         if !repo_info.is_valid {
-            return Err(color_eyre::eyre::eyre!("Not in a Git repository"));
+            return Err("Not in a Git repository".into());
         }
 
         // 获取仓库名
@@ -61,7 +59,7 @@ impl RepoCheckCommand {
     }
 
     /// 验证仓库配置文件及内容
-    fn verify_repo_config(&self) -> Result<()> {
+    fn verify_repo_config(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_repo = get_repo_config_repository();
 
         // repo_path 仅用于显示路径，实际加载配置时不需要传入

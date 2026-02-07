@@ -1,6 +1,5 @@
 //! 重命名分支命令
 
-use color_eyre::Result;
 use domain::git::GitError;
 use prompt::{confirm, error, info, input, select, success, warning};
 

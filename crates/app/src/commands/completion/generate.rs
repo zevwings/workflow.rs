@@ -4,7 +4,6 @@
 
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
-use color_eyre::{eyre::WrapErr, Result};
 use domain::get_completion_cache_shell_dir;
 use prompt::{info, success};
 use toolkit::{detect_shell, shell_from_string, shell_to_string};
@@ -28,12 +27,15 @@ impl CompletionGenerateCommand {
     }
 
     /// 运行生成命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 1. 确定 shell 类型
-        let shell = match &self.shell_type {
-            Some(s) => shell_from_string(s).wrap_err("Failed to parse shell type")?,
-            None => detect_shell().wrap_err("Failed to auto-detect shell type")?,
-        };
+        let shell =
+            match &self.shell_type {
+                Some(s) => shell_from_string(s)
+                    .map_err(|e| format!("Failed to parse shell type: {}", e))?,
+                None => detect_shell()
+                    .map_err(|e| format!("Failed to auto-detect shell type: {}", e))?,
+            };
 
         let shell_str = shell_to_string(&shell);
         info!("Detected shell type: {}", shell);
@@ -45,7 +47,7 @@ impl CompletionGenerateCommand {
         let service = get_completion_service();
         let result = service
             .save_and_configure(shell_str, &script_content, self.output_dir.as_deref())
-            .wrap_err("Failed to save and configure completion")?;
+            .map_err(|e| format!("Failed to save and configure completion: {}", e))?;
 
         // 4. 显示结果
         info!(
@@ -72,7 +74,10 @@ impl CompletionGenerateCommand {
     }
 
     /// 生成 completion 脚本内容
-    fn generate_completion_script(&self, shell: &Shell) -> Result<Vec<u8>> {
+    fn generate_completion_script(
+        &self,
+        shell: &Shell,
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let mut cmd = Cli::command();
         let mut buffer = Vec::new();
 

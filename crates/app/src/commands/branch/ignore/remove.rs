@@ -1,7 +1,6 @@
 //! 从忽略列表移除分支
 
 use crate::registry;
-use color_eyre::Result;
 use prompt::{info, success, MultiSelectBuilder};
 
 /// Branch Ignore Remove 命令

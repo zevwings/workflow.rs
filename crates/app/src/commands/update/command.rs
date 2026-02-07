@@ -5,7 +5,6 @@
 
 use std::path::PathBuf;
 
-use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
 use toolkit::{backup, cleanup_backup, rollback, Platform};
 
@@ -38,7 +37,7 @@ impl UpdateCommand {
     }
 
     /// 运行更新命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting Workflow CLI update...");
         br!();
 
@@ -101,7 +100,7 @@ impl UpdateCommand {
             let confirmed = ConfirmBuilder::new(&confirm_message)
                 .default(true)
                 .prompt()
-                .wrap_err("Failed to get confirmation")?;
+                .map_err(|e| format!("Failed to get confirmation: {}", e))?;
 
             if !confirmed {
                 print!("Update cancelled");
@@ -137,12 +136,12 @@ impl UpdateCommand {
 
                     self.perform_rollback(backup_dir);
 
-                    Err(e.wrap_err("Update failed"))
+                    Err(format!("Update failed: {}", e).into())
                 }
             }
         } else {
             error!("Failed to create backup");
-            Err(color_eyre::eyre::eyre!("Failed to create backup"))
+            Err("Failed to create backup".into())
         }
     }
 
@@ -187,7 +186,7 @@ impl UpdateCommand {
         temp_manager: &TempDirManager,
         download_url: &str,
         _target_version: &str,
-    ) -> Result<()> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // 下载文件
         download_file(download_url, &temp_manager.archive_path)?;
         br!();
@@ -209,7 +208,7 @@ impl UpdateCommand {
         br!();
 
         if !verification_result.all_checks_passed {
-            color_eyre::eyre::bail!("Installation verification failed, some checks did not pass");
+            return Err("Installation verification failed, some checks did not pass".into());
         }
 
         Ok(())

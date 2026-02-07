@@ -1,6 +1,5 @@
 //! 列出 Pull Requests 命令
 
-use color_eyre::Result;
 use prompt::info;
 
 use crate::registry;

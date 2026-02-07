@@ -13,12 +13,24 @@ use crate::github::{
 };
 
 /// 注册 GitHub 相关服务
+///
+/// # 注册顺序和依赖关系
+///
+/// 服务注册顺序：
+/// 1. **GitHubContext** (外部注册) - 必须在调用此函数前注册
+/// 2. **GitRepoRepository** (外部注册) - 必须在调用此函数前注册
+/// 3. **GitHubClient** (依赖 GitHubContext)
+/// 4. **ServiceContext** (依赖 GitRepoRepository)
+/// 5. **PullRequestQueryService** (依赖 GitHubClient, ServiceContext)
+/// 6. **其他服务** (依赖上述服务)
+///
+/// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
 pub fn register_github() -> registry::Result<()> {
-    // GitHub Client
+    // 注册 GitHub Client (依赖外部的 GitHubContext)
     bind!(dyn GitHubClient, |c: &Container| {
         let context = c
             .get::<dyn GitHubContext>()
-            .expect("GitHubContext must be registered before GitHubClient");
+            .expect("PROGRAMMER ERROR:PROGRAMMER ERROR: GitHubContext must be registered before GitHubClient");
         Arc::new(GitHubClientImpl::new(context))
     })
     .in_scope(Scope::Singleton)?;
@@ -27,19 +39,19 @@ pub fn register_github() -> registry::Result<()> {
     bind!(dyn ServiceContext, |c: &Container| {
         let repo_repository = c
             .get::<dyn GitRepoRepository>()
-            .expect("GitRepoRepository must be registered before ServiceContext");
+            .expect("PROGRAMMER ERROR:GitRepoRepository must be registered before ServiceContext");
         Arc::new(ServiceContextImpl::new(repo_repository))
     })
     .in_scope(Scope::Singleton)?;
 
     // Pull Request Query Service
     bind!(dyn PullRequestQueryService, |c: &Container| {
-        let client = c
-            .get::<dyn GitHubClient>()
-            .expect("GitHubClient must be registered before PullRequestQueryService");
-        let context = c
-            .get::<dyn ServiceContext>()
-            .expect("ServiceContext must be registered before PullRequestQueryService");
+        let client = c.get::<dyn GitHubClient>().expect(
+            "PROGRAMMER ERROR:GitHubClient must be registered before PullRequestQueryService",
+        );
+        let context = c.get::<dyn ServiceContext>().expect(
+            "PROGRAMMER ERROR:ServiceContext must be registered before PullRequestQueryService",
+        );
         Arc::new(PullRequestQueryServiceImpl::new(client, context))
     })
     .in_scope(Scope::Singleton)?;
@@ -48,13 +60,13 @@ pub fn register_github() -> registry::Result<()> {
     bind!(dyn PullRequestMutationService, |c: &Container| {
         let client = c
             .get::<dyn GitHubClient>()
-            .expect("GitHubClient must be registered before PullRequestMutationService");
+            .expect("PROGRAMMER ERROR:GitHubClient must be registered before PullRequestMutationService");
         let query_service = c
             .get::<dyn PullRequestQueryService>()
-            .expect("PullRequestQueryService must be registered before PullRequestMutationService");
+            .expect("PROGRAMMER ERROR:PullRequestQueryService must be registered before PullRequestMutationService");
         let context = c
             .get::<dyn ServiceContext>()
-            .expect("ServiceContext must be registered before PullRequestMutationService");
+            .expect("PROGRAMMER ERROR:ServiceContext must be registered before PullRequestMutationService");
         Arc::new(PullRequestMutationServiceImpl::new(
             client,
             query_service,
@@ -67,13 +79,13 @@ pub fn register_github() -> registry::Result<()> {
     bind!(dyn PullRequestReviewService, |c: &Container| {
         let client = c
             .get::<dyn GitHubClient>()
-            .expect("GitHubClient must be registered before PullRequestReviewService");
+            .expect("PROGRAMMER ERROR:GitHubClient must be registered before PullRequestReviewService");
         let query_service = c
             .get::<dyn PullRequestQueryService>()
-            .expect("PullRequestQueryService must be registered before PullRequestReviewService");
+            .expect("PROGRAMMER ERROR:PullRequestQueryService must be registered before PullRequestReviewService");
         let context = c
             .get::<dyn ServiceContext>()
-            .expect("ServiceContext must be registered before PullRequestReviewService");
+            .expect("PROGRAMMER ERROR:ServiceContext must be registered before PullRequestReviewService");
         Arc::new(PullRequestReviewServiceImpl::new(
             client,
             query_service,
@@ -84,12 +96,12 @@ pub fn register_github() -> registry::Result<()> {
 
     // Pull Request Diff Service
     bind!(dyn PullRequestDiffService, |c: &Container| {
-        let client = c
-            .get::<dyn GitHubClient>()
-            .expect("GitHubClient must be registered before PullRequestDiffService");
-        let context = c
-            .get::<dyn ServiceContext>()
-            .expect("ServiceContext must be registered before PullRequestDiffService");
+        let client = c.get::<dyn GitHubClient>().expect(
+            "PROGRAMMER ERROR:GitHubClient must be registered before PullRequestDiffService",
+        );
+        let context = c.get::<dyn ServiceContext>().expect(
+            "PROGRAMMER ERROR:ServiceContext must be registered before PullRequestDiffService",
+        );
         Arc::new(PullRequestDiffServiceImpl::new(client, context))
     })
     .in_scope(Scope::Singleton)?;
@@ -98,16 +110,16 @@ pub fn register_github() -> registry::Result<()> {
     bind!(dyn GitHubRepository, |c: &Container| {
         let query_service = c
             .get::<dyn PullRequestQueryService>()
-            .expect("PullRequestQueryService must be registered before GitHubRepository");
+            .expect("PROGRAMMER ERROR:PullRequestQueryService must be registered before GitHubRepository");
         let mutation_service = c
             .get::<dyn PullRequestMutationService>()
-            .expect("PullRequestMutationService must be registered before GitHubRepository");
+            .expect("PROGRAMMER ERROR:PullRequestMutationService must be registered before GitHubRepository");
         let review_service = c
             .get::<dyn PullRequestReviewService>()
-            .expect("PullRequestReviewService must be registered before GitHubRepository");
+            .expect("PROGRAMMER ERROR:PullRequestReviewService must be registered before GitHubRepository");
         let diff_service = c
             .get::<dyn PullRequestDiffService>()
-            .expect("PullRequestDiffService must be registered before GitHubRepository");
+            .expect("PROGRAMMER ERROR:PullRequestDiffService must be registered before GitHubRepository");
         Arc::new(GitHubRepositoryImpl::new(
             query_service,
             mutation_service,
