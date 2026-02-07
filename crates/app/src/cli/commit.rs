@@ -48,4 +48,7 @@ pub enum CommitSubcommand {
         #[arg(value_name = "REF")]
         ref_or_sha: String,
     },
+    /// 三阶段提交分析：文件分类 → 分类分析 → 全局总结（需 LLM）
+    #[command(name = "summary")]
+    CommitSummary,
 }

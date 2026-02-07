@@ -142,6 +142,16 @@
   - 跳过机制（--no-verify、环境变量）
 - **优先级**: P0（高优先级，保持与标准 Git 兼容性）
 
+#### 9. [commit-analyzer-implementation.md](./commit-analyzer-implementation.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 提交分析（基于 LLM 的三阶段分析）
+- **内容**:
+  - 基于 [commit-analyzer-design.md](./commit-analyzer-design.md) 的落地分析
+  - 可直接复用的能力：CommitInfo/CommitFileChange、get_commit_diff、LLMConversation/JsonParser 等
+  - 需新增：阶段一/二/三的 domain 实体与 LLM 接口、Conversation+Prompt、CommitAnalyzerService、`commit analyze` 子命令
+- **优先级**: 中优先级（依赖 commit-analyzer-design 流程）
+
 ---
 
 ## 📊 当前统计
@@ -194,6 +204,7 @@
 - **Cursor 规则增强** → [cursor-rules-enhancement.md](./cursor-rules-enhancement.md) ⏳ 待实施
 - **日志系统增强** → [logger-enhancement.md](./logger-enhancement.md) ⏳ 待实施
 - **Git Hooks 实现** → [git-hooks-implementation.md](./git-hooks-implementation.md) ⏳ 待实施
+- **提交分析实现分析** → [commit-analyzer-implementation.md](./commit-analyzer-implementation.md) ⏳ 待实施（配套 [commit-analyzer-design.md](./commit-analyzer-design.md)）
 
 ---
 

@@ -11,6 +11,8 @@ testing = ["dep:tempfile"]
 
 [dependencies]
 domain = { path = "../domain" }
+http = { path="../http" }
+llm = { path="../llm" }
 toolkit = { path = "../toolkit" }
 registry = { path = "../registry" }
 

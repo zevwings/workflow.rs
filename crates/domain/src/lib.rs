@@ -12,10 +12,10 @@ pub mod errors;
 pub mod git;
 pub mod github;
 pub mod jira;
-pub mod llm;
 pub mod path;
 pub mod pr;
 pub mod template;
+pub mod summary;
 
 // Re-export public types
 // 避免使用 glob 导出以防止与子模块名称冲突（如 `template`）
@@ -59,8 +59,8 @@ pub use config::{
 
 // Re-export business domain types
 pub use branch::{
-    sanitize_branch_name, BranchService, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult,
-    BranchType, SourceBranchInfo, SyncStrategy,
+    sanitize_branch_name, BranchService, BranchServiceError, BranchSyncCallbacks,
+    BranchSyncOptions, BranchSyncResult, BranchType, SourceBranchInfo, SyncStrategy,
 };
 pub use completion::{
     get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
@@ -103,7 +103,10 @@ pub use jira::{
     JiraTransition, JiraUser, JiraWorkHistoryRepository, ProjectStatusConfig, StatusConfigResult,
     WorkHistoryEntry,
 };
-pub use llm::{
-    LLMConfigContext, LLMError, LLMRepository, PullRequestContent, PullRequestReword,
-    PullRequestSummary, SupportedLanguage,
-};
+
+pub use summary::{CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis, CommitTestAnalysis, CommitSummaryAnalysis};
+// pub use llm::{
+//     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
+//     CommitSummaryAnalysis, CommitTestAnalysis,
+//     PullRequestContent, PullRequestReword, PullRequestSummary,
+// };

@@ -7,8 +7,8 @@ description = "服务层（Application Service Layer），组合 storage，实�
 
 [dependencies]
 domain = { path = "../domain" }
-storage = { path = "../storage" }
 toolkit = { path = "../toolkit" }
+llm = { path = "../llm" }
 registry = { path = "../registry" }
 toml.workspace = true
 dirs.workspace = true

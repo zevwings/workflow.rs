@@ -3,8 +3,8 @@
 //! 提供版本获取和比较功能。
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+use http::{Authorization, HttpClient, Response};
 use prompt::{info, success, Spinner};
-use toolkit::{Authorization, HttpClient};
 
 use super::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
 
@@ -74,7 +74,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
 }
 
 /// 处理 GitHub API 错误响应
-fn handle_github_api_error(response: &toolkit::Response) -> Result<()> {
+fn handle_github_api_error(response: &Response) -> Result<()> {
     let status = response.status;
 
     if (200..300).contains(&status) {

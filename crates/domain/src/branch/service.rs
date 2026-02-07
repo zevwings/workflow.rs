@@ -1,24 +1,26 @@
 //! 分支服务接口
 
-use crate::branch::entity::{BranchSyncOptions, BranchSyncResult};
-use crate::errors::ServiceError;
+use thiserror::Error;
+
+/// LLM 服务错误
+#[derive(Error, Debug, Clone)]
+pub enum BranchServiceError {
+    #[error("LLM API 调用失败: {0}")]
+    LLMError(String),
+
+    #[error("生成分支名失败: {0}")]
+    GenerateBranchNameFailed(String),
+
+    #[error("JSON 解析失败: {0}")]
+    JsonParseFailed(String),
+}
 
 /// 分支服务接口
 pub trait BranchService: Send + Sync {
     /// 创建分支
-    fn create_branch(
+    fn generate_branch_name(
         &self,
-        jira_id: Option<&str>,
-        branch_type: Option<&str>,
-    ) -> Result<String, ServiceError>;
-
-    /// 同步分支
-    fn sync_branch(
-        &self,
-        source_branch: Option<&str>,
-        options: &BranchSyncOptions,
-    ) -> Result<BranchSyncResult, ServiceError>;
-
-    /// 重命名分支
-    fn rename_branch(&self, new_name: &str) -> Result<(), ServiceError>;
+        title: Option<&str>,
+        exists_branches: Option<Vec<String>>,
+    ) -> Result<String, BranchServiceError>;
 }

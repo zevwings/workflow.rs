@@ -22,29 +22,68 @@ use std::sync::Arc;
 use domain::{
     GitHubAccountInfo, GitHubRepository, GitHubVerificationResult, GitHubVerificationSummary,
     GlobalConfigRepository, JiraConfigInfo, JiraRepository, JiraVerificationResult,
-    JiraVerificationStatus, LLMConfig, LLMRepository, LLMSettings, LLMVerificationResult,
-    LLMVerificationStatus, LogConfigInfo, LogVerificationResult, ServiceError, VerificationService,
+    JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult, LLMVerificationStatus,
+    LogConfigInfo, LogVerificationResult, ServiceError, VerificationService,
 };
+use llm::LLMExecutor;
 use toolkit::Sensitive;
+
+use llm::{LLMConversation, SupportedLanguage};
+
+/// 验证对话
+///
+/// 负责构建 prompt 和业务逻辑，不直接调用 LLM API。
+struct VerifyConversation;
+
+impl VerifyConversation {
+    /// 创建新的验证对话实例
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl LLMConversation for VerifyConversation {
+    fn get_system_prompt(&self, language_code: &str) -> String {
+        let base_prompt = "You are a helpful assistant.";
+        SupportedLanguage::get_requirement(base_prompt, language_code)
+    }
+
+    fn get_user_prompt(&self, language_code: &str) -> String {
+        let lang = match SupportedLanguage::find(language_code) {
+            Some(lang) => lang,
+            None => SupportedLanguage::default_language(),
+        };
+
+        let greeting = format!(
+            "Say hello, and you should respond in {}({}) only.",
+            lang.name, lang.code
+        );
+        greeting.to_string()
+    }
+
+    fn get_execution_params(&self) -> (Option<u32>, f32) {
+        (None, 0.5) // max_tokens 由 LLM 自动决定
+    }
+}
 
 /// 验证服务实现
 pub struct VerificationServiceImpl {
+    llm_executor: Arc<dyn LLMExecutor>,
     config_repository: Arc<dyn GlobalConfigRepository>,
-    llm_repository: Arc<dyn LLMRepository>,
     jira_repository: Arc<dyn JiraRepository>,
     github_repository: Arc<dyn GitHubRepository>,
 }
 
 impl VerificationServiceImpl {
     pub fn new(
+        llm_executor: Arc<dyn LLMExecutor>,
         config_repository: Arc<dyn GlobalConfigRepository>,
-        llm_repository: Arc<dyn LLMRepository>,
         jira_repository: Arc<dyn JiraRepository>,
         github_repository: Arc<dyn GitHubRepository>,
     ) -> Self {
         Self {
+            llm_executor,
             config_repository,
-            llm_repository,
             jira_repository,
             github_repository,
         }
@@ -194,31 +233,11 @@ impl VerificationService for VerificationServiceImpl {
             language: language.clone(),
         };
 
-        let response = match self.llm_repository.verify_config() {
-            Ok(response) => response,
-            Err(err) => {
-                // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
-                let reason = match &err {
-                    domain::LLMError::ApiError(msg) => {
-                        // 如果消息已经包含 "LLM API 调用失败: " 前缀，提取后面的部分
-                        if let Some(stripped) = msg.strip_prefix("LLM API 调用失败: ") {
-                            stripped.to_string()
-                        } else {
-                            msg.clone()
-                        }
-                    }
-                    _ => err.to_string(),
-                };
-                return Ok(LLMVerificationResult {
-                    configured: false,
-                    config: Some(config),
-                    verification: Some(LLMVerificationStatus::Failed {
-                        reason,
-                        details: vec![],
-                    }),
-                });
-            }
-        };
+        let conversation = VerifyConversation::new();
+        let response = self
+            .llm_executor
+            .execute(&conversation, &language, "Verify LLM config")
+            .map_err(|e| ServiceError::OperationFailed(e.to_string()))?;
 
         Ok(LLMVerificationResult {
             configured: true,

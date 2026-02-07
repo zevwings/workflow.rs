@@ -4,9 +4,14 @@
 
 use std::sync::Arc;
 
+use llm::{LLMConfigContext, LLMExecutor};
 use registry::{bind, try_bind, Container, Scope};
 
-use crate::CompletionServiceImpl;
+use crate::branch::BranchServiceImpl;
+use crate::alias::AliasServiceImpl;
+use crate::completion::CompletionServiceImpl;
+use crate::path::PathServiceImpl;
+use crate::pull_request::PullRequestServiceImpl;
 
 /// 构建 Services 模块
 ///
@@ -22,7 +27,15 @@ pub fn register_services() -> registry::Result<()> {
     // AliasService - 依赖 GlobalConfigRepository
     try_bind!(dyn domain::AliasService, |c: &Container| {
         let config_repo = c.get::<dyn domain::GlobalConfigRepository>()?;
-        Ok(Arc::new(crate::AliasServiceImpl::new(config_repo)))
+        Ok(Arc::new(AliasServiceImpl::new(config_repo)))
+    })
+    .in_scope(Scope::Singleton)?;
+
+
+    try_bind!(dyn domain::BranchService, |c: &Container| {
+        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let llm_context = c.get::<dyn LLMConfigContext>()?;
+        Ok(Arc::new(BranchServiceImpl::new(llm_executor, llm_context)))
     })
     .in_scope(Scope::Singleton)?;
 
@@ -30,13 +43,8 @@ pub fn register_services() -> registry::Result<()> {
     try_bind!(dyn domain::PullRequestService, |c: &Container| {
         let git_repo = c.get::<dyn domain::GitRepository>()?;
         let github_repo = c.get::<dyn domain::GitHubRepository>()?;
-        let llm_repo = c.get::<dyn domain::LLMRepository>()?;
 
-        Ok(Arc::new(crate::PullRequestServiceImpl::new(
-            git_repo,
-            github_repo,
-            llm_repo,
-        )))
+        Ok(Arc::new(PullRequestServiceImpl::new(git_repo, github_repo)))
     })
     .in_scope(Scope::Singleton)?;
 
@@ -50,7 +58,7 @@ pub fn register_services() -> registry::Result<()> {
     .in_scope(Scope::Singleton)?;
 
     bind!(dyn domain::PathService, |_c: &Container| {
-        Arc::new(crate::path::PathServiceImpl::new())
+        Arc::new(PathServiceImpl::new())
     })
     .in_scope(Scope::Singleton)?;
 

@@ -10,12 +10,7 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 thiserror.workspace = true
-
-# HTTP 客户端
-reqwest.workspace = true
-
-# 重试机制
-backon = "0.4"
+url.workspace = true
 
 # 日志
 tracing = "0.1"
@@ -49,7 +44,6 @@ shellexpand = "3.1"
 clipboard = "0.5"
 
 [dev-dependencies]
-mockito = "1.2"
 tempfile.workspace = true
 rstest.workspace = true
 pretty_assertions.workspace = true

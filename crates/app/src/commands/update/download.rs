@@ -9,9 +9,11 @@ use std::path::Path;
 use color_eyre::{eyre::WrapErr, Result};
 use prompt::{info, success, warning, Progress, Spinner};
 use toolkit::{
-    archive, build_checksum_url, calculate_sha256, parse_hash_from_content,
-    verify_checksum as verify_file_checksum, HttpClient, SizeExt,
+    archive, build_checksum_url, calculate_sha256, parse_hash_from_content, verify_checksum,
+    SizeExt,
 };
+
+use http::HttpClient;
 
 use super::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
 
@@ -95,7 +97,7 @@ pub fn download_file(url: &str, output_path: &Path) -> Result<()> {
 /// 验证文件校验和
 ///
 /// 下载校验和文件并验证已下载文件的完整性。
-pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
+pub fn verify_file_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
     let checksum_url = build_checksum_url(download_url);
 
     toolkit::log_debug!("Checksum URL: {}", checksum_url);
@@ -137,7 +139,7 @@ pub fn verify_checksum(archive_path: &Path, download_url: &str) -> Result<()> {
 
             // 验证文件
             info!("Verifying file integrity...");
-            verify_file_checksum(archive_path, &expected_hash)
+            verify_checksum(archive_path, &expected_hash)
                 .wrap_err("File integrity verification failed")?;
 
             success!("File integrity verification passed");

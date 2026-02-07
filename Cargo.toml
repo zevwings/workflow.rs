@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "crates/domain",
+    "crates/http",
+    "crates/llm",
     "crates/storage",
     "crates/services",
     "crates/app",
@@ -37,6 +39,9 @@ git2 = { version = "0.20.3", features = ["https", "ssh", "vendored-libgit2", "ve
 
 # Shell 命令执行
 duct = "0.13"
+
+# URL 解析
+url = "2.5"
 
 # 工具库
 anymap2 = "0.13"

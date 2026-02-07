@@ -29,7 +29,7 @@ pub(crate) mod client;
 pub(crate) mod history;
 
 // 重新导出 client
-pub use client::{JiraClient, JiraClientImpl, JiraConfigContextImpl};
+pub use client::{JiraClient, JiraClientImpl};
 
 // 重新导出 API 领域
 pub use api::{

@@ -2,8 +2,8 @@
 //!
 //! 提供 GitHub API 响应封装和错误类型定义
 
+use http::{HttpError, Response};
 use serde::Deserialize;
-use toolkit::{HttpError, Response};
 
 /// HTTP 响应格式
 ///

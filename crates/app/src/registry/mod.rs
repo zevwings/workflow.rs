@@ -3,6 +3,7 @@
 //! 负责组合各个 crate 的依赖注入容器，统一管理所有服务。
 
 mod app;
+mod context;
 
 use std::sync::{Arc, LazyLock};
 
@@ -12,6 +13,11 @@ use std::sync::{Arc, LazyLock};
 static APP_INITIALIZED: LazyLock<()> = LazyLock::new(|| {
     // 按依赖顺序初始化模块
     // 注意：这些是启动时的关键初始化，失败时程序无法继续运行
+
+    // 0. 首先注册 llm 层服务（基础仓储实现）
+    if let Err(e) = context::register_context() {
+        panic!("Failed to register llm module: {e}");
+    }
 
     // 1. 首先注册 storage 层服务（基础仓储实现）
     if let Err(e) = storage::register_storage() {
@@ -76,6 +82,10 @@ pub fn get_alias_service() -> Arc<dyn domain::alias::AliasService> {
     get_service::<dyn domain::alias::AliasService>()
 }
 
+pub fn get_branch_service() -> Arc<dyn domain::branch::BranchService> {
+    get_service::<dyn domain::branch::BranchService>()
+}
+
 /// 获取 GlobalConfigRepository
 pub fn get_global_config_repository() -> Arc<dyn domain::GlobalConfigRepository> {
     get_service::<dyn domain::GlobalConfigRepository>()
@@ -109,11 +119,6 @@ pub fn get_jira_repository() -> Arc<dyn domain::JiraRepository> {
 /// 获取 JiraWorkHistoryRepository
 pub fn get_jira_work_history_repository() -> Arc<dyn domain::JiraWorkHistoryRepository> {
     get_service::<dyn domain::JiraWorkHistoryRepository>()
-}
-
-/// 获取 LLMRepository
-pub fn get_llm_repository() -> Arc<dyn domain::llm::repository::LLMRepository> {
-    get_service::<dyn domain::llm::repository::LLMRepository>()
 }
 
 /// 获取 PullRequestService

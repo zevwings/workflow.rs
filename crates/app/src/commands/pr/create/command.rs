@@ -76,9 +76,9 @@ impl PullRequestCreateCommand {
                     .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
                     .ok();
 
-                let llm_repo = registry::get_llm_repository();
+                let branch_service = registry::get_branch_service();
                 match spinner!("Generating branch name...").with(|| {
-                    llm_repo.generate_branch_name(Some(description.as_str()), exists_branches)
+                    branch_service.generate_branch_name(Some(description.as_str()), exists_branches)
                 }) {
                     Ok(name) => name,
                     Err(e) => {

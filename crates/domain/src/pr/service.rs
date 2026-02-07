@@ -84,34 +84,6 @@ pub trait PullRequestService: Send + Sync {
     /// Pull Request 的完整信息
     fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, ServiceError>;
 
-    /// 总结 Pull Request
-    ///
-    /// 使用 LLM 服务生成 PR 的总结文档。
-    ///
-    /// # 参数
-    /// * `pr_id` - PR ID（可选，不提供时自动检测当前分支的 PR）
-    ///
-    /// # 返回
-    /// PR 总结文档（Markdown 格式）和文件名
-    fn summarize_pull_request(
-        &self,
-        pr_id: Option<&str>,
-    ) -> Result<crate::llm::entity::PullRequestSummary, ServiceError>;
-
-    /// 重写 Pull Request 标题和描述
-    ///
-    /// 使用 LLM 服务基于当前 PR 标题和 diff 生成更新的标题和描述。
-    ///
-    /// # 参数
-    /// * `pr_id` - PR ID（可选，不提供时自动检测当前分支的 PR）
-    ///
-    /// # 返回
-    /// 更新的 PR 标题和描述
-    fn reword_pull_request(
-        &self,
-        pr_id: Option<&str>,
-    ) -> Result<crate::llm::entity::PullRequestReword, ServiceError>;
-
     /// 获取当前分支的 PR ID
     ///
     /// # 参数

@@ -10,7 +10,8 @@
 //! use toolkit::{HttpClient, TemplateEngine, Platform, log_info};
 //! ```
 
-pub mod http;
+// pub use workflow_http as http;
+
 pub mod logger;
 pub mod paths;
 pub mod rollback;
@@ -25,19 +26,6 @@ pub mod util;
 pub mod __tracing {
     pub use tracing::{debug, error, info, warn};
 }
-
-// ============================================================================
-// 统一重新导出主要公共 API
-// ============================================================================
-
-// HTTP 客户端模块
-pub use http::{
-    Authorization, ErrorContext, HttpClient, HttpClientConfig, HttpError, HttpMethod,
-    IntoHeaderMap, MultipartRequest, Request, Response, RetryConfig, RetryResult,
-};
-
-// HTTP 模块类型别名（向后兼容）
-pub type HttpResponse = http::Response;
 
 // Logger 模块
 pub use logger::init as logger_init;

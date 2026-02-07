@@ -2,7 +2,7 @@
 //!
 //! 包含 LLM 服务返回的实体类型定义
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// PR 创建内容，包含分支名、PR 标题、描述、scope 和详细总结
 ///

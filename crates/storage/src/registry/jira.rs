@@ -5,26 +5,17 @@ use std::sync::Arc;
 use registry::{bind, Container, Scope};
 
 use crate::jira::{
-    IssueService, IssueServiceImpl, JiraClient, JiraClientImpl, JiraConfigContextImpl,
+    IssueService, IssueServiceImpl, JiraClient, JiraClientImpl,
     JiraRepositoryImpl, JiraWorkHistoryRepositoryImpl, StatusService, StatusServiceImpl,
     UserService, UserServiceImpl, WorkHistoryService, WorkHistoryServiceImpl,
 };
 use domain::{
-    GlobalConfigRepository, JiraConfigContext, JiraRepository, JiraWorkHistoryRepository,
+    JiraConfigContext, JiraRepository, JiraWorkHistoryRepository,
     PathService,
 };
 
 /// 注册 Jira 相关服务
 pub fn register_jira() -> registry::Result<()> {
-    // Jira Config Context
-    bind!(dyn JiraConfigContext, |c: &Container| {
-        let global_config = c
-            .get::<dyn GlobalConfigRepository>()
-            .expect("GlobalConfigRepository must be registered before JiraConfigContext");
-        Arc::new(JiraConfigContextImpl::new(global_config))
-    })
-    .in_scope(Scope::Singleton)?;
-
     // Jira Client
     bind!(dyn JiraClient, |c: &Container| {
         let context = c

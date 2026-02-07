@@ -11,7 +11,7 @@ use reqwest::header::HeaderMap;
 use serde_json::Value;
 
 use domain::{GitHubContext, GitHubError};
-use toolkit::{HttpClient, Response};
+use http::{HttpClient, HttpError, Response};
 
 use crate::github::client::response::{GitHubErrorResponse, GitHubResponse};
 
@@ -221,7 +221,7 @@ impl GitHubClientImpl {
         method: &str,
         url: &str,
         body: Option<&Value>,
-        response: Result<Response, toolkit::HttpError>,
+        response: Result<Response, HttpError>,
     ) -> Result<GitHubResponse, GitHubError> {
         // 记录请求日志
         if let Some(body) = body {

@@ -9,7 +9,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
 use toolkit::{backup, cleanup_backup, rollback, Platform};
 
-use super::download::{build_download_url, download_file, extract_archive, verify_checksum};
+use super::download::{build_download_url, download_file, extract_archive, verify_file_checksum};
 use super::types::TempDirManager;
 use super::verify::{run_installer, verify_installation};
 use super::version::{
@@ -193,7 +193,7 @@ impl UpdateCommand {
         br!();
 
         // 验证文件完整性
-        verify_checksum(&temp_manager.archive_path, download_url)?;
+        verify_file_checksum(&temp_manager.archive_path, download_url)?;
         br!();
 
         // 解压文件

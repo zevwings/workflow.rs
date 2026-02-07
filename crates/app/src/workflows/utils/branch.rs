@@ -146,9 +146,9 @@ pub fn generate_branch_name_by_summary(
         .ok();
 
     // 使用 LLM 生成基础分支名（不包含 branch_type 前缀）
-    let llm_repo = registry::get_llm_repository();
+    let branch_service = registry::get_branch_service();
     let base_branch_name = match spinner!("Generating branch name...")
-        .with(|| llm_repo.generate_branch_name(Some(summary), exists_branches))
+        .with(|| branch_service.generate_branch_name(Some(summary), exists_branches))
     {
         Ok(name) => strip_branch_type_prefix(&name),
         Err(e) => {

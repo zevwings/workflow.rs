@@ -20,6 +20,8 @@ static URL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
         Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$").unwrap(),
         // GitHub SSH 格式: git@github.com:owner/repo.git (需在 ssh.github.com 之后，避免误匹配)
         Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").unwrap(),
+        // 兼容错误写法：git@github/owner/repo.git（缺少 .com 或误用 / 代替 :）
+        Regex::new(r"git@[^/]+/(.+?)(?:\.git)?$").unwrap(),
         // GitHub HTTPS 格式: https://github.com/owner/repo.git
         Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$").unwrap(),
         // Codeup SSH 格式: git@codeup.aliyun.com:owner/repo.git

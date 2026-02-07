@@ -2,6 +2,7 @@
 //!
 //! 提供提交相关的业务逻辑实现。
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::git::services::context::GitContext;
@@ -105,6 +106,33 @@ impl CommitService for CommitServiceImpl {
             .diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
+        // 按文件统计增删行数（仅统计文本 diff，二进制等无统计）
+        let mut path_stats: HashMap<String, (u32, u32)> = HashMap::new();
+        let mut line_cb = |delta: git2::DiffDelta<'_>,
+                           _hunk: Option<git2::DiffHunk<'_>>,
+                           line: git2::DiffLine<'_>| {
+            let path = delta
+                .new_file()
+                .path()
+                .or_else(|| delta.old_file().path())
+                .and_then(|p: &std::path::Path| p.to_str().map(String::from));
+            if let Some(path) = path {
+                let entry = path_stats.entry(path).or_insert((0, 0));
+                match line.origin() {
+                    '+' => entry.0 = entry.0.saturating_add(1),
+                    '-' => entry.1 = entry.1.saturating_add(1),
+                    _ => {}
+                }
+            }
+            true
+        };
+        let _ = diff.foreach(
+            &mut |_delta, _progress| true,
+            None,
+            None,
+            Some(&mut line_cb),
+        );
+
         let files: Vec<CommitFileChange> = diff
             .deltas()
             .map(|delta| {
@@ -116,10 +144,13 @@ impl CommitService for CommitServiceImpl {
                     .and_then(|p| p.to_str().map(String::from))
                     .unwrap_or_default();
                 let old_path = delta.old_file().path().and_then(|p| p.to_str().map(String::from));
+                let (additions, deletions) = path_stats.get(&path).copied().unwrap_or((0, 0));
                 CommitFileChange {
                     path,
                     change_type,
                     old_path,
+                    additions: Some(additions),
+                    deletions: Some(deletions),
                 }
             })
             .collect();

@@ -111,6 +111,8 @@ dependencies = [
  "color-eyre",
  "domain",
  "git2",
+ "http 0.0.1",
+ "llm",
  "once_cell",
  "prompt",
  "registry",
@@ -141,18 +143,6 @@ name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
-
-[[package]]
-name = "backon"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d67782c3f868daa71d3533538e98a8e13713231969def7536e8039606fc46bf0"
-dependencies = [
- "fastrand",
- "futures-core",
- "pin-project",
- "tokio",
-]
 
 [[package]]
 name = "backtrace"
@@ -1134,6 +1124,20 @@ dependencies = [
 
 [[package]]
 name = "http"
+version = "0.0.1"
+dependencies = [
+ "base64 0.22.1",
+ "mockito",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "tracing",
+]
+
+[[package]]
+name = "http"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "601cbb57e577e2f5ef5be8e7b83f0f63994f25aa94d673e54a92d5c516d101f1"
@@ -1615,6 +1619,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 
 [[package]]
+name = "llm"
+version = "0.0.1"
+dependencies = [
+ "http 0.0.1",
+ "registry",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1965,26 +1982,6 @@ checksum = "602113b5b5e8621770cfd490cfd90b9f84ab29bd2b0e49ad83eb6d186cef2365"
 dependencies = [
  "pest",
  "sha2",
-]
-
-[[package]]
-name = "pin-project"
-version = "1.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "677f1add503faace112b9f1373e43e9e054bfdd22ff1a63c1bc485eaec6a6a8a"
-dependencies = [
- "pin-project-internal",
-]
-
-[[package]]
-name = "pin-project-internal"
-version = "1.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e918e4ff8c4549eb882f14b3a4bc8c8bc93de829416eacf579f1207a8fbf861"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -2633,10 +2630,10 @@ version = "0.0.1"
 dependencies = [
  "dirs 5.0.1",
  "domain",
+ "llm",
  "once_cell",
  "registry",
  "serial_test",
- "storage",
  "tempfile",
  "toml",
  "toolkit",
@@ -2804,6 +2801,8 @@ dependencies = [
  "flate2",
  "git2",
  "glob",
+ "http 0.0.1",
+ "llm",
  "once_cell",
  "regex",
  "registry",
@@ -3105,7 +3104,6 @@ checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 name = "toolkit"
 version = "0.0.1"
 dependencies = [
- "backon",
  "base64 0.22.1",
  "chrono",
  "clap_complete",
@@ -3114,12 +3112,10 @@ dependencies = [
  "duct",
  "flate2",
  "handlebars",
- "mockito",
  "open",
  "pretty_assertions",
  "rand",
  "regex",
- "reqwest",
  "rstest",
  "serde",
  "serde_json",
@@ -3133,6 +3129,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "url",
  "walkdir",
  "whattheshell",
  "zip",

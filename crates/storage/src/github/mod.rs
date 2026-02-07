@@ -19,7 +19,7 @@ pub(crate) mod services;
 pub(crate) mod types;
 
 // 重新导出主要类型
-pub use client::{GitHubClient, GitHubClientImpl, GitHubContextImpl};
+pub use client::{GitHubClient, GitHubClientImpl};
 pub use repository::GitHubRepositoryImpl;
 pub use services::{
     PullRequestDiffService, PullRequestDiffServiceImpl, PullRequestMutationService,

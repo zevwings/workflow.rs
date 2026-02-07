@@ -465,8 +465,8 @@ impl BranchServiceImpl {
             // 只查看前5条记录
             if let Some(message) = entry.message() {
                 if let Some(source) = Self::extract_source_branch(message) {
-                    // 验证源分支是否存在
-                    if self.branch_exists(&source)? {
+                    // 验证源分支是否存在（用当前已持有的 repo，避免在持有锁时再调 branch_exists 导致死锁）
+                    if repo.find_branch(&source, BranchType::Local).is_ok() {
                         return Ok(Some(source));
                     }
                 }

@@ -2,8 +2,8 @@
 //!
 //! 为字符串类型提供浏览器操作相关的扩展方法。
 
-use reqwest::Url;
 use thiserror::Error;
+use url::Url;
 
 /// 浏览器操作错误
 #[derive(Debug, Error)]

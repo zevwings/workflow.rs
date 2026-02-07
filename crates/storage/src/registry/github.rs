@@ -2,11 +2,11 @@
 
 use std::sync::Arc;
 
-use domain::{GitHubContext, GitHubRepository, GitRepoRepository, GlobalConfigRepository};
+use domain::{GitHubContext, GitHubRepository, GitRepoRepository};
 use registry::{bind, Container, Scope};
 
 use crate::github::{
-    GitHubClient, GitHubClientImpl, GitHubContextImpl, GitHubRepositoryImpl,
+    GitHubClient, GitHubClientImpl, GitHubRepositoryImpl,
     PullRequestDiffService, PullRequestDiffServiceImpl, PullRequestMutationService,
     PullRequestMutationServiceImpl, PullRequestQueryService, PullRequestQueryServiceImpl,
     PullRequestReviewService, PullRequestReviewServiceImpl, ServiceContext, ServiceContextImpl,
@@ -14,15 +14,6 @@ use crate::github::{
 
 /// 注册 GitHub 相关服务
 pub fn register_github() -> registry::Result<()> {
-    // GitHub Context
-    bind!(dyn GitHubContext, |c: &Container| {
-        let global_config = c
-            .get::<dyn GlobalConfigRepository>()
-            .expect("GlobalConfigRepository must be registered before GitHubContext");
-        Arc::new(GitHubContextImpl::new(global_config))
-    })
-    .in_scope(Scope::Singleton)?;
-
     // GitHub Client
     bind!(dyn GitHubClient, |c: &Container| {
         let context = c
