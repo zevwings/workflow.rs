@@ -16,4 +16,4 @@ regex.workspace = true
 dirs.workspace = true
 
 # 路径常量（仅用于 paths::constants）
-toolkit = { path = "../toolkit" }
+toolkit.workspace = true

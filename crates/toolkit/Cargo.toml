@@ -13,35 +13,35 @@ thiserror.workspace = true
 url.workspace = true
 
 # 日志
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 # Shell 自动补全
 clap_complete.workspace = true
-whattheshell = "1.1"    # Shell 检测（通过进程树推断当前 shell）
+whattheshell.workspace = true
 
 # Shell 命令执行
 duct.workspace = true
 
 # 工具
-rand = "0.9"
+rand.workspace = true
 base64.workspace = true
 regex.workspace = true
-open = "5.0"
+open.workspace = true
 zip.workspace = true
 flate2.workspace = true
 walkdir.workspace = true
 tar.workspace = true
-sha2 = "0.10"
+sha2.workspace = true
 dirs.workspace = true
 chrono.workspace = true
 toml.workspace = true
-handlebars = "5.0"
-shellexpand = "3.1"
+handlebars.workspace = true
+shellexpand.workspace = true
 
 # clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用
 [target.'cfg(all(not(target_env = "musl"), not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))))'.dependencies]
-clipboard = "0.5"
+clipboard.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

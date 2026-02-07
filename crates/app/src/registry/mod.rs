@@ -14,22 +14,27 @@ static APP_INITIALIZED: LazyLock<()> = LazyLock::new(|| {
     // 按依赖顺序初始化模块
     // 注意：这些是启动时的关键初始化，失败时程序无法继续运行
 
-    // 0. 首先注册 llm 层服务（基础仓储实现）
+    // 0. 首先注册配置上下文服务（LLMConfigContext, JiraConfigContext, GitHubContext）
     if let Err(e) = context::register_context() {
+        panic!("Failed to register context module: {e}");
+    }
+
+    // 1. 注册 LLM 层服务（LLMClient, LLMExecutor）
+    if let Err(e) = llm::register_llm() {
         panic!("Failed to register llm module: {e}");
     }
 
-    // 1. 首先注册 storage 层服务（基础仓储实现）
+    // 2. 注册 storage 层服务（基础仓储实现）
     if let Err(e) = storage::register_storage() {
         panic!("Failed to register storage module: {e}");
     }
 
-    // 2. 然后注册 services 层服务（应用服务，依赖 storage）
+    // 3. 然后注册 services 层服务（应用服务，依赖 storage 和 llm）
     if let Err(e) = services::register_services() {
         panic!("Failed to register services module: {e}");
     }
 
-    // 3. 最后注册 app 层服务（应用层特有服务，可依赖 storage 和 services）
+    // 4. 最后注册 app 层服务（应用层特有服务，可依赖 storage 和 services）
     if let Err(e) = app::register_app() {
         panic!("Failed to register app module: {e}");
     }
