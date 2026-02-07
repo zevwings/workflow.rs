@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use domain::{
-    errors::ServiceError, CodePlatform, GitHubRepository, GitRepository, PrStatus, PullRequestInfo,
-    PullRequestService,
+    errors::ServiceError, CodePlatform, CommitSummaryService, GitHubRepository, GitRepository,
+    PrStatus, PullRequestInfo, PullRequestService,
 };
 
 /// Pull Request 服务实现
@@ -16,13 +16,19 @@ use domain::{
 pub struct PullRequestServiceImpl {
     git_repo: Arc<dyn GitRepository>,
     github_repo: Arc<dyn GitHubRepository>,
+    commit_summary_service: Arc<dyn CommitSummaryService>,
 }
 
 impl PullRequestServiceImpl {
-    pub fn new(git_repo: Arc<dyn GitRepository>, github_repo: Arc<dyn GitHubRepository>) -> Self {
+    pub fn new(
+        git_repo: Arc<dyn GitRepository>,
+        github_repo: Arc<dyn GitHubRepository>,
+        commit_summary_service: Arc<dyn CommitSummaryService>,
+    ) -> Self {
         Self {
             git_repo,
             github_repo,
+            commit_summary_service,
         }
     }
 
@@ -72,46 +78,111 @@ impl PullRequestService for PullRequestServiceImpl {
         // 使用提供的目标分支或获取默认分支
         let final_target_branch = match target_branch {
             Some(branch) => branch.to_string(),
-            None => self.git_repo.get_default_branch().unwrap_or_else(|_| "main".to_string()),
+            None => self
+                .git_repo
+                .get_default_branch()
+                .unwrap_or_else(|_| "main".to_string()),
         };
 
-        // 如果未提供标题，使用 LLM 生成 PR 内容
-        let (final_title, final_description) = ("","");
+        // 生成 PR 标题和描述
+        let (final_title, final_description) = if title.is_none() {
+            // 使用 CommitSummaryService 生成 PR 内容
+            let analysis = self
+                .commit_summary_service
+                .run_analysis(Some(&final_target_branch))
+                .map_err(|e| {
+                    ServiceError::Other(format!("Failed to generate PR content: {}", e))
+                })?;
 
-        // TODO: 使用 LLM 生成 PR 内容
-        // if title.is_none() {
-        //     // 使用 LLM 根据当前分支名生成 PR 内容
-        //     // 这里我们使用 create_pr_content，它会使用分支名来生成标题和描述
-        //     let pr_content = self.llm_repo.create_pr_content(
-        //         &current_branch,
-        //         None, // exists_branches
-        //         None, // git_diff
-        //     )?;
+            // 从 commit message 生成 PR 标题
+            let pr_title = if !analysis.commit_message.title.is_empty() {
+                analysis.commit_message.title.clone()
+            } else {
+                // Fallback: 使用 type + scope + subject
+                let type_ = &analysis.structured_summary.type_;
+                let scope = &analysis.structured_summary.scope;
+                let subject = &analysis.structured_summary.subject;
 
-        //     let mut desc = pr_content
-        //         .description
-        //         .unwrap_or_else(|| String::from("No description provided"));
+                if scope.is_empty() {
+                    format!("{}: {}", type_, subject)
+                } else {
+                    format!("{}({}): {}", type_, scope, subject)
+                }
+            };
 
-        //     // 如果提供了 jira_id，添加到描述中
-        //     if let Some(jid) = jira_id {
-        //         desc.push_str("\n\nJira: ");
-        //         desc.push_str(jid);
-        //     }
+            // 生成 PR 描述（使用结构化的摘要信息）
+            let mut pr_desc = String::new();
 
-        //     // (pr_content.pr_title, desc)
-        //     ("","")
-        // } else {
-        //     let title = title.unwrap_or("Untitled PR").to_string();
-        //     let mut desc = description.unwrap_or("").to_string();
+            // Summary section
+            if !analysis.structured_summary.main_purpose.is_empty() {
+                pr_desc.push_str("## Summary\n\n");
+                pr_desc.push_str(&analysis.structured_summary.main_purpose);
+                pr_desc.push_str("\n\n");
+            }
 
-        //     // 如果提供了 jira_id，添加到描述中
-        //     if let Some(jid) = jira_id {
-        //         desc.push_str("\n\nJira: ");
-        //         desc.push_str(jid);
-        //     }
+            // Key changes
+            if !analysis.structured_summary.key_changes.is_empty() {
+                pr_desc.push_str("### Key Changes\n\n");
+                for change in &analysis.structured_summary.key_changes {
+                    pr_desc.push_str(&format!("- {}\n", change));
+                }
+                pr_desc.push('\n');
+            }
 
-        //     (title, desc)
-        // };
+            // Breaking changes (if any)
+            if analysis.impact_analysis.breaking_changes.has_breaking {
+                pr_desc.push_str("## ⚠️ Breaking Changes\n\n");
+                pr_desc.push_str(&analysis.impact_analysis.breaking_changes.description);
+                pr_desc.push_str("\n\n");
+                if !analysis
+                    .impact_analysis
+                    .breaking_changes
+                    .migration_guide
+                    .is_empty()
+                {
+                    pr_desc.push_str("### Migration Guide\n\n");
+                    pr_desc.push_str(
+                        &analysis
+                            .impact_analysis
+                            .breaking_changes
+                            .migration_guide,
+                    );
+                    pr_desc.push_str("\n\n");
+                }
+            }
+
+            // Testing suggestions
+            if !analysis.impact_analysis.testing_suggestions.is_empty() {
+                pr_desc.push_str("## Testing\n\n");
+                for suggestion in &analysis.impact_analysis.testing_suggestions {
+                    pr_desc.push_str(&format!("- {}\n", suggestion));
+                }
+                pr_desc.push('\n');
+            }
+
+            // 如果提供了 jira_id，添加到描述中
+            if let Some(jid) = jira_id {
+                pr_desc.push_str("---\n\n");
+                pr_desc.push_str(&format!("**Jira**: {}\n", jid));
+            }
+
+            (pr_title, pr_desc.trim_end().to_string())
+        } else {
+            // 使用用户提供的标题和描述
+            let pr_title = title.unwrap_or("Untitled PR").to_string();
+            let mut pr_desc = description.unwrap_or("").to_string();
+
+            // 如果提供了 jira_id，添加到描述中
+            if let Some(jid) = jira_id {
+                if !pr_desc.is_empty() {
+                    pr_desc.push_str("\n\n");
+                }
+                pr_desc.push_str("---\n\n");
+                pr_desc.push_str(&format!("**Jira**: {}\n", jid));
+            }
+
+            (pr_title, pr_desc)
+        };
 
         let repo = self.get_pr_repository()?;
         let pr_id = map_github_err(repo.create_pull_request(

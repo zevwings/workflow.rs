@@ -48,7 +48,7 @@ Return JSON format:
     fn get_user_prompt(&self, _language_code: &str) -> String {
         let (title, exists_branches) = &self.input;
         // 构建输入文本
-        let mut input_parts = Vec::new();
+        let mut input_parts = Vec::with_capacity(1);
         if let Some(title) = title {
             input_parts.push(title.to_string());
         }

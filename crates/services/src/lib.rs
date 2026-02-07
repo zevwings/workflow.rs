@@ -9,7 +9,8 @@ pub(crate) mod completion;
 pub(crate) mod path;
 pub(crate) mod pull_request;
 pub(crate) mod registry;
+pub(crate) mod summary;
 
-// Re-export registry
 pub use branch::BranchServiceImpl;
 pub use registry::register_services;
+pub use summary::CommitSummaryServiceImpl;

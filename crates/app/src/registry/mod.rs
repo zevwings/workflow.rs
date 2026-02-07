@@ -106,6 +106,11 @@ pub fn get_git_repository() -> Arc<dyn domain::GitRepository> {
     get_service::<dyn domain::GitRepository>()
 }
 
+/// 获取 CommitSummaryService（三阶段提交分析）
+pub fn get_commit_summary_service() -> Arc<dyn domain::CommitSummaryService> {
+    get_service::<dyn domain::CommitSummaryService>()
+}
+
 /// 获取 GitHubRepository
 pub fn get_github_repository() -> Arc<dyn domain::GitHubRepository> {
     get_service::<dyn domain::GitHubRepository>()

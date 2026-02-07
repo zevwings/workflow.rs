@@ -2633,6 +2633,7 @@ dependencies = [
  "llm",
  "once_cell",
  "registry",
+ "serde_json",
  "serial_test",
  "tempfile",
  "toml",

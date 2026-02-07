@@ -23,7 +23,7 @@ pub struct GlobalConfig {
     /// LLM 配置
     #[serde(default, skip_serializing_if = "LLMSettings::is_empty")]
     pub llm: LLMSettings,
-    /// 别名配置（TOML section: [aliases]）
+    /// 别名配置（TOML section: `[aliases]`）
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub aliases: HashMap<String, String>,
 }

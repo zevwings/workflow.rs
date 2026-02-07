@@ -7,11 +7,12 @@ use std::sync::Arc;
 use llm::{LLMConfigContext, LLMExecutor};
 use registry::{bind, try_bind, Container, Scope};
 
-use crate::branch::BranchServiceImpl;
 use crate::alias::AliasServiceImpl;
+use crate::branch::BranchServiceImpl;
 use crate::completion::CompletionServiceImpl;
 use crate::path::PathServiceImpl;
 use crate::pull_request::PullRequestServiceImpl;
+use crate::summary::CommitSummaryServiceImpl;
 
 /// 构建 Services 模块
 ///
@@ -39,21 +40,33 @@ pub fn register_services() -> registry::Result<()> {
     })
     .in_scope(Scope::Singleton)?;
 
-    // PullRequestService - 依赖 GitRepository、GitHubRepository 和 LLMRepository
+    // PullRequestService - 依赖 GitRepository、GitHubRepository、CommitSummaryService
     try_bind!(dyn domain::PullRequestService, |c: &Container| {
         let git_repo = c.get::<dyn domain::GitRepository>()?;
         let github_repo = c.get::<dyn domain::GitHubRepository>()?;
+        let commit_summary_service = c.get::<dyn domain::CommitSummaryService>()?;
 
-        Ok(Arc::new(PullRequestServiceImpl::new(git_repo, github_repo)))
+        Ok(Arc::new(PullRequestServiceImpl::new(
+            git_repo,
+            github_repo,
+            commit_summary_service,
+        )))
     })
     .in_scope(Scope::Singleton)?;
 
-    // CompletionService - 无外部依赖
-    bind!(dyn domain::CompletionService, |c: &Container| {
-        let path_service = c
-            .get::<dyn domain::PathService>()
-            .expect("PathService must be registered before CompletionService");
-        Arc::new(CompletionServiceImpl::new(path_service))
+    // CommitSummaryService - 依赖 GitRepository、LLMExecutor、LLMConfigContext
+    try_bind!(dyn domain::CommitSummaryService, |c: &Container| {
+        let git_repo = c.get::<dyn domain::GitRepository>()?;
+        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let llm_context = c.get::<dyn LLMConfigContext>()?;
+        Ok(Arc::new(CommitSummaryServiceImpl::new(git_repo, llm_executor, llm_context)))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    // CompletionService - 依赖 PathService
+    try_bind!(dyn domain::CompletionService, |c: &Container| {
+        let path_service = c.get::<dyn domain::PathService>()?;
+        Ok(Arc::new(CompletionServiceImpl::new(path_service)))
     })
     .in_scope(Scope::Singleton)?;
 

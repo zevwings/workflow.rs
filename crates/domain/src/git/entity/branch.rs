@@ -7,7 +7,7 @@
 pub struct BranchInfo {
     /// 原始分支名称（如 "origin/feature" 或 "feature"）
     pub name: String,
-    /// 显示名称（如 "[R] feature" 或 "feature"）
+    /// 显示名称（如 "\[R\] feature" 或 "feature"）
     pub display_name: String,
     /// 是否为远程分支
     pub is_remote: bool,

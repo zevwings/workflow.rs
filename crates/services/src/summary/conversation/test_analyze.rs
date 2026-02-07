@@ -2,9 +2,8 @@
 //!
 //! 分析测试文件的变更及与业务代码的对应关系。
 
-use domain::{CommitTestAnalysis, LLMError};
-
-use crate::llm::services::{parsers::JsonParser, LLMConversation};
+use llm::LLMConversation;
+use crate::summary::prompt::analyze_tests;
 
 /// 测试文件分析对话
 ///
@@ -14,14 +13,16 @@ pub(crate) struct TestAnalyzeConversation {
 }
 
 impl TestAnalyzeConversation {
-    pub fn new(user_prompt: String) -> Self {
-        Self { user_prompt }
+    pub fn new(user_prompt: impl Into<String>) -> Self {
+        Self {
+            user_prompt: user_prompt.into(),
+        }
     }
 }
 
 impl LLMConversation for TestAnalyzeConversation {
     fn get_system_prompt(&self, _language_code: &str) -> String {
-        super::test_analyze().to_string()
+        analyze_tests().to_string()
     }
 
     fn get_user_prompt(&self, _language_code: &str) -> String {
@@ -30,10 +31,5 @@ impl LLMConversation for TestAnalyzeConversation {
 
     fn get_execution_params(&self) -> (Option<u32>, f32) {
         (None, 0.3)
-    }
-
-    fn parse_response(&self, response: String) -> Result<Self::Output, LLMError> {
-        JsonParser::to_model(response)
-            .map_err(|e| LLMError::ApiError(format!("JSON parse error: {}", e)))
     }
 }

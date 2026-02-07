@@ -14,8 +14,8 @@ pub mod github;
 pub mod jira;
 pub mod path;
 pub mod pr;
-pub mod template;
 pub mod summary;
+pub mod template;
 
 // Re-export public types
 // 避免使用 glob 导出以防止与子模块名称冲突（如 `template`）
@@ -104,9 +104,7 @@ pub use jira::{
     WorkHistoryEntry,
 };
 
-pub use summary::{CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis, CommitTestAnalysis, CommitSummaryAnalysis};
-// pub use llm::{
-//     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
-//     CommitSummaryAnalysis, CommitTestAnalysis,
-//     PullRequestContent, PullRequestReword, PullRequestSummary,
-// };
+pub use summary::{
+    CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
+    CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis,
+};

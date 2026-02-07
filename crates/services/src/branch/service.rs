@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
-use crate::branch::BranchNameConversation;
 use domain::{sanitize_branch_name, BranchService, BranchServiceError};
 use llm::parsers::JsonParser;
 use llm::{LLMConfigContext, LLMExecutor};
+
+use super::BranchNameConversation;
 
 pub struct BranchServiceImpl {
     llm_executor: Arc<dyn LLMExecutor>,
@@ -23,11 +24,15 @@ impl BranchService for BranchServiceImpl {
     fn generate_branch_name(
         &self,
         title: Option<&str>,
-        exists_branches: Option<Vec<String>>,
+        exists_branches: &[String],
     ) -> Result<String, BranchServiceError> {
         let conversation = BranchNameConversation::new((
             title.map(String::from),
-            exists_branches.map(|branches| branches.into_iter().map(String::from).collect()),
+            if exists_branches.is_empty() {
+                None
+            } else {
+                Some(exists_branches.to_vec())
+            },
         ));
 
         // 执行 LLM 调用

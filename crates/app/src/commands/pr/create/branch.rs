@@ -1,12 +1,12 @@
 //! 分支处理逻辑
 
 use domain::GitRepository;
-use prompt::{info, select};
+use prompt::{info, select, spinner, warning};
 
 use crate::registry;
 
 use super::commit::{check_needs_push, commit_changes, push_branch};
-use super::pr::{confirm_target_branch, create_pull_request, generate_pr_summary};
+use super::pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary};
 use super::types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption};
 
 /// 处理非默认分支的情况
@@ -76,42 +76,31 @@ fn handle_existing_pr(
     .map_err(|e| format!("Failed to select update option: {}", e))?;
 
     if update_selected == ConfirmOption::Yes {
-        // 生成 PR 内容
-        let pr_content = generate_pr_summary(
-            ctx.branch_repo,
-            ctx.current_branch,
-            ctx.jira_id,
-            ctx.description,
-        )?;
+        // 生成 commit message（用于组合 PR 标题）
+        let commit_message = build_commit_message(ctx.jira_id, ctx.description)?;
 
-        if let Some(pr_content) = pr_content {
-            // 更新 PR
-            if dry_run {
-                info!("[DRY RUN] Would update PR #{}", pr_id);
-                info!("  Title: {}", pr_content.pr_title);
-                if let Some(ref desc) = pr_content.description {
-                    info!("  Description:\n{}", desc);
-                }
-            } else {
-                let mut pr_body = String::new();
-                if let Some(ref description) = pr_content.description {
-                    pr_body.push_str(description);
-                }
-                if let Some(ref summary) = pr_content.summary {
-                    if !pr_body.is_empty() {
-                        pr_body.push_str("\n\n");
-                    }
-                    pr_body.push_str("## Summary\n\n");
-                    pr_body.push_str(summary);
-                }
+        // 生成 PR 摘要（三阶段分析）
+        let pr_summary = generate_pr_summary(None)?;
 
-                info!("Updating PR #{}...", pr_id);
-                let pr_service = registry::get_pull_request_service();
-                pr_service
-                    .update_pull_request(pr_id, Some(&pr_content.pr_title), Some(&pr_body))
-                    .map_err(|e| format!("Failed to update PR: {}", e))?;
-                prompt::success!("PR #{} updated successfully!", pr_id);
-            }
+        // 组合 PR 标题
+        let pr_title = format_pr_title(
+            &pr_summary.type_,
+            pr_summary.scope.as_deref(),
+            &commit_message,
+        );
+
+        // 更新 PR
+        if dry_run {
+            info!("[DRY RUN] Would update PR #{}", pr_id);
+            info!("  Title: {}", pr_title);
+            info!("  Description:\n{}", pr_summary.pr_body);
+        } else {
+            info!("Updating PR #{}...", pr_id);
+            let pr_service = registry::get_pull_request_service();
+            pr_service
+                .update_pull_request(pr_id, Some(&pr_title), Some(&pr_summary.pr_body))
+                .map_err(|e| format!("Failed to update PR: {}", e))?;
+            prompt::success!("PR #{} updated successfully!", pr_id);
         }
     } else {
         info!("Operation cancelled");
@@ -166,42 +155,46 @@ fn handle_no_existing_pr(
         }
     }
 
-    // 生成 PR 内容并创建 PR
-    let pr_content = generate_pr_summary(
+    // 生成 commit message（用于组合 PR 标题）
+    let commit_message = build_commit_message(ctx.jira_id, ctx.description)?;
+
+    // 生成 PR 摘要（三阶段分析）
+    let pr_summary = generate_pr_summary(None)?;
+
+    // 组合 PR 标题
+    let pr_title = format_pr_title(
+        &pr_summary.type_,
+        pr_summary.scope.as_deref(),
+        &commit_message,
+    );
+
+    // 确定目标分支
+    let target_branch = if dry_run {
+        // 直接使用默认分支，跳过耗时的推断和交互
+        let default_branch = ctx
+            .branch_repo
+            .get_default_branch()
+            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+        info!("[DRY RUN] Target branch: {}", default_branch);
+        default_branch
+    } else {
+        // 非 dry-run 模式：推断目标分支并询问用户确认
+        let inferred_target = ctx
+            .branch_repo
+            .infer_target_branch(ctx.current_branch)
+            .map_err(|e| format!("Failed to infer target branch: {}", e))?;
+
+        confirm_target_branch(ctx.branch_repo, inferred_target.as_deref())?
+    };
+
+    create_pull_request(
         ctx.branch_repo,
         ctx.current_branch,
-        ctx.jira_id,
-        ctx.description,
+        &pr_title,
+        &pr_summary.pr_body,
+        Some(&target_branch),
+        dry_run,
     )?;
-
-    if let Some(pr_content) = pr_content {
-        // 在 dry-run 模式下，简化目标分支推断逻辑
-        let target_branch = if dry_run {
-            // 直接使用默认分支，跳过耗时的推断和交互
-            let default_branch = ctx
-                .branch_repo
-                .get_default_branch()
-                .map_err(|e| format!("Failed to get default branch: {}", e))?;
-            info!("[DRY RUN] Target branch: {}", default_branch);
-            default_branch
-        } else {
-            // 非 dry-run 模式：推断目标分支并询问用户确认
-            let inferred_target = ctx
-                .branch_repo
-                .infer_target_branch(ctx.current_branch)
-                .map_err(|e| format!("Failed to infer target branch: {}", e))?;
-
-            confirm_target_branch(ctx.branch_repo, inferred_target.as_deref())?
-        };
-
-        create_pull_request(
-            ctx.branch_repo,
-            ctx.current_branch,
-            &pr_content,
-            Some(&target_branch),
-            dry_run,
-        )?;
-    }
 
     Ok(())
 }
@@ -310,6 +303,32 @@ pub fn handle_default_branch(
         Some(generated_branch_name.to_string()),
         Some(default_branch.to_string()),
     )
+}
+
+/// 生成 commit message 字符串
+///
+/// 与 `commit_changes` 中的逻辑一致，用于组合 PR 标题。
+fn build_commit_message(
+    jira_id: &Option<String>,
+    description: Option<&str>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    if let Some(jira_id) = jira_id {
+        if jira_id.trim().is_empty() {
+            return Ok(description.unwrap_or("Update").to_string());
+        }
+        let jira_repo = registry::get_jira_repository();
+        match spinner!("Fetching JIRA ticket '{}'...", jira_id)
+            .with(|| jira_repo.get_issue_info(jira_id))
+        {
+            Ok(issue) => Ok(format!("{}: {}", jira_id, issue.fields.summary)),
+            Err(e) => {
+                warning!("Failed to fetch JIRA ticket '{}': {}", jira_id, e);
+                Ok(jira_id.clone())
+            }
+        }
+    } else {
+        Ok(description.unwrap_or("Update").to_string())
+    }
 }
 
 /// 准备默认分支的辅助方法

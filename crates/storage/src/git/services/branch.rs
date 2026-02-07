@@ -601,10 +601,4 @@ impl BranchServiceImpl {
         None
     }
 
-    /// 检查分支是否存在（本地）
-    fn branch_exists(&self, branch_name: &str) -> Result<bool, GitError> {
-        let repo = self.ctx.repository();
-        let exists = repo.find_branch(branch_name, BranchType::Local).is_ok();
-        Ok(exists)
-    }
 }

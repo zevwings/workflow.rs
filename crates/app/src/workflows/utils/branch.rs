@@ -140,15 +140,15 @@ pub fn generate_branch_name_by_summary(
 
     // 获取所有已存在的分支名（失败则为空）
     let branch_repo = registry::get_git_repository();
-    let exists_branches: Option<Vec<String>> = branch_repo
+    let exists_branches: Vec<String> = branch_repo
         .list_branches(false, true)
         .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
-        .ok();
+        .unwrap_or_default();
 
     // 使用 LLM 生成基础分支名（不包含 branch_type 前缀）
     let branch_service = registry::get_branch_service();
     let base_branch_name = match spinner!("Generating branch name...")
-        .with(|| branch_service.generate_branch_name(Some(summary), exists_branches))
+        .with(|| branch_service.generate_branch_name(Some(summary), &exists_branches))
     {
         Ok(name) => strip_branch_type_prefix(&name),
         Err(e) => {

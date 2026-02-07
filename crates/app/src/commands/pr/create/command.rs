@@ -9,7 +9,9 @@ use crate::workflows::utils::jira::{ensure_jira_status_config, get_jira_id_inter
 
 use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
 use crate::commands::pr::create::commit::commit_changes;
-use crate::commands::pr::create::pr::{create_pull_request, generate_pr_summary};
+use crate::commands::pr::create::pr::{
+    create_pull_request, format_pr_title, generate_pr_summary,
+};
 use crate::commands::pr::create::types::BranchHandleContext;
 
 /// Pull Request Create 命令
@@ -71,14 +73,14 @@ impl PullRequestCreateCommand {
             // 然后使用 Spinner 生成分支名称
             let base_branch_name = {
                 let branch_repo = registry::get_git_repository();
-                let exists_branches: Option<Vec<String>> = branch_repo
+                let exists_branches: Vec<String> = branch_repo
                     .list_branches(false, true)
                     .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
-                    .ok();
+                    .unwrap_or_default();
 
                 let branch_service = registry::get_branch_service();
                 match spinner!("Generating branch name...").with(|| {
-                    branch_service.generate_branch_name(Some(description.as_str()), exists_branches)
+                    branch_service.generate_branch_name(Some(description.as_str()), &exists_branches)
                 }) {
                     Ok(name) => name,
                     Err(e) => {
@@ -188,10 +190,10 @@ impl PullRequestCreateCommand {
             success!("Created and switched to branch '{}'", new_branch_name);
         }
 
-        // 生成 PR 详细总结（在提交之前）
-        let pr_content = generate_pr_summary(branch_repo, new_branch_name, jira_id, description)?;
+        // 生成 commit message（用于提交和 PR 标题）
+        let commit_message = build_commit_message(jira_id, description)?;
 
-        // 提交代码（如果有更改）
+        // 先提交代码，确保 merge diff 可用
         if !self.dry_run {
             commit_changes(branch_repo, jira_id, description)?;
         } else {
@@ -201,17 +203,7 @@ impl PullRequestCreateCommand {
 
             if !status.is_clean() {
                 info!("[DRY RUN] Would commit changes");
-                let commit_message = if let Some(jira_id) = jira_id {
-                    format!(
-                        "[DRY RUN] Commit message would be: {}: <JIRA summary>",
-                        jira_id
-                    )
-                } else if let Some(desc) = description {
-                    format!("[DRY RUN] Commit message would be: {}", desc)
-                } else {
-                    "[DRY RUN] Commit message would be generated".to_string()
-                };
-                info!("{}", commit_message);
+                info!("[DRY RUN] Commit message: {}", commit_message);
                 info!(
                     "[DRY RUN] Would push branch '{}' to remote",
                     new_branch_name
@@ -221,12 +213,20 @@ impl PullRequestCreateCommand {
             }
         }
 
-        // 创建 PR（如果有 PR 内容）
-        if let Some(pr_content) = pr_content {
+        // 生成 PR 摘要（三阶段分析，需要在提交之后调用）
+        let pr_summary = generate_pr_summary(target_branch)?;
+
+        // 组合 PR 标题：type(scope): commit_message
+        let pr_title =
+            format_pr_title(&pr_summary.type_, pr_summary.scope.as_deref(), &commit_message);
+
+        // 创建 PR
+        {
             let pr_result = create_pull_request(
                 branch_repo,
                 new_branch_name,
-                &pr_content,
+                &pr_title,
+                &pr_summary.pr_body,
                 target_branch,
                 self.dry_run,
             )?;
@@ -323,5 +323,35 @@ impl PullRequestCreateCommand {
         info!("Work history recorded for PR #{}", pr_id);
 
         Ok(())
+    }
+}
+
+/// 生成 commit message 字符串
+///
+/// 与 `commit_changes` 中的逻辑一致，用于组合 PR 标题。
+///
+/// - 有 JIRA ID → `"{jira_id}: {JIRA summary}"`
+/// - 无 JIRA ID → 使用 description
+/// - 都没有 → 返回 "Update"
+fn build_commit_message(
+    jira_id: &Option<String>,
+    description: Option<&str>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    if let Some(jira_id) = jira_id {
+        if jira_id.trim().is_empty() {
+            return Ok(description.unwrap_or("Update").to_string());
+        }
+        let jira_repo = registry::get_jira_repository();
+        match spinner!("Fetching JIRA ticket '{}'...", jira_id)
+            .with(|| jira_repo.get_issue_info(jira_id))
+        {
+            Ok(issue) => Ok(format!("{}: {}", jira_id, issue.fields.summary)),
+            Err(e) => {
+                warning!("Failed to fetch JIRA ticket '{}': {}", jira_id, e);
+                Ok(jira_id.clone())
+            }
+        }
+    } else {
+        Ok(description.unwrap_or("Update").to_string())
     }
 }

@@ -10,6 +10,7 @@ domain = { path = "../domain" }
 toolkit = { path = "../toolkit" }
 llm = { path = "../llm" }
 registry = { path = "../registry" }
+serde_json.workspace = true
 toml.workspace = true
 dirs.workspace = true
 

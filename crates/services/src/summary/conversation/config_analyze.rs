@@ -2,9 +2,8 @@
 //!
 //! 对配置文件、环境变量、文档类文件的修改进行简要总结。
 
-use domain::{CommitConfigAnalysis, LLMError};
-
-use crate::llm::services::{parsers::JsonParser, LLMConversation};
+use llm::LLMConversation;
+use crate::summary::prompt::analyze_config;
 
 /// 配置/文档分析对话
 ///
@@ -14,14 +13,16 @@ pub(crate) struct ConfigAnalyzeConversation {
 }
 
 impl ConfigAnalyzeConversation {
-    pub fn new(user_prompt: String) -> Self {
-        Self { user_prompt }
+    pub fn new(user_prompt: impl Into<String>) -> Self {
+        Self {
+            user_prompt: user_prompt.into(),
+        }
     }
 }
 
 impl LLMConversation for ConfigAnalyzeConversation {
     fn get_system_prompt(&self, _language_code: &str) -> String {
-        super::config_analyze().to_string()
+        analyze_config().to_string()
     }
 
     fn get_user_prompt(&self, _language_code: &str) -> String {
@@ -30,10 +31,5 @@ impl LLMConversation for ConfigAnalyzeConversation {
 
     fn get_execution_params(&self) -> (Option<u32>, f32) {
         (None, 0.3)
-    }
-
-    fn parse_response(&self, response: String) -> Result<Self::Output, LLMError> {
-        JsonParser::to_model(response)
-            .map_err(|e| LLMError::ApiError(format!("JSON parse error: {}", e)))
     }
 }

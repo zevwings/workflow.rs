@@ -1,14 +1,57 @@
-//! LLM 服务接口
+//! LLM 仓储接口
+//!
+//! 定义与大语言模型（LLM）交互的底层接口，支持各种 AI 辅助功能。
 
-use crate::llm::entity::{
-    CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
-    CommitSummaryAnalysis, CommitTestAnalysis, PullRequestContent,
-};
 use crate::llm::error::LLMError;
+use crate::summary::entity::{
+    CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
+    CommitSummaryAnalysis, CommitTestAnalysis,
+};
 
-/// LLM 服务接口
+/// LLM 仓储接口
 ///
-/// 提供 LLM API 操作的接口定义。
+/// 提供与大语言模型 API 交互的底层接口，封装了各类智能分析功能。
+///
+/// # 功能范围
+///
+/// ## 代码生成
+/// - 分支名生成
+/// - Commit message 生成
+///
+/// ## 代码分析（三阶段 Commit 分析）
+/// - **阶段一**：文件分类（logic、test、config、build）
+/// - **阶段二**：分类分析（批量操作、核心逻辑、配置、测试）
+/// - **阶段三**：全局总结（整合所有分析结果）
+///
+/// ## 配置管理
+/// - LLM 配置验证
+///
+/// # 线程安全
+///
+/// 实现须满足 [`Send`] + [`Sync`]，以便在多线程或异步上下文中共享。
+///
+/// # 支持的 LLM 提供商
+///
+/// 实现可以支持多种 LLM 提供商，例如：
+/// - OpenAI（GPT-3.5、GPT-4）
+/// - Anthropic（Claude）
+/// - 本地模型（Ollama、LLaMA）
+///
+/// 具体实现由 Storage 层负责。
+///
+/// # 错误处理
+///
+/// 所有方法返回 [`LLMError`]，包含：
+/// - API 调用失败（网络错误、超时、限流）
+/// - 响应解析失败（JSON 格式错误）
+/// - 配置错误（API Key 无效）
+///
+/// # 性能考虑
+///
+/// - LLM API 调用通常需要 1-5 秒
+/// - 三阶段分析会进行多次 API 调用（3-5 次）
+/// - 建议在异步上下文中调用
+/// - 考虑实现缓存和并行调用以优化性能
 pub trait LLMRepository: Send + Sync {
     /// 验证 LLM 配置
     fn verify_config(&self) -> Result<String, LLMError>;
@@ -65,27 +108,4 @@ pub trait LLMRepository: Send + Sync {
         total_deletions: u32,
     ) -> Result<CommitSummaryAnalysis, LLMError>;
 
-    /// 创建 PR 内容（包含分支名、PR 标题、描述、scope 和详细总结）
-    ///
-    /// 根据 commit 标题和 git diff 生成符合规范的分支名、PR 标题、描述、scope 和详细总结。
-    /// 分支名和 PR 标题都会自动翻译为英文（如果输入包含非英文内容）。
-    ///
-    /// 如果提供了 `git_diff`，还会自动生成详细的 PR 总结文档（Markdown 格式），
-    /// 包含需求分析、技术细节、变更列表等完整信息。
-    ///
-    /// # 参数
-    ///
-    /// * `commit_title` - commit 标题或描述
-    /// * `exists_branches` - 已存在的分支列表（可选）
-    /// * `git_diff` - Git 工作区和暂存区的修改内容（可选，用于生成描述、提取 scope 和生成详细总结）
-    ///
-    /// # 返回
-    ///
-    /// 返回 `PullRequestContent` 结构体，包含分支名、PR 标题、描述、scope 和详细总结（如果有 git_diff）
-    fn create_pr_content(
-        &self,
-        commit_title: &str,
-        exists_branches: Option<Vec<String>>,
-        git_diff: Option<String>,
-    ) -> Result<PullRequestContent, LLMError>;
 }

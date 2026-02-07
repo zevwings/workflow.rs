@@ -2,26 +2,9 @@
 //!
 //! 综合阶段一分类结果与阶段二各分析结果，生成结构化的 commit 总结（标题、描述、影响分析等）。
 
-use domain::{CommitSummaryAnalysis, LLMError};
-
-use crate::llm::services::{parsers::JsonParser, LLMConversation};
-
-/// 阶段三全局总结的输入参数
-#[derive(Clone)]
-pub(crate) struct SummaryAnalyzeInput {
-    pub stage1_classification: String,
-    pub stage2_batch_analysis: String,
-    pub stage2_logic_analysis: String,
-    pub stage2_config_analysis: String,
-    pub stage2_test_analysis: String,
-    pub total_files: u32,
-    pub added_count: u32,
-    pub deleted_count: u32,
-    pub modified_count: u32,
-    pub renamed_count: u32,
-    pub total_additions: u32,
-    pub total_deletions: u32,
-}
+use llm::LLMConversation;
+use crate::summary::prompt::summary;
+use crate::summary::summary::SummaryAnalyzeInput;
 
 /// 阶段三：全局总结对话
 ///
@@ -38,7 +21,7 @@ impl SummaryAnalyzeConversation {
 
 impl LLMConversation for SummaryAnalyzeConversation {
     fn get_system_prompt(&self, _language_code: &str) -> String {
-        super::summary_analyze().to_string()
+        summary().to_string()
     }
 
     fn get_user_prompt(&self, _language_code: &str) -> String {
@@ -97,10 +80,5 @@ impl LLMConversation for SummaryAnalyzeConversation {
 
     fn get_execution_params(&self) -> (Option<u32>, f32) {
         (None, 0.3)
-    }
-
-    fn parse_response(&self, response: String) -> Result<Self::Output, LLMError> {
-        JsonParser::to_model(response)
-            .map_err(|e| LLMError::ApiError(format!("JSON parse error: {}", e)))
     }
 }

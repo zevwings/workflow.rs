@@ -1,7 +1,10 @@
 //! PR 创建和摘要生成逻辑
 
 use domain::git::CodePlatform;
-use domain::{GitRepository, PullRequestContent};
+use domain::summary::entity::{
+    AffectedModule, CommitSummaryAnalysis, DetailsByCategory, ImpactAnalysis,
+};
+use domain::GitRepository;
 use prompt::{error, info, select, spinner, success, warning};
 use toolkit::BrowserExt;
 
@@ -18,12 +21,45 @@ pub struct PrCreateResult {
     pub pr_url: String,
 }
 
+/// PR 摘要结果
+///
+/// 由三阶段提交分析生成，包含 PR body 和 Conventional Commits 所需的 type/scope。
+#[derive(Debug, Clone)]
+pub struct PrSummaryResult {
+    /// Conventional Commits type（feat / fix / refactor / docs / style / test / chore / perf）
+    pub type_: String,
+    /// Commit scope（变更涉及的模块或功能区域，如 "api", "auth"）
+    pub scope: Option<String>,
+    /// PR body（Markdown 格式，包含总结、变更详情、影响分析和统计信息）
+    pub pr_body: String,
+}
+
+/// 组合 PR 标题
+///
+/// 使用 Conventional Commits 格式将 type、scope 和 commit message 组合为 PR 标题。
+///
+/// # 示例
+///
+/// - 有 scope: `feat(auth): PROJ-123: 用户登录功能`
+/// - 无 scope: `feat: PROJ-123: 用户登录功能`
+pub fn format_pr_title(type_: &str, scope: Option<&str>, commit_message: &str) -> String {
+    match scope {
+        Some(s) if !s.is_empty() => format!("{}({}): {}", type_, s, commit_message),
+        _ => format!("{}: {}", type_, commit_message),
+    }
+}
+
 /// 创建 Pull Request
 ///
-/// 使用生成的 PR 内容创建 Pull Request
+/// 使用生成的 PR 标题和内容创建 Pull Request
 ///
 /// # 参数
+/// - `branch_repo`: Git 仓库
+/// - `branch_name`: 源分支名称
+/// - `pr_title`: PR 标题
+/// - `pr_body`: PR 描述内容（Markdown 格式）
 /// - `target_branch`: 可选的目标分支，如果为 None 则使用默认分支
+/// - `dry_run`: 是否为 dry-run 模式
 ///
 /// # 返回
 /// - `Ok(Some(PrCreateResult))` - PR 创建成功，返回 PR ID 和 URL
@@ -32,7 +68,8 @@ pub struct PrCreateResult {
 pub fn create_pull_request(
     branch_repo: &dyn GitRepository,
     branch_name: &str,
-    pr_content: &PullRequestContent,
+    pr_title: &str,
+    pr_body: &str,
     target_branch: Option<&str>,
     dry_run: bool,
 ) -> Result<Option<PrCreateResult>, Box<dyn std::error::Error>> {
@@ -43,22 +80,9 @@ pub fn create_pull_request(
 
     let target = target_branch.unwrap_or(&default_branch);
 
-    // 构建 PR 描述
-    let mut pr_body = String::new();
-    if let Some(ref description) = pr_content.description {
-        pr_body.push_str(description);
-    }
-    if let Some(ref summary) = pr_content.summary {
-        if !pr_body.is_empty() {
-            pr_body.push_str("\n\n");
-        }
-        pr_body.push_str("## Summary\n\n");
-        pr_body.push_str(summary);
-    }
-
     if dry_run {
         info!("[DRY RUN] Would create Pull Request:");
-        info!("  Title: {}", pr_content.pr_title);
+        info!("  Title: {}", pr_title);
         info!("  Source branch: {}", branch_name);
         info!("  Target branch: {}", target);
         if !pr_body.is_empty() {
@@ -74,8 +98,8 @@ pub fn create_pull_request(
         .with(|| {
             pr_service.create_pull_request(
                 None, // jira_id
-                Some(&pr_content.pr_title),
-                Some(&pr_body),
+                Some(pr_title),
+                Some(pr_body),
                 Some(target), // 使用用户选择的目标分支
             )
         })
@@ -171,87 +195,225 @@ pub fn confirm_target_branch(
     }
 }
 
-/// 生成 PR 详细总结
+/// 生成 PR 摘要
 ///
-/// 获取当前工作区和暂存区相对于默认分支的 diff，然后调用 LLM 生成详细的 PR 总结。
-/// 在提交代码之前调用此方法。
+/// 调用三阶段提交分析服务（文件分类 → 分类分析 → 全局总结），
+/// 将分析结果渲染为 Markdown 格式的 PR body，并提取 type/scope。
+///
+/// 必须在 `commit_changes` 之后调用，确保变更已提交，`get_merge_diff` 能获取到 diff。
+///
+/// # 参数
+/// - `base_branch`: 可选的基准分支，为 None 时由服务自动推断
 ///
 /// # 返回
-/// 返回生成的 PR 内容（如果有更改），否则返回 None
+/// 返回 `PrSummaryResult`（包含 type、scope 和 PR body）
 pub fn generate_pr_summary(
-    branch_repo: &dyn GitRepository,
-    _branch_name: &str,
-    jira_id: &Option<String>,
-    description: Option<&str>,
-) -> Result<Option<PullRequestContent>, Box<dyn std::error::Error>> {
-    // 获取默认分支
-    let default_branch = branch_repo
-        .get_default_branch()
-        .map_err(|e| format!("Failed to get default branch: {}", e))?;
-
-    // 获取工作区和暂存区相对于默认分支的 diff
-    // storage 层会自动应用 .gitignore 忽略规则和大小限制
-    // 这个 diff 包括：已提交的更改、暂存区更改、工作区未暂存更改
-    let git_diff = branch_repo
-        .get_working_tree_diff(&default_branch)
-        .map_err(|e| format!("Failed to get working tree diff: {}", e))?;
-
-    // 如果没有 diff（既没有已提交的 commits，也没有未提交的更改），跳过生成总结
-    let git_diff = match git_diff {
-        Some(diff) if !diff.trim().is_empty() => diff,
-        _ => {
-            info!("No changes to generate PR summary");
-            return Ok(None);
-        }
-    };
-
-    // 生成 commit title（用于生成 PR 内容）
-    let commit_title = if let Some(jira_id) = jira_id {
-        // 获取 JIRA summary
-        let jira_repo = registry::get_jira_repository();
-        let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
-            .with(|| jira_repo.get_issue_info(jira_id))
-            .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
-        format!("{}: {}", jira_id, issue.fields.summary)
-    } else if let Some(desc) = description {
-        desc.to_string()
-    } else {
-        // 使用 description 或默认消息
-        description.unwrap_or("Update").to_string()
-    };
-
-    // 获取已存在的分支列表（用于避免重复分支名）
-    let existing_branches = branch_repo
-        .list_branches(false, true)
-        .map_err(|e| format!("Failed to list branches: {}", e))?;
-    let branch_names: Vec<String> =
-        existing_branches.iter().map(|b| b.display_name.clone()).collect();
-
-    // 调用 LLM 生成 PR 内容（包括详细总结）
+    base_branch: Option<&str>,
+) -> Result<PrSummaryResult, Box<dyn std::error::Error>> {
     info!("Generating PR summary...");
-    let llm_repo = registry::get_llm_repository();
-    let pr_content = spinner!("Generating PR content and summary...")
-        .with(|| {
-            llm_repo.create_pr_content(&commit_title, Some(branch_names), Some(git_diff.clone()))
-        })
-        .map_err(|e| format!("Failed to generate PR content: {}", e))?;
 
-    // 显示 PR 内容
-    info!("PR Title: {}", pr_content.pr_title);
-    if let Some(ref desc) = pr_content.description {
-        info!("PR Description:\n{}", desc);
-    }
-    if let Some(ref scope) = pr_content.scope {
-        info!("Scope: {}", scope);
-    }
+    let summary_service = registry::get_commit_summary_service();
+    let analysis = spinner!("Analyzing commit changes (3-stage analysis)...")
+        .with(|| summary_service.run_analysis(base_branch))
+        .map_err(|e| format!("Failed to generate PR summary: {}", e))?;
 
-    // 显示详细总结
-    if let Some(ref summary) = pr_content.summary {
-        success!("PR Summary generated successfully!");
-        println!("\n{}", summary);
+    // 提取 type 和 scope
+    let type_ = analysis.structured_summary.type_.clone();
+    let scope = if analysis.structured_summary.scope.is_empty() {
+        None
     } else {
-        info!("No detailed summary generated (this is normal if git diff is empty or too large)");
+        Some(analysis.structured_summary.scope.clone())
+    };
+
+    // 渲染 PR body
+    let pr_body = render_pr_body(&analysis);
+
+    // 显示摘要信息
+    info!("Type: {}", type_);
+    if let Some(ref s) = scope {
+        info!("Scope: {}", s);
+    }
+    success!("PR Summary generated successfully!");
+    println!("\n{}", pr_body);
+
+    Ok(PrSummaryResult {
+        type_,
+        scope,
+        pr_body,
+    })
+}
+
+/// 将 `CommitSummaryAnalysis` 渲染为 Markdown 格式的 PR body
+fn render_pr_body(analysis: &CommitSummaryAnalysis) -> String {
+    let mut body = String::new();
+
+    // == Summary ==
+    body.push_str("## Summary\n\n");
+    if !analysis.structured_summary.main_purpose.is_empty() {
+        body.push_str(&analysis.structured_summary.main_purpose);
+        body.push_str("\n\n");
     }
 
-    Ok(Some(pr_content))
+    // Key changes
+    if !analysis.structured_summary.key_changes.is_empty() {
+        body.push_str("### Key Changes\n\n");
+        for change in &analysis.structured_summary.key_changes {
+            body.push_str(&format!("- {}\n", change));
+        }
+        body.push('\n');
+    }
+
+    // == Changes by Category ==
+    render_details_by_category(&mut body, &analysis.structured_summary.details_by_category);
+
+    // == Impact Analysis ==
+    render_impact_analysis(&mut body, &analysis.impact_analysis);
+
+    // == Statistics ==
+    let stats = &analysis.statistics;
+    body.push_str("## Statistics\n\n");
+    body.push_str(&format!(
+        "| Metric | Value |\n|--------|-------|\n| Total files | {} |\n| Additions | +{} |\n| Deletions | -{} |\n| Net change | {} |\n",
+        stats.total_files,
+        stats.additions,
+        stats.deletions,
+        stats.net_change,
+    ));
+
+    let fb = &stats.file_breakdown;
+    if fb.added > 0 || fb.modified > 0 || fb.deleted > 0 || fb.renamed > 0 {
+        body.push_str(&format!(
+            "| Added files | {} |\n| Modified files | {} |\n| Deleted files | {} |\n| Renamed files | {} |\n",
+            fb.added, fb.modified, fb.deleted, fb.renamed,
+        ));
+    }
+    body.push('\n');
+
+    // == Metadata ==
+    let meta = &analysis.metadata;
+    if !meta.complexity.is_empty() || !meta.review_priority.is_empty() {
+        body.push_str("## Review Info\n\n");
+        if !meta.complexity.is_empty() {
+            body.push_str(&format!("- **Complexity**: {}\n", meta.complexity));
+        }
+        if !meta.review_priority.is_empty() {
+            body.push_str(&format!("- **Review priority**: {}\n", meta.review_priority));
+        }
+        if !meta.estimated_review_time.is_empty() {
+            body.push_str(&format!(
+                "- **Estimated review time**: {}\n",
+                meta.estimated_review_time
+            ));
+        }
+        if !meta.tags.is_empty() {
+            body.push_str(&format!("- **Tags**: {}\n", meta.tags.join(", ")));
+        }
+        body.push('\n');
+    }
+
+    body.trim_end().to_string()
+}
+
+/// 渲染按类别划分的变更详情
+fn render_details_by_category(body: &mut String, details: &DetailsByCategory) {
+    let categories: Vec<(&str, &[String])> = vec![
+        ("Features", &details.features),
+        ("Bug Fixes", &details.fixes),
+        ("Refactors", &details.refactors),
+        ("Configuration", &details.config),
+        ("Documentation", &details.docs),
+        ("Tests", &details.tests),
+        ("Others", &details.others),
+    ];
+
+    let has_any = categories.iter().any(|(_, items)| !items.is_empty());
+    if !has_any {
+        return;
+    }
+
+    body.push_str("## Changes\n\n");
+    for (label, items) in &categories {
+        if items.is_empty() {
+            continue;
+        }
+        body.push_str(&format!("### {}\n\n", label));
+        for item in *items {
+            body.push_str(&format!("- {}\n", item));
+        }
+        body.push('\n');
+    }
+}
+
+/// 渲染影响分析
+fn render_impact_analysis(body: &mut String, impact: &ImpactAnalysis) {
+    let has_breaking = impact.breaking_changes.has_breaking;
+    let has_modules = !impact.affected_modules.is_empty();
+    let has_risk = !impact.risk_assessment.overall_risk.is_empty();
+    let has_testing = !impact.testing_suggestions.is_empty();
+
+    if !has_breaking && !has_modules && !has_risk && !has_testing {
+        return;
+    }
+
+    body.push_str("## Impact Analysis\n\n");
+
+    // Breaking changes
+    if has_breaking {
+        body.push_str("### Breaking Changes\n\n");
+        if !impact.breaking_changes.description.is_empty() {
+            body.push_str(&format!("{}\n\n", impact.breaking_changes.description));
+        }
+        if !impact.breaking_changes.migration_guide.is_empty() {
+            body.push_str(&format!(
+                "**Migration guide**: {}\n\n",
+                impact.breaking_changes.migration_guide
+            ));
+        }
+    }
+
+    // Affected modules
+    if has_modules {
+        render_affected_modules(body, &impact.affected_modules);
+    }
+
+    // Risk assessment
+    if has_risk {
+        body.push_str(&format!(
+            "### Risk Assessment\n\n**Overall risk**: {}\n\n",
+            impact.risk_assessment.overall_risk
+        ));
+        if !impact.risk_assessment.risk_factors.is_empty() {
+            body.push_str("**Risk factors**:\n");
+            for factor in &impact.risk_assessment.risk_factors {
+                body.push_str(&format!("- {}\n", factor));
+            }
+            body.push('\n');
+        }
+        if !impact.risk_assessment.mitigation.is_empty() {
+            body.push_str("**Mitigation**:\n");
+            for m in &impact.risk_assessment.mitigation {
+                body.push_str(&format!("- {}\n", m));
+            }
+            body.push('\n');
+        }
+    }
+
+    // Testing suggestions
+    if has_testing {
+        body.push_str("### Testing Suggestions\n\n");
+        for suggestion in &impact.testing_suggestions {
+            body.push_str(&format!("- {}\n", suggestion));
+        }
+        body.push('\n');
+    }
+}
+
+/// 渲染受影响模块表格
+fn render_affected_modules(body: &mut String, modules: &[AffectedModule]) {
+    body.push_str("### Affected Modules\n\n");
+    body.push_str("| Module | Impact | Severity |\n|--------|--------|----------|\n");
+    for m in modules {
+        body.push_str(&format!("| {} | {} | {} |\n", m.module, m.impact, m.severity));
+    }
+    body.push('\n');
 }
