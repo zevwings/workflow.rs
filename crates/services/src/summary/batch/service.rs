@@ -5,9 +5,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use domain::errors::ServiceError;
 use domain::git::entity::CommitFileChange;
 use domain::summary::entity::{CommitBatchAnalysis, CommitFileClassification};
-use domain::errors::ServiceError;
 use llm::LLMExecutor;
 
 use super::BatchAnalyzeConversation;
@@ -45,16 +45,10 @@ impl BatchAnalyzeService {
 
         let mut sample_diffs = String::new();
         for (i, path) in sample_paths.iter().enumerate() {
-            let additions = files
-                .iter()
-                .find(|f| f.path == **path)
-                .and_then(|f| f.additions)
-                .unwrap_or(0);
-            let deletions = files
-                .iter()
-                .find(|f| f.path == **path)
-                .and_then(|f| f.deletions)
-                .unwrap_or(0);
+            let additions =
+                files.iter().find(|f| f.path == **path).and_then(|f| f.additions).unwrap_or(0);
+            let deletions =
+                files.iter().find(|f| f.path == **path).and_then(|f| f.deletions).unwrap_or(0);
             let diff = file_diffs.get(*path).map(String::as_str).unwrap_or("");
             sample_diffs.push_str(&format!(
                 "\n### 文件{}: {}\n变更：+{} -{}\n```diff\n{}\n```\n",
@@ -92,7 +86,6 @@ impl BatchAnalyzeService {
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }
-
 
 // ── Helpers ───────────────────────────────────────────────────
 

@@ -8,10 +8,10 @@ mod config;
 mod prompt;
 mod service;
 // 允许模块嵌套：summary/summary 模块用于阶段三的总结分析
+mod logic;
 #[allow(clippy::module_inception)]
 mod summary;
 mod tests;
-mod logic;
 
 pub(crate) use batch::BatchAnalyzeService;
 pub(crate) use classify::FileClassifyService;

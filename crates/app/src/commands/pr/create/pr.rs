@@ -297,7 +297,10 @@ fn render_pr_body(analysis: &CommitSummaryAnalysis) -> String {
             body.push_str(&format!("- **Complexity**: {}\n", meta.complexity));
         }
         if !meta.review_priority.is_empty() {
-            body.push_str(&format!("- **Review priority**: {}\n", meta.review_priority));
+            body.push_str(&format!(
+                "- **Review priority**: {}\n",
+                meta.review_priority
+            ));
         }
         if !meta.estimated_review_time.is_empty() {
             body.push_str(&format!(
@@ -413,7 +416,10 @@ fn render_affected_modules(body: &mut String, modules: &[AffectedModule]) {
     body.push_str("### Affected Modules\n\n");
     body.push_str("| Module | Impact | Severity |\n|--------|--------|----------|\n");
     for m in modules {
-        body.push_str(&format!("| {} | {} | {} |\n", m.module, m.impact, m.severity));
+        body.push_str(&format!(
+            "| {} | {} | {} |\n",
+            m.module, m.impact, m.severity
+        ));
     }
     body.push('\n');
 }

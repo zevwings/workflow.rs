@@ -3,8 +3,8 @@
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
 use crate::workflows::core::stage::WorkflowStage;
 use crate::workflows::display::VerificationResultFormatter;
-use llm::language::SupportedLanguage;
 use domain::{GlobalConfig, LLMSettings, VerificationService};
+use llm::language::SupportedLanguage;
 use prompt::{
     br, confirm, info, separator, FormBuilder, FormResult, InputFormField, PasswordFormField,
     PromptError, SelectBuilder, SelectFormField,

@@ -242,8 +242,7 @@ impl domain::CommitSummaryService for CommitSummaryServiceImpl {
             total_deletions: ctx.total_deletions,
         };
 
-        SummaryAnalyzeService::new(self.llm_executor.clone())
-            .summarize(input, &ctx.language_code)
+        SummaryAnalyzeService::new(self.llm_executor.clone()).summarize(input, &ctx.language_code)
     }
 }
 
@@ -305,4 +304,3 @@ fn count_by_status(files: &[CommitFileChange]) -> FileStatusCount {
 
     count
 }
-

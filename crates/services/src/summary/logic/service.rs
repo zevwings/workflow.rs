@@ -5,9 +5,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use domain::errors::ServiceError;
 use domain::git::entity::CommitFileChange;
 use domain::summary::entity::{CommitFileClassification, CommitLogicAnalysis};
-use domain::errors::ServiceError;
 use llm::LLMExecutor;
 
 use super::LogicAnalyzeConversation;
@@ -39,16 +39,10 @@ impl LogicAnalyzeService {
 
         let mut parts = String::new();
         for path in focus_group {
-            let additions = files
-                .iter()
-                .find(|f| f.path == *path)
-                .and_then(|f| f.additions)
-                .unwrap_or(0);
-            let deletions = files
-                .iter()
-                .find(|f| f.path == *path)
-                .and_then(|f| f.deletions)
-                .unwrap_or(0);
+            let additions =
+                files.iter().find(|f| f.path == *path).and_then(|f| f.additions).unwrap_or(0);
+            let deletions =
+                files.iter().find(|f| f.path == *path).and_then(|f| f.deletions).unwrap_or(0);
             let diff = file_diffs.get(path).map(String::as_str).unwrap_or("");
             let file_type = infer_file_nature(path.as_str(), stage1);
             parts.push_str(&format!(

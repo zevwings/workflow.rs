@@ -5,6 +5,7 @@
 use clap::{Args, Subcommand};
 
 use super::args::JiraIdArg;
+use crate::commands::jira::info::OutputFormat;
 
 /// Jira 配置管理子命令
 #[derive(Subcommand)]
@@ -40,6 +41,19 @@ pub struct InfoArgs {
     /// Markdown 格式输出
     #[arg(long, action = clap::ArgAction::SetTrue)]
     pub markdown: bool,
+}
+
+impl InfoArgs {
+    /// 将布尔参数转换为输出格式枚举
+    pub fn get_format(&self) -> OutputFormat {
+        if self.json {
+            OutputFormat::Json
+        } else if self.markdown {
+            OutputFormat::Markdown
+        } else {
+            OutputFormat::HumanReadable
+        }
+    }
 }
 
 /// Attachments 命令参数

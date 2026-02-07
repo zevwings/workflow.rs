@@ -32,7 +32,6 @@ pub fn register_services() -> registry::Result<()> {
     })
     .in_scope(Scope::Singleton)?;
 
-
     try_bind!(dyn domain::BranchService, |c: &Container| {
         let llm_executor = c.get::<dyn LLMExecutor>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
@@ -59,7 +58,11 @@ pub fn register_services() -> registry::Result<()> {
         let git_repo = c.get::<dyn domain::GitRepository>()?;
         let llm_executor = c.get::<dyn LLMExecutor>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
-        Ok(Arc::new(CommitSummaryServiceImpl::new(git_repo, llm_executor, llm_context)))
+        Ok(Arc::new(CommitSummaryServiceImpl::new(
+            git_repo,
+            llm_executor,
+            llm_context,
+        )))
     })
     .in_scope(Scope::Singleton)?;
 

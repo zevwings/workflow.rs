@@ -9,9 +9,7 @@ use crate::workflows::utils::jira::{ensure_jira_status_config, get_jira_id_inter
 
 use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
 use crate::commands::pr::create::commit::commit_changes;
-use crate::commands::pr::create::pr::{
-    create_pull_request, format_pr_title, generate_pr_summary,
-};
+use crate::commands::pr::create::pr::{create_pull_request, format_pr_title, generate_pr_summary};
 use crate::commands::pr::create::types::BranchHandleContext;
 
 /// Pull Request Create 命令
@@ -80,7 +78,8 @@ impl PullRequestCreateCommand {
 
                 let branch_service = registry::get_branch_service();
                 match spinner!("Generating branch name...").with(|| {
-                    branch_service.generate_branch_name(Some(description.as_str()), &exists_branches)
+                    branch_service
+                        .generate_branch_name(Some(description.as_str()), &exists_branches)
                 }) {
                     Ok(name) => name,
                     Err(e) => {
@@ -217,8 +216,11 @@ impl PullRequestCreateCommand {
         let pr_summary = generate_pr_summary(target_branch)?;
 
         // 组合 PR 标题：type(scope): commit_message
-        let pr_title =
-            format_pr_title(&pr_summary.type_, pr_summary.scope.as_deref(), &commit_message);
+        let pr_title = format_pr_title(
+            &pr_summary.type_,
+            pr_summary.scope.as_deref(),
+            &commit_message,
+        );
 
         // 创建 PR
         {

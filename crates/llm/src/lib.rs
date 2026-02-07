@@ -19,5 +19,5 @@ pub use conversation::LLMConversation;
 pub use error::LLMError;
 pub use executor::LLMExecutor;
 pub use language::SupportedLanguage;
-pub use parsers::{JsonParser, TextParser};
+pub use parsers::{JsonParseMode, JsonParser, TextParser};
 pub use registry::register_llm;

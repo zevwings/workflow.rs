@@ -62,9 +62,15 @@ impl LLMExecutor for LLMExecutorImpl {
             // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
             let original_msg = match &e {
                 LLMError::ApiError(msg) => {
-                    msg.strip_prefix("LLM API call failed: ").unwrap_or(msg).to_string()
+                    msg.strip_prefix("LLM API call failed: ").unwrap_or(msg)
                 }
-                _ => e.to_string(),
+                _ => {
+                    // 只在需要时分配字符串
+                    return LLMError::ApiError(format!(
+                        "Failed to call LLM API ({}): {}",
+                        context, e
+                    ));
+                }
             };
             LLMError::ApiError(format!(
                 "Failed to call LLM API ({}): {}",
@@ -73,20 +79,5 @@ impl LLMExecutor for LLMExecutorImpl {
         })?;
 
         Ok(response)
-
-        // // 解析响应
-        // conversation.parse_response(response).map_err(|e| {
-        //     // 提取原始错误消息，避免重复的 "LLM API 调用失败: " 前缀
-        //     let original_msg = match &e {
-        //         LLMError::ApiError(msg) => {
-        //             msg.strip_prefix("LLM API call failed: ").unwrap_or(msg).to_string()
-        //         }
-        //         _ => e.to_string(),
-        //     };
-        //     LLMError::ApiError(format!(
-        //         "Failed to parse LLM response ({}): {}",
-        //         context, original_msg
-        //     ))
-        // })
     }
 }

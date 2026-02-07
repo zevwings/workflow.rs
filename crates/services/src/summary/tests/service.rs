@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use domain::summary::entity::{CommitFileClassification, CommitTestAnalysis};
 use domain::errors::ServiceError;
+use domain::summary::entity::{CommitFileClassification, CommitTestAnalysis};
 use llm::LLMExecutor;
 
 use super::TestAnalyzeConversation;
@@ -34,10 +34,7 @@ impl TestAnalyzeService {
         let mut combined = String::new();
         for path in test_paths {
             let diff = file_diffs.get(path).map(String::as_str).unwrap_or("");
-            combined.push_str(&format!(
-                "\n### {}\n\n```diff\n{}\n```\n\n",
-                path, diff
-            ));
+            combined.push_str(&format!("\n### {}\n\n```diff\n{}\n```\n\n", path, diff));
         }
 
         let user_prompt = format!("## 测试文件变更\n{}\n", combined);

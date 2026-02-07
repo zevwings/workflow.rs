@@ -1,13 +1,12 @@
-
 //! 阶段一：文件分类服务
 //!
 //! 根据 commit 元数据和文件变更列表，调用 LLM 进行智能分类。
 
 use std::sync::Arc;
 
+use domain::errors::ServiceError;
 use domain::git::entity::{CommitChangeType, CommitFileChange};
 use domain::summary::entity::CommitFileClassification;
-use domain::errors::ServiceError;
 use llm::LLMExecutor;
 
 use super::FileClassifyConversation;

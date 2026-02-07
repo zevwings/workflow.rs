@@ -38,8 +38,8 @@ pub struct LLMRequestParameters {
 impl Default for LLMRequestParameters {
     fn default() -> Self {
         Self {
-            system_prompt: String::new(),
-            user_prompt: String::new(),
+            system_prompt: String::with_capacity(512),
+            user_prompt: String::with_capacity(512),
             max_tokens: None,
             temperature: 0.5,
         }
@@ -159,10 +159,10 @@ impl LLMClientImpl {
     ///
     /// 使用 OpenAI 标准格式解析响应，提取消息内容。
     /// 支持所有遵循 OpenAI Chat Completions API 标准的响应格式。
-    fn extract_content(&self, response: &Value) -> Result<String, LLMError> {
-        // 解析为标准结构体
+    fn extract_content(&self, response: Value) -> Result<String, LLMError> {
+        // 解析为标准结构体 - 直接消费 Value，避免 clone
         let completion: ChatCompletionResponse =
-            serde_json::from_value(response.clone()).map_err(|e| {
+            serde_json::from_value(response).map_err(|e| {
                 LLMError::ApiError(format!(
                     "Failed to parse response as OpenAI ChatCompletion format: {}",
                     e
@@ -259,7 +259,7 @@ impl LLMClient for LLMClientImpl {
             .json()
             .map_err(|e| LLMError::ApiError(format!("Failed to parse JSON response: {}", e)))?;
 
-        // 根据配置的响应格式提取内容
-        self.extract_content(&data)
+        // 根据配置的响应格式提取内容（直接传递 Value，避免引用）
+        self.extract_content(data)
     }
 }

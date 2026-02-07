@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use domain::summary::entity::CommitSummaryAnalysis;
 use domain::errors::ServiceError;
+use domain::summary::entity::CommitSummaryAnalysis;
 use llm::LLMExecutor;
 
 use super::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
-
 
 // ── Service ───────────────────────────────────────────────────
 

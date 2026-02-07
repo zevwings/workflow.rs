@@ -10,6 +10,15 @@ use crate::LLMError;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
+/// JSON 解析模式
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JsonParseMode {
+    /// 原始字符串，直接解析
+    Raw,
+    /// 从 markdown 代码块中提取 JSON 后解析
+    ExtractFromMarkdown,
+}
+
 /// JSON 响应解析器
 ///
 /// 负责从 LLM 响应中提取和解析 JSON 数据。
@@ -54,6 +63,7 @@ impl JsonParser {
     /// # 参数
     ///
     /// * `json_str` - JSON 字符串
+    /// * `mode` - 解析模式，决定是否从 markdown 代码块中提取 JSON
     ///
     /// # 返回
     ///
@@ -62,11 +72,10 @@ impl JsonParser {
     /// # 错误
     ///
     /// 如果 JSON 格式不正确，返回相应的错误信息。
-    pub fn parse(json_str: String, extract_json: bool) -> Result<Value, LLMError> {
-        let json_str = if extract_json {
-            Self::extract_json(json_str)
-        } else {
-            json_str
+    pub fn parse(json_str: String, mode: JsonParseMode) -> Result<Value, LLMError> {
+        let json_str = match mode {
+            JsonParseMode::Raw => json_str,
+            JsonParseMode::ExtractFromMarkdown => Self::extract_json(json_str),
         };
 
         serde_json::from_str(json_str.as_str()).map_err(|e| {
@@ -117,7 +126,7 @@ impl JsonParser {
         T: for<'de> Deserialize<'de>,
     {
         // 先提取并解析为 Value，然后转换为目标类型
-        let value = Self::parse(response, true)?;
+        let value = Self::parse(response, JsonParseMode::ExtractFromMarkdown)?;
         serde_json::from_value(value).map_err(|e| {
             LLMError::ApiError(format!(
                 "Failed to convert JSON Value to type {}: {}",
@@ -152,7 +161,7 @@ impl JsonParser {
     /// let branch_name = map.get("branch_name").and_then(|v| v.as_str());
     /// ```
     pub fn to_map(response: String) -> Result<Map<String, Value>, LLMError> {
-        let value = Self::parse(response, true)?;
+        let value = Self::parse(response, JsonParseMode::ExtractFromMarkdown)?;
 
         match value {
             Value::Object(map) => Ok(map),

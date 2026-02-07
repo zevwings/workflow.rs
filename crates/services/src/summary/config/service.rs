@@ -5,9 +5,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use domain::errors::ServiceError;
 use domain::git::entity::CommitFileChange;
 use domain::summary::entity::{CommitConfigAnalysis, CommitFileClassification};
-use domain::errors::ServiceError;
 use llm::LLMExecutor;
 
 use super::ConfigAnalyzeConversation;
@@ -41,16 +41,10 @@ impl ConfigAnalyzeService {
 
         let mut parts = String::new();
         for path in config_paths {
-            let additions = files
-                .iter()
-                .find(|f| f.path == *path)
-                .and_then(|f| f.additions)
-                .unwrap_or(0);
-            let deletions = files
-                .iter()
-                .find(|f| f.path == *path)
-                .and_then(|f| f.deletions)
-                .unwrap_or(0);
+            let additions =
+                files.iter().find(|f| f.path == *path).and_then(|f| f.additions).unwrap_or(0);
+            let deletions =
+                files.iter().find(|f| f.path == *path).and_then(|f| f.deletions).unwrap_or(0);
             let diff = file_diffs.get(path).map(String::as_str).unwrap_or("");
             parts.push_str(&format!(
                 "\n### {}\n变更：+{} -{}\n\n```diff\n{}\n```\n\n---\n",

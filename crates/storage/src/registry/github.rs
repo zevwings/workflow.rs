@@ -6,10 +6,10 @@ use domain::{GitHubContext, GitHubRepository, GitRepoRepository};
 use registry::{bind, Container, Scope};
 
 use crate::github::{
-    GitHubClient, GitHubClientImpl, GitHubRepositoryImpl,
-    PullRequestDiffService, PullRequestDiffServiceImpl, PullRequestMutationService,
-    PullRequestMutationServiceImpl, PullRequestQueryService, PullRequestQueryServiceImpl,
-    PullRequestReviewService, PullRequestReviewServiceImpl, ServiceContext, ServiceContextImpl,
+    GitHubClient, GitHubClientImpl, GitHubRepositoryImpl, PullRequestDiffService,
+    PullRequestDiffServiceImpl, PullRequestMutationService, PullRequestMutationServiceImpl,
+    PullRequestQueryService, PullRequestQueryServiceImpl, PullRequestReviewService,
+    PullRequestReviewServiceImpl, ServiceContext, ServiceContextImpl,
 };
 
 /// 注册 GitHub 相关服务

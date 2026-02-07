@@ -78,21 +78,16 @@ impl PullRequestService for PullRequestServiceImpl {
         // 使用提供的目标分支或获取默认分支
         let final_target_branch = match target_branch {
             Some(branch) => branch.to_string(),
-            None => self
-                .git_repo
-                .get_default_branch()
-                .unwrap_or_else(|_| "main".to_string()),
+            None => self.git_repo.get_default_branch().unwrap_or_else(|_| "main".to_string()),
         };
 
         // 生成 PR 标题和描述
         let (final_title, final_description) = if title.is_none() {
             // 使用 CommitSummaryService 生成 PR 内容
-            let analysis = self
-                .commit_summary_service
-                .run_analysis(Some(&final_target_branch))
-                .map_err(|e| {
-                    ServiceError::Other(format!("Failed to generate PR content: {}", e))
-                })?;
+            let analysis =
+                self.commit_summary_service.run_analysis(Some(&final_target_branch)).map_err(
+                    |e| ServiceError::Other(format!("Failed to generate PR content: {}", e)),
+                )?;
 
             // 从 commit message 生成 PR 标题
             let pr_title = if !analysis.commit_message.title.is_empty() {
@@ -134,19 +129,9 @@ impl PullRequestService for PullRequestServiceImpl {
                 pr_desc.push_str("## ⚠️ Breaking Changes\n\n");
                 pr_desc.push_str(&analysis.impact_analysis.breaking_changes.description);
                 pr_desc.push_str("\n\n");
-                if !analysis
-                    .impact_analysis
-                    .breaking_changes
-                    .migration_guide
-                    .is_empty()
-                {
+                if !analysis.impact_analysis.breaking_changes.migration_guide.is_empty() {
                     pr_desc.push_str("### Migration Guide\n\n");
-                    pr_desc.push_str(
-                        &analysis
-                            .impact_analysis
-                            .breaking_changes
-                            .migration_guide,
-                    );
+                    pr_desc.push_str(&analysis.impact_analysis.breaking_changes.migration_guide);
                     pr_desc.push_str("\n\n");
                 }
             }

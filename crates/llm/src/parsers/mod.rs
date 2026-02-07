@@ -5,5 +5,5 @@
 mod json_parser;
 mod text_parser;
 
-pub use json_parser::JsonParser;
+pub use json_parser::{JsonParseMode, JsonParser};
 pub use text_parser::TextParser;

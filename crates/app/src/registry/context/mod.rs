@@ -1,17 +1,16 @@
-mod llm_context;
-mod jira_context;
 mod github_context;
-use llm::LLMConfigContext;
+mod jira_context;
+mod llm_context;
 
-pub use llm_context::LLMConfigContextImpl;
-pub use jira_context::JiraConfigContextImpl;
 pub use github_context::GitHubContextImpl;
+pub use jira_context::JiraConfigContextImpl;
+pub use llm_context::LLMConfigContextImpl;
 
 use std::sync::Arc;
 
-use registry::{bind, Container, Scope};
-
 use domain::{GitHubContext, GlobalConfigRepository, JiraConfigContext};
+use llm::LLMConfigContext;
+use registry::{bind, Container, Scope};
 
 /// 注册 LLM 相关服务
 pub fn register_context() -> registry::Result<()> {
@@ -44,4 +43,3 @@ pub fn register_context() -> registry::Result<()> {
 
     Ok(())
 }
-

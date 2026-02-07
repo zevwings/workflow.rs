@@ -600,5 +600,4 @@ impl BranchServiceImpl {
 
         None
     }
-
 }

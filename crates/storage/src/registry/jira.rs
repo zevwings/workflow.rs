@@ -5,14 +5,11 @@ use std::sync::Arc;
 use registry::{bind, Container, Scope};
 
 use crate::jira::{
-    IssueService, IssueServiceImpl, JiraClient, JiraClientImpl,
-    JiraRepositoryImpl, JiraWorkHistoryRepositoryImpl, StatusService, StatusServiceImpl,
-    UserService, UserServiceImpl, WorkHistoryService, WorkHistoryServiceImpl,
+    IssueService, IssueServiceImpl, JiraClient, JiraClientImpl, JiraRepositoryImpl,
+    JiraWorkHistoryRepositoryImpl, StatusService, StatusServiceImpl, UserService, UserServiceImpl,
+    WorkHistoryService, WorkHistoryServiceImpl,
 };
-use domain::{
-    JiraConfigContext, JiraRepository, JiraWorkHistoryRepository,
-    PathService,
-};
+use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathService};
 
 /// 注册 Jira 相关服务
 pub fn register_jira() -> registry::Result<()> {

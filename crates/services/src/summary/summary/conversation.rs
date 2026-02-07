@@ -2,7 +2,7 @@
 //!
 //! 综合阶段一分类结果与阶段二各分析结果，生成结构化的 commit 总结。
 
-use llm::{LLMConversation};
+use llm::LLMConversation;
 
 use crate::summary::{prompt, summary::SummaryAnalyzeInput};
 
@@ -84,4 +84,3 @@ impl LLMConversation for SummaryAnalyzeConversation {
 }
 
 // ── Service ───────────────────────────────────────────────────
-
