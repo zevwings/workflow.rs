@@ -13,8 +13,10 @@ pub(crate) struct FileClassifyConversation {
 }
 
 impl FileClassifyConversation {
-    pub fn new(input_json: String) -> Self {
-        Self { input_json }
+    pub fn new(input_json: impl Into<String>) -> Self {
+        Self {
+            input_json: input_json.into(),
+        }
     }
 }
 

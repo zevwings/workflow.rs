@@ -26,14 +26,7 @@ impl BranchService for BranchServiceImpl {
         title: Option<&str>,
         exists_branches: &[String],
     ) -> Result<String, BranchServiceError> {
-        let conversation = BranchNameConversation::new((
-            title.map(String::from),
-            if exists_branches.is_empty() {
-                None
-            } else {
-                Some(exists_branches.to_vec())
-            },
-        ));
+        let conversation = BranchNameConversation::new(title, exists_branches);
 
         // 执行 LLM 调用
         let response = self

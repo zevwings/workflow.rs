@@ -173,7 +173,12 @@ impl DiffService for DiffServiceImpl {
                     // 对于新文件，读取内容并生成简单的 diff 格式
                     if delta.status() == git2::Delta::Untracked {
                         if let Some(path) = delta.new_file().path() {
-                            let file_path = repo.workdir().unwrap().join(path);
+                            // 获取工作目录，如果是 bare repository 则跳过
+                            let Some(workdir) = repo.workdir() else {
+                                log_warn!("Cannot process untracked file in bare repository: {}", path.display());
+                                continue;
+                            };
+                            let file_path = workdir.join(path);
                             if let Ok(content) = std::fs::read_to_string(&file_path) {
                                 let diff_header = format!(
                                     "diff --git a/{} b/{}\nnew file\n--- /dev/null\n+++ b/{}\n",

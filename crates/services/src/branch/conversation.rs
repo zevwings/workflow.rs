@@ -12,13 +12,22 @@ use llm::LLMConversation;
 ///
 /// 负责构建 prompt 和业务逻辑，不直接调用 LLM API。
 pub struct BranchNameConversation {
-    input: (Option<String>, Option<Vec<String>>),
+    title: Option<String>,
+    exists_branches: Vec<String>,
 }
 
 impl BranchNameConversation {
     /// 创建新的分支名对话实例
-    pub fn new(input: (Option<String>, Option<Vec<String>>)) -> Self {
-        Self { input }
+    ///
+    /// # 参数
+    ///
+    /// * `title` - 可选的标题，用于生成分支名
+    /// * `exists_branches` - 已存在的分支列表，用于避免重名
+    pub fn new(title: Option<&str>, exists_branches: &[String]) -> Self {
+        Self {
+            title: title.map(String::from),
+            exists_branches: exists_branches.to_vec(),
+        }
     }
 }
 
@@ -46,10 +55,9 @@ Return JSON format:
     }
 
     fn get_user_prompt(&self, _language_code: &str) -> String {
-        let (title, exists_branches) = &self.input;
         // 构建输入文本
         let mut input_parts = Vec::with_capacity(1);
-        if let Some(title) = title {
+        if let Some(title) = &self.title {
             input_parts.push(title.to_string());
         }
 
@@ -66,9 +74,13 @@ Return JSON format:
         ];
 
         // 如果有已存在的分支列表，添加到 prompt 中
-        if let Some(branches) = exists_branches {
-            let filtered_branches: Vec<String> =
-                branches.iter().filter(|b| !b.is_empty()).cloned().collect();
+        if !self.exists_branches.is_empty() {
+            let filtered_branches: Vec<&str> = self
+                .exists_branches
+                .iter()
+                .map(|s| s.as_str())
+                .filter(|b| !b.is_empty())
+                .collect();
             if !filtered_branches.is_empty() {
                 parts.push(String::new());
                 parts.push(format!(

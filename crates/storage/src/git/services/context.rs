@@ -13,23 +13,32 @@ use std::sync::{Arc, Mutex};
 static URL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
         // GitHub SSH over 443: git@ssh.github.com:443/owner/repo.git
-        Regex::new(r"git@ssh\.github\.com:\d+/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"git@ssh\.github\.com:\d+/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub SSH over 443 regex must be valid"),
         // GitHub SSH 协议格式（含 ssh.github.com）: ssh://git@ssh.github.com:443/owner/repo.git
-        Regex::new(r"ssh://git@ssh\.github\.com(?::\d+)?/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"ssh://git@ssh\.github\.com(?::\d+)?/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub SSH protocol regex must be valid"),
         // GitHub SSH 协议格式: ssh://git@github.com/owner/repo.git
-        Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub SSH protocol (standard) regex must be valid"),
         // GitHub SSH 格式: git@github.com:owner/repo.git (需在 ssh.github.com 之后，避免误匹配)
-        Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").unwrap(),
+        Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$")
+            .expect("Hardcoded GitHub SSH format regex must be valid"),
         // 兼容错误写法：git@github/owner/repo.git（缺少 .com 或误用 / 代替 :）
-        Regex::new(r"git@[^/]+/(.+?)(?:\.git)?$").unwrap(),
+        Regex::new(r"git@[^/]+/(.+?)(?:\.git)?$")
+            .expect("Hardcoded GitHub SSH fallback regex must be valid"),
         // GitHub HTTPS 格式: https://github.com/owner/repo.git
-        Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub HTTPS regex must be valid"),
         // Codeup SSH 格式: git@codeup.aliyun.com:owner/repo.git
-        Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$").unwrap(),
+        Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$")
+            .expect("Hardcoded Codeup SSH regex must be valid"),
         // Codeup HTTPS/HTTP 格式: https://codeup.aliyun.com/owner/repo.git
-        Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded Codeup HTTPS regex must be valid"),
         // 通用 HTTPS/HTTP 格式
-        Regex::new(r"https?://[^/]+/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"https?://[^/]+/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded generic HTTPS regex must be valid"),
     ]
 });
 

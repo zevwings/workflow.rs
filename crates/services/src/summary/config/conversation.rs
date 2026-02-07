@@ -12,8 +12,10 @@ pub(crate) struct ConfigAnalyzeConversation {
 }
 
 impl ConfigAnalyzeConversation {
-    pub fn new(user_prompt: String) -> Self {
-        Self { user_prompt }
+    pub fn new(user_prompt: impl Into<String>) -> Self {
+        Self {
+            user_prompt: user_prompt.into(),
+        }
     }
 }
 

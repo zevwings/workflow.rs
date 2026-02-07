@@ -59,7 +59,7 @@ pub trait CommitSummaryService: Send + Sync {
     /// # 参数
     ///
     /// * `base_branch` - 基准分支名称。如果为 `None`，将自动推断目标分支
-    ///                   （通常是 `main`、`master` 或远程默认分支）。
+    ///   （通常是 `main`、`master` 或远程默认分支）。
     ///
     /// # 返回
     ///
