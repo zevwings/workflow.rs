@@ -4,9 +4,6 @@ use crate::path::{COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR, MAIN_
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-// 从 toolkit 统一导入路径常量
-// pub use toolkit::paths::{COMPLETIONS_DIR, COMPLETIONS_FILE, WORKFLOW_DIR};
-
 // ============================================================================
 // 生成结果
 // ============================================================================
@@ -103,8 +100,6 @@ pub fn get_all_completion_filenames() -> Vec<String> {
 /// 获取 shell 的 source 路径
 ///
 /// 注意：此函数返回 shell 脚本中使用的路径字符串。
-/// 实际路径应使用 `toolkit::completion_source_shell_path()` 和
-/// `toolkit::completion_file_shell_path()` 获取。
 pub fn get_shell_source_path(shell: &str) -> String {
     match shell.to_lowercase().as_str() {
         "zsh" | "bash" => format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE),

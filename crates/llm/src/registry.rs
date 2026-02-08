@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::{
     client::LLMClientImpl, executor::LLMExecutorImpl, LLMClient, LLMConfigContext, LLMExecutor,
 };
-use registry::{bind, Container, Scope};
+use registry::{try_bind, Container, Scope};
 
 /// 注册 LLM 相关服务
 ///
@@ -13,19 +13,15 @@ use registry::{bind, Container, Scope};
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
 pub fn register_llm() -> registry::Result<()> {
-    bind!(dyn LLMClient, |c: &Container| {
-        let context = c
-            .get::<dyn LLMConfigContext>()
-            .expect("PROGRAMMER ERROR:LLMConfigContext must be registered before LLMClient");
-        Arc::new(LLMClientImpl::new(context))
+    try_bind!(dyn LLMClient, |c: &Container| {
+        let context = c.get::<dyn LLMConfigContext>()?;
+        Ok(Arc::new(LLMClientImpl::new(context)))
     })
     .in_scope(Scope::Singleton)?;
 
-    bind!(dyn LLMExecutor, |c: &Container| {
-        let client = c
-            .get::<dyn LLMClient>()
-            .expect("PROGRAMMER ERROR:LLMClient must be registered before LLMExecutor");
-        Arc::new(LLMExecutorImpl::new(client))
+    try_bind!(dyn LLMExecutor, |c: &Container| {
+        let client = c.get::<dyn LLMClient>()?;
+        Ok(Arc::new(LLMExecutorImpl::new(client)))
     })
     .in_scope(Scope::Singleton)?;
 

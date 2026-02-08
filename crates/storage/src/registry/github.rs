@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use domain::{GitHubContext, GitHubRepository, GitRepoRepository};
-use registry::{bind, Container, Scope};
+use registry::{try_bind, Container, Scope};
 
 use crate::github::{
     GitHubClient, GitHubClientImpl, GitHubRepositoryImpl, PullRequestDiffService,
@@ -27,105 +27,73 @@ use crate::github::{
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
 pub fn register_github() -> registry::Result<()> {
     // 注册 GitHub Client (依赖外部的 GitHubContext)
-    bind!(dyn GitHubClient, |c: &Container| {
-        let context = c
-            .get::<dyn GitHubContext>()
-            .expect("PROGRAMMER ERROR:PROGRAMMER ERROR: GitHubContext must be registered before GitHubClient");
-        Arc::new(GitHubClientImpl::new(context))
+    try_bind!(dyn GitHubClient, |c: &Container| {
+        let context = c.get::<dyn GitHubContext>()?;
+        Ok(Arc::new(GitHubClientImpl::new(context)))
     })
     .in_scope(Scope::Singleton)?;
 
     // Service Context
-    bind!(dyn ServiceContext, |c: &Container| {
-        let repo_repository = c
-            .get::<dyn GitRepoRepository>()
-            .expect("PROGRAMMER ERROR:GitRepoRepository must be registered before ServiceContext");
-        Arc::new(ServiceContextImpl::new(repo_repository))
+    try_bind!(dyn ServiceContext, |c: &Container| {
+        let repo_repository = c.get::<dyn GitRepoRepository>()?;
+        Ok(Arc::new(ServiceContextImpl::new(repo_repository)))
     })
     .in_scope(Scope::Singleton)?;
 
     // Pull Request Query Service
-    bind!(dyn PullRequestQueryService, |c: &Container| {
-        let client = c.get::<dyn GitHubClient>().expect(
-            "PROGRAMMER ERROR:GitHubClient must be registered before PullRequestQueryService",
-        );
-        let context = c.get::<dyn ServiceContext>().expect(
-            "PROGRAMMER ERROR:ServiceContext must be registered before PullRequestQueryService",
-        );
-        Arc::new(PullRequestQueryServiceImpl::new(client, context))
+    try_bind!(dyn PullRequestQueryService, |c: &Container| {
+        let client = c.get::<dyn GitHubClient>()?;
+        let context = c.get::<dyn ServiceContext>()?;
+        Ok(Arc::new(PullRequestQueryServiceImpl::new(client, context)))
     })
     .in_scope(Scope::Singleton)?;
 
     // Pull Request Mutation Service
-    bind!(dyn PullRequestMutationService, |c: &Container| {
-        let client = c
-            .get::<dyn GitHubClient>()
-            .expect("PROGRAMMER ERROR:GitHubClient must be registered before PullRequestMutationService");
-        let query_service = c
-            .get::<dyn PullRequestQueryService>()
-            .expect("PROGRAMMER ERROR:PullRequestQueryService must be registered before PullRequestMutationService");
-        let context = c
-            .get::<dyn ServiceContext>()
-            .expect("PROGRAMMER ERROR:ServiceContext must be registered before PullRequestMutationService");
-        Arc::new(PullRequestMutationServiceImpl::new(
+    try_bind!(dyn PullRequestMutationService, |c: &Container| {
+        let client = c.get::<dyn GitHubClient>()?;
+        let query_service = c.get::<dyn PullRequestQueryService>()?;
+        let context = c.get::<dyn ServiceContext>()?;
+        Ok(Arc::new(PullRequestMutationServiceImpl::new(
             client,
             query_service,
             context,
-        ))
+        )))
     })
     .in_scope(Scope::Singleton)?;
 
     // Pull Request Review Service
-    bind!(dyn PullRequestReviewService, |c: &Container| {
-        let client = c
-            .get::<dyn GitHubClient>()
-            .expect("PROGRAMMER ERROR:GitHubClient must be registered before PullRequestReviewService");
-        let query_service = c
-            .get::<dyn PullRequestQueryService>()
-            .expect("PROGRAMMER ERROR:PullRequestQueryService must be registered before PullRequestReviewService");
-        let context = c
-            .get::<dyn ServiceContext>()
-            .expect("PROGRAMMER ERROR:ServiceContext must be registered before PullRequestReviewService");
-        Arc::new(PullRequestReviewServiceImpl::new(
+    try_bind!(dyn PullRequestReviewService, |c: &Container| {
+        let client = c.get::<dyn GitHubClient>()?;
+        let query_service = c.get::<dyn PullRequestQueryService>()?;
+        let context = c.get::<dyn ServiceContext>()?;
+        Ok(Arc::new(PullRequestReviewServiceImpl::new(
             client,
             query_service,
             context,
-        ))
+        )))
     })
     .in_scope(Scope::Singleton)?;
 
     // Pull Request Diff Service
-    bind!(dyn PullRequestDiffService, |c: &Container| {
-        let client = c.get::<dyn GitHubClient>().expect(
-            "PROGRAMMER ERROR:GitHubClient must be registered before PullRequestDiffService",
-        );
-        let context = c.get::<dyn ServiceContext>().expect(
-            "PROGRAMMER ERROR:ServiceContext must be registered before PullRequestDiffService",
-        );
-        Arc::new(PullRequestDiffServiceImpl::new(client, context))
+    try_bind!(dyn PullRequestDiffService, |c: &Container| {
+        let client = c.get::<dyn GitHubClient>()?;
+        let context = c.get::<dyn ServiceContext>()?;
+        Ok(Arc::new(PullRequestDiffServiceImpl::new(client, context)))
     })
     .in_scope(Scope::Singleton)?;
 
     // GitHub Repository
-    bind!(dyn GitHubRepository, |c: &Container| {
-        let query_service = c
-            .get::<dyn PullRequestQueryService>()
-            .expect("PROGRAMMER ERROR:PullRequestQueryService must be registered before GitHubRepository");
-        let mutation_service = c
-            .get::<dyn PullRequestMutationService>()
-            .expect("PROGRAMMER ERROR:PullRequestMutationService must be registered before GitHubRepository");
-        let review_service = c
-            .get::<dyn PullRequestReviewService>()
-            .expect("PROGRAMMER ERROR:PullRequestReviewService must be registered before GitHubRepository");
-        let diff_service = c
-            .get::<dyn PullRequestDiffService>()
-            .expect("PROGRAMMER ERROR:PullRequestDiffService must be registered before GitHubRepository");
-        Arc::new(GitHubRepositoryImpl::new(
+    try_bind!(dyn GitHubRepository, |c: &Container| {
+        let query_service = c.get::<dyn PullRequestQueryService>()?;
+        let mutation_service = c.get::<dyn PullRequestMutationService>()?;
+        let review_service = c.get::<dyn PullRequestReviewService>()?;
+        let diff_service = c.get::<dyn PullRequestDiffService>()?;
+        Ok(Arc::new(GitHubRepositoryImpl::new(
             query_service,
             mutation_service,
             review_service,
             diff_service,
-        ))
+        )))
     })
     .in_scope(Scope::Singleton)?;
 

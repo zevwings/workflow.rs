@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use llm::{LLMConfigContext, LLMExecutor};
-use registry::{bind, try_bind, Container, Scope};
+use registry::{try_bind, Container, Scope};
 
 use crate::alias::AliasServiceImpl;
 use crate::branch::BranchServiceImpl;
@@ -73,8 +73,8 @@ pub fn register_services() -> registry::Result<()> {
     })
     .in_scope(Scope::Singleton)?;
 
-    bind!(dyn domain::PathService, |_c: &Container| {
-        Arc::new(PathServiceImpl::new())
+    try_bind!(dyn domain::PathService, |_c: &Container| {
+        Ok(Arc::new(PathServiceImpl::new()))
     })
     .in_scope(Scope::Singleton)?;
 

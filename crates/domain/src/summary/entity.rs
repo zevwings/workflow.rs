@@ -7,18 +7,14 @@ use serde::{Deserialize, Serialize};
 pub struct CommitFileClassification {
     pub categories: FileClassificationCategories,
     pub patterns: FileClassificationPatterns,
-    #[serde(rename = "analysis_strategy")]
     pub analysis_strategy: AnalysisStrategy,
     pub summary: ClassificationSummary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileClassificationCategories {
-    #[serde(rename = "by_status")]
     pub by_status: ByStatusCategories,
-    #[serde(rename = "by_nature")]
     pub by_nature: ByNatureCategories,
-    #[serde(rename = "by_scale")]
     pub by_scale: ByScaleCategories,
 }
 
@@ -57,14 +53,10 @@ pub struct ByScaleCategories {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileClassificationPatterns {
-    #[serde(rename = "mass_rename")]
     pub mass_rename: PatternMassRename,
     pub formatting: PatternFormatting,
-    #[serde(rename = "config_update")]
     pub config_update: PatternConfigUpdate,
-    #[serde(rename = "dependency_upgrade")]
     pub dependency_upgrade: PatternDependencyUpgrade,
-    #[serde(rename = "import_path_change")]
     pub import_path_change: PatternImportPathChange,
 }
 
@@ -118,9 +110,7 @@ pub struct AnalysisStrategy {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClassificationSummary {
-    #[serde(rename = "total_files")]
     pub total_files: u32,
-    #[serde(rename = "primary_change_type")]
     #[serde(default)]
     pub primary_change_type: String,
     #[serde(default)]
@@ -132,20 +122,16 @@ pub struct ClassificationSummary {
 /// 阶段二 2.1：批量操作分析结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitBatchAnalysis {
-    #[serde(rename = "batch_summary")]
     #[serde(default)]
     pub batch_summary: String,
-    #[serde(rename = "common_changes")]
     #[serde(default)]
     pub common_changes: String,
-    #[serde(rename = "pattern_consistency")]
     #[serde(default)]
     pub pattern_consistency: String,
     #[serde(default)]
     pub exceptions: Vec<BatchException>,
     #[serde(default)]
     pub impact: BatchImpact,
-    #[serde(rename = "total_affected")]
     #[serde(default)]
     pub total_affected: u32,
 }
@@ -181,32 +167,24 @@ pub struct LogicFileAnalysis {
     pub file: String,
     #[serde(default)]
     pub purpose: String,
-    #[serde(rename = "key_changes")]
     #[serde(default)]
     pub key_changes: Vec<String>,
-    #[serde(rename = "technical_approach")]
     #[serde(default)]
     pub technical_approach: String,
-    #[serde(rename = "impact_scope")]
     #[serde(default)]
     pub impact_scope: LogicImpactScope,
-    #[serde(rename = "related_files")]
     #[serde(default)]
     pub related_files: Vec<RelatedFile>,
-    #[serde(rename = "risk_assessment")]
     #[serde(default)]
     pub risk_assessment: RiskAssessment,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LogicImpactScope {
-    #[serde(rename = "api_changes")]
     #[serde(default)]
     pub api_changes: bool,
-    #[serde(rename = "database_changes")]
     #[serde(default)]
     pub database_changes: bool,
-    #[serde(rename = "module_dependencies")]
     #[serde(default)]
     pub module_dependencies: Vec<String>,
     #[serde(default)]
@@ -234,13 +212,10 @@ pub struct RiskAssessment {
 /// 阶段二 2.3：配置/文档分析结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitConfigAnalysis {
-    #[serde(rename = "config_changes")]
     #[serde(default)]
     pub config_changes: Vec<ConfigChange>,
-    #[serde(rename = "doc_updates")]
     #[serde(default)]
     pub doc_updates: Vec<DocUpdate>,
-    #[serde(rename = "deployment_notes")]
     #[serde(default)]
     pub deployment_notes: String,
 }
@@ -249,7 +224,6 @@ pub struct CommitConfigAnalysis {
 pub struct ConfigChange {
     #[serde(default)]
     pub file: String,
-    #[serde(rename = "change_type")]
     #[serde(default)]
     pub change_type: String,
     #[serde(default)]
@@ -260,10 +234,8 @@ pub struct ConfigChange {
 pub struct ConfigItem {
     #[serde(default)]
     pub key: String,
-    #[serde(rename = "old_value")]
     #[serde(default)]
     pub old_value: String,
-    #[serde(rename = "new_value")]
     #[serde(default)]
     pub new_value: String,
     #[serde(default)]
@@ -274,7 +246,6 @@ pub struct ConfigItem {
 pub struct DocUpdate {
     #[serde(default)]
     pub file: String,
-    #[serde(rename = "update_type")]
     #[serde(default)]
     pub update_type: String,
     #[serde(default)]
@@ -284,26 +255,20 @@ pub struct DocUpdate {
 /// 阶段二 2.4：测试文件分析结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitTestAnalysis {
-    #[serde(rename = "test_summary")]
     #[serde(default)]
     pub test_summary: TestSummary,
-    #[serde(rename = "alignment_with_code")]
     #[serde(default)]
     pub alignment_with_code: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TestSummary {
-    #[serde(rename = "new_tests")]
     #[serde(default)]
     pub new_tests: Vec<String>,
-    #[serde(rename = "modified_tests")]
     #[serde(default)]
     pub modified_tests: Vec<String>,
-    #[serde(rename = "deleted_tests")]
     #[serde(default)]
     pub deleted_tests: Vec<String>,
-    #[serde(rename = "coverage_modules")]
     #[serde(default)]
     pub coverage_modules: Vec<String>,
 }
@@ -313,11 +278,8 @@ pub struct TestSummary {
 /// 阶段三：全局总结结果（commit_message + structured_summary + impact_analysis + statistics + metadata）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitSummaryAnalysis {
-    #[serde(rename = "commit_message")]
     pub commit_message: CommitMessagePart,
-    #[serde(rename = "structured_summary")]
     pub structured_summary: StructuredSummary,
-    #[serde(rename = "impact_analysis")]
     pub impact_analysis: ImpactAnalysis,
     pub statistics: SummaryStatistics,
     pub metadata: SummaryMetadata,
@@ -344,13 +306,10 @@ pub struct StructuredSummary {
     pub scope: String,
     #[serde(default)]
     pub subject: String,
-    #[serde(rename = "main_purpose")]
     #[serde(default)]
     pub main_purpose: String,
-    #[serde(rename = "key_changes")]
     #[serde(default)]
     pub key_changes: Vec<String>,
-    #[serde(rename = "details_by_category")]
     #[serde(default)]
     pub details_by_category: DetailsByCategory,
 }
@@ -377,16 +336,12 @@ pub struct DetailsByCategory {
 /// 影响分析（breaking_changes / affected_modules / risk_assessment / testing_suggestions）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImpactAnalysis {
-    #[serde(rename = "breaking_changes")]
     #[serde(default)]
     pub breaking_changes: SummaryBreakingChanges,
-    #[serde(rename = "affected_modules")]
     #[serde(default)]
     pub affected_modules: Vec<AffectedModule>,
-    #[serde(rename = "risk_assessment")]
     #[serde(default)]
     pub risk_assessment: SummaryRiskAssessment,
-    #[serde(rename = "testing_suggestions")]
     #[serde(default)]
     pub testing_suggestions: Vec<String>,
 }
@@ -394,12 +349,10 @@ pub struct ImpactAnalysis {
 /// 破坏性变更说明
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SummaryBreakingChanges {
-    #[serde(rename = "has_breaking")]
     #[serde(default)]
     pub has_breaking: bool,
     #[serde(default)]
     pub description: String,
-    #[serde(rename = "migration_guide")]
     #[serde(default)]
     pub migration_guide: String,
 }
@@ -418,10 +371,8 @@ pub struct AffectedModule {
 /// 阶段三风险评估
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SummaryRiskAssessment {
-    #[serde(rename = "overall_risk")]
     #[serde(default)]
     pub overall_risk: String,
-    #[serde(rename = "risk_factors")]
     #[serde(default)]
     pub risk_factors: Vec<String>,
     #[serde(default)]
@@ -431,17 +382,14 @@ pub struct SummaryRiskAssessment {
 /// 统计信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SummaryStatistics {
-    #[serde(rename = "total_files")]
     #[serde(default)]
     pub total_files: u32,
     #[serde(default)]
     pub additions: u32,
     #[serde(default)]
     pub deletions: u32,
-    #[serde(rename = "net_change")]
     #[serde(default)]
     pub net_change: i64,
-    #[serde(rename = "file_breakdown")]
     #[serde(default)]
     pub file_breakdown: FileBreakdown,
 }
@@ -464,10 +412,8 @@ pub struct FileBreakdown {
 pub struct SummaryMetadata {
     #[serde(default)]
     pub complexity: String,
-    #[serde(rename = "review_priority")]
     #[serde(default)]
     pub review_priority: String,
-    #[serde(rename = "estimated_review_time")]
     #[serde(default)]
     pub estimated_review_time: String,
     #[serde(default)]
