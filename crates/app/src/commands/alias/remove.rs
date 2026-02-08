@@ -70,11 +70,8 @@ impl AliasRemoveCommand {
             .map_err(|e| format!("Failed to select alias: {}", e))?;
 
         // 从选中的显示字符串中提取别名名称
-        let selected_name = selected_display
-            .split(" -> ")
-            .next()
-            .unwrap_or(&aliases[0].name)
-            .to_string();
+        let selected_name =
+            selected_display.split(" -> ").next().unwrap_or(&aliases[0].name).to_string();
 
         Ok(selected_name)
     }

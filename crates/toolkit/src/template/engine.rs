@@ -44,8 +44,7 @@ impl TemplateEngine {
         name: impl AsRef<str>,
         template: impl AsRef<str>,
     ) -> Result<(), TemplateError> {
-        self.handlebars
-            .register_template_string(name.as_ref(), template.as_ref())?;
+        self.handlebars.register_template_string(name.as_ref(), template.as_ref())?;
         Ok(())
     }
 

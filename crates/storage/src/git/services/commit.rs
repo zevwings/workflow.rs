@@ -433,9 +433,7 @@ impl CommitService for CommitServiceImpl {
         // [3] post-commit hook（失败不影响提交结果，仅记录警告）
         let post_commit_context =
             HookContext::new(repo_path, git_dir).with_commit_sha(oid.to_string());
-        if let Err(e) =
-            self.hook_service
-                .execute_hook(git_hooks::POST_COMMIT, &post_commit_context)
+        if let Err(e) = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context)
         {
             toolkit::log_warn!("post-commit hook failed (commit already succeeded): {}", e);
         }

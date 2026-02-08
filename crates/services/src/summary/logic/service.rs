@@ -8,6 +8,7 @@ use std::sync::Arc;
 use domain::errors::ServiceError;
 use domain::git::entity::CommitFileChange;
 use domain::summary::entity::{CommitFileClassification, CommitLogicAnalysis};
+use llm::parsers::JsonParser;
 use llm::LLMExecutor;
 
 use super::LogicAnalyzeConversation;
@@ -74,7 +75,7 @@ impl LogicAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "logic_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitLogicAnalysis = serde_json::from_str(&response)
+        let result: CommitLogicAnalysis = JsonParser::to_model(&response)
             .map_err(|e| ServiceError::Other(format!("解析核心逻辑分析结果失败: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }

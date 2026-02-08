@@ -7,6 +7,7 @@ use std::sync::Arc;
 use domain::errors::ServiceError;
 use domain::git::entity::{CommitChangeType, CommitFileChange};
 use domain::summary::entity::CommitFileClassification;
+use llm::parsers::JsonParser;
 use llm::LLMExecutor;
 
 use super::FileClassifyConversation;
@@ -36,7 +37,7 @@ impl FileClassifyService {
             .llm_executor
             .execute(&conversation, language_code, "file_classify")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        serde_json::from_str(&response)
+        JsonParser::to_model(&response)
             .map_err(|e| ServiceError::Other(format!("解析文件分类结果失败: {}", e)))
     }
 }

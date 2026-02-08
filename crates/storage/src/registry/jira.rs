@@ -71,7 +71,9 @@ pub fn register_jira() -> registry::Result<()> {
     // Jira Work History Repository
     try_bind!(dyn JiraWorkHistoryRepository, |c: &Container| {
         let work_history_service = c.get::<dyn WorkHistoryService>()?;
-        Ok(Arc::new(JiraWorkHistoryRepositoryImpl::new(work_history_service)))
+        Ok(Arc::new(JiraWorkHistoryRepositoryImpl::new(
+            work_history_service,
+        )))
     })
     .in_scope(Scope::Singleton)?;
 

@@ -8,6 +8,7 @@ use std::sync::Arc;
 use domain::errors::ServiceError;
 use domain::git::entity::CommitFileChange;
 use domain::summary::entity::{CommitBatchAnalysis, CommitFileClassification};
+use llm::parsers::JsonParser;
 use llm::LLMExecutor;
 
 use super::BatchAnalyzeConversation;
@@ -81,7 +82,7 @@ impl BatchAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "batch_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitBatchAnalysis = serde_json::from_str(&response)
+        let result: CommitBatchAnalysis = JsonParser::to_model(&response)
             .map_err(|e| ServiceError::Other(format!("解析批量分析结果失败: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }

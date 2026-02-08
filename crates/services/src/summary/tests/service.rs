@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use domain::errors::ServiceError;
 use domain::summary::entity::{CommitFileClassification, CommitTestAnalysis};
+use llm::parsers::JsonParser;
 use llm::LLMExecutor;
 
 use super::TestAnalyzeConversation;
@@ -43,7 +44,7 @@ impl TestAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "test_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitTestAnalysis = serde_json::from_str(&response)
+        let result: CommitTestAnalysis = JsonParser::to_model(&response)
             .map_err(|e| ServiceError::Other(format!("解析测试分析结果失败: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }

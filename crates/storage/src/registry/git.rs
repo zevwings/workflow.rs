@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use domain::{GitRepoRepository, GitRepository};
-use registry::{Container, Scope, try_bind};
+use registry::{try_bind, Container, Scope};
 
 use crate::git::services::{
     BlameService, BlameServiceImpl, BranchService, BranchServiceImpl, CommitService,
@@ -70,7 +70,10 @@ pub fn register_git() -> registry::Result<()> {
     try_bind!(dyn CommitService, |c: &Container| {
         let holder = c.get::<dyn GitContextHolder>()?;
         let hook_service = c.get::<dyn HookService>()?;
-        Ok(Arc::new(CommitServiceImpl::new(holder.context(), hook_service)))
+        Ok(Arc::new(CommitServiceImpl::new(
+            holder.context(),
+            hook_service,
+        )))
     })
     .in_scope(Scope::Singleton)?;
 
@@ -89,7 +92,10 @@ pub fn register_git() -> registry::Result<()> {
     try_bind!(dyn RemoteService, |c: &Container| {
         let holder = c.get::<dyn GitContextHolder>()?;
         let hook_service = c.get::<dyn HookService>()?;
-        Ok(Arc::new(RemoteServiceImpl::new(holder.context(), hook_service)))
+        Ok(Arc::new(RemoteServiceImpl::new(
+            holder.context(),
+            hook_service,
+        )))
     })
     .in_scope(Scope::Singleton)?;
 

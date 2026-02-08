@@ -58,10 +58,7 @@ pub fn read_string(path: impl AsRef<Path>) -> Result<String, FileError> {
 pub fn read_lines(path: &Path) -> Result<Vec<String>, FileError> {
     let file = File::open(path).map_err(FileError::Io)?;
     let reader = BufReader::new(file);
-    reader
-        .lines()
-        .collect::<std::io::Result<Vec<String>>>()
-        .map_err(FileError::Io)
+    reader.lines().collect::<std::io::Result<Vec<String>>>().map_err(FileError::Io)
 }
 
 /// 读取文件内容为字节向量。

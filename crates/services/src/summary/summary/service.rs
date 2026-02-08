@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use domain::errors::ServiceError;
 use domain::summary::entity::CommitSummaryAnalysis;
+use llm::parsers::JsonParser;
 use llm::LLMExecutor;
 
 use super::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
@@ -29,7 +30,7 @@ impl SummaryAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "summary_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        serde_json::from_str(&response)
+        JsonParser::to_model(&response)
             .map_err(|e| ServiceError::Other(format!("解析全局总结结果失败: {}", e)))
     }
 }

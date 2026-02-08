@@ -521,8 +521,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         let service: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert_eq!(service.value(), 42);
@@ -561,8 +560,7 @@ mod tests {
                     id: count,
                 }) as Arc<dyn TestService>
             })
-            .in_scope(scope)
-            ?;
+            .in_scope(scope)?;
 
         let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
@@ -595,8 +593,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         assert!(container.is_bound::<dyn TestService>());
         assert_eq!(container.binding_count(), 1);
@@ -618,8 +615,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         trait AnotherService: Send + Sync {}
         struct AnotherServiceImpl;
@@ -629,8 +625,7 @@ mod tests {
             .bind::<dyn AnotherService>(|_: &Container| {
                 Arc::new(AnotherServiceImpl) as Arc<dyn AnotherService>
             })
-            .in_scope(Scope::Singleton)
-                    ?;
+            .in_scope(Scope::Singleton)?;
 
         assert_eq!(container.binding_count(), 2);
 
@@ -649,7 +644,7 @@ mod tests {
     // ============================================================================
 
     #[test]
-    fn test_validate_container() -> Result<()>  {
+    fn test_validate_container() -> Result<()> {
         // 测试空容器验证
         let empty_container = Container::new();
         assert!(empty_container.validate().is_ok());
@@ -660,8 +655,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
         assert!(container.validate().is_ok());
 
         Ok(())
@@ -676,8 +670,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 panic!("Factory function panicked during validation");
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 验证应该返回错误
         let result = container.validate();
@@ -723,13 +716,11 @@ mod tests {
 
         container
             .bind::<dyn ServiceA>(|_: &Container| Arc::new(ServiceAImpl) as Arc<dyn ServiceA>)
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         container
             .bind::<dyn ServiceB>(|_: &Container| Arc::new(ServiceBImpl) as Arc<dyn ServiceB>)
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         assert_eq!(container.binding_count(), 2);
 
@@ -761,8 +752,7 @@ mod tests {
                 })
                 .in_scope(Scope::Singleton)?;
             Ok(())
-        })
-        ?;
+        })?;
 
         const THREAD_COUNT: usize = 4;
         const ITERATIONS_PER_THREAD: usize = 20;
@@ -808,8 +798,7 @@ mod tests {
                 })
                 .in_scope(Scope::Singleton)?;
             Ok(())
-        })
-        ?;
+        })?;
 
         const THREAD_COUNT: usize = 4;
         const ITERATIONS_PER_THREAD: usize = 20;
@@ -871,8 +860,7 @@ mod tests {
         // 测试绑定具体类型（不是 trait 对象）
         container
             .bind::<TestServiceImpl>(Arc::new(TestServiceImpl { value: 777, id: 88 }))
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         let service: Arc<TestServiceImpl> = container.get::<TestServiceImpl>()?;
         assert_eq!(service.value, 777);
@@ -893,8 +881,7 @@ mod tests {
                     id: 222,
                 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         let service: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert_eq!(service.value(), 111);
@@ -972,8 +959,7 @@ mod tests {
                 value: 999,
                 id: 100,
             }))
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 使用具体类型获取
         let service: Arc<TestServiceImpl> = container.get::<TestServiceImpl>()?;
@@ -999,13 +985,11 @@ mod tests {
             .bind_instance(Arc::new(ServiceA {
                 name: "ServiceA".to_string(),
             }))
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         container
             .bind_instance(Arc::new(ServiceB { count: 42 }))
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 分别获取
         let service_a: Arc<ServiceA> = container.get::<ServiceA>()?;
@@ -1018,7 +1002,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bind_instance_vs_bind_trait() -> Result<()>     {
+    fn test_bind_instance_vs_bind_trait() -> Result<()> {
         let container = Container::new();
 
         trait MyService: Send + Sync {
@@ -1039,15 +1023,11 @@ mod tests {
         // 1. 绑定具体类型
         container
             .bind_instance(Arc::new(MyServiceImpl { value: 100 }))
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 2. 绑定 trait 对象（不同的标识符）
         let trait_instance: Arc<dyn MyService> = Arc::new(MyServiceImpl { value: 200 });
-        container
-            .bind::<dyn MyService>(trait_instance)
-            .in_scope(Scope::Singleton)
-            ?;
+        container.bind::<dyn MyService>(trait_instance).in_scope(Scope::Singleton)?;
 
         // 可以分别获取
         let concrete: Arc<MyServiceImpl> = container.get::<MyServiceImpl>()?;
@@ -1164,24 +1144,21 @@ mod tests {
                 let dep = c.get::<dyn ServiceB>()?;
                 Ok(Arc::new(ServiceAImpl { _dep: dep }) as Arc<dyn ServiceA>)
             })
-            .in_scope(Scope::Transient)
-            ?;
+            .in_scope(Scope::Transient)?;
 
         container
             .try_bind::<dyn ServiceB>(|c: &Container| {
                 let dep = c.get::<dyn ServiceC>()?;
                 Ok(Arc::new(ServiceBImpl { _dep: dep }) as Arc<dyn ServiceB>)
             })
-            .in_scope(Scope::Transient)
-            ?;
+            .in_scope(Scope::Transient)?;
 
         container
             .try_bind::<dyn ServiceC>(|c: &Container| {
                 let dep = c.get::<dyn ServiceA>()?;
                 Ok(Arc::new(ServiceCImpl { _dep: dep }) as Arc<dyn ServiceC>)
             })
-            .in_scope(Scope::Transient)
-            ?;
+            .in_scope(Scope::Transient)?;
 
         let result: Result<Arc<dyn ServiceA>> = container.get();
         assert!(result.is_err());
@@ -1203,8 +1180,7 @@ mod tests {
             .try_bind::<dyn TestService>(|_c: &Container| {
                 Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         assert!(container.is_bound::<dyn TestService>());
 
@@ -1223,8 +1199,7 @@ mod tests {
             .try_bind::<dyn TestService>(|_c: &Container| {
                 Err(RegistryError::NotBound("Dependency not found".to_string()))
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         assert!(container.is_bound::<dyn TestService>());
 
@@ -1261,8 +1236,7 @@ mod tests {
                     value: "config_value".to_string(),
                 }) as Arc<dyn ConfigService>
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 使用 try_bind 绑定依赖于其他服务的服务
         container
@@ -1275,8 +1249,7 @@ mod tests {
                 };
                 Ok(Arc::new(TestServiceImpl { value, id: 1 }) as Arc<dyn TestService>)
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         let service: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert_eq!(service.value(), 100);
@@ -1296,8 +1269,7 @@ mod tests {
                 let _dep: Arc<dyn NonExistent> = c.get()?;
                 Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 获取服务时应该返回依赖未找到的错误
         let result: Result<Arc<dyn TestService>> = container.get();
@@ -1310,7 +1282,10 @@ mod tests {
     #[rstest]
     #[case(Scope::Singleton, true)]
     #[case(Scope::Transient, false)]
-    fn test_try_bind_scope_behavior(#[case] scope: Scope, #[case] should_be_same: bool) -> Result<()> {
+    fn test_try_bind_scope_behavior(
+        #[case] scope: Scope,
+        #[case] should_be_same: bool,
+    ) -> Result<()> {
         let container = Container::new();
         let call_count = Arc::new(AtomicUsize::new(0));
         let call_count_clone = call_count.clone();
@@ -1323,8 +1298,7 @@ mod tests {
                     id: count,
                 }) as Arc<dyn TestService>)
             })
-            .in_scope(scope)
-                ?;
+            .in_scope(scope)?;
 
         let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
@@ -1352,8 +1326,7 @@ mod tests {
             .try_bind::<dyn TestService>(|_: &Container| {
                 Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 验证应该成功
         assert!(container.validate().is_ok());
@@ -1369,8 +1342,7 @@ mod tests {
             .try_bind::<dyn TestService>(|_: &Container| {
                 Err(RegistryError::NotBound("Simulated error".to_string()))
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 验证应该返回错误
         let result = container.validate();
@@ -1393,8 +1365,7 @@ mod tests {
             .try_bind::<dyn TestService>(|_: &Container| {
                 panic!("Simulated panic in fallible factory");
             })
-            .in_scope(Scope::Singleton)
-            ?;
+            .in_scope(Scope::Singleton)?;
 
         // 验证应该捕获 panic 并返回错误
         let result = container.validate();
@@ -1418,8 +1389,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // 添加可失败绑定（成功）
         trait AnotherService: Send + Sync {}
@@ -1430,8 +1400,7 @@ mod tests {
             .try_bind::<dyn AnotherService>(|_: &Container| {
                 Ok(Arc::new(AnotherServiceImpl) as Arc<dyn AnotherService>)
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // 验证应该成功
         assert!(container.validate().is_ok());
@@ -1568,8 +1537,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 100, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-                    ?;
+            .in_scope(Scope::Singleton)?;
 
         // 获取第一个实例
         let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
@@ -1584,8 +1552,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 200, id: 2 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-                    ?;
+            .in_scope(Scope::Singleton)?;
 
         // 获取第二个实例（应该是新值）
         let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
@@ -1618,15 +1585,13 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 1, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         container
             .bind::<dyn ServiceA>(|_: &Container| {
                 Arc::new(ServiceAImpl { name: "first" }) as Arc<dyn ServiceA>
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         assert_eq!(container.binding_count(), 2);
 
@@ -1639,8 +1604,7 @@ mod tests {
             .bind::<dyn ServiceA>(|_: &Container| {
                 Arc::new(ServiceAImpl { name: "second" }) as Arc<dyn ServiceA>
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // 验证新绑定有效
         let service: Arc<dyn ServiceA> = container.get::<dyn ServiceA>()?;
@@ -1661,8 +1625,7 @@ mod tests {
                 count1.fetch_add(1, Ordering::SeqCst);
                 Arc::new(TestServiceImpl { value: 1, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Transient)
-                ?;
+            .in_scope(Scope::Transient)?;
 
         // 获取两次，应该调用两次 factory
         let _ = container.get::<dyn TestService>()?;
@@ -1679,8 +1642,7 @@ mod tests {
                 count2.fetch_add(1, Ordering::SeqCst);
                 Arc::new(TestServiceImpl { value: 2, id: 2 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // 获取两次，应该只调用一次 factory
         let _ = container.get::<dyn TestService>()?;
@@ -1708,8 +1670,7 @@ mod tests {
                 std::thread::sleep(std::time::Duration::from_millis(1));
                 Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         const THREAD_COUNT: usize = 8;
 
@@ -1839,40 +1800,35 @@ mod tests {
         // 按顺序绑定
         container
             .bind::<dyn ServiceA>(|_: &Container| Arc::new(ServiceAImpl) as Arc<dyn ServiceA>)
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         container
             .try_bind::<dyn ServiceB>(|c: &Container| {
                 let a = c.get::<dyn ServiceA>()?;
                 Ok(Arc::new(ServiceBImpl(a)) as Arc<dyn ServiceB>)
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         container
             .try_bind::<dyn ServiceC>(|c: &Container| {
                 let b = c.get::<dyn ServiceB>()?;
                 Ok(Arc::new(ServiceCImpl(b)) as Arc<dyn ServiceC>)
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         container
             .try_bind::<dyn ServiceD>(|c: &Container| {
                 let c_service = c.get::<dyn ServiceC>()?;
                 Ok(Arc::new(ServiceDImpl(c_service)) as Arc<dyn ServiceD>)
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         container
             .try_bind::<dyn ServiceE>(|c: &Container| {
                 let d = c.get::<dyn ServiceD>()?;
                 Ok(Arc::new(ServiceEImpl(d)) as Arc<dyn ServiceE>)
             })
-            .in_scope(Scope::Singleton)
-                    ?;
+            .in_scope(Scope::Singleton)?;
 
         // 获取最深层的服务
         let service_e: Arc<dyn ServiceE> = container.get::<dyn ServiceE>()?;
@@ -1905,8 +1861,7 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // 解绑
         container.unbind::<dyn TestService>();
@@ -1932,8 +1887,7 @@ mod tests {
                     value,
                     id: i as usize,
                 }))
-                .in_scope(Scope::Singleton)
-                ?; // 由于所有都是同一类型，只有第一个会成功
+                .in_scope(Scope::Singleton)?; // 由于所有都是同一类型，只有第一个会成功
         }
 
         // 至少绑定了一个
@@ -1962,8 +1916,7 @@ mod tests {
             .try_bind::<dyn TestService>(|_: &Container| {
                 Ok(Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>)
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // is_bound 应该返回 true（即使是 fallible binding）
         assert!(container.is_bound::<dyn TestService>());
@@ -1984,16 +1937,14 @@ mod tests {
             .bind::<dyn TestService>(|_: &Container| {
                 Arc::new(TestServiceImpl { value: 42, id: 1 }) as Arc<dyn TestService>
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // 添加可失败绑定
         container
             .try_bind::<dyn ServiceA>(|_: &Container| {
                 Ok(Arc::new(ServiceAImpl) as Arc<dyn ServiceA>)
             })
-            .in_scope(Scope::Singleton)
-                ?;
+            .in_scope(Scope::Singleton)?;
 
         // binding_count 应该包含两种类型
         assert_eq!(container.binding_count(), 2);

@@ -48,3 +48,4 @@ tempfile.workspace = true
 rstest.workspace = true
 pretty_assertions.workspace = true
 serial_test.workspace = true
+filetime = "0.2.27"

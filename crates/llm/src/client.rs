@@ -201,7 +201,7 @@ impl LLMClient for LLMClientImpl {
     /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
     fn call(&self, params: &LLMRequestParameters) -> Result<String, LLMError> {
         // 创建带超时的 HTTP 客户端（60秒）
-        let config = HttpClientConfig::new().timeout(Duration::from_secs(60));
+        let config = HttpClientConfig::new().timeout(Duration::from_secs(120));
         let client = HttpClient::with_config(config).map_err(|e| {
             LLMError::ApiError(format!("Failed to create HTTP client with timeout: {}", e))
         })?;

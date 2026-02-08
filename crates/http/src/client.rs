@@ -326,11 +326,8 @@ mod tests {
         let client = HttpClient::new()?;
         let url = format!("{}/search", server.url());
 
-        let response = client
-            .get(&url)
-            .query(&serde_json::json!({"q": "rust", "page": "1"}))
-            .send()
-            ?;
+        let response =
+            client.get(&url).query(&serde_json::json!({"q": "rust", "page": "1"})).send()?;
 
         assert!(response.is_success());
 
@@ -420,7 +417,7 @@ mod tests {
         }
 
         Ok(())
-        }
+    }
 
     #[test]
     #[serial]
@@ -494,8 +491,7 @@ mod tests {
         let client = HttpClient::new()?;
         let url = format!("{}/users/123", server.url());
 
-        let response =
-            client.patch(&url).body(&serde_json::json!({"field": "value"})).send()?;
+        let response = client.patch(&url).body(&serde_json::json!({"field": "value"})).send()?;
 
         assert!(response.is_success());
 
@@ -519,7 +515,7 @@ mod tests {
         let result = client
             .get(&url)
             .retry(RetryConfig::new().max_retries(3).initial_delay(Duration::from_millis(10)))
-            .send()?    ;
+            .send()?;
 
         assert!(result.is_success());
 

@@ -8,6 +8,7 @@ use std::sync::Arc;
 use domain::errors::ServiceError;
 use domain::git::entity::CommitFileChange;
 use domain::summary::entity::{CommitConfigAnalysis, CommitFileClassification};
+use llm::parsers::JsonParser;
 use llm::LLMExecutor;
 
 use super::ConfigAnalyzeConversation;
@@ -58,7 +59,7 @@ impl ConfigAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "config_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitConfigAnalysis = serde_json::from_str(&response)
+        let result: CommitConfigAnalysis = JsonParser::to_model(&response)
             .map_err(|e| ServiceError::Other(format!("解析配置分析结果失败: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }

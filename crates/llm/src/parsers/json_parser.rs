@@ -126,7 +126,10 @@ impl JsonParser {
         T: for<'de> Deserialize<'de>,
     {
         // 先提取并解析为 Value，然后转换为目标类型
-        let value = Self::parse(response, JsonParseMode::ExtractFromMarkdown)?;
+        let mut value = Self::parse(response, JsonParseMode::ExtractFromMarkdown)?;
+        // LLM 可能返回 null 值（如 "old_value": null），
+        // 递归移除 null 值的字段，让 #[serde(default)] 提供默认值
+        Self::remove_null_values(&mut value);
         serde_json::from_value(value).map_err(|e| {
             LLMError::ApiError(format!(
                 "Failed to convert JSON Value to type {}: {}",
@@ -160,6 +163,28 @@ impl JsonParser {
     /// let map = JsonParser::to_map(response)?;
     /// let branch_name = map.get("branch_name").and_then(|v| v.as_str());
     /// ```
+    /// 递归移除 JSON 对象中值为 null 的字段
+    ///
+    /// LLM 响应中可能包含 `"field": null` 的情况，但目标结构体的字段类型是 `String`
+    /// 而非 `Option<String>`。`#[serde(default)]` 只在字段缺失时生效，不处理显式的 null 值。
+    /// 通过移除 null 值的字段，让 `#[serde(default)]` 对这些字段提供默认值。
+    fn remove_null_values(value: &mut Value) {
+        match value {
+            Value::Object(map) => {
+                map.retain(|_, v| !v.is_null());
+                for v in map.values_mut() {
+                    Self::remove_null_values(v);
+                }
+            }
+            Value::Array(arr) => {
+                for v in arr.iter_mut() {
+                    Self::remove_null_values(v);
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub fn to_map(response: impl AsRef<str>) -> Result<Map<String, Value>, LLMError> {
         let value = Self::parse(response, JsonParseMode::ExtractFromMarkdown)?;
 

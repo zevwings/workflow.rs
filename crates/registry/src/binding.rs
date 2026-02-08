@@ -341,7 +341,10 @@ mod tests {
     #[rstest]
     #[case(Scope::Singleton, true)]
     #[case(Scope::Transient, false)]
-    fn test_binding_resolve_scope(#[case] scope: Scope, #[case] should_be_same: bool) -> Result<()> {
+    fn test_binding_resolve_scope(
+        #[case] scope: Scope,
+        #[case] should_be_same: bool,
+    ) -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
@@ -447,8 +450,7 @@ mod tests {
 
         // 使用 Arc 实例绑定
         let instance: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 100, id: 1 });
-        BindingBuilder::new(identifier, instance, &container)
-            .in_scope(Scope::Singleton)?;
+        BindingBuilder::new(identifier, instance, &container).in_scope(Scope::Singleton)?;
 
         // 多次获取应该返回同一个实例（Singleton）
         let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
@@ -495,7 +497,10 @@ mod tests {
     #[rstest]
     #[case(Scope::Singleton, true)]
     #[case(Scope::Transient, false)]
-    fn test_fallible_binding_resolve_scope(#[case] scope: Scope, #[case] should_be_same: bool) -> Result<()> {
+    fn test_fallible_binding_resolve_scope(
+        #[case] scope: Scope,
+        #[case] should_be_same: bool,
+    ) -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();

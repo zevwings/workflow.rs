@@ -196,7 +196,10 @@ pub fn remove_source(shell: &Shell, source_path: impl AsRef<str>) -> Result<bool
 /// # 返回
 ///
 /// 返回 (是否已配置, 配置文件路径)。
-pub fn is_configured(shell: &Shell, source_path: impl AsRef<str>) -> Result<(bool, PathBuf), ShellError> {
+pub fn is_configured(
+    shell: &Shell,
+    source_path: impl AsRef<str>,
+) -> Result<(bool, PathBuf), ShellError> {
     let source_path = source_path.as_ref();
     let config_path = config_file_path(shell).ok_or(ShellError::HomeNotFound)?;
     let configured = has_source(shell, source_path)?;

@@ -27,11 +27,10 @@ pub(crate) fn log_file_path(
     let logs_dir = &config.logs_dir;
 
     // 创建 tracing 子目录
-    let tracing_dir = logs_dir.join("tracing");
-    fs::create_dir_all(&tracing_dir).map_err(|e| {
+    fs::create_dir_all(logs_dir).map_err(|e| {
         LoggerError::CreateDirectoryFailed(format!(
             "Failed to create tracing directory {:?}: {}",
-            tracing_dir, e
+            logs_dir, e
         ))
     })?;
 
@@ -43,7 +42,7 @@ pub(crate) fn log_file_path(
     let command_prefix = command_name.unwrap_or("workflow");
 
     // 文件命名：{command}-{timestamp}-{pid}.log
-    let log_file = tracing_dir.join(format!("{}-{}-{}.log", command_prefix, timestamp, pid));
+    let log_file = logs_dir.join(format!("{}-{}-{}.log", command_prefix, timestamp, pid));
 
     Ok(log_file)
 }
