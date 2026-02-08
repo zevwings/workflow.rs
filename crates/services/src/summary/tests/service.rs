@@ -38,14 +38,14 @@ impl TestAnalyzeService {
             combined.push_str(&format!("\n### {}\n\n```diff\n{}\n```\n\n", path, diff));
         }
 
-        let user_prompt = format!("## 测试文件变更\n{}\n", combined);
+        let user_prompt = format!("## Test File Changes\n{}\n", combined);
         let conversation = TestAnalyzeConversation::new(user_prompt);
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "test_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
         let result: CommitTestAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("解析测试分析结果失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to parse test analysis results: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }

@@ -48,11 +48,11 @@ impl LogicAnalyzeService {
             let file_type = infer_file_nature(path.as_str(), stage1);
             parts.push_str(&format!(
                 r##"
-### 文件：{}
-修改规模：+{} -{}
-文件类型：{}
+### File: {}
+Change scale: +{} -{}
+File type: {}
 
-#### Diff内容：
+#### Diff content:
 ```diff
 {}
 ```
@@ -64,7 +64,7 @@ impl LogicAnalyzeService {
         }
 
         let user_prompt = format!(
-            r##"## 修改文件列表
+            r##"## Modified File List
 {}
 "##,
             parts
@@ -76,7 +76,7 @@ impl LogicAnalyzeService {
             .execute(&conversation, language_code, "logic_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
         let result: CommitLogicAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("解析核心逻辑分析结果失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to parse logic analysis results: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }
@@ -87,20 +87,20 @@ impl LogicAnalyzeService {
 fn infer_file_nature(path: &str, stage1: &CommitFileClassification) -> &'static str {
     let n = &stage1.categories.by_nature;
     if n.business_logic.iter().any(|p| p.as_str() == path) {
-        "核心业务逻辑"
+        "Business Logic"
     } else if n.configuration.iter().any(|p| p.as_str() == path) {
-        "配置文件"
+        "Configuration"
     } else if n.tests.iter().any(|p| p.as_str() == path) {
-        "测试文件"
+        "Test"
     } else if n.documentation.iter().any(|p| p.as_str() == path) {
-        "文档"
+        "Documentation"
     } else if n.dependencies.iter().any(|p| p.as_str() == path) {
-        "依赖/构建"
+        "Dependencies/Build"
     } else if n.ui_style.iter().any(|p| p.as_str() == path) {
-        "UI/样式"
+        "UI/Style"
     } else if n.infrastructure.iter().any(|p| p.as_str() == path) {
-        "基础设施"
+        "Infrastructure"
     } else {
-        "其他"
+        "Other"
     }
 }

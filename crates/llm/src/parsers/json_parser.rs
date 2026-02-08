@@ -27,9 +27,13 @@ pub struct JsonParser;
 impl JsonParser {
     /// 从 LLM 响应中提取 JSON 字符串
     ///
-    /// 支持处理包含 markdown 代码块的响应格式：
-    /// - ````json\n{...}\n````
-    /// - ````\n{...}\n````
+    /// 支持处理多种 LLM 响应格式：
+    /// - ````json\n{...}\n````（标准 markdown 代码块）
+    /// - ````JSON\n{...}\n````（大写语言标签）
+    /// - ````\n{...}\n````（无语言标签的代码块）
+    /// - `Some text\n```json\n{...}\n````（代码块前有说明文字）
+    /// - ````json\n{...}\n````\nSome text`（代码块后有说明文字）
+    /// - ````json\n{...}`（无闭合标记）
     /// - 纯 JSON 字符串
     ///
     /// # 参数
@@ -40,22 +44,33 @@ impl JsonParser {
     ///
     /// 返回提取的 JSON 字符串（已去除 markdown 代码块包装）
     pub fn extract_json(response: impl AsRef<str>) -> String {
-        let trimmed = response.as_ref().trim();
+        let text = response.as_ref().trim();
 
-        // 尝试提取 JSON（可能包含 markdown 代码块）
-        if trimmed.starts_with("```json") {
-            // 移除 ```json 开头和 ``` 结尾
-            let start = trimmed.find('\n').unwrap_or(0);
-            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
-            trimmed[start..end].trim().to_string()
-        } else if trimmed.starts_with("```") {
-            // 移除 ``` 开头和 ``` 结尾
-            let start = trimmed.find('\n').unwrap_or(0);
-            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
-            trimmed[start..end].trim().to_string()
-        } else {
-            trimmed.to_string()
-        }
+        // 在整个文本中查找 markdown 代码块的开始位置（支持 ```json、```JSON、```）
+        let fence_start = text
+            .find("```json")
+            .or_else(|| text.find("```JSON"))
+            .or_else(|| text.find("```"));
+
+        let Some(fence_pos) = fence_start else {
+            // 没有找到代码块，原样返回
+            return text.to_string();
+        };
+
+        // 从代码块开始位置之后找到第一个换行符，内容从换行符之后开始
+        let after_fence = &text[fence_pos..];
+        let content_start = match after_fence.find('\n') {
+            Some(p) => fence_pos + p + 1,
+            None => return text.to_string(),
+        };
+
+        // 从内容开始位置之后查找闭合的 ```
+        let content_end = text[content_start..]
+            .find("```")
+            .map(|p| content_start + p)
+            .unwrap_or(text.len());
+
+        text[content_start..content_end].trim().to_string()
     }
 
     /// 解析 JSON 字符串为 Value

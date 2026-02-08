@@ -11,7 +11,7 @@ pub struct Message {
     writer: Box<dyn Write + Send>,
 }
 
-/// Mock writer for testing
+/// 用于测试的模拟写入器
 #[cfg(any(test, feature = "testing"))]
 pub struct MockWriter {
     buffer: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
@@ -19,26 +19,26 @@ pub struct MockWriter {
 
 #[cfg(any(test, feature = "testing"))]
 impl MockWriter {
-    /// Create a new mock writer
+    /// 创建新的模拟写入器
     pub fn new() -> Self {
         Self {
             buffer: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
         }
     }
 
-    /// Get the captured output as a string
+    /// 将捕获的输出转换为字符串
     pub fn output(&self) -> String {
         let buffer = self.buffer.lock().unwrap();
         String::from_utf8_lossy(&buffer).to_string()
     }
 
-    /// Clear the buffer
+    /// 清空缓冲区
     pub fn clear(&self) {
         let mut buffer = self.buffer.lock().unwrap();
         buffer.clear();
     }
 
-    /// Clone the inner buffer for sharing
+    /// 克隆内部缓冲区以供共享
     pub fn clone_buffer(&self) -> std::sync::Arc<std::sync::Mutex<Vec<u8>>> {
         std::sync::Arc::clone(&self.buffer)
     }

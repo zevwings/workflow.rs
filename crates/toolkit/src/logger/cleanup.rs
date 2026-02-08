@@ -54,8 +54,6 @@ pub(crate) fn cleanup_logs(logs_dir: impl AsRef<Path>) {
         })
         .collect();
 
-    println!("log_files: {:?}", log_files);
-
     // 按修改时间降序排列（最新的在前）
     log_files.sort_by(|a, b| b.1.cmp(&a.1));
 

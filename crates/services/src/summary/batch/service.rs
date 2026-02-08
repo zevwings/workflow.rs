@@ -52,7 +52,7 @@ impl BatchAnalyzeService {
                 files.iter().find(|f| f.path == **path).and_then(|f| f.deletions).unwrap_or(0);
             let diff = file_diffs.get(*path).map(String::as_str).unwrap_or("");
             sample_diffs.push_str(&format!(
-                "\n### 文件{}: {}\n变更：+{} -{}\n```diff\n{}\n```\n",
+                "\n### File {}: {}\nChanges: +{} -{}\n```diff\n{}\n```\n",
                 i + 1,
                 path,
                 additions,
@@ -62,12 +62,12 @@ impl BatchAnalyzeService {
         }
 
         let user_prompt = format!(
-            r##"## 批量操作信息
-- 操作类型：{}
-- 涉及文件数：{}
-- 操作模式：{}
+            r##"## Batch Operation Information
+- Operation type: {}
+- Number of files affected: {}
+- Operation pattern: {}
 
-## 样本文件Diff（前{}个代表性文件）
+## Sample File Diffs (first {} representative files)
 {}
 "##,
             pattern_type,
@@ -83,7 +83,7 @@ impl BatchAnalyzeService {
             .execute(&conversation, language_code, "batch_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
         let result: CommitBatchAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("解析批量分析结果失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to parse batch analysis results: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }
@@ -92,17 +92,17 @@ impl BatchAnalyzeService {
 
 fn detect_pattern_type(stage1: &CommitFileClassification) -> &'static str {
     if stage1.patterns.mass_rename.detected {
-        "批量重命名"
+        "Mass Rename"
     } else if stage1.patterns.formatting.detected {
-        "批量格式化"
+        "Mass Formatting"
     } else if stage1.patterns.config_update.detected {
-        "统一配置更新"
+        "Unified Configuration Update"
     } else if stage1.patterns.dependency_upgrade.detected {
-        "依赖版本升级"
+        "Dependency Version Upgrade"
     } else if stage1.patterns.import_path_change.detected {
-        "导入路径调整"
+        "Import Path Adjustment"
     } else {
-        "批量操作"
+        "Batch Operation"
     }
 }
 
@@ -113,28 +113,28 @@ fn build_batch_pattern_description(stage1: &CommitFileClassification) -> String 
     let mut parts: Vec<String> = Vec::with_capacity(5);
     if p.mass_rename.detected && !p.mass_rename.pattern.is_empty() {
         parts.push(format!(
-            "批量重命名：{}（涉及 {} 个文件）",
+            "Mass rename: {} ({} files affected)",
             p.mass_rename.pattern, p.mass_rename.affected_files
         ));
     }
     if p.formatting.detected && !p.formatting.description.is_empty() {
-        parts.push(format!("批量格式化：{}", p.formatting.description));
+        parts.push(format!("Mass formatting: {}", p.formatting.description));
     }
     if p.config_update.detected && !p.config_update.type_desc.is_empty() {
-        parts.push(format!("统一配置更新：{}", p.config_update.type_desc));
+        parts.push(format!("Unified configuration update: {}", p.config_update.type_desc));
     }
     if p.dependency_upgrade.detected && !p.dependency_upgrade.packages.is_empty() {
         parts.push(format!(
-            "依赖版本升级：{}",
+            "Dependency version upgrade: {}",
             p.dependency_upgrade.packages.join(", ")
         ));
     }
     if p.import_path_change.detected && !p.import_path_change.pattern.is_empty() {
-        parts.push(format!("导入路径调整：{}", p.import_path_change.pattern));
+        parts.push(format!("Import path adjustment: {}", p.import_path_change.pattern));
     }
     if parts.is_empty() {
-        "（阶段一未识别到具体模式，请根据样本 diff 归纳）".to_string()
+        "(Stage 1 did not identify specific patterns, please summarize based on sample diffs)".to_string()
     } else {
-        parts.join("；")
+        parts.join("; ")
     }
 }

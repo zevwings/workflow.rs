@@ -8,20 +8,20 @@ use std::fmt;
 /// 表示工作流中不同类型的分支。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BranchType {
-    /// Feature branch - for new features
+    /// 功能分支 - 用于新功能开发
     Feature,
-    /// Bugfix branch - for bug fixes
+    /// 错误修复分支 - 用于修复 bug
     Bugfix,
-    /// Refactoring branch - for code refactoring
+    /// 重构分支 - 用于代码重构
     Refactoring,
-    /// Hotfix branch - for urgent production fixes
+    /// 热修复分支 - 用于紧急生产环境修复
     Hotfix,
-    /// Chore branch - for maintenance tasks
+    /// 杂项分支 - 用于维护任务
     Chore,
 }
 
 impl BranchType {
-    /// Get all available branch types
+    /// 获取所有可用的分支类型
     pub fn all() -> Vec<BranchType> {
         vec![
             BranchType::Feature,
@@ -32,7 +32,7 @@ impl BranchType {
         ]
     }
 
-    /// Get branch type as string (for template selection)
+    /// 将分支类型转换为字符串（用于模板选择）
     pub fn as_str(&self) -> &'static str {
         match self {
             BranchType::Feature => "feature",
@@ -43,7 +43,7 @@ impl BranchType {
         }
     }
 
-    /// Get Conventional Commits commit type from branch type
+    /// 从分支类型获取 Conventional Commits 提交类型
     pub fn to_commit_type(&self) -> &'static str {
         match self {
             BranchType::Feature => "feat",
@@ -54,7 +54,7 @@ impl BranchType {
         }
     }
 
-    /// Parse branch type from string
+    /// 从字符串解析分支类型
     pub fn parse(s: impl AsRef<str>) -> Option<Self> {
         match s.as_ref().to_lowercase().as_str() {
             "feature" => Some(BranchType::Feature),
@@ -105,13 +105,13 @@ pub fn sanitize_branch_name(name: impl AsRef<str>) -> String {
 /// 同步策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SyncStrategy {
-    /// Merge strategy
+    /// 合并策略
     Merge,
-    /// Rebase strategy
+    /// 变基策略
     Rebase,
-    /// Fast-forward only
+    /// 仅快进合并
     FastForwardOnly,
-    /// Squash merge
+    /// 压缩合并
     Squash,
 }
 

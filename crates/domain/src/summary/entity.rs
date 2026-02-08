@@ -100,11 +100,8 @@ pub struct PatternImportPathChange {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisStrategy {
-    #[serde(rename = "批量处理组")]
     pub batch_group: Vec<String>,
-    #[serde(rename = "重点分析组")]
     pub focus_group: Vec<String>,
-    #[serde(rename = "可跳过组")]
     pub skip_group: Vec<String>,
 }
 

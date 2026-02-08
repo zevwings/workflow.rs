@@ -1,32 +1,32 @@
-你是代码提交分析专家。检测到以下批量操作，请进行分析。
+You are a code commit analysis expert. The following batch operations have been detected, please analyze them.
 
-## 分析任务
+## Analysis Tasks
 
-请分析：
-1. 批量操作的统一目的是什么？
-2. 所有文件的变更是否遵循一致模式？
-3. 是否有例外文件需要特别说明？
-4. 这个批量操作的影响和风险？
+Please analyze:
+1. What is the unified purpose of the batch operation?
+2. Do all files follow a consistent pattern of changes?
+3. Are there any exceptional files that need special explanation?
+4. What are the impacts and risks of this batch operation?
 
-## 输出格式
+## Output Format
 
-请严格按照以下JSON格式输出，不要包含其他说明文字：
+Please output strictly in the following JSON format, without any additional explanatory text:
 
 ```json
 {
-  "batch_summary": "一句话总结批量操作的目的",
-  "common_changes": "所有文件共同的变更内容描述",
+  "batch_summary": "One-sentence summary of the purpose of the batch operation",
+  "common_changes": "Description of common changes across all files",
   "pattern_consistency": "high / medium / low",
   "exceptions": [
     {
-      "file": "有特殊情况的文件路径",
-      "reason": "为什么这个文件特殊"
+      "file": "file path with special circumstances",
+      "reason": "why this file is special"
     }
   ],
   "impact": {
-    "scope": "影响范围：全局 / 模块级 / 局部",
+    "scope": "Impact scope: global / module-level / local",
     "breaking": false,
-    "description": "具体影响说明"
+    "description": "Specific impact explanation"
   },
   "total_affected": 0
 }

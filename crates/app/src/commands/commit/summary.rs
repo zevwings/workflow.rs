@@ -1,6 +1,6 @@
 //! workflow commit summary：三阶段提交分析（阶段一文件分类 → 阶段二分类分析 → 阶段三全局总结）
 //!
-//! 对当前分支相对基准分支的变更执行完整分析，输出结构化的 commit 总结。
+//! 对当前分支相对基准分支的变更执行完整分析，输出 Markdown 格式的 commit 总结。
 //!
 //! 通过 `CommitSummaryService` 委托给 services 层的三阶段分析实现。
 
@@ -29,7 +29,7 @@ impl CommitSummaryCommand {
         let summary = summary_service.run_analysis(None)?;
 
         info!("三阶段分析完成。");
-        println!("{}", serde_json::to_string_pretty(&summary)?);
+        println!("{}", summary.to_markdown());
         Ok(())
     }
 }

@@ -25,7 +25,7 @@ impl LLMConversation for FileClassifyConversation {
     }
 
     fn get_user_prompt(&self, _language_code: &str) -> String {
-        format!("## 文件变更信息\n\n{}", self.input_json)
+        format!("## File Change Information\n\n{}", self.input_json)
     }
 
     fn get_execution_params(&self) -> (Option<u32>, f32) {

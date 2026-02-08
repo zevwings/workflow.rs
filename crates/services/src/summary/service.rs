@@ -76,14 +76,14 @@ impl CommitSummaryServiceImpl {
         let current_branch = self
             .git_repo
             .get_current_branch()
-            .map_err(|e| ServiceError::Other(format!("获取当前分支失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to get current branch: {}", e)))?;
 
         let base_branch = match base_branch {
             Some(b) => b.to_string(),
             None => self
                 .git_repo
                 .infer_target_branch(&current_branch)
-                .map_err(|e| ServiceError::Other(format!("推断基准分支失败: {}", e)))?
+                .map_err(|e| ServiceError::Other(format!("Failed to infer target branch: {}", e)))?
                 .unwrap_or_else(|| "master".to_string()),
         };
 
@@ -91,11 +91,11 @@ impl CommitSummaryServiceImpl {
         let files = self
             .git_repo
             .get_merge_changed_files(&current_branch, &base_branch)
-            .map_err(|e| ServiceError::Other(format!("获取变更文件列表失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to get changed files: {}", e)))?;
 
         if files.is_empty() {
             return Err(ServiceError::Other(format!(
-                "当前分支 {} 相对 {} 无变更文件，无需分析。",
+                "No changed files between branch {} and {}, nothing to analyze.",
                 current_branch, base_branch
             )));
         }
@@ -104,13 +104,13 @@ impl CommitSummaryServiceImpl {
         let commit_info = self
             .git_repo
             .get_commit_info("HEAD")
-            .map_err(|e| ServiceError::Other(format!("获取 commit 信息失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to get commit info: {}", e)))?;
 
         // 4. 获取完整 merge diff 并按文件拆分
         let full_diff = self
             .git_repo
             .get_merge_diff(&current_branch, &base_branch)
-            .map_err(|e| ServiceError::Other(format!("获取 merge diff 失败: {}", e)))?
+            .map_err(|e| ServiceError::Other(format!("Failed to get merge diff: {}", e)))?
             .unwrap_or_default();
         let file_diffs = parse_diff_per_file(&full_diff);
 
@@ -225,7 +225,7 @@ impl domain::CommitSummaryService for CommitSummaryServiceImpl {
 
         // 阶段三：全局总结
         let stage1_json = serde_json::to_string(&stage1)
-            .map_err(|e| ServiceError::Other(format!("序列化阶段一结果失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to serialize stage 1 results: {}", e)))?;
 
         let input = SummaryAnalyzeInput {
             stage1_classification: stage1_json,

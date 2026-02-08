@@ -38,7 +38,7 @@ impl FileClassifyService {
             .execute(&conversation, language_code, "file_classify")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
         JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("解析文件分类结果失败: {}", e)))
+            .map_err(|e| ServiceError::Other(format!("Failed to parse file classification results: {}", e)))
     }
 }
 

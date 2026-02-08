@@ -1,4 +1,4 @@
-//! Jira configuration management subcommands
+//! Jira 配置管理子命令
 //!
 //! Jira 配置管理子命令结构定义
 

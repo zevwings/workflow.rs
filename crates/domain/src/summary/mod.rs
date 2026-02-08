@@ -1,4 +1,5 @@
 pub mod entity;
+pub mod markdown;
 pub mod service;
 
 pub use entity::{

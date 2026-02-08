@@ -27,42 +27,42 @@ impl LLMConversation for SummaryAnalyzeConversation {
     fn get_user_prompt(&self, _language_code: &str) -> String {
         let i = &self.input;
         format!(
-            r##"## 输入信息
+            r##"## Input Information
 
-### 阶段一：文件分类结果
+### Stage 1: File Classification Results
 ```json
 {}
 ```
 
-### 阶段二：详细分析结果
+### Stage 2: Detailed Analysis Results
 
-#### 批量操作分析
+#### Batch Operation Analysis
 ```json
 {}
 ```
 
-#### 核心逻辑分析
+#### Core Logic Analysis
 ```json
 {}
 ```
 
-#### 配置文档分析
+#### Configuration/Documentation Analysis
 ```json
 {}
 ```
 
-#### 测试分析
+#### Test Analysis
 ```json
 {}
 ```
 
-### 统计信息
-- 总文件数：{}
-- 新增：{} 个
-- 删除：{} 个
-- 修改：{} 个
-- 重命名：{} 个
-- 代码行变化：+{} -{}"##,
+### Statistics
+- Total files: {}
+- Added: {}
+- Deleted: {}
+- Modified: {}
+- Renamed: {}
+- Line changes: +{} -{}"##,
             i.stage1_classification,
             i.stage2_batch_analysis,
             i.stage2_logic_analysis,

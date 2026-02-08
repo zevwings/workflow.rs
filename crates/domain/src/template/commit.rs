@@ -9,19 +9,19 @@ use serde::{Deserialize, Serialize};
 /// 描述提交的领域属性，用于生成提交消息。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CommitTemplateVars {
-    /// Commit type (e.g., "feat", "fix", "docs")
+    /// 提交类型（例如 "feat", "fix", "docs"）
     pub commit_type: String,
-    /// Commit scope (optional)
+    /// 提交范围（可选）
     pub scope: Option<String>,
-    /// Commit subject
+    /// 提交主题
     pub subject: String,
-    /// Commit body (optional)
+    /// 提交正文（可选）
     pub body: Option<String>,
-    /// JIRA ticket key (optional)
+    /// JIRA 工单键（可选）
     pub jira_key: Option<String>,
-    /// Whether to use scope (when no ticket id)
+    /// 是否使用范围（当没有工单 ID 时）
     ///
-    /// This value comes from configuration and is passed to the template
+    /// 该值来自配置并传递给模板
     pub use_scope: bool,
 }
 

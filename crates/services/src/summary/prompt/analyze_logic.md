@@ -1,51 +1,51 @@
-你是资深代码审查专家。请深入分析以下核心业务逻辑的修改。
+You are a senior code review expert. Please analyze the following core business logic modifications in depth.
 
-## 分析任务
+## Analysis Tasks
 
-对每个文件分别进行分析：
+Analyze each file separately:
 
-1. **修改目的**：这个文件改动是为了实现什么功能或解决什么问题？
-2. **关键变更点**：列出3-5个最重要的代码变更
-3. **技术实现**：使用了什么技术方案或设计模式？
-4. **影响范围**：
-   - 是否影响API接口？
-   - 是否影响数据库？
-   - 是否影响其他模块？
-5. **关联性**：与其他修改的文件有什么关联？
-6. **风险评估**：潜在的bug风险或性能影响
+1. **Modification Purpose**: What functionality is this file change intended to implement or what problem does it solve?
+2. **Key Changes**: List 3-5 most important code changes
+3. **Technical Implementation**: What technical solutions or design patterns are used?
+4. **Impact Scope**:
+   - Does it affect API interfaces?
+   - Does it affect the database?
+   - Does it affect other modules?
+5. **Relationships**: What relationships exist with other modified files?
+6. **Risk Assessment**: Potential bug risks or performance impacts
 
-## 输出格式
+## Output Format
 
-请严格按照以下JSON格式输出，不要包含其他说明文字：
+Please output strictly in the following JSON format, without any additional explanatory text:
 
 ```json
 {
   "files": [
     {
-      "file": "文件路径",
-      "purpose": "修改目的的简要描述",
+      "file": "file path",
+      "purpose": "Brief description of modification purpose",
       "key_changes": [
-        "变更点1：具体描述",
-        "变更点2：具体描述",
-        "变更点3：具体描述"
+        "Change point 1: detailed description",
+        "Change point 2: detailed description",
+        "Change point 3: detailed description"
       ],
-      "technical_approach": "使用的技术方案",
+      "technical_approach": "Technical solution used",
       "impact_scope": {
         "api_changes": true,
         "database_changes": false,
-        "module_dependencies": [],
-        "description": "影响范围详细说明"
+        "module_dependencies": ["affected module name 1", "affected module name 2"],
+        "description": "Detailed description of impact scope"
       },
       "related_files": [
         {
-          "file": "关联文件路径",
-          "relationship": "关系说明"
+          "file": "related file path",
+          "relationship": "relationship description"
         }
       ],
       "risk_assessment": {
         "level": "low / medium / high",
-        "concerns": [],
-        "recommendations": []
+        "concerns": ["potential risk point 1", "potential risk point 2"],
+        "recommendations": ["improvement suggestion 1", "improvement suggestion 2"]
       }
     }
   ]

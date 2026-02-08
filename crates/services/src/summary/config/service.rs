@@ -48,19 +48,19 @@ impl ConfigAnalyzeService {
                 files.iter().find(|f| f.path == *path).and_then(|f| f.deletions).unwrap_or(0);
             let diff = file_diffs.get(path).map(String::as_str).unwrap_or("");
             parts.push_str(&format!(
-                "\n### {}\n变更：+{} -{}\n\n```diff\n{}\n```\n\n---\n",
+                "\n### {}\nChanges: +{} -{}\n\n```diff\n{}\n```\n\n---\n",
                 path, additions, deletions, diff
             ));
         }
 
-        let user_prompt = format!("## 修改文件\n{}\n", parts);
+        let user_prompt = format!("## Modified Files\n{}\n", parts);
         let conversation = ConfigAnalyzeConversation::new(user_prompt);
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "config_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
         let result: CommitConfigAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("解析配置分析结果失败: {}", e)))?;
+            .map_err(|e| ServiceError::Other(format!("Failed to parse configuration analysis results: {}", e)))?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }
