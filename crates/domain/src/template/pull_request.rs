@@ -9,21 +9,21 @@ use serde::{Deserialize, Serialize};
 /// 描述 PR 的领域属性，用于生成 PR 内容。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct PullRequestTemplateVars {
-    /// JIRA ticket key (optional)
+    /// JIRA 工单键（可选）
     pub jira_key: Option<String>,
-    /// JIRA ticket summary
+    /// JIRA 工单摘要
     pub jira_summary: Option<String>,
-    /// JIRA ticket description
+    /// JIRA 工单描述
     pub jira_description: Option<String>,
-    /// JIRA ticket type
+    /// JIRA 工单类型
     pub jira_type: Option<String>,
-    /// JIRA service address (for building links)
+    /// JIRA 服务地址（用于构建链接）
     pub jira_service_address: Option<String>,
-    /// Change types (array of booleans indicating which types are selected)
+    /// 变更类型列表（包含哪些类型被选中）
     pub change_types: Vec<ChangeTypeItem>,
-    /// Short description (optional)
+    /// 简短描述（可选）
     pub short_description: Option<String>,
-    /// Dependency information (optional)
+    /// 依赖信息（可选）
     pub dependency: Option<String>,
 }
 
@@ -32,9 +32,9 @@ pub struct PullRequestTemplateVars {
 /// 用于 PR 模板中的变更类型选择。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChangeTypeItem {
-    /// Change type name
+    /// 变更类型名称
     pub name: String,
-    /// Whether this change type is selected
+    /// 该变更类型是否被选中
     pub selected: bool,
 }
 
@@ -43,23 +43,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_change_type_item_serialize() {
+    fn test_change_type_item_serialize() -> Result<(), serde_json::Error> {
         let item = ChangeTypeItem {
             name: "Feature".to_string(),
             selected: true,
         };
 
-        let json = serde_json::to_string(&item).unwrap();
+        let json = serde_json::to_string(&item)?;
         assert!(json.contains("\"name\":\"Feature\""));
         assert!(json.contains("\"selected\":true"));
+
+        Ok(())
     }
 
     #[test]
-    fn test_change_type_item_deserialize() {
+    fn test_change_type_item_deserialize() -> Result<(), serde_json::Error> {
         let json = r#"{"name": "Bug Fix", "selected": false}"#;
-        let item: ChangeTypeItem = serde_json::from_str(json).unwrap();
+        let item: ChangeTypeItem = serde_json::from_str(json)?;
         assert_eq!(item.name, "Bug Fix");
         assert!(!item.selected);
+
+        Ok(())
     }
 
     #[test]

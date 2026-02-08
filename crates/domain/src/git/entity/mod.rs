@@ -3,7 +3,6 @@
 mod blame;
 mod branch;
 mod commit;
-mod commit_change;
 mod merge;
 mod remote;
 mod repo;
@@ -13,8 +12,7 @@ mod tag;
 
 pub use blame::BlameLineInfo;
 pub use branch::{BranchFilter, BranchInfo};
-pub use commit::CommitInfo;
-pub use commit_change::{CommitChangeType, CommitFileChange};
+pub use commit::{CommitChangeType, CommitFileChange, CommitInfo};
 pub use merge::MergeStrategy;
 pub use remote::RemoteInfo;
 pub use repo::{CodePlatform, RepoInfo};

@@ -4,7 +4,6 @@
 
 use std::path::PathBuf;
 
-use color_eyre::Result;
 use prompt::{br, info, warning};
 use toolkit::rollback;
 
@@ -22,7 +21,7 @@ impl RestoreCommand {
     }
 
     /// 运行 Restore 命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting Restore command");
         br!();
 
@@ -31,7 +30,7 @@ impl RestoreCommand {
             Ok(d) => d,
             Err(e) => {
                 warning!("Failed to get install dir: {}", e);
-                return Err(color_eyre::eyre::eyre!("Failed to get install dir"));
+                return Err("Failed to get install dir".into());
             }
         };
 
@@ -39,7 +38,7 @@ impl RestoreCommand {
             Ok(n) => n,
             Err(e) => {
                 warning!("Failed to get binary name: {}", e);
-                return Err(color_eyre::eyre::eyre!("Failed to get binary name"));
+                return Err("Failed to get binary name".into());
             }
         };
 
@@ -51,7 +50,7 @@ impl RestoreCommand {
             }
             Err(e) => {
                 warning!("Failed to restore: {}", e);
-                return Err(color_eyre::eyre::eyre!("Failed to restore"));
+                return Err("Failed to restore".into());
             }
         }
         Ok(())

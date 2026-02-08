@@ -168,11 +168,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             JiraCommand::Info(args) => {
-                let cmd = commands::jira::JiraInfoCommand::new(
-                    args.jira_id.into_option(),
-                    args.json,
-                    args.markdown,
-                );
+                let format = args.get_format();
+                let cmd = commands::jira::JiraInfoCommand::new(args.jira_id.into_option(), format);
                 cmd.run()?;
             }
             JiraCommand::Attachments(args) => {
@@ -280,6 +277,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     CommitSubcommand::CommitDiff { ref_or_sha } => {
                         let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
+                        cmd.run()?;
+                    }
+                    CommitSubcommand::CommitSummary => {
+                        let cmd = commands::commit::CommitSummaryCommand::new();
                         cmd.run()?;
                     }
                 }
@@ -391,10 +392,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             PrSubcommand::Approve { pr_id } => {
                 let cmd = commands::pr::PullRequestApproveCommand::new(pr_id.clone());
-                cmd.run()?;
-            }
-            PrSubcommand::Summarize { pr_id } => {
-                let cmd = commands::pr::PullRequestSummarizeCommand::new(pr_id.clone());
                 cmd.run()?;
             }
         },

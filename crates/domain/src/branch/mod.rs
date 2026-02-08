@@ -10,4 +10,4 @@ pub use entity::{
     sanitize_branch_name, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult, BranchType,
     SourceBranchInfo, SyncStrategy,
 };
-pub use service::BranchService;
+pub use service::{BranchService, BranchServiceError};

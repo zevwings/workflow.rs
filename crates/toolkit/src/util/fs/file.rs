@@ -58,12 +58,7 @@ pub fn read_string(path: impl AsRef<Path>) -> Result<String, FileError> {
 pub fn read_lines(path: &Path) -> Result<Vec<String>, FileError> {
     let file = File::open(path).map_err(FileError::Io)?;
     let reader = BufReader::new(file);
-    let mut lines = Vec::new();
-    for line in reader.lines() {
-        let line = line.map_err(FileError::Io)?;
-        lines.push(line);
-    }
-    Ok(lines)
+    reader.lines().collect::<std::io::Result<Vec<String>>>().map_err(FileError::Io)
 }
 
 /// 读取文件内容为字节向量。
@@ -354,10 +349,12 @@ mod tests {
         }
 
         #[test]
-        fn test_open_nonexistent_file() {
+        fn test_open_nonexistent_file() -> Result<(), FileError> {
             let result = open(std::path::Path::new("/nonexistent/file.txt"));
 
             assert!(matches!(result, Err(FileError::Io(_))));
+
+            Ok(())
         }
 
         #[rstest]
@@ -452,30 +449,34 @@ enabled = true
         }
 
         #[rstest]
-        fn test_read_toml_invalid_format(temp_dir: TempDir) {
+        fn test_read_toml_invalid_format(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.toml");
             let invalid_toml = "name = test\nversion = 1.0.0"; // 缺少引号
 
-            std::fs::write(&file_path, invalid_toml).unwrap();
+            std::fs::write(&file_path, invalid_toml)?;
 
             let result: Result<TestConfig, _> = read_toml(&file_path);
 
             assert!(matches!(result, Err(FileError::Toml(_))));
+
+            Ok(())
         }
 
         #[rstest]
-        fn test_read_toml_missing_fields(temp_dir: TempDir) {
+        fn test_read_toml_missing_fields(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.toml");
             let incomplete_toml = r#"
 name = "test"
 # version 和 enabled 缺失
 "#;
 
-            std::fs::write(&file_path, incomplete_toml).unwrap();
+            std::fs::write(&file_path, incomplete_toml)?;
 
             let result: Result<TestConfig, _> = read_toml(&file_path);
 
             assert!(result.is_err());
+
+            Ok(())
         }
 
         #[rstest]
@@ -501,27 +502,31 @@ name = "test"
         }
 
         #[rstest]
-        fn test_read_json_invalid_format(temp_dir: TempDir) {
+        fn test_read_json_invalid_format(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.json");
             let invalid_json = r#"{ "name": "test", "version": }"#; // 语法错误
 
-            std::fs::write(&file_path, invalid_json).unwrap();
+            std::fs::write(&file_path, invalid_json)?;
 
             let result: Result<TestConfig, _> = read_json(&file_path);
 
             assert!(matches!(result, Err(FileError::Json(_))));
+
+            Ok(())
         }
 
         #[rstest]
-        fn test_read_json_missing_fields(temp_dir: TempDir) {
+        fn test_read_json_missing_fields(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.json");
             let incomplete_json = r#"{ "name": "test" }"#; // 缺少 version 和 enabled
 
-            std::fs::write(&file_path, incomplete_json).unwrap();
+            std::fs::write(&file_path, incomplete_json)?;
 
             let result: Result<TestConfig, _> = read_json(&file_path);
 
             assert!(result.is_err());
+
+            Ok(())
         }
     }
 
@@ -598,10 +603,12 @@ name = "test"
 
         #[cfg(unix)]
         #[test]
-        fn test_set_permissions_nonexistent_file() {
+        fn test_set_permissions_nonexistent_file() -> Result<(), FileError> {
             let result = set_permissions(std::path::Path::new("/nonexistent/file.txt"), 0o600);
 
             assert!(matches!(result, Err(FileError::Io(_))));
+
+            Ok(())
         }
 
         #[rstest]

@@ -13,7 +13,6 @@ use std::fs;
 
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
-use color_eyre::{eyre::eyre, eyre::ContextCompat, eyre::WrapErr, Result};
 use domain::get_completion_cache_shell_dir;
 use prompt::{br, info, print, success, warning};
 use toolkit::{detect_shell, directory, shell_to_string};
@@ -39,7 +38,7 @@ impl InstallCommand {
     }
 
     /// 运行安装命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         print!("Installing Workflow CLI...");
         br!();
 
@@ -66,7 +65,7 @@ impl InstallCommand {
     ///
     /// 在当前可执行文件所在目录查找 workflow 二进制文件，
     /// 并将其复制到系统二进制目录（通常是 /usr/local/bin）。
-    fn install_binaries(&self) -> Result<()> {
+    fn install_binaries(&self) -> Result<(), Box<dyn std::error::Error>> {
         let install_dir = get_path_service().get_binary_install_dir()?;
         info!("Installing binaries to {}...", install_dir.display());
 
@@ -75,9 +74,11 @@ impl InstallCommand {
         directory::ensure_exists(&install_path)?;
 
         // 获取当前可执行文件所在目录
-        let current_exe = env::current_exe().wrap_err("Failed to get current executable path")?;
-        let current_dir =
-            current_exe.parent().wrap_err("Failed to get parent directory of executable")?;
+        let current_exe = env::current_exe()
+            .map_err(|e| format!("Failed to get current executable path: {}", e))?;
+        let current_dir = current_exe
+            .parent()
+            .ok_or_else(|| "Failed to get parent directory of executable".to_string())?;
 
         toolkit::log_debug!("Current directory: {}", current_dir.display());
         toolkit::log_debug!("Install directory: {}", install_dir.display());
@@ -89,7 +90,7 @@ impl InstallCommand {
 
         if !source.exists() {
             warning!("Binary file {} does not exist, skipping", source.display());
-            return Err(eyre!("Binary file {} does not exist", source.display()));
+            return Err(format!("Binary file {} does not exist", source.display()).into());
         }
 
         info!("  Installing {} -> {}", bin_name, target.display());
@@ -98,44 +99,38 @@ impl InstallCommand {
         // Windows: 直接复制文件
         #[cfg(unix)]
         {
-            let status = Command::new("sudo")
-                .arg("cp")
-                .arg(&source)
-                .arg(&target)
-                .status()
-                .wrap_err_with(|| {
+            let status =
+                Command::new("sudo").arg("cp").arg(&source).arg(&target).status().map_err(|e| {
                     format!(
-                        "Failed to copy {} to {}",
+                        "Failed to copy {} to {}: {}",
                         source.display(),
-                        target.display()
+                        target.display(),
+                        e
                     )
                 })?;
 
             if !status.success() {
-                return Err(eyre!("Failed to install {}", bin_name));
+                return Err(format!("Failed to install {}", bin_name).into());
             }
 
             // 设置执行权限
-            Command::new("sudo")
-                .arg("chmod")
-                .arg("+x")
-                .arg(&target)
-                .status()
-                .wrap_err_with(|| {
-                    format!(
-                        "Failed to set executable permission for {}",
-                        target.display()
-                    )
-                })?;
+            Command::new("sudo").arg("chmod").arg("+x").arg(&target).status().map_err(|e| {
+                format!(
+                    "Failed to set executable permission for {}: {}",
+                    target.display(),
+                    e
+                )
+            })?;
         }
 
         #[cfg(windows)]
         {
-            fs::copy(&source, &target).wrap_err_with(|| {
+            fs::copy(&source, &target).map_err(|e| {
                 format!(
-                    "Failed to copy {} to {}",
+                    "Failed to copy {} to {}: {}",
                     source.display(),
-                    target.display()
+                    target.display(),
+                    e
                 )
             })?;
         }
@@ -148,11 +143,11 @@ impl InstallCommand {
     /// 安装 shell completion 脚本
     ///
     /// 自动检测当前 shell 类型并安装相应的 completion 脚本。
-    fn install_completions(&self) -> Result<()> {
+    fn install_completions(&self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Installing shell completion scripts...");
 
         // 检测 shell 类型
-        let shell = detect_shell().wrap_err("Failed to detect shell type")?;
+        let shell = detect_shell().map_err(|e| format!("Failed to detect shell type: {}", e))?;
         let shell_str = shell_to_string(&shell);
 
         toolkit::log_debug!("Detected shell: {}", shell);
@@ -164,7 +159,7 @@ impl InstallCommand {
         let service = get_completion_service();
         let result = service
             .save_and_configure(shell_str, &script_content, None)
-            .wrap_err("Failed to save and configure completion")?;
+            .map_err(|e| format!("Failed to save and configure completion: {}", e))?;
 
         // 显示结果
         success!(
@@ -194,7 +189,10 @@ impl InstallCommand {
     }
 
     /// 生成 completion 脚本内容
-    fn generate_completion_script(&self, shell: &Shell) -> Result<Vec<u8>> {
+    fn generate_completion_script(
+        &self,
+        shell: &Shell,
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let mut cmd = Cli::command();
         let mut buffer = Vec::new();
 

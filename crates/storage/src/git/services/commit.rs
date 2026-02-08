@@ -2,6 +2,7 @@
 //!
 //! 提供提交相关的业务逻辑实现。
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::git::services::context::GitContext;
@@ -105,6 +106,36 @@ impl CommitService for CommitServiceImpl {
             .diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
+        // 按文件统计增删行数（仅统计文本 diff，二进制等无统计）
+        let mut path_stats: HashMap<String, (u32, u32)> =
+            HashMap::with_capacity(diff.deltas().len());
+        let mut line_cb = |delta: git2::DiffDelta<'_>,
+                           _hunk: Option<git2::DiffHunk<'_>>,
+                           line: git2::DiffLine<'_>| {
+            let path = delta
+                .new_file()
+                .path()
+                .or_else(|| delta.old_file().path())
+                .and_then(|p: &std::path::Path| p.to_str().map(String::from));
+            if let Some(path) = path {
+                let entry = path_stats.entry(path).or_insert((0, 0));
+                match line.origin() {
+                    '+' => entry.0 = entry.0.saturating_add(1),
+                    '-' => entry.1 = entry.1.saturating_add(1),
+                    _ => {}
+                }
+            }
+            true
+        };
+        if let Err(e) = diff.foreach(
+            &mut |_delta, _progress| true,
+            None,
+            None,
+            Some(&mut line_cb),
+        ) {
+            toolkit::log_warn!("Failed to iterate diff lines: {}", e);
+        }
+
         let files: Vec<CommitFileChange> = diff
             .deltas()
             .map(|delta| {
@@ -116,10 +147,13 @@ impl CommitService for CommitServiceImpl {
                     .and_then(|p| p.to_str().map(String::from))
                     .unwrap_or_default();
                 let old_path = delta.old_file().path().and_then(|p| p.to_str().map(String::from));
+                let (additions, deletions) = path_stats.get(&path).copied().unwrap_or((0, 0));
                 CommitFileChange {
                     path,
                     change_type,
                     old_path,
+                    additions: Some(additions),
+                    deletions: Some(deletions),
                 }
             })
             .collect();
@@ -140,9 +174,10 @@ impl CommitService for CommitServiceImpl {
             .statuses(Some(&mut opts))
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        let mut staged = Vec::new();
-        let mut unstaged = Vec::new();
-        let mut untracked = Vec::new();
+        let status_count = statuses.len();
+        let mut staged = Vec::with_capacity(status_count);
+        let mut unstaged = Vec::with_capacity(status_count);
+        let mut untracked = Vec::with_capacity(status_count);
         let mut conflicted = Vec::new();
 
         for entry in statuses.iter() {
@@ -395,10 +430,13 @@ impl CommitService for CommitServiceImpl {
             )));
         }
 
-        // [3] post-commit hook（失败不影响提交结果）
+        // [3] post-commit hook（失败不影响提交结果，仅记录警告）
         let post_commit_context =
             HookContext::new(repo_path, git_dir).with_commit_sha(oid.to_string());
-        let _ = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context);
+        if let Err(e) = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context)
+        {
+            toolkit::log_warn!("post-commit hook failed (commit already succeeded): {}", e);
+        }
 
         Ok(oid.to_string())
     }

@@ -341,7 +341,10 @@ mod tests {
     #[rstest]
     #[case(Scope::Singleton, true)]
     #[case(Scope::Transient, false)]
-    fn test_binding_resolve_scope(#[case] scope: Scope, #[case] should_be_same: bool) {
+    fn test_binding_resolve_scope(
+        #[case] scope: Scope,
+        #[case] should_be_same: bool,
+    ) -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
@@ -354,8 +357,8 @@ mod tests {
         });
         let binding = Binding::new(identifier, type_name, factory, scope);
 
-        let service1: Arc<dyn TestService> = binding.resolve(&container).unwrap();
-        let service2: Arc<dyn TestService> = binding.resolve(&container).unwrap();
+        let service1: Arc<dyn TestService> = binding.resolve(&container)?;
+        let service2: Arc<dyn TestService> = binding.resolve(&container)?;
 
         assert_eq!(service1.value(), 42);
         assert_eq!(service2.value(), 42);
@@ -367,11 +370,13 @@ mod tests {
             assert_ne!(service1.id(), service2.id());
             assert!(!Arc::ptr_eq(&service1, &service2));
         }
+
+        Ok(())
     }
 
     // 2. BindingBuilder 链式调用和作用域
     #[test]
-    fn test_binding_builder_in_scope() {
+    fn test_binding_builder_in_scope() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -386,14 +391,16 @@ mod tests {
         assert!(container.is_bound::<dyn TestService>());
 
         // 验证 Transient 作用域
-        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
-        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert!(!Arc::ptr_eq(&service1, &service2));
+
+        Ok(())
     }
 
     // 3. BindingBuilder in_scope 方法（Singleton 作用域）
     #[test]
-    fn test_binding_builder_singleton() {
+    fn test_binding_builder_singleton() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -408,14 +415,15 @@ mod tests {
         assert!(container.is_bound::<dyn TestService>());
 
         // 验证 Singleton 作用域
-        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
-        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert!(Arc::ptr_eq(&service1, &service2));
+        Ok(())
     }
 
     // 4. 测试 IntoFactory trait - 使用 Arc<T> 直接绑定
     #[test]
-    fn test_into_factory_with_arc_instance() {
+    fn test_into_factory_with_arc_instance() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -428,35 +436,36 @@ mod tests {
         assert!(container.is_bound::<dyn TestService>());
 
         // 验证服务值
-        let service: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert_eq!(service.value(), 99);
         assert_eq!(service.id(), 42);
+        Ok(())
     }
 
     // 5. 测试 IntoFactory trait - Arc 实例的 Singleton 行为
     #[test]
-    fn test_into_factory_arc_singleton_behavior() {
+    fn test_into_factory_arc_singleton_behavior() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
         // 使用 Arc 实例绑定
         let instance: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 100, id: 1 });
-        BindingBuilder::new(identifier, instance, &container)
-            .in_scope(Scope::Singleton)
-            .unwrap();
+        BindingBuilder::new(identifier, instance, &container).in_scope(Scope::Singleton)?;
 
         // 多次获取应该返回同一个实例（Singleton）
-        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
-        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
 
         assert_eq!(service1.value(), 100);
         assert_eq!(service2.value(), 100);
         assert!(Arc::ptr_eq(&service1, &service2));
+
+        Ok(())
     }
 
     // 6. 测试 IntoFactory trait - 闭包方式仍然有效
     #[test]
-    fn test_into_factory_with_closure_still_works() {
+    fn test_into_factory_with_closure_still_works() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -470,13 +479,15 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
-        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
 
         // Transient 应该创建不同实例
         assert_eq!(service1.value(), 200);
         assert_eq!(service2.value(), 200);
         assert!(!Arc::ptr_eq(&service1, &service2));
+
+        Ok(())
     }
 
     // ============================================================================
@@ -486,7 +497,10 @@ mod tests {
     #[rstest]
     #[case(Scope::Singleton, true)]
     #[case(Scope::Transient, false)]
-    fn test_fallible_binding_resolve_scope(#[case] scope: Scope, #[case] should_be_same: bool) {
+    fn test_fallible_binding_resolve_scope(
+        #[case] scope: Scope,
+        #[case] should_be_same: bool,
+    ) -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
@@ -501,8 +515,8 @@ mod tests {
 
         let binding = FallibleBinding::new(identifier, type_name, factory, scope);
 
-        let service1: Arc<dyn TestService> = binding.resolve(&container).unwrap();
-        let service2: Arc<dyn TestService> = binding.resolve(&container).unwrap();
+        let service1: Arc<dyn TestService> = binding.resolve(&container)?;
+        let service2: Arc<dyn TestService> = binding.resolve(&container)?;
 
         assert_eq!(service1.value(), 42);
         assert_eq!(service2.value(), 42);
@@ -514,10 +528,12 @@ mod tests {
             assert_ne!(service1.id(), service2.id());
             assert!(!Arc::ptr_eq(&service1, &service2));
         }
+
+        Ok(())
     }
 
     #[test]
-    fn test_fallible_binding_resolve_error() {
+    fn test_fallible_binding_resolve_error() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
@@ -530,16 +546,18 @@ mod tests {
 
         let binding = FallibleBinding::new(identifier, type_name, factory, Scope::Singleton);
 
-        let result: crate::error::Result<Arc<dyn TestService>> = binding.resolve(&container);
+        let result: Result<Arc<dyn TestService>> = binding.resolve(&container);
         assert!(result.is_err());
         assert!(matches!(
             result,
             Err(crate::error::RegistryError::NotBound(_))
         ));
+
+        Ok(())
     }
 
     #[test]
-    fn test_fallible_binding_singleton_caches_on_success() {
+    fn test_fallible_binding_singleton_caches_on_success() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
         let type_name = std::any::type_name::<Arc<dyn TestService>>();
@@ -555,9 +573,9 @@ mod tests {
         let binding = FallibleBinding::new(identifier, type_name, factory, Scope::Singleton);
 
         // 多次调用 resolve
-        let _ = binding.resolve::<dyn TestService>(&container).unwrap();
-        let _ = binding.resolve::<dyn TestService>(&container).unwrap();
-        let _ = binding.resolve::<dyn TestService>(&container).unwrap();
+        let _ = binding.resolve::<dyn TestService>(&container)?;
+        let _ = binding.resolve::<dyn TestService>(&container)?;
+        let _ = binding.resolve::<dyn TestService>(&container)?;
 
         // Singleton 应该只调用一次 factory
         assert_eq!(
@@ -565,6 +583,8 @@ mod tests {
             1,
             "Singleton fallible factory should be called only once"
         );
+
+        Ok(())
     }
 
     // ============================================================================
@@ -572,7 +592,7 @@ mod tests {
     // ============================================================================
 
     #[test]
-    fn test_fallible_binding_builder_in_scope_singleton() {
+    fn test_fallible_binding_builder_in_scope_singleton() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -588,13 +608,15 @@ mod tests {
         assert!(container.is_bound::<dyn TestService>());
 
         // 验证 Singleton 作用域
-        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
-        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert!(Arc::ptr_eq(&service1, &service2));
+
+        Ok(())
     }
 
     #[test]
-    fn test_fallible_binding_builder_in_scope_transient() {
+    fn test_fallible_binding_builder_in_scope_transient() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -610,9 +632,11 @@ mod tests {
         assert!(container.is_bound::<dyn TestService>());
 
         // 验证 Transient 作用域
-        let service1: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
-        let service2: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service1: Arc<dyn TestService> = container.get::<dyn TestService>()?;
+        let service2: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert!(!Arc::ptr_eq(&service1, &service2));
+
+        Ok(())
     }
 
     // ============================================================================
@@ -620,7 +644,7 @@ mod tests {
     // ============================================================================
 
     #[test]
-    fn test_into_fallible_factory_with_closure() {
+    fn test_into_fallible_factory_with_closure() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -635,13 +659,15 @@ mod tests {
 
         assert!(result.is_ok());
 
-        let service: Arc<dyn TestService> = container.get::<dyn TestService>().unwrap();
+        let service: Arc<dyn TestService> = container.get::<dyn TestService>()?;
         assert_eq!(service.value(), 99);
         assert_eq!(service.id(), 42);
+
+        Ok(())
     }
 
     #[test]
-    fn test_into_fallible_factory_error_propagation() {
+    fn test_into_fallible_factory_error_propagation() -> Result<()> {
         let container = crate::container::Container::new();
         let identifier = TypeId::of::<Arc<dyn TestService>>();
 
@@ -659,8 +685,10 @@ mod tests {
         assert!(result.is_ok()); // 绑定本身成功
 
         // 获取时返回错误
-        let get_result: crate::error::Result<Arc<dyn TestService>> = container.get();
+        let get_result: Result<Arc<dyn TestService>> = container.get();
         assert!(get_result.is_err());
+
+        Ok(())
     }
 
     // ============================================================================
@@ -668,7 +696,7 @@ mod tests {
     // ============================================================================
 
     #[test]
-    fn test_try_unbox_arc_type_mismatch() {
+    fn test_try_unbox_arc_type_mismatch() -> Result<()> {
         // 创建一个 Arc<TestServiceImpl>
         let arc: Arc<TestServiceImpl> = Arc::new(TestServiceImpl { value: 42, id: 1 });
         let boxed = Binding::box_arc(arc);
@@ -684,10 +712,12 @@ mod tests {
             result,
             Err(crate::error::RegistryError::TypeCast(_))
         ));
+
+        Ok(())
     }
 
     #[test]
-    fn test_try_unbox_arc_correct_type() {
+    fn test_try_unbox_arc_correct_type() -> Result<()> {
         // 创建一个 Arc<dyn TestService>
         let arc: Arc<dyn TestService> = Arc::new(TestServiceImpl { value: 42, id: 1 });
         let identifier = TypeId::of::<Arc<dyn TestService>>();
@@ -696,7 +726,9 @@ mod tests {
         let result = Binding::try_unbox_arc::<dyn TestService>(&boxed, identifier);
 
         assert!(result.is_ok());
-        let service = result.unwrap();
+        let service = result?;
         assert_eq!(service.value(), 42);
+
+        Ok(())
     }
 }

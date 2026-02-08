@@ -3,8 +3,6 @@
 //! 添加新的别名。
 
 use clap::CommandFactory;
-use color_eyre::{eyre::WrapErr, Result};
-
 use prompt::{br, info, success, warning, InputBuilder, SelectBuilder};
 
 use crate::cli::Cli;
@@ -31,16 +29,22 @@ impl AliasAddCommand {
     }
 
     /// 运行添加命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 获取别名名称和命令
+        let interactive_result;
         let (name, command) = match (&self.name, &self.command) {
-            (Some(n), Some(c)) => (n.clone(), c.clone()),
-            _ => self.interactive_input()?,
+            (Some(n), Some(c)) => (n.as_str(), c.as_str()),
+            _ => {
+                interactive_result = self.interactive_input()?;
+                (interactive_result.0.as_str(), interactive_result.1.as_str())
+            }
         };
 
         // 添加别名
         let service = get_alias_service();
-        let result = service.add(&name, &command, self.force).wrap_err("Failed to add alias")?;
+        let result = service
+            .add(name, command, self.force)
+            .map_err(|e| format!("Failed to add alias: {}", e))?;
 
         // 显示结果
         br!();
@@ -57,7 +61,7 @@ impl AliasAddCommand {
     }
 
     /// 交互式输入
-    fn interactive_input(&self) -> Result<(String, String)> {
+    fn interactive_input(&self) -> Result<(String, String), Box<dyn std::error::Error>> {
         info!("Add new alias (interactive mode)");
         br!();
 
@@ -68,10 +72,10 @@ impl AliasAddCommand {
             let input = InputBuilder::new("Enter alias name")
                 .placeholder("e.g.: ci")
                 .prompt()
-                .wrap_err("Failed to get alias name")?;
+                .map_err(|e| format!("Failed to get alias name: {}", e))?;
 
             if input.is_empty() {
-                color_eyre::eyre::bail!("Alias name cannot be empty");
+                return Err("Alias name cannot be empty".into());
             }
             input
         };
@@ -94,7 +98,7 @@ impl AliasAddCommand {
 
             let selected = SelectBuilder::new("Select the command to associate", display_options)
                 .prompt()
-                .wrap_err("Failed to select command")?;
+                .map_err(|e| format!("Failed to select command: {}", e))?;
 
             // 从选中的显示文本中提取命令部分
             selected.split(" - ").next().unwrap_or(&selected).to_string()

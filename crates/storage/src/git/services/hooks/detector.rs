@@ -51,12 +51,12 @@ impl HookToolDetector {
     ///
     /// # 返回
     /// 检测结果列表，按优先级排序
-    pub fn detect_tools(&self, hook_name: &str) -> Vec<ToolDetectionResult> {
+    pub fn detect_tools(&self, hook_name: impl AsRef<str>) -> Vec<ToolDetectionResult> {
         let mut results = Vec::new();
 
         // 1. 检测 prek/pre-commit
         // hook_name 参数保留以便将来按 hook 类型过滤
-        let _ = hook_name;
+        let _ = hook_name.as_ref();
         if let Some(result) = self.detect_hook_tools() {
             results.push(result);
         }

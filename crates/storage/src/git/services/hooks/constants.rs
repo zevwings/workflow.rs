@@ -59,8 +59,8 @@ pub mod pre_commit_hooks {
     /// - `true`: 支持
     /// - `false`: 不支持
     #[inline]
-    pub fn is_supported(hook_name: &str) -> bool {
-        SUPPORTED.contains(&hook_name)
+    pub fn is_supported(hook_name: impl AsRef<str>) -> bool {
+        SUPPORTED.contains(&hook_name.as_ref())
     }
 }
 

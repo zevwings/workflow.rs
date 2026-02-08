@@ -72,6 +72,26 @@ pub trait GitRepository: Send + Sync {
     /// - `Err`: 操作失败
     fn get_working_tree_diff(&self, base_branch: &str) -> Result<Option<String>, GitError>;
 
+    /// 获取将源分支合并到目标分支时会引入的 diff（仅已提交部分）
+    ///
+    /// 等价于 `git diff $(git merge-base target_branch branch)..branch`，
+    /// 即合并时“本次会引入的改动”，与目标分支在合并后的尖端无关。
+    ///
+    /// # 参数
+    /// - `branch`: 源分支（如当前分支 `feature/path`）
+    /// - `target_branch`: 目标分支（如 `master`）
+    fn get_merge_diff(&self, branch: &str, target_branch: &str)
+        -> Result<Option<String>, GitError>;
+
+    /// 获取将源分支合并到目标分支时会变更的文件列表
+    ///
+    /// 即 `merge_base(target_branch, branch)..branch` 的变更文件，与 `get_merge_diff` 范围一致。
+    fn get_merge_changed_files(
+        &self,
+        branch: &str,
+        target_branch: &str,
+    ) -> Result<Vec<CommitFileChange>, GitError>;
+
     // ========== Branch 操作 ==========
 
     /// 创建新分支

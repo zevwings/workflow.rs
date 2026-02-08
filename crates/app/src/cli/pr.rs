@@ -58,9 +58,4 @@ pub enum PrSubcommand {
         /// PR ID（数字）
         pr_id: String,
     },
-    /// 总结 Pull Request
-    Summarize {
-        /// PR ID（数字，可选，不提供时使用当前分支关联的 PR）
-        pr_id: Option<String>,
-    },
 }

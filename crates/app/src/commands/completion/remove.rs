@@ -2,8 +2,6 @@
 //!
 //! 移除 Shell Completion 配置和脚本文件。
 
-use color_eyre::{eyre::WrapErr, Result};
-
 use crate::registry::get_completion_service;
 
 /// Completion 移除命令
@@ -18,7 +16,7 @@ impl CompletionRemoveCommand {
     }
 
     /// 运行移除命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         if self.remove_all {
             println!("Removing completion config for all shells...\n");
         } else {
@@ -27,8 +25,9 @@ impl CompletionRemoveCommand {
 
         // 调用 Service 移除配置
         let service = get_completion_service();
-        let result =
-            service.remove(self.remove_all).wrap_err("Failed to remove completion config")?;
+        let result = service
+            .remove(self.remove_all)
+            .map_err(|e| format!("Failed to remove completion config: {}", e))?;
 
         // 显示移除的配置
         for shell in &result.removed_configs {

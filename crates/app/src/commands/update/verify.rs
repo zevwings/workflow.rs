@@ -8,8 +8,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use color_eyre::{eyre::WrapErr, Result};
-
 use prompt::{success, warning, Spinner};
 use toolkit::{detect_shell, get_completion_files_for_shell, shell_to_string};
 
@@ -38,13 +36,13 @@ struct BinaryStatus {
 
 /// 检查文件是否可执行
 #[cfg(unix)]
-fn check_executable(path: &Path) -> Result<bool> {
+fn check_executable(path: &Path) -> Result<bool, Box<dyn std::error::Error>> {
     if !path.exists() {
         return Ok(false);
     }
 
     let metadata = fs::metadata(path)
-        .wrap_err_with(|| format!("Failed to get metadata for: {}", path.display()))?;
+        .map_err(|e| format!("Failed to get metadata for {}: {}", path.display(), e))?;
 
     let permissions = metadata.permissions();
     let mode = permissions.mode();
@@ -54,7 +52,7 @@ fn check_executable(path: &Path) -> Result<bool> {
 }
 
 #[cfg(windows)]
-fn check_executable(path: &Path) -> Result<bool> {
+fn check_executable(path: &Path) -> Result<bool, Box<dyn std::error::Error>> {
     if !path.exists() {
         return Ok(false);
     }
@@ -74,7 +72,10 @@ fn check_executable(path: &Path) -> Result<bool> {
 }
 
 /// 验证单个二进制文件
-fn verify_single_binary(path: &str, name: &str) -> Result<BinaryStatus> {
+fn verify_single_binary(
+    path: &str,
+    name: &str,
+) -> Result<BinaryStatus, Box<dyn std::error::Error>> {
     let path_obj = Path::new(path);
 
     let exists = path_obj.exists();
@@ -98,7 +99,7 @@ fn verify_single_binary(path: &str, name: &str) -> Result<BinaryStatus> {
 }
 
 /// 验证二进制文件（从 pathService 获取单文件路径）
-fn verify_binaries() -> Result<Vec<BinaryStatus>> {
+fn verify_binaries() -> Result<Vec<BinaryStatus>, Box<dyn std::error::Error>> {
     let path_service = get_path_service();
     let install_dir = path_service.get_binary_install_dir()?;
     let bin_name = path_service.get_binary_name()?;
@@ -114,7 +115,7 @@ fn verify_binaries() -> Result<Vec<BinaryStatus>> {
 }
 
 /// 验证补全脚本
-fn verify_completions() -> Result<bool> {
+fn verify_completions() -> Result<bool, Box<dyn std::error::Error>> {
     let shell = match detect_shell() {
         Ok(shell) => shell,
         Err(_) => {
@@ -167,7 +168,7 @@ fn verify_completions() -> Result<bool> {
 }
 
 /// 验证安装结果
-pub fn verify_installation() -> Result<VerificationResult> {
+pub fn verify_installation() -> Result<VerificationResult, Box<dyn std::error::Error>> {
     // 验证二进制文件
     let binaries = verify_binaries()?;
 
@@ -205,14 +206,15 @@ pub fn verify_installation() -> Result<VerificationResult> {
 /// 运行安装程序
 ///
 /// 在解压目录中运行 ./install 来安装二进制文件和补全脚本。
-pub fn run_installer(extract_dir: &Path) -> Result<()> {
+pub fn run_installer(extract_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let install_binary = extract_dir.join(install_binary_name());
 
     if !install_binary.exists() {
-        color_eyre::eyre::bail!(
+        return Err(format!(
             "Install binary does not exist: {}",
             install_binary.display()
-        );
+        )
+        .into());
     }
 
     // 设置执行权限（仅 Unix）
@@ -222,7 +224,7 @@ pub fn run_installer(extract_dir: &Path) -> Result<()> {
             .arg("+x")
             .arg(&install_binary)
             .status()
-            .wrap_err("Failed to set executable permission for install")?;
+            .map_err(|e| format!("Failed to set executable permission for install: {}", e))?;
     }
 
     // 运行安装程序，捕获输出以避免与 spinner 冲突
@@ -237,7 +239,7 @@ pub fn run_installer(extract_dir: &Path) -> Result<()> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
-        .wrap_err("Failed to run install")?;
+        .map_err(|e| format!("Failed to run install: {}", e))?;
 
     spinner_instance.stop();
 
@@ -252,7 +254,7 @@ pub fn run_installer(extract_dir: &Path) -> Result<()> {
     }
 
     if !output.status.success() {
-        color_eyre::eyre::bail!("Installation failed");
+        return Err("Installation failed".into());
     }
 
     success!("Binaries and completion scripts installation complete");

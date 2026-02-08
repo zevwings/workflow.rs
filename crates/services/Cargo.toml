@@ -6,10 +6,11 @@ rust-version.workspace = true
 description = "服务层（Application Service Layer），组合 storage，实现业务用例"
 
 [dependencies]
-domain = { path = "../domain" }
-storage = { path = "../storage" }
-toolkit = { path = "../toolkit" }
-registry = { path = "../registry" }
+domain.workspace = true
+toolkit.workspace = true
+llm.workspace = true
+registry.workspace = true
+serde_json.workspace = true
 toml.workspace = true
 dirs.workspace = true
 

@@ -36,8 +36,7 @@ pub fn generate_branch_name_from_template(
 ) -> Result<String, Box<dyn std::error::Error>> {
     // 获取配置
     let config_repo = registry::get_repo_config_repository();
-    let repo_config =
-        config_repo.load().map_err(|e| format!("Failed to load repo config: {}", e))?;
+    let repo_config = config_repo.load().map_err(|e| format!("加载仓库配置失败: {}", e))?;
 
     // 获取对应类型的模板
     let template = match branch_type {
@@ -65,7 +64,7 @@ pub fn generate_branch_name_from_template(
     let engine = TemplateEngine::new();
     let branch_name = engine
         .render_string(template, &vars)
-        .map_err(|e| format!("Failed to render template: {}", e))?;
+        .map_err(|e| format!("渲染模板失败: {}", e))?;
 
     Ok(branch_name)
 }
@@ -88,8 +87,9 @@ pub fn generate_branch_name_from_template(
 /// assert_eq!(to_slug("Chat Unified Entry"), "chat-unified-entry");
 /// assert_eq!(to_slug("Fix: Auth Issue"), "fix-auth-issue");
 /// ```
-pub fn to_slug(summary: &str) -> String {
+pub fn to_slug(summary: impl AsRef<str>) -> String {
     let slug = summary
+        .as_ref()
         .to_lowercase()
         .chars()
         .map(|c| {
@@ -119,12 +119,12 @@ pub fn select_branch_type() -> Result<BranchType, Box<dyn std::error::Error>> {
     let branch_type_options: Vec<String> =
         BranchType::all().iter().map(|t| t.as_str().to_string()).collect();
 
-    let selected_type = select!("Select branch type", branch_type_options)
+    let selected_type = select!("选择分支类型", branch_type_options)
         .prompt()
-        .map_err(|e| format!("Failed to select branch type: {}", e))?;
+        .map_err(|e| format!("选择分支类型失败: {}", e))?;
 
     let branch_type = BranchType::parse(&selected_type)
-        .ok_or_else(|| format!("Invalid branch type: {}", selected_type))?;
+        .ok_or_else(|| format!("无效的分支类型: {}", selected_type))?;
 
     Ok(branch_type)
 }
@@ -140,19 +140,19 @@ pub fn generate_branch_name_by_summary(
 
     // 获取所有已存在的分支名（失败则为空）
     let branch_repo = registry::get_git_repository();
-    let exists_branches: Option<Vec<String>> = branch_repo
+    let exists_branches: Vec<String> = branch_repo
         .list_branches(false, true)
         .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
-        .ok();
+        .unwrap_or_default();
 
     // 使用 LLM 生成基础分支名（不包含 branch_type 前缀）
-    let llm_repo = registry::get_llm_repository();
-    let base_branch_name = match spinner!("Generating branch name...")
-        .with(|| llm_repo.generate_branch_name(Some(summary), exists_branches))
+    let branch_service = registry::get_branch_service();
+    let base_branch_name = match spinner!("正在生成分支名...")
+        .with(|| branch_service.generate_branch_name(Some(summary), &exists_branches))
     {
         Ok(name) => strip_branch_type_prefix(&name),
         Err(e) => {
-            info!("LLM generation failed: {}, using fallback method", e);
+            info!("LLM 生成失败: {}, 使用备用方法", e);
             to_slug(summary)
         }
     };
@@ -195,14 +195,17 @@ fn strip_branch_type_prefix(name: &str) -> String {
 /// # Returns
 ///
 /// 生成的分支名（如 "feature/proj-123-chat-unified-entry"）
-pub fn generate_branch_name_from_jira(jira_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn generate_branch_name_from_jira(
+    jira_id: impl AsRef<str>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let jira_id = jira_id.as_ref();
     // 获取 JiraRepository
     let jira_repo = registry::get_jira_repository();
 
     // 获取 JIRA ticket 信息
-    let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
+    let issue = spinner!("正在获取 JIRA 工单 '{}'...", jira_id)
         .with(|| jira_repo.get_issue_info(jira_id))
-        .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
+        .map_err(|e| format!("获取 JIRA 工单失败: {}", e))?;
 
     let summary = issue.fields.summary.clone();
 

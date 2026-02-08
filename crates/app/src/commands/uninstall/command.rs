@@ -8,7 +8,6 @@ use std::{fs, path::PathBuf};
 #[cfg(unix)]
 use std::process::Command;
 
-use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, info, print, success, warning, ConfirmBuilder};
 use toolkit::{detect_shell, reload_shell};
 
@@ -27,7 +26,7 @@ impl UninstallCommand {
     }
 
     /// 运行卸载流程
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         warning!("Uninstall Workflow CLI");
         br!();
         print!("This will remove all Workflow CLI configuration and binaries.");
@@ -51,7 +50,7 @@ impl UninstallCommand {
                 ConfirmBuilder::new("Remove TOML config file (workflow.toml)?")
                     .default(true)
                     .prompt()
-                    .wrap_err("Failed to get confirmation")?
+                    .map_err(|e| format!("Failed to get confirmation: {}", e))?
             };
 
             // 删除 shell completion
@@ -97,12 +96,14 @@ impl UninstallCommand {
     }
 
     /// 返回待删除的 workflow 主二进制路径（仅此一个）；若路径不存在则确认后再返回。
-    fn get_workflow_binary_path(&self) -> Result<Option<PathBuf>> {
+    fn get_workflow_binary_path(&self) -> Result<Option<PathBuf>, Box<dyn std::error::Error>> {
         let path_service = get_path_service();
         let install_dir = path_service
             .get_binary_install_dir()
-            .wrap_err("Failed to get binary install dir")?;
-        let bin_name = path_service.get_binary_name().wrap_err("Failed to get binary name")?;
+            .map_err(|e| format!("Failed to get binary install dir: {}", e))?;
+        let bin_name = path_service
+            .get_binary_name()
+            .map_err(|e| format!("Failed to get binary name: {}", e))?;
 
         let workflow_binary = install_dir.join(&bin_name);
 
@@ -115,19 +116,23 @@ impl UninstallCommand {
     }
 
     /// 路径不存在时询问是否仍加入操作列表
-    fn should_include_missing_path(&self, path: &str, kind: &str) -> Result<bool> {
+    fn should_include_missing_path(
+        &self,
+        path: &str,
+        kind: &str,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
         let confirmed = ConfirmBuilder::new(format!(
             "Path does not exist: {} ({}). Include it anyway?",
             path, kind
         ))
         .default(false)
         .prompt()
-        .wrap_err("Failed to get confirmation")?;
+        .map_err(|e| format!("Failed to get confirmation: {}", e))?;
         Ok(confirmed)
     }
 
     /// 删除二进制文件（列表来自 pathService 收集的路径）
-    fn remove_binary(&self, binary_path: PathBuf) -> Result<()> {
+    fn remove_binary(&self, binary_path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         match self.try_remove_binary(binary_path.clone()) {
             Ok(()) => {
                 success!("Workflow binary removed successfully");
@@ -178,12 +183,12 @@ impl UninstallCommand {
     }
 
     /// 删除 shell completion
-    fn remove_completions(&self) -> Result<()> {
+    fn remove_completions(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 使用 completion service 删除
         let service = get_completion_service();
         let result = service
             .remove(true) // remove_all = true
-            .wrap_err("Failed to remove completions")?;
+            .map_err(|e| format!("Failed to remove completions: {}", e))?;
 
         // 显示已删除的配置
         for shell in &result.removed_configs {
@@ -238,7 +243,7 @@ impl UninstallCommand {
     }
 
     /// 删除配置文件
-    fn remove_config_files(&self) -> Result<Vec<String>> {
+    fn remove_config_files(&self) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let mut removed: Vec<String> = Vec::new();
         let path_service = get_path_service();
 
@@ -247,7 +252,7 @@ impl UninstallCommand {
             // let wf_config_path = config_dir.join(WORKFLOW_CONFIG_FILE);
             if workflow_config_filepath.exists() {
                 fs::remove_file(workflow_config_filepath)
-                    .wrap_err("Failed to remove workflow.toml")?;
+                    .map_err(|e| format!("Failed to remove workflow.toml: {}", e))?;
                 removed.push("workflow.toml".to_string());
             }
         }
@@ -255,7 +260,8 @@ impl UninstallCommand {
         // 删除 jira.toml
         if let Ok(jira_config_path) = path_service.get_jira_config_filepath() {
             if jira_config_path.exists() {
-                fs::remove_file(&jira_config_path).wrap_err("Failed to remove jira.toml")?;
+                fs::remove_file(&jira_config_path)
+                    .map_err(|e| format!("Failed to remove jira.toml: {}", e))?;
                 removed.push("jira.toml".to_string());
             }
         }

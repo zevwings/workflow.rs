@@ -11,7 +11,7 @@ use reqwest::header::HeaderMap;
 use serde_json::Value;
 
 use domain::{GitHubContext, GitHubError};
-use toolkit::{HttpClient, Response};
+use http::{HttpClient, HttpError, Response};
 
 use crate::github::client::response::{GitHubErrorResponse, GitHubResponse};
 
@@ -103,19 +103,24 @@ impl GitHubClientImpl {
 
         let response = match method {
             "GET" => client.get(&url).headers(headers).send(),
-            "POST" => client
-                .post(&url)
-                .headers(headers)
-                .body(body.expect("POST requires body"))
-                .send(),
-            "PUT" => {
-                client.put(&url).headers(headers).body(body.expect("PUT requires body")).send()
+            "POST" => {
+                let body = body.ok_or_else(|| {
+                    GitHubError::ApiError("POST request requires a body".to_string())
+                })?;
+                client.post(&url).headers(headers).body(body).send()
             }
-            "PATCH" => client
-                .patch(&url)
-                .headers(headers)
-                .body(body.expect("PATCH requires body"))
-                .send(),
+            "PUT" => {
+                let body = body.ok_or_else(|| {
+                    GitHubError::ApiError("PUT request requires a body".to_string())
+                })?;
+                client.put(&url).headers(headers).body(body).send()
+            }
+            "PATCH" => {
+                let body = body.ok_or_else(|| {
+                    GitHubError::ApiError("PATCH request requires a body".to_string())
+                })?;
+                client.patch(&url).headers(headers).body(body).send()
+            }
             "DELETE" => client.delete(&url).headers(headers).send(),
             _ => unreachable!("unsupported HTTP method: {}", method),
         };
@@ -221,7 +226,7 @@ impl GitHubClientImpl {
         method: &str,
         url: &str,
         body: Option<&Value>,
-        response: Result<Response, toolkit::HttpError>,
+        response: Result<Response, HttpError>,
     ) -> Result<GitHubResponse, GitHubError> {
         // 记录请求日志
         if let Some(body) = body {

@@ -19,6 +19,7 @@ impl CommitDiffCommand {
         let diff = git_repo.get_commit_diff(&self.ref_or_sha)?;
         if let Some(patch) = diff {
             info!("{}", patch);
+            info!("diff length: {}", patch.len());
         }
         Ok(())
     }

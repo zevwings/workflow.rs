@@ -1,10 +1,10 @@
-//! LLM Workflow Stage (v2)
+//! LLM 工作流阶段 (v2)
 
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
 use crate::workflows::core::stage::WorkflowStage;
 use crate::workflows::display::VerificationResultFormatter;
-use domain::llm::language::SupportedLanguage;
 use domain::{GlobalConfig, LLMSettings, VerificationService};
+use llm::language::SupportedLanguage;
 use prompt::{
     br, confirm, info, separator, FormBuilder, FormResult, InputFormField, PasswordFormField,
     PromptError, SelectBuilder, SelectFormField,
@@ -12,12 +12,12 @@ use prompt::{
 use std::error::Error;
 use toolkit::Sensitive;
 
-/// The LLM workflow stage.
+/// LLM 工作流阶段
 pub struct LlmStage;
 
 impl LlmStage {
     fn run_form(settings: &mut GlobalConfig) -> Result<(), Box<dyn Error>> {
-        info!("Configure LLM provider and API key. Leave fields empty to keep defaults or skip.");
+        info!("配置 LLM 提供商和 API 密钥。留空字段以保留默认值或跳过。");
         br!();
 
         let llm = &mut settings.llm;
@@ -32,17 +32,14 @@ impl LlmStage {
             LlmProvider::options().iter().map(|option| option.to_string()).collect();
         let default_provider = LlmProvider::from_str(&llm.provider).unwrap_or_default();
         let provider_prompt = if has_llm {
-            format!(
-                "Please select your LLM provider [current: {}]",
-                llm.provider
-            )
+            format!("请选择您的 LLM 提供商 [当前: {}]", llm.provider)
         } else {
-            "Please select your LLM provider (required)".to_string()
+            "请选择您的 LLM 提供商（必填）".to_string()
         };
 
         let provider_value = SelectBuilder::new(provider_prompt, provider_options.clone())
             .default(default_provider.index())
-            .result_title("Your LLM provider")
+            .result_title("您的 LLM 提供商")
             .prompt()
             .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
 
@@ -110,34 +107,34 @@ impl WorkflowStage for LlmStage {
         let mode = context.mode();
         let settings = context.settings_mut();
 
-        separator!('─', 80, "LLM Configuration");
+        separator!('─', 80, "LLM 配置");
         br!();
 
         let llm = &settings.llm;
         let has_llm = !llm.is_empty();
 
         if has_llm {
-            info!("LLM configuration is detected!");
-            info!("  - Provider: {}", llm.provider);
+            info!("检测到 LLM 配置！");
+            info!("  - 提供商: {}", llm.provider);
             if let Some(model) = llm.current_provider().model.as_ref() {
-                info!("  - Model: {}", model);
+                info!("  - 模型: {}", model);
             }
             if let Some(key) = llm.current_provider().key.as_ref() {
-                info!("  - Key: {}", key.mask());
+                info!("  - 密钥: {}", key.mask());
             }
-            info!("  - Language: {}", llm.language);
+            info!("  - 语言: {}", llm.language);
             br!();
         }
 
-        // Handle mode-specific interaction
+        // 处理模式特定的交互
         if mode == WorkflowMode::Setup {
             if has_llm {
                 let keep = confirm!(
-                    "Existing LLM configuration detected (Provider: {}). Do you want to keep the current values?",
+                    "检测到现有 LLM 配置（提供商: {}）。是否保留当前值？",
                     llm.provider
                 )
                 .default(true)
-                .result_title("Keep LLM configuration")
+                .result_title("保留 LLM 配置")
                 .prompt()
                 .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
 
@@ -145,9 +142,9 @@ impl WorkflowStage for LlmStage {
                     return Ok(());
                 }
             } else {
-                let configure = confirm!("Do you want to configure LLM?")
+                let configure = confirm!("是否配置 LLM？")
                     .default(false)
-                    .result_title("Configure LLM")
+                    .result_title("配置 LLM")
                     .prompt()
                     .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
 
@@ -159,22 +156,22 @@ impl WorkflowStage for LlmStage {
 
         Self::run_form(settings)?;
 
-        // Display final configuration summary
+        // 显示最终配置摘要
         br!();
-        separator!('─', 80, "LLM Configuration Summary");
+        separator!('─', 80, "LLM 配置摘要");
         br!();
         let llm = &settings.llm;
-        info!("Provider: {}", llm.provider);
+        info!("提供商: {}", llm.provider);
         if let Some(model) = llm.current_provider().model.as_ref() {
-            info!("Model: {}", model);
+            info!("模型: {}", model);
         }
         if let Some(key) = llm.current_provider().key.as_ref() {
-            info!("API Key: {}", key.mask());
+            info!("API 密钥: {}", key.mask());
         }
         if let Some(url) = llm.current_provider().url.as_ref() {
-            info!("Proxy URL: {}", url);
+            info!("代理 URL: {}", url);
         }
-        info!("Language: {}", llm.language);
+        info!("语言: {}", llm.language);
         br!();
 
         Ok(())
@@ -195,7 +192,7 @@ impl WorkflowStage for LlmStage {
     }
 }
 
-/// Get the LLM stage instance.
+/// 获取 LLM 阶段实例
 pub fn llm_stage() -> &'static dyn WorkflowStage {
     &LlmStage
 }
@@ -254,17 +251,17 @@ fn configure_openai(
     language_codes: &[&'static str],
 ) -> Result<ProviderFormResult, String> {
     let builder = FormBuilder::new()
-        .with_title("OpenAI Configuration")
+        .with_title("OpenAI 配置")
         .add_password(
-            PasswordFormField::new("api_key", "Please enter your OpenAI API key")
+            PasswordFormField::new("api_key", "请输入您的 OpenAI API 密钥")
                 .default(default_key)
-                .result_title("Your OpenAI API key")
+                .result_title("您的 OpenAI API 密钥")
                 .required(),
         )
         .add_input(
-            InputFormField::new("model", "Please enter your OpenAI model")
+            InputFormField::new("model", "请输入您的 OpenAI 模型")
                 .default(default_model)
-                .result_title("Your OpenAI model")
+                .result_title("您的 OpenAI 模型")
                 .required(),
         )
         .add_select(build_language_field(
@@ -291,16 +288,16 @@ fn configure_deepseek(
     language_codes: &[&'static str],
 ) -> Result<ProviderFormResult, String> {
     let builder = FormBuilder::new()
-        .with_title("DeepSeek Configuration")
+        .with_title("DeepSeek 配置")
         .add_password(
-            PasswordFormField::new("api_key", "Please enter your DeepSeek API key")
+            PasswordFormField::new("api_key", "请输入您的 DeepSeek API 密钥")
                 .default(default_key)
-                .result_title("Your DeepSeek API key"),
+                .result_title("您的 DeepSeek API 密钥"),
         )
         .add_input(
-            InputFormField::new("model", "Please enter your DeepSeek model")
+            InputFormField::new("model", "请输入您的 DeepSeek 模型")
                 .default(default_model)
-                .result_title("Your DeepSeek model")
+                .result_title("您的 DeepSeek 模型")
                 .required(),
         )
         .add_select(build_language_field(
@@ -328,23 +325,23 @@ fn configure_proxy(
     language_codes: &[&'static str],
 ) -> Result<ProviderFormResult, String> {
     let builder = FormBuilder::new()
-        .with_title("Custom Provider (Proxy) Configuration")
+        .with_title("自定义提供商（代理）配置")
         .add_input(
-            InputFormField::new("url", "Please enter your LLM proxy URL")
+            InputFormField::new("url", "请输入您的 LLM 代理 URL")
                 .default(default_url)
-                .result_title("Your LLM proxy URL")
+                .result_title("您的 LLM 代理 URL")
                 .required(),
         )
         .add_password(
-            PasswordFormField::new("api_key", "Please enter your LLM proxy key")
+            PasswordFormField::new("api_key", "请输入您的 LLM 代理密钥")
                 .default(default_key)
-                .result_title("Your LLM proxy key")
+                .result_title("您的 LLM 代理密钥")
                 .required(),
         )
         .add_input(
-            InputFormField::new("model", "Please enter your LLM model")
+            InputFormField::new("model", "请输入您的 LLM 模型")
                 .default(default_model)
-                .result_title("Your LLM model")
+                .result_title("您的 LLM 模型")
                 .required(),
         )
         .add_select(build_language_field(
@@ -365,7 +362,7 @@ fn configure_proxy(
 fn build_language_field(prompt: &str, options: &[String], default_index: usize) -> SelectFormField {
     SelectFormField::new("language", prompt.to_string(), options.to_vec())
         .default(default_index)
-        .result_title("Your output language")
+        .result_title("您的输出语言")
 }
 
 fn build_language_prompt(
@@ -376,12 +373,9 @@ fn build_language_prompt(
         language_codes.iter().position(|code| code == &current_language).unwrap_or(0);
 
     let prompt = if current_language.is_empty() {
-        "Please select your output language".to_string()
+        "请选择您的输出语言".to_string()
     } else {
-        format!(
-            "Please select your output language [current: {}]",
-            current_language
-        )
+        format!("请选择您的输出语言 [当前: {}]", current_language)
     };
 
     (prompt, default_language_index)

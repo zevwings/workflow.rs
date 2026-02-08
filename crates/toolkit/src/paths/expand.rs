@@ -49,7 +49,8 @@ pub enum PathExpandError {
 /// expand("/absolute/path") -> "/absolute/path"
 /// expand("C:\\absolute\\path") -> "C:\\absolute\\path"
 /// ```
-pub fn expand(path_str: &str) -> Result<PathBuf, PathExpandError> {
+pub fn expand(path_str: impl AsRef<str>) -> Result<PathBuf, PathExpandError> {
+    let path_str = path_str.as_ref();
     // 先处理 Windows 风格的环境变量展开 %VAR%
     // 因为 shellexpand 不支持这种格式
     let expanded = if path_str.contains('%') {

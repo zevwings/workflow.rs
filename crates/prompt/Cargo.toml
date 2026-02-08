@@ -14,11 +14,11 @@ testing = []
 thiserror.workspace = true
 
 # 终端控制
-crossterm = "0.28"
-unicode-width = "0.1"
+crossterm.workspace = true
+unicode-width.workspace = true
 
 # 模糊匹配（用于 select/multiselect 的搜索过滤）
-fuzzy-matcher = "0.3"
+fuzzy-matcher.workspace = true
 
 # 正则表达式（用于验证器）
 regex.workspace = true

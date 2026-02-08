@@ -1,4 +1,4 @@
-//! Jira Workflow Stage (v2)
+//! Jira 工作流阶段 (v2)
 
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
 use crate::workflows::core::stage::WorkflowStage;
@@ -10,13 +10,13 @@ use prompt::{
 use std::error::Error;
 use toolkit::Sensitive;
 
-/// The Jira workflow stage.
+/// Jira 工作流阶段
 pub struct JiraStage;
 
 impl JiraStage {
-    /// Run the Jira configuration form.
+    /// 运行 Jira 配置表单
     fn run_form(settings: &mut GlobalConfig) -> Result<(), String> {
-        info!("Configure Jira service address, email, and API token. Leave fields empty to keep defaults or skip.");
+        info!("配置 Jira 服务地址、邮箱和 API 令牌。留空字段以保留默认值或跳过。");
         br!();
 
         let jira = &mut settings.jira;
@@ -25,23 +25,23 @@ impl JiraStage {
         let current_token = jira.api_token.clone();
 
         let builder = FormBuilder::new()
-            .with_title("Jira Configuration")
+            .with_title("Jira 配置")
             .add_input(
-                InputFormField::new("service_address", "Please enter your Jira service address")
+                InputFormField::new("service_address", "请输入您的 Jira 服务地址")
                     .default(current_service)
-                    .result_title("Your Jira service address")
+                    .result_title("您的 Jira 服务地址")
                     .required(),
             )
             .add_input(
-                InputFormField::new("email", "Please enter your Jira email")
+                InputFormField::new("email", "请输入您的 Jira 邮箱")
                     .default(current_email)
-                    .result_title("Your Jira email")
+                    .result_title("您的 Jira 邮箱")
                     .required(),
             )
             .add_password(
-                PasswordFormField::new("api_token", "Please enter your Jira API token")
+                PasswordFormField::new("api_token", "请输入您的 Jira API 令牌")
                     .default(current_token)
-                    .result_title("Your Jira API token")
+                    .result_title("您的 Jira API 令牌")
                     .required(),
             );
 
@@ -73,7 +73,7 @@ impl WorkflowStage for JiraStage {
         let mode = context.mode();
         let settings = context.settings_mut();
 
-        separator!('─', 80, "Jira Configuration");
+        separator!('─', 80, "Jira 配置");
         br!();
 
         let jira = &settings.jira;
@@ -82,24 +82,22 @@ impl WorkflowStage for JiraStage {
             || !jira.service_address.is_empty();
 
         if has_jira {
-            info!("Jira configuration is detected!");
-            info!("  - Service Address: {}", jira.service_address);
-            info!("  - Jira Email: {}", jira.email);
+            info!("检测到 Jira 配置！");
+            info!("  - 服务地址: {}", jira.service_address);
+            info!("  - Jira 邮箱: {}", jira.email);
             if !jira.api_token.is_empty() {
-                info!("  - API Token: {}", jira.api_token.mask());
+                info!("  - API 令牌: {}", jira.api_token.mask());
             }
             br!();
         }
 
-        // Handle mode-specific interaction
+        // 处理模式特定的交互
         if mode == WorkflowMode::Setup && has_jira {
-            let keep = confirm!(
-                "Existing Jira configuration detected. Do you want to keep the current values?"
-            )
-            .default(true)
-            .result_title("Keep Jira configuration")
-            .prompt()
-            .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
+            let keep = confirm!("检测到现有 Jira 配置。是否保留当前值？")
+                .default(true)
+                .result_title("保留 Jira 配置")
+                .prompt()
+                .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
 
             if keep {
                 return Ok(());
@@ -126,7 +124,7 @@ impl WorkflowStage for JiraStage {
     }
 }
 
-/// Get the Jira stage instance.
+/// 获取 Jira 阶段实例
 pub fn jira_stage() -> &'static dyn WorkflowStage {
     &JiraStage
 }

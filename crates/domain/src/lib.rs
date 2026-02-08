@@ -12,9 +12,9 @@ pub mod errors;
 pub mod git;
 pub mod github;
 pub mod jira;
-pub mod llm;
 pub mod path;
 pub mod pr;
+pub mod summary;
 pub mod template;
 
 // Re-export public types
@@ -59,8 +59,8 @@ pub use config::{
 
 // Re-export business domain types
 pub use branch::{
-    sanitize_branch_name, BranchService, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult,
-    BranchType, SourceBranchInfo, SyncStrategy,
+    sanitize_branch_name, BranchService, BranchServiceError, BranchSyncCallbacks,
+    BranchSyncOptions, BranchSyncResult, BranchType, SourceBranchInfo, SyncStrategy,
 };
 pub use completion::{
     get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
@@ -103,7 +103,8 @@ pub use jira::{
     JiraTransition, JiraUser, JiraWorkHistoryRepository, ProjectStatusConfig, StatusConfigResult,
     WorkHistoryEntry,
 };
-pub use llm::{
-    LLMConfigContext, LLMError, LLMRepository, PullRequestContent, PullRequestReword,
-    PullRequestSummary, SupportedLanguage,
+
+pub use summary::{
+    CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
+    CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis,
 };

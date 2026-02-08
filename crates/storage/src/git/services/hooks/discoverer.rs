@@ -81,8 +81,8 @@ impl HookDiscoverer {
     /// - `Ok(Some(PathBuf))`: 找到的 hook 脚本路径
     /// - `Ok(None)`: Hook 不存在或不可执行
     /// - `Err(GitError)`: 检查过程中出错
-    pub fn find_hook(&self, hook_name: &str) -> Result<Option<PathBuf>, GitError> {
-        let hook_path = self.hooks_dir.join(hook_name);
+    pub fn find_hook(&self, hook_name: impl AsRef<str>) -> Result<Option<PathBuf>, GitError> {
+        let hook_path = self.hooks_dir.join(hook_name.as_ref());
 
         // 检查文件是否存在
         if !hook_path.exists() {

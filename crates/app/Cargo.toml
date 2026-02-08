@@ -20,15 +20,16 @@ name = "install"
 path = "src/bin/install.rs"
 
 [dependencies]
-domain = { path = "../domain" }
-services = { path = "../services" }
-storage = { path = "../storage" }
-toolkit = { path = "../toolkit" }
-prompt = { path = "../prompt" }
-registry = { path = "../registry" }
+domain.workspace = true
+services.workspace = true
+storage.workspace = true
+http.workspace = true
+llm.workspace = true
+toolkit.workspace = true
+prompt.workspace = true
+registry.workspace = true
 once_cell.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
-color-eyre = "0.6"
 serde_json.workspace = true
 git2.workspace = true

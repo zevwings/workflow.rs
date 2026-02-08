@@ -1,4 +1,4 @@
-//! GitHub Workflow Stage (v2)
+//! GitHub 工作流阶段 (v2)
 
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
 use crate::workflows::core::platform::{
@@ -14,7 +14,7 @@ use prompt::{
 };
 use std::error::Error;
 
-/// The GitHub workflow stage.
+/// GitHub 工作流阶段
 pub struct GitHubStage;
 
 impl WorkflowStage for GitHubStage {
@@ -47,13 +47,13 @@ impl WorkflowStage for GitHubStage {
     }
 }
 
-/// Get the GitHub stage instance.
+/// 获取 GitHub 阶段实例
 pub fn github_stage() -> &'static dyn WorkflowStage {
     &GitHubStage
 }
 
 // =================================================================================
-// GitHub Configurator & Accessor
+// GitHub 配置器和访问器
 // =================================================================================
 
 struct GitHubConfigurator;
@@ -68,22 +68,19 @@ impl GitHubConfigurator {
     fn build_account_form_fields(&self, builder: FormBuilder) -> FormBuilder {
         builder
             .add_input(
-                InputFormField::new("name", "Please enter your GitHub account name")
-                    .result_title("Your GitHub account name")
+                InputFormField::new("name", "请输入您的 GitHub 账户名称")
+                    .result_title("您的 GitHub 账户名称")
                     .required(),
             )
             .add_input(
-                InputFormField::new("email", "Please enter your GitHub email")
-                    .result_title("Your GitHub email")
+                InputFormField::new("email", "请输入您的 GitHub 邮箱")
+                    .result_title("您的 GitHub 邮箱")
                     .required(),
             )
             .add_password(
-                PasswordFormField::new(
-                    "api_token",
-                    "Please enter your GitHub Personal Access Token",
-                )
-                .result_title("Your GitHub Personal Access Token")
-                .required(),
+                PasswordFormField::new("api_token", "请输入您的 GitHub Personal Access Token")
+                    .result_title("您的 GitHub Personal Access Token")
+                    .required(),
             )
     }
 
@@ -96,25 +93,22 @@ impl GitHubConfigurator {
     ) -> FormBuilder {
         builder
             .add_input(
-                InputFormField::new("name", "Please enter your GitHub account name")
+                InputFormField::new("name", "请输入您的 GitHub 账户名称")
                     .default(current_name)
-                    .result_title("Your GitHub account name")
+                    .result_title("您的 GitHub 账户名称")
                     .required(),
             )
             .add_input(
-                InputFormField::new("email", "Please enter your GitHub email")
+                InputFormField::new("email", "请输入您的 GitHub 邮箱")
                     .default(current_email)
-                    .result_title("Your GitHub email")
+                    .result_title("您的 GitHub 邮箱")
                     .required(),
             )
             .add_password(
-                PasswordFormField::new(
-                    "api_token",
-                    "Please enter your GitHub Personal Access Token",
-                )
-                .default(current_token)
-                .result_title("Your GitHub Personal Access Token")
-                .required(),
+                PasswordFormField::new("api_token", "请输入您的 GitHub Personal Access Token")
+                    .default(current_token)
+                    .result_title("您的 GitHub Personal Access Token")
+                    .required(),
             )
     }
 
@@ -122,7 +116,7 @@ impl GitHubConfigurator {
         let (name, email, api_token) = self.extract_basic_fields(form_result);
 
         if api_token.trim().is_empty() {
-            return Err("GitHub API token is required to add a new account.".to_string());
+            return Err("添加新账户需要 GitHub API 令牌。".to_string());
         }
 
         let account_name = if name.trim().is_empty() {
@@ -215,7 +209,7 @@ impl PlatformSettings for GitHubSettings {
 }
 
 // =================================================================================
-// Account Actions
+// 账户操作
 // =================================================================================
 
 fn add_new_github_account(
@@ -242,11 +236,11 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     let settings: &GitHubSettings = context.settings().get_settings();
 
     if !settings.has_accounts() {
-        return Err("No GitHub accounts available to update".to_string());
+        return Err("没有可更新的 GitHub 账户".to_string());
     }
 
     br!();
-    info!("Updating GitHub account information...");
+    info!("正在更新 GitHub 账户信息...");
     br!();
 
     let account_options: Vec<String> = settings
@@ -261,25 +255,22 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
         .position(|acc| acc.name() == settings.current())
         .unwrap_or(0);
 
-    let selected_account = SelectBuilder::new(
-        "Please select the GitHub account to update",
-        account_options,
-    )
-    .default(default_index)
-    .result_title("Account to update")
-    .prompt()
-    .map_err(|e: PromptError| e.to_string())?;
+    let selected_account = SelectBuilder::new("请选择要更新的 GitHub 账户", account_options)
+        .default(default_index)
+        .result_title("要更新的账户")
+        .prompt()
+        .map_err(|e: PromptError| e.to_string())?;
 
     let account_name = selected_account
         .split(' ')
         .next()
-        .ok_or_else(|| "Failed to parse account name".to_string())?
+        .ok_or_else(|| "解析账户名称失败".to_string())?
         .to_string();
 
     let settings: &GitHubSettings = context.settings().get_settings();
     let account = settings
         .find_account(&account_name)
-        .ok_or_else(|| format!("Account '{}' not found", account_name))?;
+        .ok_or_else(|| format!("未找到账户 '{}'", account_name))?;
 
     let old_name = account.name().to_string();
     let current_name = account.name().to_string();
@@ -288,8 +279,8 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     let was_current = settings.current() == old_name;
 
     br!();
-    info!("Updating account: {}", account_name);
-    info!("Leave fields empty to keep current values.");
+    info!("正在更新账户: {}", account_name);
+    info!("留空字段以保留当前值。");
     br!();
 
     let builder = configurator.build_update_form(&account_name);
@@ -303,7 +294,7 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
         let settings: &GitHubSettings = context.settings().get_settings();
         if settings.account_exists(&new_name_trimmed) {
             return Err(format!(
-                "Account name '{}' already exists. Please choose a different name.",
+                "账户名称 '{}' 已存在。请选择不同的名称。",
                 new_name_trimmed
             ));
         }
@@ -312,7 +303,7 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     let settings: &mut GitHubSettings = context.settings_mut().get_settings_mut();
     let account = settings
         .find_account_mut(&account_name)
-        .ok_or_else(|| format!("Account '{}' not found", account_name))?;
+        .ok_or_else(|| format!("未找到账户 '{}'", account_name))?;
 
     let updated_name = configurator.update_account_from_form(account, &form_result, &old_name)?;
 
@@ -321,20 +312,20 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     }
 
     if context.mode() == WorkflowMode::Command {
-        context.save().map_err(|e| format!("Failed to save config: {}", e))?;
+        context.save().map_err(|e| format!("保存配置失败: {}", e))?;
 
         br!();
-        success!("GitHub account '{}' updated successfully.", updated_name);
+        success!("GitHub 账户 '{}' 更新成功。", updated_name);
 
         if configurator.auto_verify_in_command_setup() {
             br!();
             if let Err(err) = configurator.verify() {
-                warning!("Failed to verify GitHub account: {}", err);
+                warning!("验证 GitHub 账户失败: {}", err);
             }
         }
     } else {
         br!();
-        success!("GitHub account '{}' updated successfully.", updated_name);
+        success!("GitHub 账户 '{}' 更新成功。", updated_name);
     }
 
     Ok(())

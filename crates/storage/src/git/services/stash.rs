@@ -74,14 +74,16 @@ impl StashServiceImpl {
         let stash_oid = {
             let mut repo_mut = self.ctx.repository_mut();
             let mut oid = None;
-            let _ = repo_mut.stash_foreach(|idx, _, stash_oid| {
+            if let Err(e) = repo_mut.stash_foreach(|idx, _, stash_oid| {
                 if idx == index {
                     oid = Some(*stash_oid);
                     false // 找到后停止遍历
                 } else {
                     true
                 }
-            });
+            }) {
+                toolkit::log_warn!("Failed to iterate stash entries: {}", e);
+            }
             oid
         }?; // 释放 repo_mut 锁
 

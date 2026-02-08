@@ -18,11 +18,11 @@ pub struct GitHubAccountRow {
 impl Tabled for GitHubAccountRow {
     fn headers() -> Vec<String> {
         vec![
-            "Name".to_string(),
-            "Email".to_string(),
-            "API Token".to_string(),
-            "Status".to_string(),
-            "Verification".to_string(),
+            "名称".to_string(),
+            "邮箱".to_string(),
+            "API 令牌".to_string(),
+            "状态".to_string(),
+            "验证".to_string(),
         ]
     }
 
@@ -51,7 +51,7 @@ impl VerificationResultFormatter for GitHubVerificationResult {
                 email: account.email.clone(),
                 token: account.token.clone(),
                 status: if account.is_current {
-                    "Current".to_string()
+                    "当前".to_string()
                 } else {
                     String::new()
                 },
@@ -64,12 +64,9 @@ impl VerificationResultFormatter for GitHubVerificationResult {
 
         // 显示验证结果
         if self.summary.success_count == self.summary.total_count {
-            success!(
-                "All {} GitHub account(s) verified successfully!",
-                self.summary.total_count
-            );
+            success!("所有 {} 个 GitHub 账户验证成功！", self.summary.total_count);
         } else {
-            warning!("Some GitHub account(s) verification failed. Please check the configuration.");
+            warning!("部分 GitHub 账户验证失败。请检查配置。");
         }
 
         br!();

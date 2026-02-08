@@ -1,6 +1,5 @@
 //! 添加 Pull Request 评论命令
 
-use color_eyre::Result;
 use prompt::{error, input, spinner, success};
 
 use crate::registry;

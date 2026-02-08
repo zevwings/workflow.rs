@@ -142,6 +142,29 @@
   - 跳过机制（--no-verify、环境变量）
 - **优先级**: P0（高优先级，保持与标准 Git 兼容性）
 
+#### 9. [commit-analyzer-implementation.md](./commit-analyzer-implementation.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 提交分析（基于 LLM 的三阶段分析）
+- **内容**:
+  - 基于 [commit-analyzer-design.md](./commit-analyzer-design.md) 的落地分析
+  - 可直接复用的能力：CommitInfo/CommitFileChange、get_commit_diff、LLMConversation/JsonParser 等
+  - 需新增：阶段一/二/三的 domain 实体与 LLM 接口、Conversation+Prompt、CommitAnalyzerService、`commit analyze` 子命令
+- **优先级**: 中优先级（依赖 commit-analyzer-design 流程）
+
+#### 10. [i18n.md](./i18n.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 国际化（i18n）支持
+- **内容**:
+  - 引入 rust-i18n 框架实现多语言支持
+  - CLI 命令、参数、帮助文本国际化
+  - 错误消息、日志、交互提示国际化
+  - LLM Prompt 模板输出语言支持
+  - 语言自动检测和手动切换机制
+  - 支持中英文双语（可扩展更多语言）
+- **优先级**: 高优先级（用户体验提升）
+
 ---
 
 ## 📊 当前统计
@@ -150,8 +173,8 @@
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 1 个 | 测试架构改进 |
-| ⏳ 待实施 | 6 个 | 集成扩展、文档检查工具、依赖迁移、Cursor 规则增强、日志系统增强、Git Hooks 实现 |
-| **总计** | **7 个** | - |
+| ⏳ 待实施 | 8 个 | 集成扩展、文档检查工具、依赖迁移、Cursor 规则增强、日志系统增强、Git Hooks 实现、提交分析实现、i18n 支持 |
+| **总计** | **10 个** | - |
 
 ---
 
@@ -194,6 +217,8 @@
 - **Cursor 规则增强** → [cursor-rules-enhancement.md](./cursor-rules-enhancement.md) ⏳ 待实施
 - **日志系统增强** → [logger-enhancement.md](./logger-enhancement.md) ⏳ 待实施
 - **Git Hooks 实现** → [git-hooks-implementation.md](./git-hooks-implementation.md) ⏳ 待实施
+- **提交分析实现分析** → [commit-analyzer-implementation.md](./commit-analyzer-implementation.md) ⏳ 待实施（配套 [commit-analyzer-design.md](./commit-analyzer-design.md)）
+- **国际化支持** → [i18n.md](./i18n.md) ⏳ 待实施
 
 ---
 
@@ -206,4 +231,4 @@
 
 ---
 
-**最后更新**: 2025-02-05
+**最后更新**: 2026-02-08

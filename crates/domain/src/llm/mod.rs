@@ -8,9 +8,8 @@ pub mod error;
 pub mod language;
 pub mod repository;
 
-// Re-export public types
 pub use context::LLMConfigContext;
-pub use entity::{PullRequestContent, PullRequestReword, PullRequestSummary};
+pub use entity::{PullRequestReword, PullRequestSummary};
 pub use error::LLMError;
 pub use language::SupportedLanguage;
 pub use repository::LLMRepository;

@@ -2,7 +2,6 @@
 //!
 //! 应用 stash 条目（不删除）。
 
-use color_eyre::Result;
 use prompt::{confirm, error, info, select, success, warning};
 
 use crate::registry;

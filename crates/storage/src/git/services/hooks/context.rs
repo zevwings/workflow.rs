@@ -152,22 +152,22 @@ impl HookContext {
 
     /// 设置提交消息
     #[allow(dead_code)]
-    pub fn with_commit_message(mut self, message: String) -> Self {
-        self.commit_message = Some(message);
+    pub fn with_commit_message(mut self, message: impl Into<String>) -> Self {
+        self.commit_message = Some(message.into());
         self
     }
 
     /// 设置提交 SHA
     #[allow(dead_code)]
-    pub fn with_commit_sha(mut self, sha: String) -> Self {
-        self.commit_sha = Some(sha);
+    pub fn with_commit_sha(mut self, sha: impl Into<String>) -> Self {
+        self.commit_sha = Some(sha.into());
         self
     }
 
     /// 设置分支名称
     #[allow(dead_code)]
-    pub fn with_branch_name(mut self, name: String) -> Self {
-        self.branch_name = Some(name);
+    pub fn with_branch_name(mut self, name: impl Into<String>) -> Self {
+        self.branch_name = Some(name.into());
         self
     }
 }

@@ -57,6 +57,22 @@ impl GitRepository for GitRepositoryImpl {
         self.services.diff.get_working_tree_diff(base_branch)
     }
 
+    fn get_merge_diff(
+        &self,
+        branch: &str,
+        target_branch: &str,
+    ) -> Result<Option<String>, GitError> {
+        self.services.diff.get_merge_diff(branch, target_branch)
+    }
+
+    fn get_merge_changed_files(
+        &self,
+        branch: &str,
+        target_branch: &str,
+    ) -> Result<Vec<CommitFileChange>, GitError> {
+        self.services.diff.get_merge_changed_files(branch, target_branch)
+    }
+
     // ========== Branch 操作 ==========
 
     fn create_branch(&self, name: &str) -> Result<(), GitError> {

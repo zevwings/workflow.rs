@@ -4,7 +4,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use color_eyre::{eyre::WrapErr, Result};
 use toolkit::directory;
 
 // ============================================================================
@@ -56,12 +55,18 @@ impl TempDirManager {
     ///
     /// * `version` - 目标版本号
     /// * `platform` - 平台标识
-    pub fn new(version: &str, platform: &str) -> Result<Self> {
+    pub fn new(
+        version: impl AsRef<str>,
+        platform: impl AsRef<str>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let version = version.as_ref();
+        let platform = platform.as_ref();
         let temp_dir = env::temp_dir().join(format!("workflow-update-{}", version));
 
         // 如果临时目录已存在，先删除
         if temp_dir.exists() {
-            fs::remove_dir_all(&temp_dir).wrap_err("Failed to remove existing temp directory")?;
+            fs::remove_dir_all(&temp_dir)
+                .map_err(|e| format!("Failed to remove existing temp directory: {}", e))?;
         }
 
         // 创建临时目录
@@ -86,9 +91,10 @@ impl TempDirManager {
     }
 
     /// 清理临时目录
-    pub fn cleanup(&self) -> Result<()> {
+    pub fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
         if self.temp_dir.exists() {
-            fs::remove_dir_all(&self.temp_dir).wrap_err("Failed to clean up temp directory")?;
+            fs::remove_dir_all(&self.temp_dir)
+                .map_err(|e| format!("Failed to clean up temp directory: {}", e))?;
         }
         Ok(())
     }

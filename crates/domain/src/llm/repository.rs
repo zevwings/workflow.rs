@@ -1,12 +1,57 @@
-//! LLM 服务接口
+//! LLM 仓储接口
+//!
+//! 定义与大语言模型（LLM）交互的底层接口，支持各种 AI 辅助功能。
 
-use crate::llm::entity::{PullRequestContent, PullRequestReword, PullRequestSummary};
 use crate::llm::error::LLMError;
-use crate::pr::entity::PrContent;
+use crate::summary::entity::{
+    CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
+    CommitSummaryAnalysis, CommitTestAnalysis,
+};
 
-/// LLM 服务接口
+/// LLM 仓储接口
 ///
-/// 提供 LLM API 操作的接口定义。
+/// 提供与大语言模型 API 交互的底层接口，封装了各类智能分析功能。
+///
+/// # 功能范围
+///
+/// ## 代码生成
+/// - 分支名生成
+/// - Commit message 生成
+///
+/// ## 代码分析（三阶段 Commit 分析）
+/// - **阶段一**：文件分类（logic、test、config、build）
+/// - **阶段二**：分类分析（批量操作、核心逻辑、配置、测试）
+/// - **阶段三**：全局总结（整合所有分析结果）
+///
+/// ## 配置管理
+/// - LLM 配置验证
+///
+/// # 线程安全
+///
+/// 实现须满足 [`Send`] + [`Sync`]，以便在多线程或异步上下文中共享。
+///
+/// # 支持的 LLM 提供商
+///
+/// 实现可以支持多种 LLM 提供商，例如：
+/// - OpenAI（GPT-3.5、GPT-4）
+/// - Anthropic（Claude）
+/// - 本地模型（Ollama、LLaMA）
+///
+/// 具体实现由 Storage 层负责。
+///
+/// # 错误处理
+///
+/// 所有方法返回 [`LLMError`]，包含：
+/// - API 调用失败（网络错误、超时、限流）
+/// - 响应解析失败（JSON 格式错误）
+/// - 配置错误（API Key 无效）
+///
+/// # 性能考虑
+///
+/// - LLM API 调用通常需要 1-5 秒
+/// - 三阶段分析会进行多次 API 调用（3-5 次）
+/// - 建议在异步上下文中调用
+/// - 考虑实现缓存和并行调用以优化性能
 pub trait LLMRepository: Send + Sync {
     /// 验证 LLM 配置
     fn verify_config(&self) -> Result<String, LLMError>;
@@ -18,96 +63,49 @@ pub trait LLMRepository: Send + Sync {
         exists_branches: Option<Vec<String>>,
     ) -> Result<String, LLMError>;
 
-    /// 生成 PR 内容
-    fn generate_pr_content(
+    /// 阶段一：对提交的文件变更列表进行智能分类
+    ///
+    /// 输入为设计文档中的 JSON（commit 元数据 + files 数组），返回分类结果。
+    fn classify_commit_files(&self, input_json: &str)
+        -> Result<CommitFileClassification, LLMError>;
+
+    /// 阶段二 2.1：批量操作分析
+    ///
+    /// 当阶段一检测到批量重命名、格式化、配置更新等模式时使用。传入操作类型、文件数、模式描述及样本 diff。
+    fn analyze_commit_batch(&self, user_prompt: &str) -> Result<CommitBatchAnalysis, LLMError>;
+
+    /// 阶段二 2.2：核心逻辑分析
+    ///
+    /// 对业务代码、服务层等核心文件的完整 diff 进行深入分析。
+    fn analyze_commit_logic(&self, user_prompt: &str) -> Result<CommitLogicAnalysis, LLMError>;
+
+    /// 阶段二 2.3：配置/文档分析
+    ///
+    /// 对配置文件、环境变量、文档类文件的修改进行简要总结。
+    fn analyze_commit_config(&self, user_prompt: &str) -> Result<CommitConfigAnalysis, LLMError>;
+
+    /// 阶段二 2.4：测试文件分析
+    ///
+    /// 分析测试文件的变更及与业务代码的对应关系。
+    fn analyze_commit_tests(&self, user_prompt: &str) -> Result<CommitTestAnalysis, LLMError>;
+
+    /// 阶段三：全局总结
+    ///
+    /// 综合阶段一分类结果与阶段二各分析结果及统计信息，生成结构化的 commit 总结（标题、描述、影响分析等）。
+    fn summarize_commit_analysis(
         &self,
-        branch_name: &str,
-        commits: &[String],
-    ) -> Result<PrContent, LLMError>;
+        stage1_json: &str,
+        stage2_batch_json: &str,
+        stage2_logic_json: &str,
+        stage2_config_json: &str,
+        stage2_test_json: &str,
+        total_files: u32,
+        added_count: u32,
+        deleted_count: u32,
+        modified_count: u32,
+        renamed_count: u32,
+        total_additions: u32,
+        total_deletions: u32,
+    ) -> Result<CommitSummaryAnalysis, LLMError>;
 
-    /// 生成提交信息
-    fn generate_commit_message(&self, changes: &str) -> Result<String, LLMError>;
-
-    /// 翻译文本为英文
-    ///
-    /// 使用 LLM 将非英文文本（中文、俄文等）翻译为英文。
-    ///
-    /// # 参数
-    ///
-    /// * `text` - 需要翻译的文本
-    ///
-    /// # 返回
-    ///
-    /// 返回翻译后的英文文本
-    fn translate_to_english(&self, text: &str) -> Result<String, LLMError>;
-
-    /// 创建 PR 内容（包含分支名、PR 标题、描述、scope 和详细总结）
-    ///
-    /// 根据 commit 标题和 git diff 生成符合规范的分支名、PR 标题、描述、scope 和详细总结。
-    /// 分支名和 PR 标题都会自动翻译为英文（如果输入包含非英文内容）。
-    ///
-    /// 如果提供了 `git_diff`，还会自动生成详细的 PR 总结文档（Markdown 格式），
-    /// 包含需求分析、技术细节、变更列表等完整信息。
-    ///
-    /// # 参数
-    ///
-    /// * `commit_title` - commit 标题或描述
-    /// * `exists_branches` - 已存在的分支列表（可选）
-    /// * `git_diff` - Git 工作区和暂存区的修改内容（可选，用于生成描述、提取 scope 和生成详细总结）
-    ///
-    /// # 返回
-    ///
-    /// 返回 `PullRequestContent` 结构体，包含分支名、PR 标题、描述、scope 和详细总结（如果有 git_diff）
-    fn create_pr_content(
-        &self,
-        commit_title: &str,
-        exists_branches: Option<Vec<String>>,
-        git_diff: Option<String>,
-    ) -> Result<PullRequestContent, LLMError>;
-
-    /// 重写 PR 标题和描述
-    ///
-    /// 根据当前 PR 标题和 PR diff 生成更新的 PR 标题和描述，用于更新现有 PR。
-    ///
-    /// # 参数
-    ///
-    /// * `pr_diff` - PR 的 diff 内容
-    /// * `current_title` - 当前 PR 标题（可选）
-    ///
-    /// # 返回
-    ///
-    /// 返回 `PullRequestReword` 结构体，包含更新的 PR 标题和描述
-    fn reword_pr(
-        &self,
-        pr_diff: &str,
-        current_title: Option<&str>,
-    ) -> Result<PullRequestReword, LLMError>;
-
-    /// 生成 PR 总结文档
-    ///
-    /// 根据 PR 的 diff 内容生成详细的总结文档和文件名。
-    ///
-    /// # 参数
-    ///
-    /// * `pr_title` - PR 标题
-    /// * `pr_diff` - PR 的 diff 内容
-    ///
-    /// # 返回
-    ///
-    /// 返回 `PullRequestSummary` 结构体，包含总结文档（Markdown 格式）和文件名
-    fn summarize_pr(&self, pr_title: &str, pr_diff: &str) -> Result<PullRequestSummary, LLMError>;
-
-    /// 生成单个文件的修改总结
-    ///
-    /// 根据文件的 diff 内容生成该文件的修改总结。
-    ///
-    /// # 参数
-    ///
-    /// * `file_path` - 文件路径
-    /// * `file_diff` - 文件的 diff 内容
-    ///
-    /// # 返回
-    ///
-    /// 返回文件的修改总结（纯文本）
-    fn summarize_file_change(&self, file_path: &str, file_diff: &str) -> Result<String, LLMError>;
 }
