@@ -30,7 +30,8 @@ impl SummaryAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "summary_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("Failed to parse summary analysis results: {}", e)))
+        JsonParser::to_model(&response).map_err(|e| {
+            ServiceError::Other(format!("Failed to parse summary analysis results: {}", e))
+        })
     }
 }

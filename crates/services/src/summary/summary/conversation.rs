@@ -26,8 +26,21 @@ impl LLMConversation for SummaryAnalyzeConversation {
 
     fn get_user_prompt(&self, _language_code: &str) -> String {
         let i = &self.input;
+
+        // 构建未提交变更警告（如果存在）
+        let uncommitted_warning = if i.has_uncommitted_changes {
+            "\n\n### ⚠️ Notice\nThe working directory has uncommitted changes. This summary only covers committed changes."
+        } else {
+            ""
+        };
+
         format!(
             r##"## Input Information
+
+### Commit History (Total: {} commits)
+```
+{}
+```
 
 ### Stage 1: File Classification Results
 ```json
@@ -62,7 +75,9 @@ impl LLMConversation for SummaryAnalyzeConversation {
 - Deleted: {}
 - Modified: {}
 - Renamed: {}
-- Line changes: +{} -{}"##,
+- Line changes: +{} -{}{}"##,
+            i.commit_count,
+            i.commit_history_summary,
             i.stage1_classification,
             i.stage2_batch_analysis,
             i.stage2_logic_analysis,
@@ -75,6 +90,7 @@ impl LLMConversation for SummaryAnalyzeConversation {
             i.renamed_count,
             i.total_additions,
             i.total_deletions,
+            uncommitted_warning,
         )
     }
 

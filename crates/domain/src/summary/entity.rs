@@ -1,5 +1,38 @@
 use serde::{Deserialize, Serialize};
 
+// ========== 通用结构 ==========
+
+/// 行为差异分析
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct BehaviorDiff {
+    /// 修改前的行为描述
+    #[serde(default)]
+    pub before: String,
+    /// 修改后的行为描述
+    #[serde(default)]
+    pub after: String,
+    /// 行为变更的原因
+    #[serde(default)]
+    pub reason: String,
+}
+
+/// 功能域（跨文件类型的功能性聚合）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FeatureDomain {
+    /// 功能域名称（如 "HTTP 客户端统一化"、"LLM 集成"）
+    #[serde(default)]
+    pub domain: String,
+    /// 该功能域的整体目的
+    #[serde(default)]
+    pub purpose: String,
+    /// 涉及的文件路径列表
+    #[serde(default)]
+    pub files: Vec<String>,
+    /// 该功能域下的变更描述（可跨 features/config/tests 等类别）
+    #[serde(default)]
+    pub changes: Vec<String>,
+}
+
 // ========== 提交分析阶段一：文件分类结果 ==========
 
 /// 阶段一文件分类结果（按变更类型 / 性质 / 规模 + 模式 + 分析策略 + 摘要）
@@ -174,6 +207,9 @@ pub struct LogicFileAnalysis {
     pub related_files: Vec<RelatedFile>,
     #[serde(default)]
     pub risk_assessment: RiskAssessment,
+    /// 行为差异分析
+    #[serde(default)]
+    pub behavior_diff: BehaviorDiff,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -231,12 +267,28 @@ pub struct ConfigChange {
 pub struct ConfigItem {
     #[serde(default)]
     pub key: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_value_as_string")]
     pub old_value: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_value_as_string")]
     pub new_value: String,
     #[serde(default)]
     pub purpose: String,
+}
+
+/// Custom deserializer to convert any JSON value to a string
+fn deserialize_value_as_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde_json::Value;
+    let value = Value::deserialize(deserializer)?;
+    Ok(match value {
+        Value::String(s) => s,
+        Value::Null => String::new(),
+        Value::Bool(b) => b.to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::Array(_) | Value::Object(_) => value.to_string(),
+    })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -293,7 +345,7 @@ pub struct CommitMessagePart {
     pub footer: String,
 }
 
-/// 结构化总结（type / scope / subject / main_purpose / key_changes / details_by_category）
+/// 结构化总结（type / scope / subject / main_purpose / key_changes / details_by_category / changes_by_domain）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StructuredSummary {
     #[serde(default)]
@@ -309,6 +361,9 @@ pub struct StructuredSummary {
     pub key_changes: Vec<String>,
     #[serde(default)]
     pub details_by_category: DetailsByCategory,
+    /// 按功能域聚合的变更（跨文件类型）
+    #[serde(default)]
+    pub changes_by_domain: Vec<FeatureDomain>,
 }
 
 /// 按类别划分的变更详情

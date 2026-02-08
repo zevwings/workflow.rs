@@ -46,6 +46,12 @@ struct AnalysisContext {
     total_additions: u32,
     /// 总删除行数
     total_deletions: u32,
+    /// 是否存在未提交的变更
+    has_uncommitted_changes: bool,
+    /// 分支提交历史（从旧到新）
+    commit_history: Vec<CommitInfo>,
+    /// 提交总数
+    commit_count: u32,
 }
 
 /// 提交总结服务实现
@@ -106,6 +112,21 @@ impl CommitSummaryServiceImpl {
             .get_commit_info("HEAD")
             .map_err(|e| ServiceError::Other(format!("Failed to get commit info: {}", e)))?;
 
+        // 3.1 获取分支提交历史
+        let commit_shas = self
+            .git_repo
+            .commits_to_merge(&current_branch, &base_branch)
+            .map_err(|e| ServiceError::Other(format!("Failed to get commit history: {}", e)))?;
+        let commit_count = commit_shas.len() as u32;
+
+        // 逐条获取完整信息（超过 50 条时截断）
+        const MAX_HISTORY: usize = 50;
+        let commit_history: Vec<CommitInfo> = commit_shas
+            .iter()
+            .take(MAX_HISTORY)
+            .filter_map(|sha| self.git_repo.get_commit_info(sha).ok())
+            .collect();
+
         // 4. 获取完整 merge diff 并按文件拆分
         let full_diff = self
             .git_repo
@@ -114,12 +135,19 @@ impl CommitSummaryServiceImpl {
             .unwrap_or_default();
         let file_diffs = parse_diff_per_file(&full_diff);
 
-        // 5. 统计信息
+        // 5. 检查工作区状态
+        let has_uncommitted_changes = self
+            .git_repo
+            .get_working_tree_status()
+            .map(|status| !status.is_clean())
+            .unwrap_or(false);
+
+        // 6. 统计信息
         let status_count = count_by_status(&files);
         let total_additions: u32 = files.iter().filter_map(|f| f.additions).sum();
         let total_deletions: u32 = files.iter().filter_map(|f| f.deletions).sum();
 
-        // 6. 语言代码
+        // 7. 语言代码
         let language_code = self.llm_context.get_language();
 
         Ok(AnalysisContext {
@@ -130,6 +158,9 @@ impl CommitSummaryServiceImpl {
             status_count,
             total_additions,
             total_deletions,
+            has_uncommitted_changes,
+            commit_history,
+            commit_count,
         })
     }
 }
@@ -224,8 +255,26 @@ impl domain::CommitSummaryService for CommitSummaryServiceImpl {
         let stage2 = self.run_stage2(&ctx, &stage1)?;
 
         // 阶段三：全局总结
-        let stage1_json = serde_json::to_string(&stage1)
-            .map_err(|e| ServiceError::Other(format!("Failed to serialize stage 1 results: {}", e)))?;
+        let stage1_json = serde_json::to_string(&stage1).map_err(|e| {
+            ServiceError::Other(format!("Failed to serialize stage 1 results: {}", e))
+        })?;
+
+        // 格式化提交历史摘要
+        let commit_history_summary = if ctx.commit_history.is_empty() {
+            "No commit history available".to_string()
+        } else {
+            ctx.commit_history
+                .iter()
+                .map(|c| {
+                    format!(
+                        "{} - {}",
+                        &c.sha[..8],
+                        c.message.lines().next().unwrap_or("")
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
 
         let input = SummaryAnalyzeInput {
             stage1_classification: stage1_json,
@@ -240,6 +289,9 @@ impl domain::CommitSummaryService for CommitSummaryServiceImpl {
             renamed_count: ctx.status_count.renamed,
             total_additions: ctx.total_additions,
             total_deletions: ctx.total_deletions,
+            has_uncommitted_changes: ctx.has_uncommitted_changes,
+            commit_history_summary,
+            commit_count: ctx.commit_count,
         };
 
         SummaryAnalyzeService::new(self.llm_executor.clone()).summarize(input, &ctx.language_code)

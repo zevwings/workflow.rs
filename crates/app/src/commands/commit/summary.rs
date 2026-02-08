@@ -23,12 +23,12 @@ impl CommitSummaryCommand {
     }
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        info!("开始三阶段提交分析（当前分支相对基准分支）...");
+        info!("starting 3-stage commit summary analysis...");
 
         let summary_service = get_commit_summary_service();
         let summary = summary_service.run_analysis(None)?;
 
-        info!("三阶段分析完成。");
+        info!("3-stage commit summary analysis completed.");
         println!("{}", summary.to_markdown());
         Ok(())
     }

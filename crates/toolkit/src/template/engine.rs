@@ -85,9 +85,7 @@ impl TemplateEngine {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_nanos())
-            .map_err(|_| {
-                TemplateError::SystemTime("系统时间早于 Unix 纪元".to_string())
-            })?;
+            .map_err(|_| TemplateError::SystemTime("系统时间早于 Unix 纪元".to_string()))?;
 
         let temp_name = format!("__temp_{}", timestamp);
         let mut engine = TemplateEngine::new();

@@ -75,8 +75,9 @@ File type: {}
             .llm_executor
             .execute(&conversation, language_code, "logic_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitLogicAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("Failed to parse logic analysis results: {}", e)))?;
+        let result: CommitLogicAnalysis = JsonParser::to_model(&response).map_err(|e| {
+            ServiceError::Other(format!("Failed to parse logic analysis results: {}", e))
+        })?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }

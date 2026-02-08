@@ -3,9 +3,7 @@
 //! 将结构化的提交分析结果格式化为可读的 Markdown 文本，
 //! 适用于 PR 描述、终端输出等场景。
 
-use super::entity::{
-    AffectedModule, CommitSummaryAnalysis, DetailsByCategory, ImpactAnalysis,
-};
+use super::entity::{AffectedModule, CommitSummaryAnalysis, DetailsByCategory, ImpactAnalysis};
 
 impl CommitSummaryAnalysis {
     /// 将提交分析结果渲染为 Markdown 格式的字符串

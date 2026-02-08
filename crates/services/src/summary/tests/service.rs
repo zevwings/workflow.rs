@@ -44,8 +44,9 @@ impl TestAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "test_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitTestAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("Failed to parse test analysis results: {}", e)))?;
+        let result: CommitTestAnalysis = JsonParser::to_model(&response).map_err(|e| {
+            ServiceError::Other(format!("Failed to parse test analysis results: {}", e))
+        })?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }

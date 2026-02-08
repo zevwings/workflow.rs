@@ -33,34 +33,62 @@ impl ConfigAnalyzeService {
         files: &[CommitFileChange],
         language_code: &str,
     ) -> Result<String, ServiceError> {
-        let mut config_paths: Vec<&String> =
-            stage1.categories.by_nature.configuration.iter().collect();
-        config_paths.extend(stage1.categories.by_nature.documentation.iter());
-        if config_paths.is_empty() {
+        let config_paths: Vec<&String> = stage1.categories.by_nature.configuration.iter().collect();
+        let doc_paths: Vec<&String> = stage1.categories.by_nature.documentation.iter().collect();
+
+        if config_paths.is_empty() && doc_paths.is_empty() {
             return Ok("{}".to_string());
         }
 
-        let mut parts = String::new();
-        for path in config_paths {
+        // 配置文件：发送完整 diff
+        let mut config_parts = String::new();
+        for path in &config_paths {
             let additions =
-                files.iter().find(|f| f.path == *path).and_then(|f| f.additions).unwrap_or(0);
+                files.iter().find(|f| f.path == **path).and_then(|f| f.additions).unwrap_or(0);
             let deletions =
-                files.iter().find(|f| f.path == *path).and_then(|f| f.deletions).unwrap_or(0);
-            let diff = file_diffs.get(path).map(String::as_str).unwrap_or("");
-            parts.push_str(&format!(
+                files.iter().find(|f| f.path == **path).and_then(|f| f.deletions).unwrap_or(0);
+            let diff = file_diffs.get(*path).map(String::as_str).unwrap_or("");
+            config_parts.push_str(&format!(
                 "\n### {}\nChanges: +{} -{}\n\n```diff\n{}\n```\n\n---\n",
                 path, additions, deletions, diff
             ));
         }
 
-        let user_prompt = format!("## Modified Files\n{}\n", parts);
+        // 文档文件：仅发送路径 + 变更统计（不发送完整 diff）
+        let mut doc_parts = String::new();
+        for path in &doc_paths {
+            let additions =
+                files.iter().find(|f| f.path == **path).and_then(|f| f.additions).unwrap_or(0);
+            let deletions =
+                files.iter().find(|f| f.path == **path).and_then(|f| f.deletions).unwrap_or(0);
+            let status = if additions > 0 && deletions == 0 {
+                "Added"
+            } else if additions == 0 && deletions > 0 {
+                "Deleted"
+            } else {
+                "Modified"
+            };
+            doc_parts.push_str(&format!(
+                "- {} [{}] (+{} -{})\n",
+                path, status, additions, deletions
+            ));
+        }
+
+        let user_prompt = format!(
+            "## Configuration File Changes\n{}\n\n## Documentation File Changes (summary only, no need for deep content analysis)\n{}\n",
+            config_parts, doc_parts
+        );
         let conversation = ConfigAnalyzeConversation::new(user_prompt);
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "config_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitConfigAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("Failed to parse configuration analysis results: {}", e)))?;
+        let result: CommitConfigAnalysis = JsonParser::to_model(&response).map_err(|e| {
+            ServiceError::Other(format!(
+                "Failed to parse configuration analysis results: {}",
+                e
+            ))
+        })?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }

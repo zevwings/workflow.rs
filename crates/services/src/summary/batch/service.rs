@@ -82,8 +82,9 @@ impl BatchAnalyzeService {
             .llm_executor
             .execute(&conversation, language_code, "batch_analyze")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitBatchAnalysis = JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("Failed to parse batch analysis results: {}", e)))?;
+        let result: CommitBatchAnalysis = JsonParser::to_model(&response).map_err(|e| {
+            ServiceError::Other(format!("Failed to parse batch analysis results: {}", e))
+        })?;
         serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
     }
 }
@@ -121,7 +122,10 @@ fn build_batch_pattern_description(stage1: &CommitFileClassification) -> String 
         parts.push(format!("Mass formatting: {}", p.formatting.description));
     }
     if p.config_update.detected && !p.config_update.type_desc.is_empty() {
-        parts.push(format!("Unified configuration update: {}", p.config_update.type_desc));
+        parts.push(format!(
+            "Unified configuration update: {}",
+            p.config_update.type_desc
+        ));
     }
     if p.dependency_upgrade.detected && !p.dependency_upgrade.packages.is_empty() {
         parts.push(format!(
@@ -130,10 +134,14 @@ fn build_batch_pattern_description(stage1: &CommitFileClassification) -> String 
         ));
     }
     if p.import_path_change.detected && !p.import_path_change.pattern.is_empty() {
-        parts.push(format!("Import path adjustment: {}", p.import_path_change.pattern));
+        parts.push(format!(
+            "Import path adjustment: {}",
+            p.import_path_change.pattern
+        ));
     }
     if parts.is_empty() {
-        "(Stage 1 did not identify specific patterns, please summarize based on sample diffs)".to_string()
+        "(Stage 1 did not identify specific patterns, please summarize based on sample diffs)"
+            .to_string()
     } else {
         parts.join("; ")
     }

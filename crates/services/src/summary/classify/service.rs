@@ -37,8 +37,12 @@ impl FileClassifyService {
             .llm_executor
             .execute(&conversation, language_code, "file_classify")
             .map_err(|e| ServiceError::Other(e.to_string()))?;
-        JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("Failed to parse file classification results: {}", e)))
+        JsonParser::to_model(&response).map_err(|e| {
+            ServiceError::Other(format!(
+                "Failed to parse file classification results: {}",
+                e
+            ))
+        })
     }
 }
 

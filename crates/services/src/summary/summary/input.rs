@@ -12,4 +12,7 @@ pub(crate) struct SummaryAnalyzeInput {
     pub renamed_count: u32,
     pub total_additions: u32,
     pub total_deletions: u32,
+    pub has_uncommitted_changes: bool,
+    pub commit_history_summary: String,
+    pub commit_count: u32,
 }

@@ -13,6 +13,10 @@ Analyze each file separately:
    - Does it affect other modules?
 5. **Relationships**: What relationships exist with other modified files?
 6. **Risk Assessment**: Potential bug risks or performance impacts
+7. **Behavior Difference**: Based on the diff's -/+ lines, summarize how the file's behavior changed
+   - before: Description of behavior before the modification
+   - after: Description of behavior after the modification
+   - reason: Why this behavior change was made
 
 ## Output Format
 
@@ -46,6 +50,11 @@ Please output strictly in the following JSON format, without any additional expl
         "level": "low / medium / high",
         "concerns": ["potential risk point 1", "potential risk point 2"],
         "recommendations": ["improvement suggestion 1", "improvement suggestion 2"]
+      },
+      "behavior_diff": {
+        "before": "Description of behavior before the modification",
+        "after": "Description of behavior after the modification",
+        "reason": "Why this behavior change was made"
       }
     }
   ]
