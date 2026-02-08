@@ -39,8 +39,13 @@ impl TemplateEngine {
     ///
     /// * `name` - Template name
     /// * `template` - Template string
-    pub fn register_template(&mut self, name: &str, template: &str) -> Result<(), TemplateError> {
-        self.handlebars.register_template_string(name, template)?;
+    pub fn register_template(
+        &mut self,
+        name: impl AsRef<str>,
+        template: impl AsRef<str>,
+    ) -> Result<(), TemplateError> {
+        self.handlebars
+            .register_template_string(name.as_ref(), template.as_ref())?;
         Ok(())
     }
 
@@ -54,8 +59,12 @@ impl TemplateEngine {
     /// # Returns
     ///
     /// Rendered template string
-    pub fn render<T: Serialize>(&self, name: &str, vars: &T) -> Result<String, TemplateError> {
-        Ok(self.handlebars.render(name, vars)?)
+    pub fn render<T: Serialize>(
+        &self,
+        name: impl AsRef<str>,
+        vars: &T,
+    ) -> Result<String, TemplateError> {
+        Ok(self.handlebars.render(name.as_ref(), vars)?)
     }
 
     /// Render a template string directly (without registration)
@@ -70,7 +79,7 @@ impl TemplateEngine {
     /// Rendered template string
     pub fn render_string<T: Serialize>(
         &self,
-        template: &str,
+        template: impl AsRef<str>,
         vars: &T,
     ) -> Result<String, TemplateError> {
         // Register template with a temporary name

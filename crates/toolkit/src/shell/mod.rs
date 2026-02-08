@@ -142,7 +142,8 @@ pub fn shell_to_string(shell: &Shell) -> &'static str {
 /// # 返回
 ///
 /// 返回解析后的 Shell 类型，如果无法解析则返回错误。
-pub fn shell_from_string(s: &str) -> Result<Shell, ShellError> {
+pub fn shell_from_string(s: impl AsRef<str>) -> Result<Shell, ShellError> {
+    let s = s.as_ref();
     match s.to_lowercase().as_str() {
         "zsh" => Ok(Shell::Zsh),
         "bash" => Ok(Shell::Bash),

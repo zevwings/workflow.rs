@@ -19,7 +19,9 @@ use super::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
 /// 构建下载 URL
 ///
 /// 根据平台和版本号拼接下载链接。
-pub fn build_download_url(version: &str, platform: &str) -> String {
+pub fn build_download_url(version: impl AsRef<str>, platform: impl AsRef<str>) -> String {
+    let version = version.as_ref();
+    let platform = platform.as_ref();
     let extension = if platform.starts_with("Windows") {
         "zip"
     } else {
@@ -35,7 +37,11 @@ pub fn build_download_url(version: &str, platform: &str) -> String {
 /// 下载文件
 ///
 /// 从指定 URL 下载文件到临时目录，显示下载进度。
-pub fn download_file(url: &str, output_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+pub fn download_file(
+    url: impl AsRef<str>,
+    output_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let url = url.as_ref();
     info!("Downloading update package...");
     toolkit::log_debug!("Download URL: {}", url);
     toolkit::log_debug!("Saving to: {}", output_path.display());

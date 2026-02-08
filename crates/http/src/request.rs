@@ -76,9 +76,12 @@ impl<'a> Request<'a> {
     }
 
     /// 添加单个请求头
-    pub fn header(mut self, name: &str, value: &str) -> Self {
+    pub fn header(mut self, name: impl AsRef<str>, value: impl AsRef<str>) -> Self {
         let headers = self.headers.get_or_insert_with(HeaderMap::new);
-        if let (Ok(name), Ok(value)) = (HeaderName::try_from(name), HeaderValue::from_str(value)) {
+        if let (Ok(name), Ok(value)) = (
+            HeaderName::try_from(name.as_ref()),
+            HeaderValue::from_str(value.as_ref()),
+        ) {
             headers.insert(name, value);
         }
         self

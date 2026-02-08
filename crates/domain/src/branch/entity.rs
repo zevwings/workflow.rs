@@ -55,8 +55,8 @@ impl BranchType {
     }
 
     /// Parse branch type from string
-    pub fn parse(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
+    pub fn parse(s: impl AsRef<str>) -> Option<Self> {
+        match s.as_ref().to_lowercase().as_str() {
             "feature" => Some(BranchType::Feature),
             "bugfix" | "bug" | "fix" => Some(BranchType::Bugfix),
             "refactoring" | "refactor" => Some(BranchType::Refactoring),
@@ -95,8 +95,9 @@ impl fmt::Display for BranchType {
 /// assert_eq!(sanitize_branch_name("feature@test#123"), "featuretest123");
 /// assert_eq!(sanitize_branch_name("  feature/test  "), "feature/test");
 /// ```
-pub fn sanitize_branch_name(name: &str) -> String {
-    name.chars()
+pub fn sanitize_branch_name(name: impl AsRef<str>) -> String {
+    name.as_ref()
+        .chars()
         .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_' || *c == '/')
         .collect()
 }

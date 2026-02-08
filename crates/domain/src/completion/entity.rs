@@ -75,8 +75,8 @@ pub struct CompletionRemoveResult {
 // ============================================================================
 
 /// 获取 completion 文件名
-pub fn get_completion_filename(shell: &str) -> String {
-    match shell.to_lowercase().as_str() {
+pub fn get_completion_filename(shell: impl AsRef<str>) -> String {
+    match shell.as_ref().to_lowercase().as_str() {
         "zsh" => "_workflow".to_string(),
         "bash" => "workflow.bash".to_string(),
         "fish" => "workflow.fish".to_string(),
@@ -100,8 +100,8 @@ pub fn get_all_completion_filenames() -> Vec<String> {
 /// 获取 shell 的 source 路径
 ///
 /// 注意：此函数返回 shell 脚本中使用的路径字符串。
-pub fn get_shell_source_path(shell: &str) -> String {
-    match shell.to_lowercase().as_str() {
+pub fn get_shell_source_path(shell: impl AsRef<str>) -> String {
+    match shell.as_ref().to_lowercase().as_str() {
         "zsh" | "bash" => format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE),
         "fish" => format!(
             "$HOME/{}/{}/{}",
@@ -137,8 +137,13 @@ pub fn get_completion_source_shell_path() -> String {
     format!("$HOME/{}/{}", MAIN_DIR, COMPLETIONS_FILE)
 }
 
-pub fn get_completion_shell_path(filename: &str) -> String {
-    format!("$HOME/{}/{}/{}", MAIN_DIR, COMPLETIONS_DIR, filename)
+pub fn get_completion_shell_path(filename: impl AsRef<str>) -> String {
+    format!(
+        "$HOME/{}/{}/{}",
+        MAIN_DIR,
+        COMPLETIONS_DIR,
+        filename.as_ref()
+    )
 }
 
 #[cfg(test)]

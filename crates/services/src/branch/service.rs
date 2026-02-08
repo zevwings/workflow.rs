@@ -6,6 +6,9 @@ use llm::{LLMConfigContext, LLMExecutor};
 
 use super::BranchNameConversation;
 
+/// 分支服务实现
+///
+/// 使用 LLM 生成语义化的分支名称。
 pub struct BranchServiceImpl {
     llm_executor: Arc<dyn LLMExecutor>,
     llm_context: Arc<dyn LLMConfigContext>,

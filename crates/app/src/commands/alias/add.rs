@@ -31,15 +31,19 @@ impl AliasAddCommand {
     /// 运行添加命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 获取别名名称和命令
+        let interactive_result;
         let (name, command) = match (&self.name, &self.command) {
-            (Some(n), Some(c)) => (n.clone(), c.clone()),
-            _ => self.interactive_input()?,
+            (Some(n), Some(c)) => (n.as_str(), c.as_str()),
+            _ => {
+                interactive_result = self.interactive_input()?;
+                (interactive_result.0.as_str(), interactive_result.1.as_str())
+            }
         };
 
         // 添加别名
         let service = get_alias_service();
         let result = service
-            .add(&name, &command, self.force)
+            .add(name, command, self.force)
             .map_err(|e| format!("Failed to add alias: {}", e))?;
 
         // 显示结果

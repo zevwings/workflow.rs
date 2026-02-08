@@ -122,9 +122,20 @@ fn handle_github_api_error(response: &Response) -> Result<(), Box<dyn std::error
 /// 比较两个版本号
 ///
 /// 返回版本比较结果。
-pub fn compare_versions(current: &str, target: &str) -> VersionComparison {
-    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
-    let target_parts: Vec<u32> = target.split('.').filter_map(|s| s.parse().ok()).collect();
+pub fn compare_versions(
+    current: impl AsRef<str>,
+    target: impl AsRef<str>,
+) -> VersionComparison {
+    let current_parts: Vec<u32> = current
+        .as_ref()
+        .split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    let target_parts: Vec<u32> = target
+        .as_ref()
+        .split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
 
     // 补齐到相同长度
     let max_len = current_parts.len().max(target_parts.len());

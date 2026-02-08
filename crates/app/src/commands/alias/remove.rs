@@ -60,9 +60,6 @@ impl AliasRemoveCommand {
         let mut aliases = list_result.aliases;
         aliases.sort_by(|a, b| a.name.cmp(&b.name));
 
-        // 获取别名名称列表
-        let names: Vec<String> = aliases.iter().map(|a| a.name.clone()).collect();
-
         // 构建显示选项（名称 -> 命令）
         let display_options: Vec<String> =
             aliases.iter().map(|a| format!("{} -> {}", a.name, a.command)).collect();
@@ -76,8 +73,8 @@ impl AliasRemoveCommand {
         let selected_name = selected_display
             .split(" -> ")
             .next()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| names[0].clone());
+            .unwrap_or(&aliases[0].name)
+            .to_string();
 
         Ok(selected_name)
     }

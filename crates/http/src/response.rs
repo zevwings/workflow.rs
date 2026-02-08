@@ -144,8 +144,8 @@ impl Response {
     }
 
     /// 获取响应头
-    pub fn header(&self, name: &str) -> Option<&str> {
-        self.headers.get(name).and_then(|v| v.to_str().ok())
+    pub fn header(&self, name: impl AsRef<str>) -> Option<&str> {
+        self.headers.get(name.as_ref()).and_then(|v| v.to_str().ok())
     }
 
     /// 获取所有响应头（转换为 HashMap）

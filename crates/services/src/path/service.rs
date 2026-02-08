@@ -1,14 +1,20 @@
+// 标准库
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
-use std::{fs, path::Path};
+use std::path::{Path, PathBuf};
+use std::fs;
 
-use domain::{Dir, PathError, PathService};
+// 项目内部
 use domain::{
-    COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR, JIRA_CONFIG_FILE, MAIN_DIR,
-    PROJECT_CONFIG_FILE, USER_CONFIG_FILE, WORKFLOW_CONFIG_DIR, WORKFLOW_CONFIG_FILE,
+    Dir, PathError, PathService, COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR,
+    JIRA_CONFIG_FILE, MAIN_DIR, PROJECT_CONFIG_FILE, USER_CONFIG_FILE, WORKFLOW_CONFIG_DIR,
+    WORKFLOW_CONFIG_FILE,
 };
 
+/// 路径服务实现
+///
+/// 管理应用程序的配置文件、数据目录等路径。
+/// 支持 iCloud 同步（macOS）和本地存储两种模式。
 pub struct PathServiceImpl {
     is_icloud_available: bool,
 }

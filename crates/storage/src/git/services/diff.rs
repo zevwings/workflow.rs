@@ -364,7 +364,8 @@ impl DiffService for DiffServiceImpl {
             )
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        let mut path_stats: HashMap<String, (u32, u32)> = HashMap::new();
+        let mut path_stats: HashMap<String, (u32, u32)> =
+            HashMap::with_capacity(diff.deltas().len());
         let mut line_cb = |delta: git2::DiffDelta<'_>,
                            _hunk: Option<git2::DiffHunk<'_>>,
                            line: git2::DiffLine<'_>| {
@@ -383,12 +384,14 @@ impl DiffService for DiffServiceImpl {
             }
             true
         };
-        let _ = diff.foreach(
+        if let Err(e) = diff.foreach(
             &mut |_delta, _progress| true,
             None,
             None,
             Some(&mut line_cb),
-        );
+        ) {
+            toolkit::log_warn!("Failed to iterate diff lines: {}", e);
+        }
 
         let files: Vec<CommitFileChange> = diff
             .deltas()

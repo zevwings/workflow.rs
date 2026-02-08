@@ -43,23 +43,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_change_type_item_serialize() {
+    fn test_change_type_item_serialize() -> Result<(), serde_json::Error> {
         let item = ChangeTypeItem {
             name: "Feature".to_string(),
             selected: true,
         };
 
-        let json = serde_json::to_string(&item).unwrap();
+        let json = serde_json::to_string(&item)?;
         assert!(json.contains("\"name\":\"Feature\""));
         assert!(json.contains("\"selected\":true"));
+
+        Ok(())
     }
 
     #[test]
-    fn test_change_type_item_deserialize() {
+    fn test_change_type_item_deserialize() -> Result<(), serde_json::Error> {
         let json = r#"{"name": "Bug Fix", "selected": false}"#;
-        let item: ChangeTypeItem = serde_json::from_str(json).unwrap();
+        let item: ChangeTypeItem = serde_json::from_str(json)?;
         assert_eq!(item.name, "Bug Fix");
         assert!(!item.selected);
+
+        Ok(())
     }
 
     #[test]

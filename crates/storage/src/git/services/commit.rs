@@ -107,7 +107,8 @@ impl CommitService for CommitServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 按文件统计增删行数（仅统计文本 diff，二进制等无统计）
-        let mut path_stats: HashMap<String, (u32, u32)> = HashMap::new();
+        let mut path_stats: HashMap<String, (u32, u32)> =
+            HashMap::with_capacity(diff.deltas().len());
         let mut line_cb = |delta: git2::DiffDelta<'_>,
                            _hunk: Option<git2::DiffHunk<'_>>,
                            line: git2::DiffLine<'_>| {
@@ -126,12 +127,14 @@ impl CommitService for CommitServiceImpl {
             }
             true
         };
-        let _ = diff.foreach(
+        if let Err(e) = diff.foreach(
             &mut |_delta, _progress| true,
             None,
             None,
             Some(&mut line_cb),
-        );
+        ) {
+            toolkit::log_warn!("Failed to iterate diff lines: {}", e);
+        }
 
         let files: Vec<CommitFileChange> = diff
             .deltas()
@@ -171,9 +174,10 @@ impl CommitService for CommitServiceImpl {
             .statuses(Some(&mut opts))
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        let mut staged = Vec::new();
-        let mut unstaged = Vec::new();
-        let mut untracked = Vec::new();
+        let status_count = statuses.len();
+        let mut staged = Vec::with_capacity(status_count);
+        let mut unstaged = Vec::with_capacity(status_count);
+        let mut untracked = Vec::with_capacity(status_count);
         let mut conflicted = Vec::new();
 
         for entry in statuses.iter() {
@@ -426,10 +430,15 @@ impl CommitService for CommitServiceImpl {
             )));
         }
 
-        // [3] post-commit hook（失败不影响提交结果）
+        // [3] post-commit hook（失败不影响提交结果，仅记录警告）
         let post_commit_context =
             HookContext::new(repo_path, git_dir).with_commit_sha(oid.to_string());
-        let _ = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context);
+        if let Err(e) =
+            self.hook_service
+                .execute_hook(git_hooks::POST_COMMIT, &post_commit_context)
+        {
+            toolkit::log_warn!("post-commit hook failed (commit already succeeded): {}", e);
+        }
 
         Ok(oid.to_string())
     }

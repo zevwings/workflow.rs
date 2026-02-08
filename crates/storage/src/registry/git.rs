@@ -37,7 +37,12 @@ pub fn register_git() -> registry::Result<()> {
     // 第一步：注册 GitContextHolder (基础服务，无依赖)
     // 注意：GitContext::discover() 要求程序在 Git 仓库中运行
     try_bind!(dyn GitContextHolder, |_: &Container| {
-        let ctx = GitContext::discover().expect("Application must run in a git repository");
+        let ctx = GitContext::discover().map_err(|e| {
+            registry::RegistryError::ValidationError(format!(
+                "Application must run in a git repository: {}",
+                e
+            ))
+        })?;
         Ok(Arc::new(DiscoveredContext(ctx)))
     })
     .in_scope(Scope::Singleton)?;

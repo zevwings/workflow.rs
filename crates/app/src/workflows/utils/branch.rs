@@ -88,8 +88,9 @@ pub fn generate_branch_name_from_template(
 /// assert_eq!(to_slug("Chat Unified Entry"), "chat-unified-entry");
 /// assert_eq!(to_slug("Fix: Auth Issue"), "fix-auth-issue");
 /// ```
-pub fn to_slug(summary: &str) -> String {
+pub fn to_slug(summary: impl AsRef<str>) -> String {
     let slug = summary
+        .as_ref()
         .to_lowercase()
         .chars()
         .map(|c| {
@@ -195,7 +196,10 @@ fn strip_branch_type_prefix(name: &str) -> String {
 /// # Returns
 ///
 /// 生成的分支名（如 "feature/proj-123-chat-unified-entry"）
-pub fn generate_branch_name_from_jira(jira_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn generate_branch_name_from_jira(
+    jira_id: impl AsRef<str>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let jira_id = jira_id.as_ref();
     // 获取 JiraRepository
     let jira_repo = registry::get_jira_repository();
 

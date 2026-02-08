@@ -250,13 +250,13 @@ impl BranchService for BranchServiceImpl {
                 // name 字段保存不带 origin/ 前缀的短名称
                 // 这样 has_branch 可以正确检查本地和远程
                 if has_local {
-                    let mut info = domain::BranchInfo::local(name.clone());
+                    let mut info = domain::BranchInfo::local(name);
                     info.display_name = display_name;
                     info.is_remote = has_remote;
                     info
                 } else {
                     // 仅存在于远程的分支
-                    domain::BranchInfo::remote(name.clone(), display_name)
+                    domain::BranchInfo::remote(name, display_name)
                 }
             })
             .collect();
@@ -506,9 +506,10 @@ impl BranchServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         // 精确匹配：merge base == 候选分支 HEAD，记录 (分支名, commit时间)
-        let mut exact_matches: Vec<(String, i64)> = Vec::new();
+        let mut exact_matches: Vec<(String, i64)> = Vec::with_capacity(4);
         // 备选：记录主线分支的 merge base 时间
-        let mut main_branch_candidates: Vec<(String, i64)> = Vec::new();
+        let mut main_branch_candidates: Vec<(String, i64)> =
+            Vec::with_capacity(MAIN_BRANCHES.len());
 
         for branch_result in all_branches {
             let (branch, _) = match branch_result {

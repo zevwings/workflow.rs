@@ -194,7 +194,9 @@ impl RemoteServiceImpl {
 
         // 如果有远程分支，隐藏远程分支的提交
         if let Some(oid) = remote_oid {
-            let _ = revwalk.hide(oid);
+            if let Err(e) = revwalk.hide(oid) {
+                toolkit::log_debug!("Failed to hide remote oid in revwalk: {}", e);
+            }
         }
 
         for oid in revwalk.flatten() {

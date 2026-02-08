@@ -195,7 +195,8 @@ fn configure_jira_status_interactive(
 /// 从 PR URL 提取 PR ID
 ///
 /// 支持 GitHub PR URL 格式：`https://github.com/owner/repo/pull/123`
-pub fn extract_pr_id_from_url(pr_url: &str) -> Option<String> {
+pub fn extract_pr_id_from_url(pr_url: impl AsRef<str>) -> Option<String> {
+    let pr_url = pr_url.as_ref();
     // 匹配 /pull/123 或 /pulls/123 格式
     let parts: Vec<&str> = pr_url.split('/').collect();
 

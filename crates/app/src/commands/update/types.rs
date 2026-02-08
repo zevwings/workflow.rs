@@ -55,7 +55,12 @@ impl TempDirManager {
     ///
     /// * `version` - 目标版本号
     /// * `platform` - 平台标识
-    pub fn new(version: &str, platform: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        version: impl AsRef<str>,
+        platform: impl AsRef<str>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let version = version.as_ref();
+        let platform = platform.as_ref();
         let temp_dir = env::temp_dir().join(format!("workflow-update-{}", version));
 
         // 如果临时目录已存在，先删除

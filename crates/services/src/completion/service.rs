@@ -2,15 +2,17 @@
 //!
 //! 实现 `CompletionService` trait，负责 Completion 脚本的保存、配置和管理。
 
+// 标准库
 use std::path::PathBuf;
-use std::{fs, sync::Arc};
+use std::sync::Arc;
+use std::fs;
 
-use domain::get_completion_source_shell_path;
+// 项目内部
 use domain::{
     errors::ServiceError, get_all_completion_filenames, get_completion_filename,
-    get_completion_shell_dir, get_completion_shell_path, get_shell_source_path,
-    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
-    PathService, ShellCompletionStatus,
+    get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,
+    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult,
+    CompletionRemoveResult, CompletionService, PathService, ShellCompletionStatus,
 };
 use toolkit::{
     add_source, config_file_path, detect_shell, directory, file, has_source, reload_hint,

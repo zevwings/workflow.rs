@@ -148,13 +148,13 @@ impl GitContext {
             .and_then(|remote| remote.url().map(String::from));
 
         // 根据 URL 检测仓库类型
-        let kind = origin_url.as_ref().map(|url| Self::parse_repo_kind(url));
+        let kind = origin_url.as_ref().map(Self::parse_repo_kind);
 
         // 获取 Git 目录
         let directory = repo.path().canonicalize().ok().and_then(|p| p.to_str().map(String::from));
 
         // 提取仓库名称
-        let name = origin_url.as_ref().and_then(|url| Self::extract_repo_name(url));
+        let name = origin_url.as_ref().and_then(Self::extract_repo_name);
 
         // 提取 owner
         let owner = name.as_ref().and_then(|n| {
@@ -177,7 +177,8 @@ impl GitContext {
     }
 
     /// 从 URL 提取仓库名称
-    pub fn extract_repo_name(url: &str) -> Option<String> {
+    pub fn extract_repo_name(url: impl AsRef<str>) -> Option<String> {
+        let url = url.as_ref();
         for (idx, pattern) in URL_PATTERNS.iter().enumerate() {
             if let Some(caps) = pattern.captures(url) {
                 if let Some(m) = caps.get(1) {
@@ -199,7 +200,8 @@ impl GitContext {
     }
 
     /// 从 URL 解析仓库类型
-    pub fn parse_repo_kind(url: &str) -> CodePlatform {
+    pub fn parse_repo_kind(url: impl AsRef<str>) -> CodePlatform {
+        let url = url.as_ref();
         if url.contains("github.com")
             || url.contains("ssh.github.com")
             || url.starts_with("git@github")
@@ -301,7 +303,7 @@ impl GitContext {
         self.inner
             .repo
             .lock()
-            .expect("Failed to lock repository")
+            .map_err(|_| GitError::OperationFailed("Failed to lock repository".into()))?
             .signature()
             .or_else(|_| git2::Signature::now("User", "user@example.com"))
             .map_err(|e| GitError::SignatureError(e.to_string()))
@@ -310,7 +312,8 @@ impl GitContext {
     /// 解析引用到 commit
     ///
     /// 支持分支名、tag 名、SHA 等各种引用格式。
-    pub fn resolve_commit(&self, reference: &str) -> Result<git2::Oid, GitError> {
+    pub fn resolve_commit(&self, reference: impl AsRef<str>) -> Result<git2::Oid, GitError> {
+        let reference = reference.as_ref();
         let repo = self.repository();
         let obj = repo
             .revparse_single(reference)

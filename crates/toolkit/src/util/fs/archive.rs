@@ -247,7 +247,7 @@ fn list_zip_contents(archive_path: &Path) -> Result<Vec<String>, FileError> {
     let mut archive = ZipArchive::new(file)
         .map_err(|e| FileError::Compression(format!("Failed to read zip archive: {}", e)))?;
 
-    let mut contents = Vec::new();
+    let mut contents = Vec::with_capacity(archive.len());
     for i in 0..archive.len() {
         if let Ok(file) = archive.by_index(i) {
             contents.push(file.name().to_string());

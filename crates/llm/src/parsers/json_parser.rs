@@ -39,8 +39,8 @@ impl JsonParser {
     /// # 返回
     ///
     /// 返回提取的 JSON 字符串（已去除 markdown 代码块包装）
-    pub fn extract_json(response: String) -> String {
-        let trimmed = response.trim();
+    pub fn extract_json(response: impl AsRef<str>) -> String {
+        let trimmed = response.as_ref().trim();
 
         // 尝试提取 JSON（可能包含 markdown 代码块）
         if trimmed.starts_with("```json") {
@@ -72,13 +72,13 @@ impl JsonParser {
     /// # 错误
     ///
     /// 如果 JSON 格式不正确，返回相应的错误信息。
-    pub fn parse(json_str: String, mode: JsonParseMode) -> Result<Value, LLMError> {
+    pub fn parse(json_str: impl AsRef<str>, mode: JsonParseMode) -> Result<Value, LLMError> {
         let json_str = match mode {
-            JsonParseMode::Raw => json_str,
+            JsonParseMode::Raw => json_str.as_ref().to_string(),
             JsonParseMode::ExtractFromMarkdown => Self::extract_json(json_str),
         };
 
-        serde_json::from_str(json_str.as_str()).map_err(|e| {
+        serde_json::from_str(&json_str).map_err(|e| {
             LLMError::ApiError(format!(
                 "Failed to parse LLM response as JSON. Raw response: {} - {}",
                 json_str, e
@@ -121,7 +121,7 @@ impl JsonParser {
     /// let response = r#"{"field1": "value", "field2": "optional"}"#.to_string();
     /// let model: MyModel = JsonParser::to_model(response)?;
     /// ```
-    pub fn to_model<T>(response: String) -> Result<T, LLMError>
+    pub fn to_model<T>(response: impl AsRef<str>) -> Result<T, LLMError>
     where
         T: for<'de> Deserialize<'de>,
     {
@@ -160,7 +160,7 @@ impl JsonParser {
     /// let map = JsonParser::to_map(response)?;
     /// let branch_name = map.get("branch_name").and_then(|v| v.as_str());
     /// ```
-    pub fn to_map(response: String) -> Result<Map<String, Value>, LLMError> {
+    pub fn to_map(response: impl AsRef<str>) -> Result<Map<String, Value>, LLMError> {
         let value = Self::parse(response, JsonParseMode::ExtractFromMarkdown)?;
 
         match value {

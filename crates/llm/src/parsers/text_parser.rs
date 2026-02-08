@@ -21,8 +21,14 @@ impl TextParser {
     /// # 返回
     ///
     /// 返回清理后的文本
-    pub fn clean(response: String) -> String {
-        response.trim().trim_matches('"').trim_matches('\'').trim().to_string()
+    pub fn clean(response: impl AsRef<str>) -> String {
+        response
+            .as_ref()
+            .trim()
+            .trim_matches('"')
+            .trim_matches('\'')
+            .trim()
+            .to_string()
     }
 
     /// 清理并验证文本响应
@@ -40,7 +46,7 @@ impl TextParser {
     /// # 错误
     ///
     /// 如果清理后的文本为空，返回相应的错误信息。
-    pub fn clean_and_validate(response: String) -> Result<String, LLMError> {
+    pub fn clean_and_validate(response: impl AsRef<str>) -> Result<String, LLMError> {
         let cleaned = Self::clean(response);
 
         if cleaned.is_empty() {

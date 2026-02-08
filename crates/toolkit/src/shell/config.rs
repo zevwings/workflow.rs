@@ -89,7 +89,8 @@ pub fn add_source(
 /// # 返回
 ///
 /// 返回是否存在该 source 语句。
-pub fn has_source(shell: &Shell, source_path: &str) -> Result<bool, ShellError> {
+pub fn has_source(shell: &Shell, source_path: impl AsRef<str>) -> Result<bool, ShellError> {
+    let source_path = source_path.as_ref();
     let config_path = config_file_path(shell).ok_or(ShellError::HomeNotFound)?;
 
     if !config_path.exists() {
@@ -116,7 +117,8 @@ pub fn has_source(shell: &Shell, source_path: &str) -> Result<bool, ShellError> 
 /// # 返回
 ///
 /// 返回是否成功移除（如果不存在则返回 false）。
-pub fn remove_source(shell: &Shell, source_path: &str) -> Result<bool, ShellError> {
+pub fn remove_source(shell: &Shell, source_path: impl AsRef<str>) -> Result<bool, ShellError> {
+    let source_path = source_path.as_ref();
     let config_path = config_file_path(shell).ok_or(ShellError::HomeNotFound)?;
 
     if !config_path.exists() {
@@ -194,7 +196,8 @@ pub fn remove_source(shell: &Shell, source_path: &str) -> Result<bool, ShellErro
 /// # 返回
 ///
 /// 返回 (是否已配置, 配置文件路径)。
-pub fn is_configured(shell: &Shell, source_path: &str) -> Result<(bool, PathBuf), ShellError> {
+pub fn is_configured(shell: &Shell, source_path: impl AsRef<str>) -> Result<(bool, PathBuf), ShellError> {
+    let source_path = source_path.as_ref();
     let config_path = config_file_path(shell).ok_or(ShellError::HomeNotFound)?;
     let configured = has_source(shell, source_path)?;
     Ok((configured, config_path))

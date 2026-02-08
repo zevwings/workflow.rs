@@ -35,7 +35,8 @@ impl BranchRenameCommand {
         }
 
         // 提取分支名称用于选择（本地分支的 name 和 display_name 相同）
-        let branch_names: Vec<String> = branch_items.iter().map(|item| item.name.clone()).collect();
+        let branch_names: Vec<String> =
+            branch_items.into_iter().map(|item| item.name).collect();
 
         // 交互式选择要重命名的分支
         let old_branch = select!("Select branch to rename:", branch_names)
