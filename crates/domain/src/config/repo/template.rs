@@ -66,17 +66,17 @@ impl Default for BranchTemplates {
 /// Commit templates configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CommitTemplates {
-    /// Default commit template
+    /// Commit message 模板（Handlebars）
     #[serde(
-        default = "CommitTemplates::default_commit_template",
+        default = "CommitTemplates::default_message_template",
         skip_serializing_if = "String::is_empty"
     )]
-    pub default: String,
+    pub message: String,
 }
 
 impl CommitTemplates {
-    /// Get default commit template
-    pub fn default_commit_template() -> String {
+    /// 默认 commit message 模板
+    pub fn default_message_template() -> String {
         r#"{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
 
 {{#if body}}{{body}}{{/if}}
@@ -89,7 +89,7 @@ impl CommitTemplates {
 impl Default for CommitTemplates {
     fn default() -> Self {
         Self {
-            default: CommitTemplates::default_commit_template(),
+            message: CommitTemplates::default_message_template(),
         }
     }
 }
@@ -97,17 +97,32 @@ impl Default for CommitTemplates {
 /// PR templates configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PullRequestsTemplates {
-    /// Default PR template
+    /// PR 标题模板（Handlebars）
+    ///
+    /// 可用变量：`jira_key`（可选）、`commit_type`、`scope`（可选）、`summary`。
+    /// 示例：`{{#if jira_key}}{{jira_key}}: {{/if}}{{commit_type}}{{#if scope}}({{scope}}){{/if}} - {{summary}}`
     #[serde(
-        default = "PullRequestsTemplates::default_pull_request_template",
+        default = "PullRequestsTemplates::default_title_template",
         skip_serializing_if = "String::is_empty"
     )]
-    pub default: String,
+    pub title: String,
+    /// PR 正文模板（Handlebars）
+    #[serde(
+        default = "PullRequestsTemplates::default_body_template",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub body: String,
 }
 
 impl PullRequestsTemplates {
-    /// Get default PR template
-    pub fn default_pull_request_template() -> String {
+    /// 默认 PR 标题模板：`JIRA: type(scope) - summary` 或 `type(scope) - summary`
+    pub fn default_title_template() -> String {
+        r#"{{#if jira_key}}{{jira_key}}: {{/if}}{{commit_type}}{{#if scope}}({{scope}}){{/if}} - {{summary}}"#
+            .to_string()
+    }
+
+    /// 默认 PR 正文模板
+    pub fn default_body_template() -> String {
         r#"
 # PR Ready
 
@@ -118,21 +133,20 @@ impl PullRequestsTemplates {
 {{/each}}
 
 {{#if short_description}}
-#### Short description:
 
 {{short_description}}
 {{/if}}
 
 {{#if jira_key}}
 {{#if jira_service_address}}
-#### Jira Link:
+## Jira Link:
 
 {{jira_service_address}}/browse/{{jira_key}}
 {{/if}}
 {{/if}}
 
 {{#if dependency}}
-#### Dependency
+## Dependency
 
 {{dependency}}
 {{/if}}
@@ -145,7 +159,8 @@ impl PullRequestsTemplates {
 impl Default for PullRequestsTemplates {
     fn default() -> Self {
         Self {
-            default: PullRequestsTemplates::default_pull_request_template(),
+            title: PullRequestsTemplates::default_title_template(),
+            body: PullRequestsTemplates::default_body_template(),
         }
     }
 }

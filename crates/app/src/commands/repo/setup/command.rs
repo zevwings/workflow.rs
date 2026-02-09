@@ -172,7 +172,7 @@ impl RepoSetupCommand {
         // 检查模板配置是否存在
         let has_commit_template = existing_project
             .as_ref()
-            .map(|c| !c.template.commit.default.is_empty())
+            .map(|c| !c.template.commit.message.is_empty())
             .unwrap_or(false);
         let has_branch_template = existing_project
             .as_ref()
@@ -186,15 +186,15 @@ impl RepoSetupCommand {
             .unwrap_or(false);
         let has_pr_template = existing_project
             .as_ref()
-            .map(|c| !c.template.pull_requests.default.is_empty())
+            .map(|c| !c.template.pull_requests.body.is_empty())
             .unwrap_or(false);
 
         // 只使用现有配置作为默认值，如果不存在则不设置默认值（空字符串）
         let custom_commit_template = existing_project
             .as_ref()
             .and_then(|c| {
-                let default = &c.template.commit.default;
-                if !default.is_empty() && default != &CommitTemplates::default().default {
+                let default = &c.template.commit.message;
+                if !default.is_empty() && default != &CommitTemplates::default().message {
                     Some(default.clone())
                 } else {
                     None
@@ -216,8 +216,8 @@ impl RepoSetupCommand {
         let custom_pr_template = existing_project
             .as_ref()
             .and_then(|c| {
-                let default = &c.template.pull_requests.default;
-                if !default.is_empty() && default != &PullRequestsTemplates::default().default {
+                let default = &c.template.pull_requests.body;
+                if !default.is_empty() && default != &PullRequestsTemplates::default().body {
                     Some(default.clone())
                 } else {
                     None
@@ -403,10 +403,11 @@ impl RepoSetupCommand {
                         chore: String::new(),
                     },
                     commit: CommitTemplates {
-                        default: String::new(),
+                        message: String::new(),
                     },
                     pull_requests: PullRequestsTemplates {
-                        default: String::new(),
+                        title: String::new(),
+                        body: String::new(),
                     },
                 }
             });
@@ -441,7 +442,7 @@ impl RepoSetupCommand {
         // 更新 commit template
         if form_result.get_bool("configure_commit_template") {
             let template_str = form_result.get_string("custom_commit_template");
-            template.commit.default = template_str.trim().to_string();
+            template.commit.message = template_str.trim().to_string();
         }
 
         // 更新 branch templates
@@ -463,7 +464,7 @@ impl RepoSetupCommand {
         // 更新 PR template
         if form_result.get_bool("configure_pr_template") {
             let template_str = form_result.get_string("custom_pr_template");
-            template.pull_requests.default = template_str.trim().to_string();
+            template.pull_requests.body = template_str.trim().to_string();
         }
     }
 }

@@ -33,16 +33,51 @@ pub struct PrSummaryResult {
 
 /// 组合 PR 标题
 ///
-/// 使用 Conventional Commits 格式将 type、scope 和 commit message 组合为 PR 标题。
+/// 格式：
+/// - **有 JIRA**：`{JIRA}: {type(scope)} - {summary}`
+/// - **无 JIRA**（`jira_id` 为 `None` 或空）：`{type(scope)} - {summary}`
+///
+/// `type(scope)` 可能无 scope，此时为 `{type}`。summary 从 `commit_message` 中取得，
+/// 若有 JIRA 且 message 以 `"{JIRA}: "` 开头则去掉该前缀，否则整句作为 summary。
 ///
 /// # 示例
 ///
-/// - 有 scope: `feat(auth): PROJ-123: 用户登录功能`
-/// - 无 scope: `feat: PROJ-123: 用户登录功能`
-pub fn format_pr_title(type_: &str, scope: Option<&str>, commit_message: &str) -> String {
-    match scope {
-        Some(s) if !s.is_empty() => format!("{}({}): {}", type_, s, commit_message),
-        _ => format!("{}: {}", type_, commit_message),
+/// - 有 JIRA 与 scope: `IOSNAT-30274: feat(workflow) - workflow 重构`
+/// - 无 JIRA: `feat(workflow) - workflow 重构`
+/// - 无 scope: `IOSNAT-30274: feat - workflow 重构`
+pub fn format_pr_title(
+    type_: &str,
+    scope: Option<&str>,
+    jira_id: Option<&str>,
+    commit_message: &str,
+) -> String {
+    let jira_key = jira_id.and_then(|j| {
+        if j.trim().is_empty() {
+            None
+        } else {
+            Some(j.trim())
+        }
+    });
+
+    // summary：有 JIRA 时尝试去掉 "JIRA: " 前缀（commit_message 可能不包含该前缀）
+    let summary = match jira_key {
+        Some(j) => commit_message
+            .strip_prefix(&format!("{}: ", j))
+            .unwrap_or(commit_message)
+            .trim(),
+        None => commit_message.trim(),
+    };
+
+    // type(scope)，scope 可能不存在
+    let type_scope = match scope {
+        Some(s) if !s.is_empty() => format!("{}({})", type_, s),
+        _ => type_.trim().to_string(),
+    };
+
+    // JIRA_KEY 可能不存在：无则只输出 type(scope) - summary
+    match jira_key {
+        Some(j) => format!("{}: {} - {}", j, type_scope, summary),
+        None => format!("{} - {}", type_scope, summary),
     }
 }
 
