@@ -3,6 +3,7 @@
 //! 提供提交相关的业务逻辑实现。
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 
 use toolkit::log_debug;
@@ -63,6 +64,61 @@ impl CommitServiceImpl {
     /// 创建新的提交服务实例
     pub fn new(ctx: GitContext, hook_service: Arc<dyn HookService>) -> Self {
         Self { ctx, hook_service }
+    }
+
+    /// 仅将工作区中已变更的路径加入暂存区（基于 status），避免全树扫描，大仓库下更快。
+    fn add_changed_paths(&self) -> Result<(), GitError> {
+        log_debug!("commit: add_changed_paths start (get_working_tree_status)");
+        let status = self.get_working_tree_status()?;
+        let paths: Vec<&Path> = status
+            .unstaged
+            .iter()
+            .chain(status.untracked.iter())
+            .map(|s| s.path.as_str())
+            .map(Path::new)
+            .collect();
+        log_debug!(
+            "commit: add_changed_paths status done (unstaged={}, untracked={})",
+            status.unstaged.len(),
+            status.untracked.len()
+        );
+        if paths.is_empty() {
+            log_debug!("commit: add_changed_paths skipped (no unstaged/untracked)");
+            return Ok(());
+        }
+        let repo = self.ctx.repository();
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+        index
+            .add_all(paths.iter(), git2::IndexAddOption::DEFAULT, None)
+            .map_err(|e| GitError::IndexError(e.to_string()))?;
+        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+        log_debug!("commit: add_changed_paths added {} path(s)", paths.len());
+        Ok(())
+    }
+
+    /// 全树扫描并添加（等价于 `git add .`），大仓库较慢；供 add_all 在 add_changed_paths 失败时回退。
+    fn add_all_full_tree(&self) -> Result<(), GitError> {
+        log_debug!("commit: add_all_full_tree start (using git command)");
+
+        // 使用 git 命令代替 libgit2 API，性能更好
+        let workdir = self.ctx.workdir();
+        let output = std::process::Command::new("git")
+            .arg("add")
+            .arg("-A")
+            .current_dir(workdir)
+            .output()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to execute git add: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(GitError::OperationFailed(format!(
+                "git add failed: {}",
+                stderr
+            )));
+        }
+
+        log_debug!("commit: add_all_full_tree done");
+        Ok(())
     }
 }
 
@@ -287,34 +343,10 @@ impl CommitService for CommitServiceImpl {
     }
 
     fn add_all(&self) -> Result<(), GitError> {
-        let repo = self.ctx.repository();
-        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
-
-        // 获取需要跳过的目录模式（从 .gitignore 和常见大型目录）
-        // 即使这些目录在 .gitignore 中，扫描它们仍然很慢，
-        // 所以使用回调函数提前跳过以提高性能
-        let ignore_patterns = self.ctx.get_ignore_directory_patterns();
-
-        index
-            .add_all(
-                ["."].iter(),
-                git2::IndexAddOption::DEFAULT,
-                Some(&mut |path, _| {
-                    // 跳过大型目录以提高性能
-                    if let Some(path_str) = path.to_str() {
-                        if ignore_patterns.iter().any(|pattern| path_str.starts_with(pattern)) {
-                            return 1; // Skip this path
-                        }
-                    }
-                    0 // Add this path (git2 会自动处理 .gitignore)
-                }),
-            )
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
-
-        // 写入索引到磁盘
-        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
-
-        Ok(())
+        // 直接使用 add_all_full_tree()（已移除性能问题的回调）。
+        // 不使用 add_changed_paths()：它依赖的 get_working_tree_status() 在大仓库中可能卡住。
+        log_debug!("commit: add_all start");
+        self.add_all_full_tree()
     }
 
     fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError> {
@@ -437,11 +469,11 @@ impl CommitService for CommitServiceImpl {
 
         let repo = self.ctx.repository();
 
-        // 添加更改到暂存区（all 时复用 add_all，内部会写入索引）
+        // 添加更改到暂存区（add_all 内部优先按变更路径添加，失败时回退全树扫描）
         if all {
-            log_debug!("commit: add_all start");
+            log_debug!("commit: staging changes (add_all)");
             self.add_all()?;
-            log_debug!("commit: add_all done");
+            log_debug!("commit: staging done");
         }
 
         let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
