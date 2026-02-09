@@ -1,5 +1,6 @@
 use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
 use prompt::{error, info, input, spinner, success, warning};
+use toolkit::{log_debug, log_error};
 
 use crate::registry;
 use crate::workflows::utils::branch::{
@@ -337,14 +338,29 @@ impl PullRequestCreateCommand {
         spinner!("Updating Jira ticket {}...", ticket).with(
             || -> Result<(), Box<dyn std::error::Error>> {
                 // 更新状态
-                jira_repo
-                    .update_issue_status(ticket, status)
-                    .map_err(|e| format!("Failed to update issue status: {}", e))?;
+                log_debug!("Jira: updating issue {} to status {}", ticket, status);
+                jira_repo.update_issue_status(ticket, status).map_err(|e| {
+                    log_error!(
+                        "Jira update_issue_status failed: ticket={}, status={}, error={}",
+                        ticket,
+                        status,
+                        e
+                    );
+                    format!("Failed to update issue status: {}", e)
+                })?;
+                log_debug!("Jira: issue status updated successfully");
 
                 // 添加评论（PR URL）
-                jira_repo
-                    .add_comment(ticket, pr_url)
-                    .map_err(|e| format!("Failed to add comment: {}", e))?;
+                log_debug!(
+                    "Jira: adding comment to {} (pr_url len={})",
+                    ticket,
+                    pr_url.len()
+                );
+                jira_repo.add_comment(ticket, pr_url).map_err(|e| {
+                    log_error!("Jira add_comment failed: ticket={}, error={}", ticket, e);
+                    format!("Failed to add comment: {}", e)
+                })?;
+                log_debug!("Jira: comment added successfully");
 
                 Ok(())
             },
@@ -353,6 +369,12 @@ impl PullRequestCreateCommand {
         success!("Updated Jira ticket {} to status: {}", ticket, status);
 
         // 写入工作历史记录
+        log_debug!(
+            "Jira: writing work history ticket={}, pr_id={}, branch={}",
+            ticket,
+            pr_id,
+            branch_name
+        );
         work_history_repo
             .write_work_history(
                 ticket,
@@ -361,7 +383,16 @@ impl PullRequestCreateCommand {
                 repository_url,
                 Some(branch_name),
             )
-            .map_err(|e| format!("Failed to write work history: {}", e))?;
+            .map_err(|e| {
+                log_error!(
+                    "Jira write_work_history failed: ticket={}, pr_id={}, error={}",
+                    ticket,
+                    pr_id,
+                    e
+                );
+                format!("Failed to write work history: {}", e)
+            })?;
+        log_debug!("Jira: work history written successfully");
 
         info!("Work history recorded for PR #{}", pr_id);
 
