@@ -75,18 +75,13 @@ impl CommitCreateCommand {
                         .map_err(|e| format!("Failed to generate commit message: {}", e))
                 })?;
 
-            // 显示生成的 commit message
-            toolkit::log_info!("\n┌─ Generated Commit Message ────────────────────────");
-            toolkit::log_info!("│");
-            toolkit::log_info!("│  {}", analysis.commit_message.title);
-            toolkit::log_info!("│");
-            if !analysis.commit_message.body.is_empty() {
-                for line in analysis.commit_message.body.lines() {
-                    toolkit::log_info!("│  {}", line);
-                }
-                toolkit::log_info!("│");
-            }
-            toolkit::log_info!("└────────────────────────────────────────────────────\n");
+            // 结构化输出生成的 commit message（便于日志采集与检索）
+            toolkit::log_info_with_fields!(
+                title = % analysis.commit_message.title,
+                body = % analysis.commit_message.body,
+                footer = % analysis.commit_message.footer,
+                "Generated commit message"
+            );
 
             if self.dry_run {
                 info!(
@@ -119,7 +114,10 @@ impl CommitCreateCommand {
             return Ok(());
         }
 
-        info!("Committing changes with message: {}", commit_message);
+        info!(
+            "Committing changes with message: {}",
+            commit_message.lines().next().unwrap_or("")
+        );
 
         // Step 4: 提交代码
         let oid = spinner!("Creating commit...")
