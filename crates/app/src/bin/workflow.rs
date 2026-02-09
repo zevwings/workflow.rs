@@ -4,15 +4,17 @@
 
 use clap::Parser;
 use prompt::{terminal_resume, terminal_suspend};
-use toolkit::{logger, logs_dir, register_spinner_handlers, LoggerConfig};
+use toolkit::{logger, register_spinner_handlers, LoggerConfig};
 
 use app::cli::{
     AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
     IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
     StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
 };
+#[cfg(feature = "develop")]
+use app::cli::{CommitSubcommand, RollbackCommand};
 use app::commands;
-use app::registry;
+use app::registry::{get_global_config_repository, get_path_service};
 
 /// 获取命令名称字符串（用于日志文件名）
 fn get_command_name(command: &Command) -> Option<&'static str> {
@@ -28,14 +30,19 @@ fn get_command_name(command: &Command) -> Option<&'static str> {
         Command::Github(_) => Some("github"),
         Command::Jira(_) => Some("jira"),
         Command::Branch(_) => Some("branch"),
+        #[cfg(feature = "develop")]
         Command::Commit(_) => Some("commit"),
         Command::Stash(_) => Some("stash"),
         Command::Tag(_) => Some("tag"),
         Command::Pr(_) => Some("pr"),
+        #[cfg(feature = "develop")]
         Command::Push => Some("push"),
+        #[cfg(feature = "develop")]
         Command::Pull => Some("pull"),
         Command::Completion(_) => Some("completion"),
         Command::Alias(_) => Some("alias"),
+        #[cfg(feature = "develop")]
+        Command::Rollback(_) => Some("rollback"),
     }
 }
 
@@ -46,7 +53,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
 
-    if let Ok(global_config) = registry::get_global_config_repository().load() {
+    let global_config_repository = get_global_config_repository();
+    let path_service = get_path_service();
+
+    if let Ok(global_config) = global_config_repository.load() {
         // RUST_LOG 优先于配置文件，便于调试时用 RUST_LOG=debug 看详细日志
         let level = std::env::var("RUST_LOG")
             .ok()
@@ -56,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             level,
             global_config.log.format.clone(),
             global_config.log.enable_trace_console.unwrap_or(false),
-            logs_dir()?,
+            path_service.get_logs_dir()?,
         );
 
         // 初始化 logger（从配置文件读取 LogSettings 并转换为 LoggerConfig）
@@ -104,8 +114,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let cmd = commands::update::UpdateCommand::new(target_version, force, token);
             cmd.run()?;
         }
-        Command::Uninstall(UninstallArgs { force, keep_config }) => {
-            let cmd = commands::uninstall::UninstallCommand::new(force, keep_config);
+        Command::Uninstall(UninstallArgs { keep_config, .. }) => {
+            let cmd = commands::uninstall::UninstallCommand::new(keep_config);
             cmd.run()?;
         }
         Command::Repo(repo_cmd) => match repo_cmd {
@@ -158,11 +168,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             JiraCommand::Info(args) => {
-                let cmd = commands::jira::JiraInfoCommand::new(
-                    args.jira_id.into_option(),
-                    args.json,
-                    args.markdown,
-                );
+                let format = args.get_format();
+                let cmd = commands::jira::JiraInfoCommand::new(args.jira_id.into_option(), format);
                 cmd.run()?;
             }
             JiraCommand::Attachments(args) => {
@@ -174,14 +181,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     commands::jira::JiraCleanCommand::new(args.jira_id.into_option(), args.all);
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
+            JiraCommand::Comment(args) => {
+                let cmd = commands::jira::JiraCommentCommand::new(
+                    args.jira_id.into_option(),
+                    args.message.clone(),
+                );
+                cmd.run()?;
+            }
+            #[cfg(feature = "develop")]
             JiraCommand::Status(args) => {
                 let cmd = commands::jira::JiraStatusCommand::new(args.jira_id);
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
             JiraCommand::Transition(args) => {
                 let cmd = commands::jira::JiraTransitionCommand::new(args.jira_id);
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
             JiraCommand::Assign(args) => {
                 let cmd = commands::jira::JiraAssignCommand::new(args.jira_id);
                 cmd.run()?;
@@ -212,6 +230,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let cmd = commands::branch::clean::BranchCleanCommand::new(dry_run.is_dry_run());
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
             BranchSubcommand::InferSource => {
                 let cmd = commands::branch::infer_source::BranchInferSourceCommand::new();
                 cmd.run()?;
@@ -248,20 +267,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
         },
+        #[cfg(feature = "develop")]
         Command::Commit(commit_cmd) => {
-            if let Some(message) = commit_cmd.message {
-                let cmd = commands::commit::CommitCreateCommand::new(message, commit_cmd.all);
-                cmd.run()?;
+            if let Some(sub) = &commit_cmd.subcommand {
+                match sub {
+                    CommitSubcommand::CommitToMerge {
+                        source_branch,
+                        target_branch,
+                    } => {
+                        let cmd = commands::commit::CommitToMergeCommand::new(
+                            source_branch.clone(),
+                            target_branch.clone(),
+                        );
+                        cmd.run()?;
+                    }
+                    CommitSubcommand::CommitFiles { ref_or_sha } => {
+                        let cmd = commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
+                        cmd.run()?;
+                    }
+                    CommitSubcommand::CommitDiff { ref_or_sha } => {
+                        let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
+                        cmd.run()?;
+                    }
+                }
             } else {
-                eprintln!("Error: commit message is required. Use -m/--message.");
-                eprintln!("Usage: workflow commit -m <MESSAGE>");
-                std::process::exit(1);
+                let cmd = commands::commit::CommitCreateCommand::new(
+                    commit_cmd.all,
+                    commit_cmd.push,
+                    commit_cmd.dry_run.is_dry_run(),
+                    commit_cmd.message.clone(),
+                );
+                cmd.run()?;
             }
         }
+        #[cfg(feature = "develop")]
         Command::Push => {
             let cmd = commands::sync::push::PushCommand::new();
             cmd.run()?;
         }
+        #[cfg(feature = "develop")]
         Command::Pull => {
             let cmd = commands::sync::pull::PullCommand::new();
             cmd.run()?;
@@ -342,8 +386,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             PrSubcommand::Merge { pr_id, force } => {
-                let cmd =
-                    commands::pr::PullRequestMergeCommand::new(pr_id.clone(), force.is_force());
+                let cmd = commands::pr::PullRequestMergeCommand::new(
+                    Some(pr_id.clone()),
+                    force.is_force(),
+                );
                 cmd.run()?;
             }
             PrSubcommand::Close { pr_id } => {
@@ -354,8 +400,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let cmd = commands::pr::PullRequestApproveCommand::new(pr_id.clone());
                 cmd.run()?;
             }
-            PrSubcommand::Summarize { pr_id } => {
-                let cmd = commands::pr::PullRequestSummarizeCommand::new(pr_id.clone());
+            PrSubcommand::Reword { dry_run } => {
+                let cmd = commands::pr::PullRequestRewordCommand::new(dry_run.is_dry_run());
                 cmd.run()?;
             }
         },
@@ -391,6 +437,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             AliasCommand::Remove { name } => {
                 let cmd = commands::alias::AliasRemoveCommand::new(name);
+                cmd.run()?;
+            }
+        },
+        #[cfg(feature = "develop")]
+        Command::Rollback(rollback_cmd) => match rollback_cmd {
+            RollbackCommand::Backup => {
+                let cmd = commands::rollback::BackupCommand::new();
+                cmd.run()?;
+            }
+            RollbackCommand::Restore { backup_dir } => {
+                let cmd = commands::rollback::RestoreCommand::new(backup_dir);
                 cmd.run()?;
             }
         },

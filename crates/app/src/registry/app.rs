@@ -12,12 +12,6 @@ use std::sync::Arc;
 #[allow(unused_imports)]
 use registry::{bind, try_bind, Container, Scope};
 
-/// 应用层模块标记类型
-///
-/// 用于标识应用层服务的注册状态
-#[derive(Debug, Clone, Copy)]
-pub struct AppModule;
-
 /// 注册应用层服务
 ///
 /// 注册所有应用层特有的服务。应用层服务通常依赖于：
@@ -79,7 +73,7 @@ pub struct AppModule;
 /// })
 /// .in_scope(Scope::Singleton)?;
 /// ```
-pub fn register_app() -> registry::Result<AppModule> {
+pub fn register_app() -> registry::Result<()> {
     // TODO: 在这里注册应用层特有的服务
     //
     // 示例：注册一个应用层服务
@@ -91,5 +85,5 @@ pub fn register_app() -> registry::Result<AppModule> {
     // })
     // .in_scope(Scope::Singleton)?;
 
-    Ok(AppModule)
+    Ok(())
 }

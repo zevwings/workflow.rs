@@ -5,13 +5,13 @@
 //! - 读取状态配置
 //! - 写入状态配置
 
-use std::{fs, path::PathBuf, sync::Arc};
+use std::{fs, path::Path, sync::Arc};
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-use domain::{extract_jira_project, JiraError, JiraStatusConfig, ProjectStatusConfig};
-use toolkit::{file, jira_config_path, log_debug};
+use domain::{extract_jira_project, JiraError, JiraStatusConfig, PathService, ProjectStatusConfig};
+use toolkit::{file, log_debug};
 
 use crate::jira::JiraClient;
 
@@ -36,22 +36,96 @@ pub trait StatusService: Send + Sync {
 /// 提供 PR 创建和合并时的状态自动更新功能。
 pub struct StatusServiceImpl {
     jira_client: Arc<dyn JiraClient>,
-    config_path_provider: Arc<dyn Fn() -> Result<PathBuf, JiraError> + Send + Sync + 'static>,
+    path_service: Arc<dyn PathService>,
 }
 
 impl StatusServiceImpl {
-    pub fn new(jira_client: Arc<dyn JiraClient>) -> Self {
+    pub fn new(jira_client: Arc<dyn JiraClient>, path_service: Arc<dyn PathService>) -> Self {
         Self {
             jira_client,
-            config_path_provider: Arc::new(|| {
-                jira_config_path()
-                    .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))
-            }),
+            path_service,
         }
     }
 
-    fn config_path(&self) -> Result<PathBuf, JiraError> {
-        (self.config_path_provider)()
+    /// 读取 Jira 配置文件
+    ///
+    /// 如果文件不存在，返回默认配置。
+    fn read_jira_config(path: impl AsRef<Path>) -> Result<JiraConfig, JiraError> {
+        let path = path.as_ref();
+        if !path.exists() {
+            return Ok(JiraConfig::default());
+        }
+        let content = file::read_string(path)
+            .map_err(|e| JiraError::ApiError(format!("Failed to read config file: {}", e)))?;
+        toml::from_str(&content).map_err(|e| {
+            JiraError::ApiError(format!("Failed to parse TOML config {:?}: {}", path, e))
+        })
+    }
+
+    /// 写入 Jira 配置文件
+    ///
+    /// 在 Unix 系统上会自动设置文件权限为 600。
+    fn write_jira_config(path: impl AsRef<Path>, config: &JiraConfig) -> Result<(), JiraError> {
+        let path = path.as_ref();
+        file::write_toml(path, config).map_err(|e| {
+            JiraError::ApiError(format!("Failed to write config file {:?}: {}", path, e))
+        })?;
+        Self::set_permissions(path)
+            .map_err(|e| JiraError::ApiError(format!("Failed to set permissions: {}", e)))?;
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    fn set_permissions(path: &Path) -> Result<(), JiraError> {
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600)).map_err(|e| {
+            JiraError::ApiError(format!("Failed to set config file permissions: {}", e))
+        })?;
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    fn set_permissions(_path: &Path) -> Result<(), JiraError> {
+        Ok(())
+    }
+
+    /// 读取 Jira 状态配置（内部方法）
+    ///
+    /// 从 `jira.toml` 配置文件中读取指定项目的状态配置。
+    ///
+    /// # 参数
+    ///
+    /// * `project` - 项目名称（如 `"PROJ"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `JiraStatusConfig` 结构体。
+    /// 如果文件不存在或项目配置不存在，返回空配置（所有字段为 `None`）。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或解析文件失败，返回相应的错误信息。
+    fn read_status_config(&self, project: &str) -> Result<JiraStatusConfig, JiraError> {
+        let config_path = self
+            .path_service
+            .get_jira_config_filepath()
+            .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
+        let config = Self::read_jira_config(&config_path)
+            .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;
+
+        if let Some(project_config) = config.status.get(project) {
+            Ok(JiraStatusConfig {
+                project: project.to_string(),
+                created_pull_request_status: project_config.created_pull_request_status.clone(),
+                merged_pull_request_status: project_config.merged_pull_request_status.clone(),
+            })
+        } else {
+            // 返回空配置
+            Ok(JiraStatusConfig {
+                project: project.to_string(),
+                created_pull_request_status: None,
+                merged_pull_request_status: None,
+            })
+        }
     }
 }
 
@@ -134,7 +208,10 @@ impl StatusService for StatusServiceImpl {
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(&self, config: &JiraStatusConfig) -> Result<(), JiraError> {
-        let config_path = self.config_path()?;
+        let config_path = self
+            .path_service
+            .get_jira_config_filepath()
+            .map_err(|e| JiraError::ApiError(format!("Failed to get config path: {}", e)))?;
 
         let mut jira_config = Self::read_jira_config(&config_path)
             .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;
@@ -219,83 +296,5 @@ impl StatusService for StatusServiceImpl {
         })?;
 
         Ok(config.merged_pull_request_status)
-    }
-}
-
-impl StatusServiceImpl {
-    /// 读取 Jira 配置文件
-    ///
-    /// 如果文件不存在，返回默认配置。
-    fn read_jira_config(path: &PathBuf) -> Result<JiraConfig, JiraError> {
-        if !path.exists() {
-            return Ok(JiraConfig::default());
-        }
-        let content = file::read_string(path)
-            .map_err(|e| JiraError::ApiError(format!("Failed to read config file: {}", e)))?;
-        toml::from_str(&content).map_err(|e| {
-            JiraError::ApiError(format!("Failed to parse TOML config {:?}: {}", path, e))
-        })
-    }
-
-    /// 写入 Jira 配置文件
-    ///
-    /// 在 Unix 系统上会自动设置文件权限为 600。
-    fn write_jira_config(path: &PathBuf, config: &JiraConfig) -> Result<(), JiraError> {
-        file::write_toml(path, config).map_err(|e| {
-            JiraError::ApiError(format!("Failed to write config file {:?}: {}", path, e))
-        })?;
-        Self::set_permissions(path)
-            .map_err(|e| JiraError::ApiError(format!("Failed to set permissions: {}", e)))?;
-        Ok(())
-    }
-
-    #[cfg(unix)]
-    fn set_permissions(path: &PathBuf) -> Result<(), JiraError> {
-        fs::set_permissions(path, fs::Permissions::from_mode(0o600)).map_err(|e| {
-            JiraError::ApiError(format!("Failed to set config file permissions: {}", e))
-        })?;
-        Ok(())
-    }
-
-    #[cfg(not(unix))]
-    fn set_permissions(_path: &PathBuf) -> Result<(), JiraError> {
-        Ok(())
-    }
-
-    /// 读取 Jira 状态配置（内部方法）
-    ///
-    /// 从 `jira.toml` 配置文件中读取指定项目的状态配置。
-    ///
-    /// # 参数
-    ///
-    /// * `project` - 项目名称（如 `"PROJ"`）
-    ///
-    /// # 返回
-    ///
-    /// 返回 `JiraStatusConfig` 结构体。
-    /// 如果文件不存在或项目配置不存在，返回空配置（所有字段为 `None`）。
-    ///
-    /// # 错误
-    ///
-    /// 如果读取或解析文件失败，返回相应的错误信息。
-    fn read_status_config(&self, project: &str) -> Result<JiraStatusConfig, JiraError> {
-        let config_path = self.config_path()?;
-        let config = Self::read_jira_config(&config_path)
-            .map_err(|e| JiraError::ApiError(format!("Failed to read config: {}", e)))?;
-
-        if let Some(project_config) = config.status.get(project) {
-            Ok(JiraStatusConfig {
-                project: project.to_string(),
-                created_pull_request_status: project_config.created_pull_request_status.clone(),
-                merged_pull_request_status: project_config.merged_pull_request_status.clone(),
-            })
-        } else {
-            // 返回空配置
-            Ok(JiraStatusConfig {
-                project: project.to_string(),
-                created_pull_request_status: None,
-                merged_pull_request_status: None,
-            })
-        }
     }
 }

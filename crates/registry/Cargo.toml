@@ -8,11 +8,11 @@ description = "依赖注入容器，提供轻量级的依赖注入功能"
 [dependencies]
 thiserror.workspace = true
 once_cell.workspace = true
-dashmap = "6.1"
+dashmap.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true
 rstest.workspace = true
 serial_test.workspace = true
-insta = { version = "1.38", features = ["json"] }
+insta.workspace = true
 criterion.workspace = true

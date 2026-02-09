@@ -12,7 +12,7 @@ mod tag;
 
 pub use blame::BlameLineInfo;
 pub use branch::{BranchFilter, BranchInfo};
-pub use commit::CommitInfo;
+pub use commit::{CommitChangeType, CommitFileChange, CommitInfo};
 pub use merge::MergeStrategy;
 pub use remote::RemoteInfo;
 pub use repo::{CodePlatform, RepoInfo};

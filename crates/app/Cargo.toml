@@ -6,6 +6,11 @@ rust-version.workspace = true
 description = "应用层（Application Layer），CLI 应用程序入口和命令处理"
 default-run = "workflow"
 
+[features]
+default = ["develop"]
+# 开发用命令（如 check），release 构建时可通过 --no-default-features 排除以减小 bin 体积
+develop = []
+
 [[bin]]
 name = "workflow"
 path = "src/bin/workflow.rs"
@@ -15,15 +20,16 @@ name = "install"
 path = "src/bin/install.rs"
 
 [dependencies]
-domain = { path = "../domain" }
-services = { path = "../services" }
-storage = { path = "../storage" }
-toolkit = { path = "../toolkit" }
-prompt = { path = "../prompt" }
-registry = { path = "../registry" }
+domain.workspace = true
+services.workspace = true
+storage.workspace = true
+http.workspace = true
+llm.workspace = true
+toolkit.workspace = true
+prompt.workspace = true
+registry.workspace = true
 once_cell.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
-color-eyre = "0.6"
 serde_json.workspace = true
 git2.workspace = true

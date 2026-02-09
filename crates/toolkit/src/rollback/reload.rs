@@ -52,51 +52,37 @@ pub fn reload_shell(shell: &Shell) -> Result<ReloadResult, ReloadError> {
         .ok_or_else(|| ReloadError::ConfigFileNotFound(shell.to_string()))?;
     let config_file_str = config_file.display().to_string();
 
-    // PowerShell 使用 `.` 而不是 `source`
-    let (shell_cmd, reload_hint) = if shell == &Shell::PowerShell {
-        (
-            format!(". {}", config_file_str),
-            format!(". {}", config_file_str),
-        )
+    // 构建重载命令：PowerShell 使用 `.`，其他 shell 使用 `source`
+    let is_powershell = shell == &Shell::PowerShell;
+    let reload_cmd = if is_powershell {
+        format!(". {}", config_file_str)
     } else {
-        (
-            format!("source {}", config_file_str),
-            format!("source {}", config_file_str),
-        )
+        format!("source {}", config_file_str)
     };
 
-    // 尝试在子 shell 中执行 source 命令
-    // 注意：这不会影响当前 shell，但可以验证配置文件是否有效
+    // 在子 shell 中执行重载命令
     let shell_type = shell.to_string();
-
-    // PowerShell 使用不同的参数格式
-    let status = if shell == &Shell::PowerShell {
-        cmd(&shell_type, &["-NoProfile", "-Command", &shell_cmd])
-            .run()
-            .map(|_| ())
-            .map_err(|e| ReloadError::ReloadFailed(e.to_string()))
+    let args: &[&str] = if is_powershell {
+        &["-NoProfile", "-Command", &reload_cmd]
     } else {
-        cmd(&shell_type, &["-c", &shell_cmd])
-            .run()
-            .map(|_| ())
-            .map_err(|e| ReloadError::ReloadFailed(e.to_string()))
+        &["-c", &reload_cmd]
     };
 
-    match status {
+    match cmd(&shell_type, args).run() {
         Ok(_) => Ok(ReloadResult {
             reloaded: true,
             messages: vec![
                 "Shell configuration reloaded (in subprocess)".to_string(),
                 "Note: Changes may not take effect in the current shell.".to_string(),
             ],
-            reload_hint: reload_hint.clone(),
+            reload_hint: reload_cmd,
         }),
         Err(e) => {
             tracing::warn!("Could not reload shell configuration: {}", e);
             Ok(ReloadResult {
                 reloaded: false,
                 messages: vec![format!("Could not reload shell configuration: {}", e)],
-                reload_hint: reload_hint.clone(),
+                reload_hint: reload_cmd,
             })
         }
     }

@@ -2,7 +2,6 @@
 //!
 //! 列出所有已定义的别名。
 
-use color_eyre::{eyre::WrapErr, Result};
 use prompt::{br, info, print};
 
 use crate::registry::get_alias_service;
@@ -17,9 +16,9 @@ impl AliasListCommand {
     }
 
     /// 运行列表命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let service = get_alias_service();
-        let result = service.list().wrap_err("Failed to get alias list")?;
+        let result = service.list().map_err(|e| format!("Failed to get alias list: {}", e))?;
 
         if result.count == 0 {
             print!("No aliases defined.");

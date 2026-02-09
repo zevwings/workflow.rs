@@ -2,9 +2,8 @@
 //!
 //! 提供版本获取和比较功能。
 
-use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+use http::{Authorization, HttpClient, Response};
 use prompt::{info, success, Spinner};
-use toolkit::{Authorization, HttpClient};
 
 use super::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
 
@@ -22,7 +21,10 @@ pub fn get_current_version() -> Option<String> {
 /// 获取目标版本号
 ///
 /// 如果指定了版本，使用指定版本；否则从 GitHub API 获取最新版本。
-pub fn get_target_version(version: Option<String>, github_token: Option<&str>) -> Result<String> {
+pub fn get_target_version(
+    version: Option<String>,
+    github_token: Option<&str>,
+) -> Result<String, Box<dyn std::error::Error>> {
     match version {
         Some(v) => {
             info!("Using specified version: v{}", v);
@@ -33,7 +35,7 @@ pub fn get_target_version(version: Option<String>, github_token: Option<&str>) -
 }
 
 /// 从 GitHub API 获取最新版本
-fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
+fn fetch_latest_version(github_token: Option<&str>) -> Result<String, Box<dyn std::error::Error>> {
     let url = format!(
         "{}/repos/{}/{}/releases/latest",
         GITHUB_API_BASE, REPO_OWNER, REPO_NAME
@@ -51,7 +53,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
     } else {
         http_client.get(&url).send()
     }
-    .wrap_err("Failed to fetch latest release from GitHub");
+    .map_err(|e| format!("Failed to fetch latest release from GitHub: {}", e));
 
     spinner_instance.stop();
 
@@ -62,10 +64,9 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
 
     // 解析响应（使用 serde_json::Value）
     let json: serde_json::Value = response.json()?;
-    let tag_name = json
-        .get("tag_name")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| eyre!("Missing tag_name in GitHub release response"))?;
+    let tag_name = json.get("tag_name").and_then(|v| v.as_str()).ok_or_else(
+        || -> Box<dyn std::error::Error> { "Missing tag_name in GitHub release response".into() },
+    )?;
 
     let version = tag_name.trim_start_matches('v').to_string();
 
@@ -74,7 +75,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String> {
 }
 
 /// 处理 GitHub API 错误响应
-fn handle_github_api_error(response: &toolkit::Response) -> Result<()> {
+fn handle_github_api_error(response: &Response) -> Result<(), Box<dyn std::error::Error>> {
     let status = response.status;
 
     if (200..300).contains(&status) {
@@ -115,15 +116,17 @@ fn handle_github_api_error(response: &toolkit::Response) -> Result<()> {
         }
     };
 
-    color_eyre::eyre::bail!("{}", error_msg)
+    Err(error_msg.into())
 }
 
 /// 比较两个版本号
 ///
 /// 返回版本比较结果。
-pub fn compare_versions(current: &str, target: &str) -> VersionComparison {
-    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
-    let target_parts: Vec<u32> = target.split('.').filter_map(|s| s.parse().ok()).collect();
+pub fn compare_versions(current: impl AsRef<str>, target: impl AsRef<str>) -> VersionComparison {
+    let current_parts: Vec<u32> =
+        current.as_ref().split('.').filter_map(|s| s.parse().ok()).collect();
+    let target_parts: Vec<u32> =
+        target.as_ref().split('.').filter_map(|s| s.parse().ok()).collect();
 
     // 补齐到相同长度
     let max_len = current_parts.len().max(target_parts.len());

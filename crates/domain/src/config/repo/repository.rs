@@ -10,7 +10,6 @@ use crate::errors::ServiceError;
 /// 负责管理仓库配置的加载和保存操作。
 /// 这是存储层的接口，提供底层的文件读写能力。
 ///
-/// 注意：实现层会从 `toolkit::Paths::repo_root()` 获取仓库根目录路径，
 /// 因此不需要通过参数传入。
 pub trait RepoConfigRepository: Send + Sync {
     /// 加载项目配置

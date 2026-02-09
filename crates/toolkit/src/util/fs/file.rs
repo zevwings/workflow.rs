@@ -42,7 +42,7 @@ pub fn open(path: &Path) -> Result<BufReader<File>, FileError> {
 /// # 返回
 ///
 /// 返回文件内容字符串。
-pub fn read_string(path: &Path) -> Result<String, FileError> {
+pub fn read_string(path: impl AsRef<Path>) -> Result<String, FileError> {
     fs::read_to_string(path).map_err(FileError::Io)
 }
 
@@ -58,12 +58,7 @@ pub fn read_string(path: &Path) -> Result<String, FileError> {
 pub fn read_lines(path: &Path) -> Result<Vec<String>, FileError> {
     let file = File::open(path).map_err(FileError::Io)?;
     let reader = BufReader::new(file);
-    let mut lines = Vec::new();
-    for line in reader.lines() {
-        let line = line.map_err(FileError::Io)?;
-        lines.push(line);
-    }
-    Ok(lines)
+    reader.lines().collect::<std::io::Result<Vec<String>>>().map_err(FileError::Io)
 }
 
 /// 读取文件内容为字节向量。
@@ -131,8 +126,8 @@ where
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn ensure_parent_dir(path: &Path) -> Result<(), FileError> {
-    if let Some(parent) = path.parent() {
+pub fn ensure_parent_dir(path: impl AsRef<Path>) -> Result<(), FileError> {
+    if let Some(parent) = path.as_ref().parent() {
         fs::create_dir_all(parent).map_err(FileError::Io)?;
     }
     Ok(())
@@ -149,7 +144,7 @@ pub fn ensure_parent_dir(path: &Path) -> Result<(), FileError> {
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
 #[cfg(unix)]
-pub fn set_permissions(path: &Path, mode: u32) -> Result<(), FileError> {
+pub fn set_permissions(path: impl AsRef<Path>, mode: u32) -> Result<(), FileError> {
     fs::set_permissions(path, fs::Permissions::from_mode(mode)).map_err(FileError::Io)
 }
 
@@ -163,7 +158,7 @@ pub fn set_permissions(path: &Path, mode: u32) -> Result<(), FileError> {
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_string(path: &Path, content: &str) -> Result<(), FileError> {
+pub fn write_string(path: impl AsRef<Path>, content: &str) -> Result<(), FileError> {
     fs::write(path, content).map_err(FileError::Io)
 }
 
@@ -179,8 +174,8 @@ pub fn write_string(path: &Path, content: &str) -> Result<(), FileError> {
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_string_with_dir(path: &Path, content: &str) -> Result<(), FileError> {
-    ensure_parent_dir(path)?;
+pub fn write_string_with_dir(path: impl AsRef<Path>, content: &str) -> Result<(), FileError> {
+    ensure_parent_dir(path.as_ref())?;
     write_string(path, content)
 }
 
@@ -194,7 +189,7 @@ pub fn write_string_with_dir(path: &Path, content: &str) -> Result<(), FileError
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_bytes(path: &Path, content: &[u8]) -> Result<(), FileError> {
+pub fn write_bytes(path: impl AsRef<Path>, content: &[u8]) -> Result<(), FileError> {
     fs::write(path, content).map_err(FileError::Io)
 }
 
@@ -210,8 +205,8 @@ pub fn write_bytes(path: &Path, content: &[u8]) -> Result<(), FileError> {
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_bytes_with_dir(path: &Path, content: &[u8]) -> Result<(), FileError> {
-    ensure_parent_dir(path)?;
+pub fn write_bytes_with_dir(path: impl AsRef<Path>, content: &[u8]) -> Result<(), FileError> {
+    ensure_parent_dir(path.as_ref())?;
     write_bytes(path, content)
 }
 
@@ -225,7 +220,7 @@ pub fn write_bytes_with_dir(path: &Path, content: &[u8]) -> Result<(), FileError
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_toml<T>(path: &Path, data: &T) -> Result<(), FileError>
+pub fn write_toml<T>(path: impl AsRef<Path>, data: &T) -> Result<(), FileError>
 where
     T: Serialize,
 {
@@ -246,10 +241,11 @@ where
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_toml_secure<T>(path: &Path, data: &T) -> Result<(), FileError>
+pub fn write_toml_secure<T>(path: impl AsRef<Path>, data: &T) -> Result<(), FileError>
 where
     T: Serialize,
 {
+    let path = path.as_ref();
     ensure_parent_dir(path)?;
     write_toml(path, data)?;
     #[cfg(unix)]
@@ -267,7 +263,7 @@ where
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_json<T>(path: &Path, data: &T) -> Result<(), FileError>
+pub fn write_json<T>(path: impl AsRef<Path>, data: &T) -> Result<(), FileError>
 where
     T: Serialize,
 {
@@ -287,10 +283,11 @@ where
 /// # 返回
 ///
 /// 成功返回 `Ok(())`，失败返回错误。
-pub fn write_json_secure<T>(path: &Path, data: &T) -> Result<(), FileError>
+pub fn write_json_secure<T>(path: impl AsRef<Path>, data: &T) -> Result<(), FileError>
 where
     T: Serialize,
 {
+    let path = path.as_ref();
     ensure_parent_dir(path)?;
     write_json(path, data)?;
     #[cfg(unix)]
@@ -352,10 +349,12 @@ mod tests {
         }
 
         #[test]
-        fn test_open_nonexistent_file() {
+        fn test_open_nonexistent_file() -> Result<(), FileError> {
             let result = open(std::path::Path::new("/nonexistent/file.txt"));
 
             assert!(matches!(result, Err(FileError::Io(_))));
+
+            Ok(())
         }
 
         #[rstest]
@@ -375,7 +374,7 @@ mod tests {
                 std::fs::write(&file_path, content)?;
             }
 
-            let read_content = read_string(&file_path)?;
+            let read_content = read_string(file_path)?;
 
             assert_eq!(read_content, content);
 
@@ -450,30 +449,34 @@ enabled = true
         }
 
         #[rstest]
-        fn test_read_toml_invalid_format(temp_dir: TempDir) {
+        fn test_read_toml_invalid_format(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.toml");
             let invalid_toml = "name = test\nversion = 1.0.0"; // 缺少引号
 
-            std::fs::write(&file_path, invalid_toml).unwrap();
+            std::fs::write(&file_path, invalid_toml)?;
 
             let result: Result<TestConfig, _> = read_toml(&file_path);
 
             assert!(matches!(result, Err(FileError::Toml(_))));
+
+            Ok(())
         }
 
         #[rstest]
-        fn test_read_toml_missing_fields(temp_dir: TempDir) {
+        fn test_read_toml_missing_fields(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.toml");
             let incomplete_toml = r#"
 name = "test"
 # version 和 enabled 缺失
 "#;
 
-            std::fs::write(&file_path, incomplete_toml).unwrap();
+            std::fs::write(&file_path, incomplete_toml)?;
 
             let result: Result<TestConfig, _> = read_toml(&file_path);
 
             assert!(result.is_err());
+
+            Ok(())
         }
 
         #[rstest]
@@ -499,27 +502,31 @@ name = "test"
         }
 
         #[rstest]
-        fn test_read_json_invalid_format(temp_dir: TempDir) {
+        fn test_read_json_invalid_format(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.json");
             let invalid_json = r#"{ "name": "test", "version": }"#; // 语法错误
 
-            std::fs::write(&file_path, invalid_json).unwrap();
+            std::fs::write(&file_path, invalid_json)?;
 
             let result: Result<TestConfig, _> = read_json(&file_path);
 
             assert!(matches!(result, Err(FileError::Json(_))));
+
+            Ok(())
         }
 
         #[rstest]
-        fn test_read_json_missing_fields(temp_dir: TempDir) {
+        fn test_read_json_missing_fields(temp_dir: TempDir) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("config.json");
             let incomplete_json = r#"{ "name": "test" }"#; // 缺少 version 和 enabled
 
-            std::fs::write(&file_path, incomplete_json).unwrap();
+            std::fs::write(&file_path, incomplete_json)?;
 
             let result: Result<TestConfig, _> = read_json(&file_path);
 
             assert!(result.is_err());
+
+            Ok(())
         }
     }
 
@@ -596,10 +603,12 @@ name = "test"
 
         #[cfg(unix)]
         #[test]
-        fn test_set_permissions_nonexistent_file() {
+        fn test_set_permissions_nonexistent_file() -> Result<(), FileError> {
             let result = set_permissions(std::path::Path::new("/nonexistent/file.txt"), 0o600);
 
             assert!(matches!(result, Err(FileError::Io(_))));
+
+            Ok(())
         }
 
         #[rstest]

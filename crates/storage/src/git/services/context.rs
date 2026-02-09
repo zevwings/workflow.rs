@@ -13,21 +13,32 @@ use std::sync::{Arc, Mutex};
 static URL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
         // GitHub SSH over 443: git@ssh.github.com:443/owner/repo.git
-        Regex::new(r"git@ssh\.github\.com:\d+/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"git@ssh\.github\.com:\d+/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub SSH over 443 regex must be valid"),
         // GitHub SSH 协议格式（含 ssh.github.com）: ssh://git@ssh.github.com:443/owner/repo.git
-        Regex::new(r"ssh://git@ssh\.github\.com(?::\d+)?/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"ssh://git@ssh\.github\.com(?::\d+)?/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub SSH protocol regex must be valid"),
         // GitHub SSH 协议格式: ssh://git@github.com/owner/repo.git
-        Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"ssh://git@github[^/]*/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub SSH protocol (standard) regex must be valid"),
         // GitHub SSH 格式: git@github.com:owner/repo.git (需在 ssh.github.com 之后，避免误匹配)
-        Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").unwrap(),
+        Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$")
+            .expect("Hardcoded GitHub SSH format regex must be valid"),
+        // 兼容错误写法：git@github/owner/repo.git（缺少 .com 或误用 / 代替 :）
+        Regex::new(r"git@[^/]+/(.+?)(?:\.git)?$")
+            .expect("Hardcoded GitHub SSH fallback regex must be valid"),
         // GitHub HTTPS 格式: https://github.com/owner/repo.git
-        Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded GitHub HTTPS regex must be valid"),
         // Codeup SSH 格式: git@codeup.aliyun.com:owner/repo.git
-        Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$").unwrap(),
+        Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$")
+            .expect("Hardcoded Codeup SSH regex must be valid"),
         // Codeup HTTPS/HTTP 格式: https://codeup.aliyun.com/owner/repo.git
-        Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded Codeup HTTPS regex must be valid"),
         // 通用 HTTPS/HTTP 格式
-        Regex::new(r"https?://[^/]+/(.+?)(?:\.git)?/?$").unwrap(),
+        Regex::new(r"https?://[^/]+/(.+?)(?:\.git)?/?$")
+            .expect("Hardcoded generic HTTPS regex must be valid"),
     ]
 });
 
@@ -97,15 +108,24 @@ impl GitContext {
     }
 
     /// 获取底层的 git2::Repository 引用
+    ///
+    /// 如果 Mutex 被毒化（持有锁的线程 panic），会尝试恢复并继续使用。
     pub fn repository(&self) -> std::sync::MutexGuard<'_, Repository> {
-        self.inner.repo.lock().expect("Failed to lock repository")
+        self.inner.repo.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Warning: Repository mutex was poisoned, attempting recovery");
+            poisoned.into_inner()
+        })
     }
 
     /// 获取底层的 git2::Repository 可变引用
     ///
     /// 用于需要 `&mut Repository` 的操作（如 stash 操作）。
+    /// 如果 Mutex 被毒化（持有锁的线程 panic），会尝试恢复并继续使用。
     pub fn repository_mut(&self) -> std::sync::MutexGuard<'_, Repository> {
-        self.inner.repo.lock().expect("Failed to lock repository")
+        self.inner.repo.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Warning: Repository mutex was poisoned, attempting recovery");
+            poisoned.into_inner()
+        })
     }
 
     /// 获取仓库的工作目录路径
@@ -115,12 +135,12 @@ impl GitContext {
 
     /// 检查是否为 bare 仓库
     pub fn is_bare(&self) -> bool {
-        self.inner.repo.lock().expect("Failed to lock repository").is_bare()
+        self.repository().is_bare()
     }
 
     /// 获取仓库信息
     pub fn info(&self) -> RepoInfo {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         // 尝试获取 origin URL
         let origin_url = repo
             .find_remote("origin")
@@ -128,13 +148,13 @@ impl GitContext {
             .and_then(|remote| remote.url().map(String::from));
 
         // 根据 URL 检测仓库类型
-        let kind = origin_url.as_ref().map(|url| Self::parse_repo_kind(url));
+        let kind = origin_url.as_ref().map(Self::parse_repo_kind);
 
         // 获取 Git 目录
         let directory = repo.path().canonicalize().ok().and_then(|p| p.to_str().map(String::from));
 
         // 提取仓库名称
-        let name = origin_url.as_ref().and_then(|url| Self::extract_repo_name(url));
+        let name = origin_url.as_ref().and_then(Self::extract_repo_name);
 
         // 提取 owner
         let owner = name.as_ref().and_then(|n| {
@@ -157,7 +177,8 @@ impl GitContext {
     }
 
     /// 从 URL 提取仓库名称
-    pub fn extract_repo_name(url: &str) -> Option<String> {
+    pub fn extract_repo_name(url: impl AsRef<str>) -> Option<String> {
+        let url = url.as_ref();
         for (idx, pattern) in URL_PATTERNS.iter().enumerate() {
             if let Some(caps) = pattern.captures(url) {
                 if let Some(m) = caps.get(1) {
@@ -179,7 +200,8 @@ impl GitContext {
     }
 
     /// 从 URL 解析仓库类型
-    pub fn parse_repo_kind(url: &str) -> CodePlatform {
+    pub fn parse_repo_kind(url: impl AsRef<str>) -> CodePlatform {
+        let url = url.as_ref();
         if url.contains("github.com")
             || url.contains("ssh.github.com")
             || url.starts_with("git@github")
@@ -219,7 +241,10 @@ impl GitContext {
 
         callbacks.credentials(move |url, username_from_url, allowed_types| {
             // 检查重试次数，防止无限循环
-            let mut count = retry_count.lock().expect("retry_count lock poisoned");
+            let mut count = retry_count.lock().unwrap_or_else(|poisoned| {
+                eprintln!("Warning: retry_count mutex was poisoned, attempting recovery");
+                poisoned.into_inner()
+            });
             *count += 1;
 
             const MAX_RETRIES: u32 = 3;
@@ -278,7 +303,7 @@ impl GitContext {
         self.inner
             .repo
             .lock()
-            .expect("Failed to lock repository")
+            .map_err(|_| GitError::OperationFailed("Failed to lock repository".into()))?
             .signature()
             .or_else(|_| git2::Signature::now("User", "user@example.com"))
             .map_err(|e| GitError::SignatureError(e.to_string()))
@@ -287,8 +312,9 @@ impl GitContext {
     /// 解析引用到 commit
     ///
     /// 支持分支名、tag 名、SHA 等各种引用格式。
-    pub fn resolve_commit(&self, reference: &str) -> Result<git2::Oid, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+    pub fn resolve_commit(&self, reference: impl AsRef<str>) -> Result<git2::Oid, GitError> {
+        let reference = reference.as_ref();
+        let repo = self.repository();
         let obj = repo
             .revparse_single(reference)
             .map_err(|_| GitError::InvalidReference(reference.to_string()))?;
@@ -298,7 +324,7 @@ impl GitContext {
 
     /// 获取 HEAD 指向的 commit
     pub fn head_commit(&self) -> Result<git2::Oid, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let commit = head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         Ok(commit.id())
@@ -318,7 +344,7 @@ impl GitContext {
         name: &str,
         branch_type: git2::BranchType,
     ) -> Result<git2::Oid, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         let branch = repo
             .find_branch(name, branch_type)
             .map_err(|_| GitError::BranchNotFound(name.to_string()))?;
@@ -338,7 +364,7 @@ impl GitContext {
     /// 如果 HEAD 处于 detached 状态，返回错误
     #[allow(dead_code)]
     pub fn ensure_head_is_branch(&self) -> Result<String, GitError> {
-        let repo = self.inner.repo.lock().expect("Failed to lock repository");
+        let repo = self.repository();
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         if !head.is_branch() {
             return Err(GitError::OperationFailed(

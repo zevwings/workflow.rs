@@ -22,7 +22,6 @@
 //! ```
 
 use clap::Parser;
-use color_eyre::Result;
 
 use app::commands::install::InstallCommand;
 
@@ -41,9 +40,7 @@ struct Args {
     completions_only: bool,
 }
 
-fn main() -> Result<()> {
-    color_eyre::install()?;
-
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     let cmd = InstallCommand::new(args.binaries_only, args.completions_only);

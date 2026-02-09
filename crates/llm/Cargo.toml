@@ -1,0 +1,16 @@
+[package]
+name = "llm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "LLM 客户端与对话抽象，提供配置驱动的 API 调用与 Conversation 能力"
+
+[dependencies]
+http.workspace = true
+registry.workspace = true
+tracing.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+thiserror.workspace = true

@@ -13,7 +13,7 @@ use std::sync::Arc;
 use serde::Serialize;
 
 use domain::{JiraConfigContext, JiraError};
-use toolkit::{Authorization, HttpClient, HttpMethod};
+use http::{Authorization, HttpClient, HttpMethod};
 
 use crate::jira::client::types::JiraResponse;
 

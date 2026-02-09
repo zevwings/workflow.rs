@@ -1,7 +1,7 @@
 //! PR 创建和摘要生成逻辑
 
 use domain::git::CodePlatform;
-use domain::{GitRepository, PullRequestContent};
+use domain::GitRepository;
 use prompt::{error, info, select, spinner, success, warning};
 use toolkit::BrowserExt;
 
@@ -18,12 +18,80 @@ pub struct PrCreateResult {
     pub pr_url: String,
 }
 
+/// PR 摘要结果
+///
+/// 由三阶段提交分析生成，包含 PR body 和 Conventional Commits 所需的 type/scope。
+#[derive(Debug, Clone)]
+pub struct PrSummaryResult {
+    /// Conventional Commits type（feat / fix / refactor / docs / style / test / chore / perf）
+    pub type_: String,
+    /// Commit scope（变更涉及的模块或功能区域，如 "api", "auth"）
+    pub scope: Option<String>,
+    /// PR body（Markdown 格式，包含总结、变更详情、影响分析和统计信息）
+    pub pr_body: String,
+}
+
+/// 组合 PR 标题
+///
+/// 格式：
+/// - **有 JIRA**：`{JIRA}: {type(scope)} - {summary}`
+/// - **无 JIRA**（`jira_id` 为 `None` 或空）：`{type(scope)} - {summary}`
+///
+/// `type(scope)` 可能无 scope，此时为 `{type}`。summary 从 `commit_message` 中取得，
+/// 若有 JIRA 且 message 以 `"{JIRA}: "` 开头则去掉该前缀，否则整句作为 summary。
+///
+/// # 示例
+///
+/// - 有 JIRA 与 scope: `IOSNAT-30274: feat(workflow) - workflow 重构`
+/// - 无 JIRA: `feat(workflow) - workflow 重构`
+/// - 无 scope: `IOSNAT-30274: feat - workflow 重构`
+pub fn format_pr_title(
+    type_: &str,
+    scope: Option<&str>,
+    jira_id: Option<&str>,
+    commit_message: &str,
+) -> String {
+    let jira_key = jira_id.and_then(|j| {
+        if j.trim().is_empty() {
+            None
+        } else {
+            Some(j.trim())
+        }
+    });
+
+    // summary：有 JIRA 时尝试去掉 "JIRA: " 前缀（commit_message 可能不包含该前缀）
+    let summary = match jira_key {
+        Some(j) => commit_message
+            .strip_prefix(&format!("{}: ", j))
+            .unwrap_or(commit_message)
+            .trim(),
+        None => commit_message.trim(),
+    };
+
+    // type(scope)，scope 可能不存在
+    let type_scope = match scope {
+        Some(s) if !s.is_empty() => format!("{}({})", type_, s),
+        _ => type_.trim().to_string(),
+    };
+
+    // JIRA_KEY 可能不存在：无则只输出 type(scope) - summary
+    match jira_key {
+        Some(j) => format!("{}: {} - {}", j, type_scope, summary),
+        None => format!("{} - {}", type_scope, summary),
+    }
+}
+
 /// 创建 Pull Request
 ///
-/// 使用生成的 PR 内容创建 Pull Request
+/// 使用生成的 PR 标题和内容创建 Pull Request
 ///
 /// # 参数
+/// - `branch_repo`: Git 仓库
+/// - `branch_name`: 源分支名称
+/// - `pr_title`: PR 标题
+/// - `pr_body`: PR 描述内容（Markdown 格式）
 /// - `target_branch`: 可选的目标分支，如果为 None 则使用默认分支
+/// - `dry_run`: 是否为 dry-run 模式
 ///
 /// # 返回
 /// - `Ok(Some(PrCreateResult))` - PR 创建成功，返回 PR ID 和 URL
@@ -32,7 +100,8 @@ pub struct PrCreateResult {
 pub fn create_pull_request(
     branch_repo: &dyn GitRepository,
     branch_name: &str,
-    pr_content: &PullRequestContent,
+    pr_title: &str,
+    pr_body: &str,
     target_branch: Option<&str>,
     dry_run: bool,
 ) -> Result<Option<PrCreateResult>, Box<dyn std::error::Error>> {
@@ -43,22 +112,9 @@ pub fn create_pull_request(
 
     let target = target_branch.unwrap_or(&default_branch);
 
-    // 构建 PR 描述
-    let mut pr_body = String::new();
-    if let Some(ref description) = pr_content.description {
-        pr_body.push_str(description);
-    }
-    if let Some(ref summary) = pr_content.summary {
-        if !pr_body.is_empty() {
-            pr_body.push_str("\n\n");
-        }
-        pr_body.push_str("## Summary\n\n");
-        pr_body.push_str(summary);
-    }
-
     if dry_run {
         info!("[DRY RUN] Would create Pull Request:");
-        info!("  Title: {}", pr_content.pr_title);
+        info!("  Title: {}", pr_title);
         info!("  Source branch: {}", branch_name);
         info!("  Target branch: {}", target);
         if !pr_body.is_empty() {
@@ -74,8 +130,8 @@ pub fn create_pull_request(
         .with(|| {
             pr_service.create_pull_request(
                 None, // jira_id
-                Some(&pr_content.pr_title),
-                Some(&pr_body),
+                Some(pr_title),
+                Some(pr_body),
                 Some(target), // 使用用户选择的目标分支
             )
         })
@@ -171,87 +227,50 @@ pub fn confirm_target_branch(
     }
 }
 
-/// 生成 PR 详细总结
+/// 生成 PR 摘要
 ///
-/// 获取当前工作区和暂存区相对于默认分支的 diff，然后调用 LLM 生成详细的 PR 总结。
-/// 在提交代码之前调用此方法。
+/// 调用三阶段提交分析服务（文件分类 → 分类分析 → 全局总结），
+/// 将分析结果渲染为 Markdown 格式的 PR body，并提取 type/scope。
+///
+/// 必须在 `commit_changes` 之后调用，确保变更已提交，`get_merge_diff` 能获取到 diff。
+///
+/// # 参数
+/// - `base_branch`: 可选的基准分支，为 None 时由服务自动推断
 ///
 /// # 返回
-/// 返回生成的 PR 内容（如果有更改），否则返回 None
+/// 返回 `PrSummaryResult`（包含 type、scope 和 PR body）
 pub fn generate_pr_summary(
-    branch_repo: &dyn GitRepository,
-    _branch_name: &str,
-    jira_id: &Option<String>,
-    description: Option<&str>,
-) -> Result<Option<PullRequestContent>, Box<dyn std::error::Error>> {
-    // 获取默认分支
-    let default_branch = branch_repo
-        .get_default_branch()
-        .map_err(|e| format!("Failed to get default branch: {}", e))?;
-
-    // 获取工作区和暂存区相对于默认分支的 diff
-    // storage 层会自动应用 .gitignore 忽略规则和大小限制
-    // 这个 diff 包括：已提交的更改、暂存区更改、工作区未暂存更改
-    let git_diff = branch_repo
-        .get_working_tree_diff(&default_branch)
-        .map_err(|e| format!("Failed to get working tree diff: {}", e))?;
-
-    // 如果没有 diff（既没有已提交的 commits，也没有未提交的更改），跳过生成总结
-    let git_diff = match git_diff {
-        Some(diff) if !diff.trim().is_empty() => diff,
-        _ => {
-            info!("No changes to generate PR summary");
-            return Ok(None);
-        }
-    };
-
-    // 生成 commit title（用于生成 PR 内容）
-    let commit_title = if let Some(jira_id) = jira_id {
-        // 获取 JIRA summary
-        let jira_repo = registry::get_jira_repository();
-        let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
-            .with(|| jira_repo.get_issue_info(jira_id))
-            .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
-        format!("{}: {}", jira_id, issue.fields.summary)
-    } else if let Some(desc) = description {
-        desc.to_string()
-    } else {
-        // 使用 description 或默认消息
-        description.unwrap_or("Update").to_string()
-    };
-
-    // 获取已存在的分支列表（用于避免重复分支名）
-    let existing_branches = branch_repo
-        .list_branches(false, true)
-        .map_err(|e| format!("Failed to list branches: {}", e))?;
-    let branch_names: Vec<String> =
-        existing_branches.iter().map(|b| b.display_name.clone()).collect();
-
-    // 调用 LLM 生成 PR 内容（包括详细总结）
+    base_branch: Option<&str>,
+) -> Result<PrSummaryResult, Box<dyn std::error::Error>> {
     info!("Generating PR summary...");
-    let llm_repo = registry::get_llm_repository();
-    let pr_content = spinner!("Generating PR content and summary...")
-        .with(|| {
-            llm_repo.create_pr_content(&commit_title, Some(branch_names), Some(git_diff.clone()))
-        })
-        .map_err(|e| format!("Failed to generate PR content: {}", e))?;
 
-    // 显示 PR 内容
-    info!("PR Title: {}", pr_content.pr_title);
-    if let Some(ref desc) = pr_content.description {
-        info!("PR Description:\n{}", desc);
-    }
-    if let Some(ref scope) = pr_content.scope {
-        info!("Scope: {}", scope);
-    }
+    let summary_service = registry::get_commit_summary_service();
+    let analysis = spinner!("Analyzing commit changes (3-stage analysis)...")
+        .with(|| summary_service.run_analysis(base_branch))
+        .map_err(|e| format!("Failed to generate PR summary: {}", e))?;
 
-    // 显示详细总结
-    if let Some(ref summary) = pr_content.summary {
-        success!("PR Summary generated successfully!");
-        println!("\n{}", summary);
+    // 提取 type 和 scope
+    let type_ = analysis.structured_summary.type_.clone();
+    let scope = if analysis.structured_summary.scope.is_empty() {
+        None
     } else {
-        info!("No detailed summary generated (this is normal if git diff is empty or too large)");
-    }
+        Some(analysis.structured_summary.scope.clone())
+    };
 
-    Ok(Some(pr_content))
+    // 渲染 PR body
+    let pr_body = analysis.to_markdown();
+
+    // 显示摘要信息
+    info!("Type: {}", type_);
+    if let Some(ref s) = scope {
+        info!("Scope: {}", s);
+    }
+    success!("PR Summary generated successfully!");
+    println!("\n{}", pr_body);
+
+    Ok(PrSummaryResult {
+        type_,
+        scope,
+        pr_body,
+    })
 }

@@ -1,22 +1,30 @@
 //! 验证模块
 //!
-//! 提供安装验证功能。
+//! 提供安装验证功能。路径从 pathService 获取，单文件验证。
 
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, Stdio};
 
-use color_eyre::{eyre::WrapErr, Result};
-
 use prompt::{success, warning, Spinner};
-use toolkit::{
-    binary_install_dir, binary_name, command_names, completion_dir, detect_shell,
-    get_completion_files_for_shell, shell_to_string,
-};
+use toolkit::{detect_shell, get_completion_files_for_shell, shell_to_string};
 
 use super::types::VerificationResult;
+use crate::registry::get_path_service;
+
+/// 补全脚本对应的命令名（与 pathService 的 binary 一致，单命令）
+const COMMAND_NAME: &str = "workflow";
+
+/// 解压目录中 install 二进制文件名（平台相关）
+fn install_binary_name() -> &'static str {
+    if cfg!(target_os = "windows") {
+        "install.exe"
+    } else {
+        "install"
+    }
+}
 
 /// 二进制文件状态（内部使用）
 struct BinaryStatus {
@@ -28,13 +36,13 @@ struct BinaryStatus {
 
 /// 检查文件是否可执行
 #[cfg(unix)]
-fn check_executable(path: &Path) -> Result<bool> {
+fn check_executable(path: &Path) -> Result<bool, Box<dyn std::error::Error>> {
     if !path.exists() {
         return Ok(false);
     }
 
     let metadata = fs::metadata(path)
-        .wrap_err_with(|| format!("Failed to get metadata for: {}", path.display()))?;
+        .map_err(|e| format!("Failed to get metadata for {}: {}", path.display(), e))?;
 
     let permissions = metadata.permissions();
     let mode = permissions.mode();
@@ -44,7 +52,7 @@ fn check_executable(path: &Path) -> Result<bool> {
 }
 
 #[cfg(windows)]
-fn check_executable(path: &Path) -> Result<bool> {
+fn check_executable(path: &Path) -> Result<bool, Box<dyn std::error::Error>> {
     if !path.exists() {
         return Ok(false);
     }
@@ -64,7 +72,10 @@ fn check_executable(path: &Path) -> Result<bool> {
 }
 
 /// 验证单个二进制文件
-fn verify_single_binary(path: &str, name: &str) -> Result<BinaryStatus> {
+fn verify_single_binary(
+    path: &str,
+    name: &str,
+) -> Result<BinaryStatus, Box<dyn std::error::Error>> {
     let path_obj = Path::new(path);
 
     let exists = path_obj.exists();
@@ -87,30 +98,24 @@ fn verify_single_binary(path: &str, name: &str) -> Result<BinaryStatus> {
     })
 }
 
-/// 验证所有二进制文件
-fn verify_binaries() -> Result<Vec<BinaryStatus>> {
-    let install_dir = binary_install_dir();
-    let install_path = PathBuf::from(&install_dir);
-    let binaries = command_names();
-    let mut results = Vec::new();
+/// 验证二进制文件（从 pathService 获取单文件路径）
+fn verify_binaries() -> Result<Vec<BinaryStatus>, Box<dyn std::error::Error>> {
+    let path_service = get_path_service();
+    let install_dir = path_service.get_binary_install_dir()?;
+    let bin_name = path_service.get_binary_name()?;
+    let path = install_dir.join(&bin_name);
 
     let spinner = Spinner::new("Verifying binaries...");
     let spinner_instance = spinner.start();
 
-    for binary in binaries {
-        let bin_name = binary_name(binary);
-        let path = install_path.join(&bin_name);
-        let status = verify_single_binary(&path.to_string_lossy(), &bin_name)?;
-        results.push(status);
-    }
-
+    let status = verify_single_binary(&path.to_string_lossy(), &bin_name)?;
     spinner_instance.stop();
 
-    Ok(results)
+    Ok(vec![status])
 }
 
 /// 验证补全脚本
-fn verify_completions() -> Result<bool> {
+fn verify_completions() -> Result<bool, Box<dyn std::error::Error>> {
     let shell = match detect_shell() {
         Ok(shell) => shell,
         Err(_) => {
@@ -119,7 +124,8 @@ fn verify_completions() -> Result<bool> {
         }
     };
 
-    let comp_dir = completion_dir()?;
+    let path_service = get_path_service();
+    let comp_dir = path_service.get_completion_dir()?;
 
     if !comp_dir.exists() {
         warning!(
@@ -129,7 +135,7 @@ fn verify_completions() -> Result<bool> {
         return Ok(false);
     }
 
-    let commands = command_names();
+    let commands: &[&str] = &[COMMAND_NAME];
     let shell_str = shell_to_string(&shell);
     let files = get_completion_files_for_shell(shell_str, commands).unwrap_or_default();
 
@@ -162,7 +168,7 @@ fn verify_completions() -> Result<bool> {
 }
 
 /// 验证安装结果
-pub fn verify_installation() -> Result<VerificationResult> {
+pub fn verify_installation() -> Result<VerificationResult, Box<dyn std::error::Error>> {
     // 验证二进制文件
     let binaries = verify_binaries()?;
 
@@ -200,14 +206,15 @@ pub fn verify_installation() -> Result<VerificationResult> {
 /// 运行安装程序
 ///
 /// 在解压目录中运行 ./install 来安装二进制文件和补全脚本。
-pub fn run_installer(extract_dir: &Path) -> Result<()> {
-    let install_binary = extract_dir.join(binary_name("install"));
+pub fn run_installer(extract_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let install_binary = extract_dir.join(install_binary_name());
 
     if !install_binary.exists() {
-        color_eyre::eyre::bail!(
+        return Err(format!(
             "Install binary does not exist: {}",
             install_binary.display()
-        );
+        )
+        .into());
     }
 
     // 设置执行权限（仅 Unix）
@@ -217,7 +224,7 @@ pub fn run_installer(extract_dir: &Path) -> Result<()> {
             .arg("+x")
             .arg(&install_binary)
             .status()
-            .wrap_err("Failed to set executable permission for install")?;
+            .map_err(|e| format!("Failed to set executable permission for install: {}", e))?;
     }
 
     // 运行安装程序，捕获输出以避免与 spinner 冲突
@@ -232,7 +239,7 @@ pub fn run_installer(extract_dir: &Path) -> Result<()> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
-        .wrap_err("Failed to run install")?;
+        .map_err(|e| format!("Failed to run install: {}", e))?;
 
     spinner_instance.stop();
 
@@ -247,7 +254,7 @@ pub fn run_installer(extract_dir: &Path) -> Result<()> {
     }
 
     if !output.status.success() {
-        color_eyre::eyre::bail!("Installation failed");
+        return Err("Installation failed".into());
     }
 
     success!("Binaries and completion scripts installation complete");

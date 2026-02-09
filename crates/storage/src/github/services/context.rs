@@ -42,7 +42,15 @@ impl ServiceContext for ServiceContextImpl {
             let hint = repo_info
                 .origin_url
                 .as_ref()
-                .map(|u| format!(" (origin URL: {})", u))
+                .map(|u| {
+                    let url_hint = format!(" (origin URL: {})", u);
+                    let fix_hint = if u.starts_with("git@github/") {
+                        "。正确格式应为: git@github.com:owner/repo.git"
+                    } else {
+                        ""
+                    };
+                    format!("{}{}", url_hint, fix_hint)
+                })
                 .unwrap_or_else(|| " (未配置 origin 远程或 origin URL 无法解析)".to_string());
             GitHubError::ApiError(format!(
                 "Failed to get repository owner from repo info{}",

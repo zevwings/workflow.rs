@@ -1,7 +1,6 @@
 //! 添加分支到忽略列表
 
 use crate::registry;
-use color_eyre::Result;
 use prompt::{info, success};
 
 /// Branch Ignore Add 命令

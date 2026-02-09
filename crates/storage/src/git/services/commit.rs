@@ -2,11 +2,18 @@
 //!
 //! 提供提交相关的业务逻辑实现。
 
+use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
+
+use toolkit::log_debug;
 
 use crate::git::services::context::GitContext;
 use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
-use domain::git::{CommitInfo, FileStatusInfo, FileStatusType, GitError, WorkingTreeStatus};
+use domain::git::{
+    CommitChangeType, CommitFileChange, CommitInfo, FileStatusInfo, FileStatusType, GitError,
+    WorkingTreeStatus,
+};
 
 /// 提交服务接口
 pub trait CommitService: Send + Sync {
@@ -19,8 +26,22 @@ pub trait CommitService: Send + Sync {
     /// - 相对引用: `"HEAD~1"`, `"main^"`
     fn get_commit_info(&self, ref_or_sha: &str) -> Result<CommitInfo, GitError>;
 
+    /// 获取指定 commit 变更的文件列表
+    fn get_commit_changed_files(&self, ref_or_sha: &str)
+        -> Result<Vec<CommitFileChange>, GitError>;
+
     /// 获取工作树状态
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError>;
+
+    /// 获取暂存区文件列表
+    ///
+    /// 返回当前暂存区（staging area）中的文件变更列表。
+    fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError>;
+
+    /// 添加所有更改到暂存区
+    ///
+    /// 等价于 `git add -A`。
+    fn add_all(&self) -> Result<(), GitError>;
 
     /// 创建提交
     ///
@@ -43,6 +64,61 @@ impl CommitServiceImpl {
     /// 创建新的提交服务实例
     pub fn new(ctx: GitContext, hook_service: Arc<dyn HookService>) -> Self {
         Self { ctx, hook_service }
+    }
+
+    /// 仅将工作区中已变更的路径加入暂存区（基于 status），避免全树扫描，大仓库下更快。
+    fn add_changed_paths(&self) -> Result<(), GitError> {
+        log_debug!("commit: add_changed_paths start (get_working_tree_status)");
+        let status = self.get_working_tree_status()?;
+        let paths: Vec<&Path> = status
+            .unstaged
+            .iter()
+            .chain(status.untracked.iter())
+            .map(|s| s.path.as_str())
+            .map(Path::new)
+            .collect();
+        log_debug!(
+            "commit: add_changed_paths status done (unstaged={}, untracked={})",
+            status.unstaged.len(),
+            status.untracked.len()
+        );
+        if paths.is_empty() {
+            log_debug!("commit: add_changed_paths skipped (no unstaged/untracked)");
+            return Ok(());
+        }
+        let repo = self.ctx.repository();
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+        index
+            .add_all(paths.iter(), git2::IndexAddOption::DEFAULT, None)
+            .map_err(|e| GitError::IndexError(e.to_string()))?;
+        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+        log_debug!("commit: add_changed_paths added {} path(s)", paths.len());
+        Ok(())
+    }
+
+    /// 全树扫描并添加（等价于 `git add .`），大仓库较慢；供 add_all 在 add_changed_paths 失败时回退。
+    fn add_all_full_tree(&self) -> Result<(), GitError> {
+        log_debug!("commit: add_all_full_tree start (using git command)");
+
+        // 使用 git 命令代替 libgit2 API，性能更好
+        let workdir = self.ctx.workdir();
+        let output = std::process::Command::new("git")
+            .arg("add")
+            .arg("-A")
+            .current_dir(workdir)
+            .output()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to execute git add: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(GitError::OperationFailed(format!(
+                "git add failed: {}",
+                stderr
+            )));
+        }
+
+        log_debug!("commit: add_all_full_tree done");
+        Ok(())
     }
 }
 
@@ -76,6 +152,82 @@ impl CommitService for CommitServiceImpl {
         })
     }
 
+    fn get_commit_changed_files(
+        &self,
+        ref_or_sha: &str,
+    ) -> Result<Vec<CommitFileChange>, GitError> {
+        let repo = self.ctx.repository();
+        let commit = repo
+            .revparse_single(ref_or_sha)
+            .map_err(|_| GitError::CommitNotFound(ref_or_sha.to_string()))?
+            .peel_to_commit()
+            .map_err(|_| GitError::CommitNotFound(ref_or_sha.to_string()))?;
+
+        let parent = match commit.parent(0) {
+            Ok(p) => p,
+            Err(_) => return Ok(Vec::new()),
+        };
+        let parent_tree = parent.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let commit_tree = commit.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        let diff = repo
+            .diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        // 按文件统计增删行数（仅统计文本 diff，二进制等无统计）
+        let mut path_stats: HashMap<String, (u32, u32)> =
+            HashMap::with_capacity(diff.deltas().len());
+        let mut line_cb = |delta: git2::DiffDelta<'_>,
+                           _hunk: Option<git2::DiffHunk<'_>>,
+                           line: git2::DiffLine<'_>| {
+            let path = delta
+                .new_file()
+                .path()
+                .or_else(|| delta.old_file().path())
+                .and_then(|p: &std::path::Path| p.to_str().map(String::from));
+            if let Some(path) = path {
+                let entry = path_stats.entry(path).or_insert((0, 0));
+                match line.origin() {
+                    '+' => entry.0 = entry.0.saturating_add(1),
+                    '-' => entry.1 = entry.1.saturating_add(1),
+                    _ => {}
+                }
+            }
+            true
+        };
+        if let Err(e) = diff.foreach(
+            &mut |_delta, _progress| true,
+            None,
+            None,
+            Some(&mut line_cb),
+        ) {
+            toolkit::log_warn!("Failed to iterate diff lines: {}", e);
+        }
+
+        let files: Vec<CommitFileChange> = diff
+            .deltas()
+            .map(|delta| {
+                let change_type = delta_status_to_commit_change_type(delta.status());
+                let path = delta
+                    .new_file()
+                    .path()
+                    .or_else(|| delta.old_file().path())
+                    .and_then(|p| p.to_str().map(String::from))
+                    .unwrap_or_default();
+                let old_path = delta.old_file().path().and_then(|p| p.to_str().map(String::from));
+                let (additions, deletions) = path_stats.get(&path).copied().unwrap_or((0, 0));
+                CommitFileChange {
+                    path,
+                    change_type,
+                    old_path,
+                    additions: Some(additions),
+                    deletions: Some(deletions),
+                }
+            })
+            .collect();
+        Ok(files)
+    }
+
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError> {
         let repo = self.ctx.repository();
 
@@ -90,9 +242,10 @@ impl CommitService for CommitServiceImpl {
             .statuses(Some(&mut opts))
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        let mut staged = Vec::new();
-        let mut unstaged = Vec::new();
-        let mut untracked = Vec::new();
+        let status_count = statuses.len();
+        let mut staged = Vec::with_capacity(status_count);
+        let mut unstaged = Vec::with_capacity(status_count);
+        let mut untracked = Vec::with_capacity(status_count);
         let mut conflicted = Vec::new();
 
         for entry in statuses.iter() {
@@ -189,9 +342,119 @@ impl CommitService for CommitServiceImpl {
         })
     }
 
+    fn add_all(&self) -> Result<(), GitError> {
+        // 直接使用 add_all_full_tree()（已移除性能问题的回调）。
+        // 不使用 add_changed_paths()：它依赖的 get_working_tree_status() 在大仓库中可能卡住。
+        log_debug!("commit: add_all start");
+        self.add_all_full_tree()
+    }
+
+    fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError> {
+        let repo = self.ctx.repository();
+        let head = repo
+            .head()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get HEAD: {}", e)))?;
+        let head_tree = head
+            .peel_to_tree()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get HEAD tree: {}", e)))?;
+
+        let index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+
+        let diff = repo
+            .diff_tree_to_index(Some(&head_tree), Some(&index), None)
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get staged diff: {}", e)))?;
+
+        // 使用 HashMap 来收集文件信息和统计
+        let mut file_map: HashMap<String, CommitFileChange> = HashMap::new();
+
+        // 第一次遍历：收集文件基本信息（路径、变更类型）
+        diff.foreach(
+            &mut |delta, _progress| {
+                let change_type = match delta.status() {
+                    git2::Delta::Added => CommitChangeType::Added,
+                    git2::Delta::Deleted => CommitChangeType::Deleted,
+                    git2::Delta::Modified => CommitChangeType::Modified,
+                    git2::Delta::Renamed => CommitChangeType::Renamed,
+                    git2::Delta::Copied => CommitChangeType::Copied,
+                    git2::Delta::Typechange => CommitChangeType::TypeChanged,
+                    _ => return true, // Skip other types
+                };
+
+                let path =
+                    delta.new_file().path().and_then(|p| p.to_str()).unwrap_or("").to_string();
+
+                if path.is_empty() {
+                    return true;
+                }
+
+                let old_path = if matches!(change_type, CommitChangeType::Renamed) {
+                    delta.old_file().path().and_then(|p| p.to_str()).map(String::from)
+                } else {
+                    None
+                };
+
+                file_map.insert(
+                    path.clone(),
+                    CommitFileChange {
+                        path,
+                        old_path,
+                        change_type,
+                        additions: Some(0), // 初始化为 0，稍后在 print 回调中计算
+                        deletions: Some(0), // 初始化为 0，稍后在 print 回调中计算
+                    },
+                );
+
+                true
+            },
+            None,
+            None,
+            None,
+        )
+        .map_err(|e| GitError::OperationFailed(format!("Failed to iterate diff: {}", e)))?;
+
+        // 第二次遍历：使用 print 回调计算每个文件的行数统计
+        diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
+            let path = delta.new_file().path().and_then(|p| p.to_str()).unwrap_or("");
+
+            if path.is_empty() {
+                return true;
+            }
+
+            if let Some(file) = file_map.get_mut(path) {
+                // 统计新增和删除的行数
+                match line.origin() {
+                    '+' => {
+                        // 新增行（不包括 +++ 文件头）
+                        if let Some(adds) = file.additions.as_mut() {
+                            *adds += 1;
+                        }
+                    }
+                    '-' => {
+                        // 删除行（不包括 --- 文件头）
+                        if let Some(dels) = file.deletions.as_mut() {
+                            *dels += 1;
+                        }
+                    }
+                    _ => {
+                        // 其他行（上下文、文件头等）不计数
+                    }
+                }
+            }
+
+            true
+        })
+        .map_err(|e| GitError::OperationFailed(format!("Failed to calculate file stats: {}", e)))?;
+
+        // 转换为 Vec 并返回
+        Ok(file_map.into_values().collect())
+    }
+
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
+        log_debug!("commit: start (all={})", all);
+
         // 获取签名（必须在获取 repo 锁之前，避免死锁）
         let signature = self.ctx.get_signature()?;
+        log_debug!("commit: got signature");
 
         // 获取路径信息（用于 hook 上下文）
         let (repo_path, git_dir) = {
@@ -205,35 +468,18 @@ impl CommitService for CommitServiceImpl {
         };
 
         let repo = self.ctx.repository();
-        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
 
-        // 添加更改到暂存区
+        // 添加更改到暂存区（add_all 内部优先按变更路径添加，失败时回退全树扫描）
         if all {
-            // 获取需要跳过的目录模式（从 .gitignore 和常见大型目录）
-            // 即使这些目录在 .gitignore 中，扫描它们仍然很慢，
-            // 所以使用回调函数提前跳过以提高性能
-            let ignore_patterns = self.ctx.get_ignore_directory_patterns();
-
-            index
-                .add_all(
-                    ["."].iter(),
-                    git2::IndexAddOption::DEFAULT,
-                    Some(&mut |path, _| {
-                        // 跳过大型目录以提高性能
-                        if let Some(path_str) = path.to_str() {
-                            if ignore_patterns.iter().any(|pattern| path_str.starts_with(pattern)) {
-                                return 1; // Skip this path
-                            }
-                        }
-                        0 // Add this path (git2 会自动处理 .gitignore)
-                    }),
-                )
-                .map_err(|e| GitError::IndexError(e.to_string()))?;
+            log_debug!("commit: staging changes (add_all)");
+            self.add_all()?;
+            log_debug!("commit: staging done");
         }
-        // 如果 all=false，直接使用已暂存的文件进行提交
 
-        // 写入索引到磁盘
-        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+        if !all {
+            index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+        }
 
         // 获取暂存文件列表（用于 hook 上下文）
         let staged_files = Self::get_staged_files(&index);
@@ -242,6 +488,7 @@ impl CommitService for CommitServiceImpl {
         drop(repo);
 
         // [1] pre-commit hook
+        log_debug!("commit: pre-commit hook start");
         let hook_context =
             HookContext::for_pre_commit(repo_path.clone(), git_dir.clone(), staged_files);
 
@@ -285,8 +532,10 @@ impl CommitService for CommitServiceImpl {
             }
             HookResult::Success => {}
         }
+        log_debug!("commit: pre-commit hook done");
 
         // 重新获取 repo 锁执行提交
+        log_debug!("commit: writing tree and creating commit");
         let oid = {
             let repo = self.ctx.repository();
             let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
@@ -326,8 +575,10 @@ impl CommitService for CommitServiceImpl {
             }
             // repo 锁在这里自动释放
         };
+        log_debug!("commit: created oid {}", oid);
 
         // [2] commit-msg hook
+        log_debug!("commit: commit-msg hook start");
         let commit_msg_context = HookContext::for_commit_msg(
             repo_path.clone(),
             git_dir.clone(),
@@ -344,13 +595,32 @@ impl CommitService for CommitServiceImpl {
                 msg
             )));
         }
+        log_debug!("commit: commit-msg hook done");
 
-        // [3] post-commit hook（失败不影响提交结果）
+        // [3] post-commit hook（失败不影响提交结果，仅记录警告）
+        log_debug!("commit: post-commit hook start");
         let post_commit_context =
             HookContext::new(repo_path, git_dir).with_commit_sha(oid.to_string());
-        let _ = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context);
+        if let Err(e) = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context)
+        {
+            toolkit::log_warn!("post-commit hook failed (commit already succeeded): {}", e);
+        }
+        log_debug!("commit: post-commit hook done, commit complete");
 
         Ok(oid.to_string())
+    }
+}
+
+fn delta_status_to_commit_change_type(status: git2::Delta) -> CommitChangeType {
+    use git2::Delta;
+    match status {
+        Delta::Added => CommitChangeType::Added,
+        Delta::Modified | Delta::Unmodified => CommitChangeType::Modified,
+        Delta::Deleted => CommitChangeType::Deleted,
+        Delta::Renamed => CommitChangeType::Renamed,
+        Delta::Copied => CommitChangeType::Copied,
+        Delta::Typechange => CommitChangeType::TypeChanged,
+        _ => CommitChangeType::Modified,
     }
 }
 

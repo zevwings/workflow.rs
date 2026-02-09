@@ -8,6 +8,6 @@
 //! - 安装 shell completion 脚本
 //! - 支持 Unix 和 Windows 平台
 
-mod binary;
+mod command;
 
-pub use binary::InstallCommand;
+pub use command::InstallCommand;

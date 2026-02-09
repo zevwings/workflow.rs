@@ -6,6 +6,7 @@
 mod alias;
 mod args;
 mod branch;
+#[cfg(feature = "develop")]
 mod commit;
 mod completion;
 mod github;
@@ -15,6 +16,8 @@ mod log;
 mod main;
 mod pr;
 mod repo;
+#[cfg(feature = "develop")]
+mod rollback;
 mod stash;
 mod tag;
 
@@ -22,7 +25,8 @@ mod tag;
 pub use alias::AliasCommand;
 pub use args::{DryRunArgs, ForceArgs, JiraIdArg};
 pub use branch::{BranchSubcommand, IgnoreSubcommand};
-pub use commit::CommitCommand;
+#[cfg(feature = "develop")]
+pub use commit::{CommitCommand, CommitSubcommand};
 pub use completion::CompletionCommand;
 pub use github::GithubCommand;
 pub use jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand};
@@ -31,5 +35,7 @@ pub use log::LogCommand;
 pub use main::{Cli, Command, UninstallArgs, UpdateArgs};
 pub use pr::PrSubcommand;
 pub use repo::RepoCommand;
+#[cfg(feature = "develop")]
+pub use rollback::RollbackCommand;
 pub use stash::StashSubcommand;
 pub use tag::TagSubcommand;

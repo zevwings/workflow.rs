@@ -10,9 +10,11 @@ default = []
 testing = ["dep:tempfile"]
 
 [dependencies]
-domain = { path = "../domain" }
-toolkit = { path = "../toolkit" }
-registry = { path = "../registry" }
+domain.workspace = true
+http.workspace = true
+llm.workspace = true
+toolkit.workspace = true
+registry.workspace = true
 
 # HTTP 客户端
 reqwest.workspace = true

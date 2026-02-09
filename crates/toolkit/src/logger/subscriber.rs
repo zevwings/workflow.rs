@@ -7,7 +7,7 @@ use std::io;
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::logger::{config::LoggerConfig, path, LoggerError};
+use crate::logger::{cleanup::cleanup_logs, config::LoggerConfig, path, LoggerError};
 use crate::terminal::SpinnerAwareMakeWriter;
 
 /// 宏：根据 use_json 创建并初始化 layer
@@ -83,6 +83,9 @@ macro_rules! add_text_layer {
 /// # }
 /// ```
 pub fn init(command_name: Option<&str>, config: &LoggerConfig) -> Result<(), LoggerError> {
+    // 清理过期日志文件（忽略清理错误，不影响正常初始化）
+    cleanup_logs(&config.logs_dir);
+
     let log_level_str = config.level.as_deref().unwrap_or("off");
 
     // 构建过滤器：项目代码使用用户设置的级别，第三方库（特别是 HTTP 相关）限制为 warn

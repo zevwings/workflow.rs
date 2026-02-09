@@ -127,8 +127,9 @@ pub fn calculate_sha256(file_path: &Path) -> Result<String, ChecksumError> {
 /// let hash = parse_hash_from_content("abc123def456").unwrap();
 /// assert_eq!(hash, "abc123def456");
 /// ```
-pub fn parse_hash_from_content(content: &str) -> Result<String, ChecksumError> {
+pub fn parse_hash_from_content(content: impl AsRef<str>) -> Result<String, ChecksumError> {
     content
+        .as_ref()
         .lines()
         .next()
         .and_then(|line| line.split_whitespace().next().map(|s| s.to_string()))
@@ -169,7 +170,11 @@ pub fn parse_hash_from_content(content: &str) -> Result<String, ChecksumError> {
 ///     println!("File integrity verified!");
 /// }
 /// ```
-pub fn verify(file_path: &Path, expected_hash: &str) -> Result<VerifyResult, ChecksumError> {
+pub fn verify(
+    file_path: &Path,
+    expected_hash: impl AsRef<str>,
+) -> Result<VerifyResult, ChecksumError> {
+    let expected_hash = expected_hash.as_ref();
     let actual_hash = calculate_sha256(file_path)?;
 
     if actual_hash == expected_hash {
@@ -200,8 +205,9 @@ pub fn verify(file_path: &Path, expected_hash: &str) -> Result<VerifyResult, Che
 /// 返回 `VerifyResult`，`verified` 字段指示是否匹配。
 pub fn verify_lenient(
     file_path: &Path,
-    expected_hash: &str,
+    expected_hash: impl AsRef<str>,
 ) -> Result<VerifyResult, ChecksumError> {
+    let expected_hash = expected_hash.as_ref();
     let actual_hash = calculate_sha256(file_path)?;
     let verified = actual_hash == expected_hash;
 
@@ -232,8 +238,8 @@ pub fn verify_lenient(
 /// let url = build_checksum_url("https://example.com/file.tar.gz");
 /// assert_eq!(url, "https://example.com/file.tar.gz.sha256");
 /// ```
-pub fn build_checksum_url(download_url: &str) -> String {
-    format!("{}.sha256", download_url)
+pub fn build_checksum_url(download_url: impl AsRef<str>) -> String {
+    format!("{}.sha256", download_url.as_ref())
 }
 
 // ============================================================================

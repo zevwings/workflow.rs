@@ -6,21 +6,28 @@ use prompt::{info, spinner, success};
 use crate::registry;
 use crate::workflows::utils::jira::get_jira_id_interactive;
 
+/// 输出格式
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OutputFormat {
+    /// 人类可读格式（默认）
+    #[default]
+    HumanReadable,
+    /// JSON 格式
+    Json,
+    /// Markdown 格式
+    Markdown,
+}
+
 /// Jira Info 命令
 pub struct JiraInfoCommand {
     jira_id: Option<String>,
-    json: bool,
-    markdown: bool,
+    format: OutputFormat,
 }
 
 impl JiraInfoCommand {
     /// 创建新的 JiraInfoCommand
-    pub fn new(jira_id: Option<String>, json: bool, markdown: bool) -> Self {
-        Self {
-            jira_id,
-            json,
-            markdown,
-        }
+    pub fn new(jira_id: Option<String>, format: OutputFormat) -> Self {
+        Self { jira_id, format }
     }
 
     /// 运行 `workflow jira info` 命令
@@ -37,12 +44,10 @@ impl JiraInfoCommand {
             .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
 
         // 根据输出格式显示信息
-        if self.json {
-            self.output_json(&issue)?;
-        } else if self.markdown {
-            self.output_markdown(&issue)?;
-        } else {
-            self.output_human_readable(&issue)?;
+        match self.format {
+            OutputFormat::Json => self.output_json(&issue)?,
+            OutputFormat::Markdown => self.output_markdown(&issue)?,
+            OutputFormat::HumanReadable => self.output_human_readable(&issue)?,
         }
 
         Ok(())

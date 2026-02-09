@@ -1,20 +1,19 @@
 //! 合并 Pull Request 命令
 
 use domain::GitError;
-use prompt::{confirm, error, info, spinner, success, warning};
+use prompt::{confirm, error, info, input, spinner, success, validators, warning};
 
 use crate::registry;
-use crate::workflows::utils::update_jira_after_pr_merged;
 
 /// Pull Request Merge 命令
 pub struct PullRequestMergeCommand {
-    pr_id: String,
+    pr_id: Option<String>,
     force: bool,
 }
 
 impl PullRequestMergeCommand {
     /// 创建新的 PullRequestMergeCommand
-    pub fn new(pr_id: String, force: bool) -> Self {
+    pub fn new(pr_id: Option<String>, force: bool) -> Self {
         Self { pr_id, force }
     }
 
@@ -27,22 +26,48 @@ impl PullRequestMergeCommand {
             info!("Force mode enabled: remote branch will be deleted after merge");
         }
 
+        let pr_id = if let Some(pr_id) = &self.pr_id {
+            pr_id.clone()
+        } else {
+            // 带验证的输入（使用 regex 验证邮箱）
+            let pr_id_validator =
+                validators::regex(r"^[0-9]+$", Some("Please enter a valid PR ID"))
+                    .map_err(|e| format!("Invalid PR ID regex: {}", e))?;
+            // 交互式输入
+            let input_id = input!("Please enter your PR ID:")
+                .validator(pr_id_validator)
+                .prompt()
+                .map_err(|e| format!("Failed to get PR ID: {}", e))?;
+
+            if input_id.trim().is_empty() {
+                return Err("PR ID is required".into());
+            }
+            input_id.trim().to_string()
+        };
+
         // 1. 获取 PR 信息（在合并前获取源分支、目标分支和标题）
         let pr_info = pr_service
-            .get_pull_request(&self.pr_id)
+            .get_pull_request(&pr_id)
             .map_err(|e| format!("Failed to get PR info: {}", e))?;
         let source_branch = pr_info.source_branch;
         let target_branch = pr_info.target_branch;
         let pr_title = pr_info.title.clone();
 
         // 2. 合并 PR
-        spinner!("Merging PR #{}...", self.pr_id)
-            .with(|| pr_service.merge_pull_request(&self.pr_id, self.force))
+        spinner!("Merging PR #{}...", pr_id)
+            .with(|| pr_service.merge_pull_request(&pr_id, self.force))
             .map_err(|e| format!("Failed to merge Pull Request: {}", e))?;
 
-        success!("Pull Request #{} merged successfully!", self.pr_id);
+        success!("Pull Request #{} merged successfully!", pr_id);
 
-        // 3. 切换到 target_branch
+        // 获取仓库 URL
+        let repo_info = git_repo.get_repo_info();
+        let repository_url = repo_info.origin_url.as_deref();
+
+        // 3. 更新 Jira 状态
+        self.update_jira_after_pr_merged(&pr_id, Some(pr_title.as_str()), repository_url)?;
+
+        // 4. 切换到 target_branch
         let current_branch = git_repo
             .get_current_branch()
             .map_err(|e| format!("Failed to get current branch: {}", e))?;
@@ -73,7 +98,7 @@ impl PullRequestMergeCommand {
             false
         };
 
-        // 4. 拉取最新代码
+        // 5. 拉取最新代码
         info!("Pulling latest changes from '{}'...", target_branch);
         if let Err(e) = git_repo.pull(&target_branch) {
             if matches!(e, GitError::MergeConflict) {
@@ -89,11 +114,11 @@ impl PullRequestMergeCommand {
         }
         success!("Pulled latest changes from '{}'", target_branch);
 
-        // 5. 删除本地和远程源分支
+        // 6. 删除本地和远程源分支
         let (local_exists, remote_exists) =
             git_repo.has_branch(&source_branch).unwrap_or((false, false));
 
-        // 5.1 删除本地分支
+        // 6.1 删除本地分支
         if local_exists {
             info!("Cleaning up local branch '{}'...", source_branch);
             match git_repo.delete_local_branch(&source_branch, false) {
@@ -135,7 +160,7 @@ impl PullRequestMergeCommand {
             }
         }
 
-        // 5.2 删除远程分支
+        // 6.2 删除远程分支
         if remote_exists {
             info!("Cleaning up remote branch '{}'...", source_branch);
             match git_repo.delete_remote_branch(&source_branch) {
@@ -155,7 +180,7 @@ impl PullRequestMergeCommand {
             }
         }
 
-        // 6. 恢复 stash
+        // 7. 恢复 stash
         if needs_stash {
             info!("Restoring stashed changes...");
             git_repo
@@ -164,23 +189,87 @@ impl PullRequestMergeCommand {
             success!("Stashed changes restored");
         }
 
-        // 7. 更新 Jira 状态（如果关联了 ticket）
+        success!("PR merge workflow completed!");
+
+        Ok(())
+    }
+
+    /// PR 合并后更新 Jira ticket
+    ///
+    /// 尝试从工作历史或 PR 标题获取关联的 Jira ticket，更新状态到"已合并"，
+    /// 并清理工作历史记录。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_repo` - Jira 仓储
+    /// * `work_history_repo` - 工作历史记录仓储
+    /// * `pr_id` - PR ID
+    /// * `pr_title` - PR 标题（用于提取 Jira ticket）
+    /// * `repository_url` - 仓库 URL（可选）
+    pub fn update_jira_after_pr_merged(
+        &self,
+        pr_id: &str,
+        pr_title: Option<&str>,
+        repository_url: Option<&str>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use domain::extract_jira_ticket_id;
+        use prompt::warning;
+
         let jira_repo = registry::get_jira_repository();
         let work_history_repo = registry::get_jira_work_history_repository();
 
-        // 获取仓库 URL
-        let repo_info = git_repo.get_repo_info();
-        let repository_url = repo_info.origin_url.as_deref();
+        // 如果没有仓库 URL，跳过工作历史相关操作
+        let repo_url = repository_url.unwrap_or("");
 
-        update_jira_after_pr_merged(
-            jira_repo.as_ref(),
-            work_history_repo.as_ref(),
-            &self.pr_id,
-            Some(pr_title.as_str()),
-            repository_url,
-        )?;
+        // 1. 尝试从工作历史读取 Jira ticket
+        let mut jira_ticket = if !repo_url.is_empty() {
+            work_history_repo.read_work_history(pr_id, repo_url).ok().flatten()
+        } else {
+            None
+        };
 
-        success!("PR merge workflow completed!");
+        // 2. 如果工作历史中没有，尝试从 PR 标题提取
+        if jira_ticket.is_none() {
+            if let Some(title) = pr_title {
+                jira_ticket = extract_jira_ticket_id(title);
+            }
+        }
+
+        // 3. 如果有 Jira ticket，更新状态
+        if let Some(ref ticket) = jira_ticket {
+            // 读取合并时的状态配置
+            if let Ok(Some(status)) = jira_repo.read_pull_request_merged_status(ticket) {
+                spinner!("Updating Jira ticket {} to status: {}...", ticket, status)
+                    .with(|| jira_repo.update_issue_status(ticket, &status))
+                    .map_err(|e| format!("Failed to update Jira status: {}", e))?;
+
+                success!("Jira ticket {} updated to: {}", ticket, status);
+            } else {
+                warning!(
+                    "No Jira merged status configuration found for ticket: {}",
+                    ticket
+                );
+            }
+        } else {
+            info!("No Jira ticket associated with this PR");
+        }
+
+        // 4. 删除工作历史记录中的 PR 条目（仅当有仓库 URL 时）
+        if !repo_url.is_empty() {
+            let delete_result = work_history_repo
+                .delete_work_history_entry(pr_id, repo_url)
+                .map_err(|e| format!("Failed to delete work history entry: {}", e))?;
+
+            // 显示删除消息
+            for message in &delete_result.messages {
+                info!("{}", message);
+            }
+
+            // 显示警告信息
+            for warning_msg in &delete_result.warnings {
+                warning!("{}", warning_msg);
+            }
+        }
 
         Ok(())
     }

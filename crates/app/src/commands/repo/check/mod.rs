@@ -1,3 +1,3 @@
-mod logic;
+mod command;
 
-pub use logic::RepoCheckCommand;
+pub use command::RepoCheckCommand;

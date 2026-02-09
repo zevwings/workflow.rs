@@ -5,9 +5,9 @@
 use std::sync::Arc;
 
 use domain::git::{
-    BlameLineInfo, CommitInfo, GitError, GitRepository, MergeStrategy, RepoInfo, StashApplyResult,
-    StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
-    WorkingTreeStatus,
+    BlameLineInfo, CommitFileChange, CommitInfo, GitError, GitRepository, MergeStrategy, RepoInfo,
+    StashApplyResult, StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo,
+    TagDeleteScope, WorkingTreeStatus,
 };
 
 use crate::git::services::{
@@ -55,6 +55,22 @@ impl GitRepository for GitRepositoryImpl {
 
     fn get_working_tree_diff(&self, base_branch: &str) -> Result<Option<String>, GitError> {
         self.services.diff.get_working_tree_diff(base_branch)
+    }
+
+    fn get_merge_diff(
+        &self,
+        branch: &str,
+        target_branch: &str,
+    ) -> Result<Option<String>, GitError> {
+        self.services.diff.get_merge_diff(branch, target_branch)
+    }
+
+    fn get_merge_changed_files(
+        &self,
+        branch: &str,
+        target_branch: &str,
+    ) -> Result<Vec<CommitFileChange>, GitError> {
+        self.services.diff.get_merge_changed_files(branch, target_branch)
     }
 
     // ========== Branch 操作 ==========
@@ -109,8 +125,31 @@ impl GitRepository for GitRepositoryImpl {
         self.services.commit.get_commit_info(ref_or_sha)
     }
 
+    fn get_commit_changed_files(
+        &self,
+        ref_or_sha: &str,
+    ) -> Result<Vec<CommitFileChange>, GitError> {
+        self.services.commit.get_commit_changed_files(ref_or_sha)
+    }
+
+    fn get_commit_diff(&self, ref_or_sha: &str) -> Result<Option<String>, GitError> {
+        self.services.diff.get_commit_diff(ref_or_sha)
+    }
+
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError> {
         self.services.commit.get_working_tree_status()
+    }
+
+    fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError> {
+        self.services.commit.get_staged_files()
+    }
+
+    fn get_staged_diff(&self) -> Result<Option<String>, GitError> {
+        self.services.diff.get_staged_diff()
+    }
+
+    fn add_all(&self) -> Result<(), GitError> {
+        self.services.commit.add_all()
     }
 
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
@@ -133,6 +172,14 @@ impl GitRepository for GitRepositoryImpl {
 
     fn merge_base(&self, branch1: &str, branch2: &str) -> Result<String, GitError> {
         self.services.merge.merge_base(branch1, branch2)
+    }
+
+    fn commits_to_merge(
+        &self,
+        source_branch: &str,
+        target_branch: &str,
+    ) -> Result<Vec<String>, GitError> {
+        self.services.merge.commits_to_merge(source_branch, target_branch)
     }
 
     // ========== Rebase 操作 ==========

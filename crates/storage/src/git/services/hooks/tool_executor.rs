@@ -61,7 +61,12 @@ impl ToolHookExecutor {
     /// # 返回
     /// - `Ok(HookResult)`: Hook 执行结果
     /// - `Err(GitError)`: Hook 执行失败
-    pub fn execute(&self, hook_name: &str, context: &HookContext) -> Result<HookResult, GitError> {
+    pub fn execute(
+        &self,
+        hook_name: impl AsRef<str>,
+        context: &HookContext,
+    ) -> Result<HookResult, GitError> {
+        let hook_name = hook_name.as_ref();
         use std::io::Read;
 
         let tool_name = if self.is_prek { "prek" } else { "pre-commit" };

@@ -5,9 +5,24 @@
 //! 使用 `shellexpand` 处理 `~` 展开和 Unix 风格的环境变量（`$VAR`、`${VAR}`），
 //! 同时保留自定义逻辑处理 Windows 风格的 `%VAR%` 环境变量。
 
-use crate::paths::PathError;
 use std::env;
 use std::path::PathBuf;
+
+// //! 路径操作错误类型
+
+use thiserror::Error;
+
+/// 路径操作错误
+#[derive(Debug, Error)]
+pub enum PathExpandError {
+    /// 环境变量错误
+    #[error("Environment variable error: {0}")]
+    EnvVar(#[from] std::env::VarError),
+
+    /// 路径展开错误
+    #[error("Path expansion error: {0}")]
+    Expansion(String),
+}
 
 /// 展开路径字符串
 ///
@@ -34,7 +49,8 @@ use std::path::PathBuf;
 /// expand("/absolute/path") -> "/absolute/path"
 /// expand("C:\\absolute\\path") -> "C:\\absolute\\path"
 /// ```
-pub fn expand(path_str: &str) -> Result<PathBuf, PathError> {
+pub fn expand(path_str: impl AsRef<str>) -> Result<PathBuf, PathExpandError> {
+    let path_str = path_str.as_ref();
     // 先处理 Windows 风格的环境变量展开 %VAR%
     // 因为 shellexpand 不支持这种格式
     let expanded = if path_str.contains('%') {
@@ -45,13 +61,13 @@ pub fn expand(path_str: &str) -> Result<PathBuf, PathError> {
 
     // 使用 shellexpand 处理 ~ 展开和 Unix 风格的环境变量
     let result = shellexpand::full(&expanded)
-        .map_err(|e| PathError::Expansion(format!("Failed to expand path: {}", e)))?;
+        .map_err(|e| PathExpandError::Expansion(format!("Failed to expand path: {}", e)))?;
 
     Ok(PathBuf::from(result.as_ref()))
 }
 
 /// 展开 Windows 风格的环境变量 `%VAR%`
-fn expand_windows_env_vars(path_str: &str) -> Result<String, PathError> {
+fn expand_windows_env_vars(path_str: &str) -> Result<String, PathExpandError> {
     let mut result = String::new();
     let mut chars = path_str.chars().peekable();
 
@@ -67,7 +83,7 @@ fn expand_windows_env_vars(path_str: &str) -> Result<String, PathError> {
             }
 
             if !var_name.is_empty() {
-                let var_value = env::var(&var_name).map_err(PathError::EnvVar)?;
+                let var_value = env::var(&var_name).map_err(PathExpandError::EnvVar)?;
                 result.push_str(&var_value);
             }
         } else {
@@ -168,7 +184,7 @@ mod tests {
 
         let result = expand("%NONEXISTENT_WIN_VAR_12345%/path");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), PathError::EnvVar(_)));
+        assert!(matches!(result.unwrap_err(), PathExpandError::EnvVar(_)));
     }
 
     #[test]

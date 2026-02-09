@@ -13,8 +13,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use chrono::Utc;
-use domain::{DeleteHistoryResult, JiraError, WorkHistoryEntry};
-use toolkit::{file, log_warn, work_history_dir};
+use domain::{DeleteHistoryResult, JiraError, PathService, WorkHistoryEntry};
+use toolkit::{file, log_warn};
 
 /// 工作历史记录存储格式（JSON 对象，PR ID -> Entry）
 type WorkHistoryMap = HashMap<String, WorkHistoryEntry>;
@@ -79,24 +79,20 @@ pub trait WorkHistoryService: Send + Sync {
 /// 工作历史记录服务实现
 pub struct WorkHistoryServiceImpl {
     /// 工作历史目录路径提供者
-    history_dir_provider: Arc<dyn Fn() -> Result<PathBuf, JiraError> + Send + Sync + 'static>,
+    // history_dir_provider: Arc<dyn Fn() -> Result<PathBuf, JiraError> + Send + Sync + 'static>,
+    path_service: Arc<dyn PathService>,
 }
 
 impl WorkHistoryServiceImpl {
     /// 创建新的工作历史记录服务实例
-    pub fn new() -> Self {
-        Self {
-            history_dir_provider: Arc::new(|| {
-                work_history_dir()
-                    .map_err(|e| JiraError::ApiError(format!("Failed to get history dir: {}", e)))
-            }),
-        }
+    pub fn new(path_service: Arc<dyn PathService>) -> Self {
+        Self { path_service }
     }
 
-    /// 获取工作历史目录路径
-    fn history_dir(&self) -> Result<PathBuf, JiraError> {
-        (self.history_dir_provider)()
-    }
+    // /// 获取工作历史目录路径
+    // fn history_dir(&self) -> Result<PathBuf, JiraError> {
+    //     (self.history_dir_provider)()
+    // }
 
     /// 规范化仓库 URL 为文件名
     ///
@@ -119,7 +115,10 @@ impl WorkHistoryServiceImpl {
 
     /// 获取仓库特定的工作历史文件路径
     fn get_repo_work_history_path(&self, repo_url: &str) -> Result<PathBuf, JiraError> {
-        let history_dir = self.history_dir()?;
+        let history_dir = self
+            .path_service
+            .get_jira_work_history_dir()
+            .map_err(|e| JiraError::ApiError(format!("Failed to get history dir: {}", e)))?;
         let repo_id = Self::normalize_repo_to_filename(repo_url);
         Ok(history_dir.join(format!("{}.json", repo_id)))
     }
@@ -144,12 +143,6 @@ impl WorkHistoryServiceImpl {
 
         file::write_string(path, &content)
             .map_err(|e| JiraError::ApiError(format!("Failed to write work history file: {}", e)))
-    }
-}
-
-impl Default for WorkHistoryServiceImpl {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -303,7 +296,10 @@ impl WorkHistoryService for WorkHistoryServiceImpl {
         &self,
         jira_ticket: &str,
     ) -> Result<Vec<WorkHistoryEntry>, JiraError> {
-        let history_dir = self.history_dir()?;
+        let history_dir = self
+            .path_service
+            .get_jira_work_history_dir()
+            .map_err(|e| JiraError::ApiError(format!("Failed to get history dir: {}", e)))?;
         let mut results = Vec::new();
 
         if !history_dir.exists() {

@@ -1,4 +1,6 @@
 //! GitHub 仓储接口
+//!
+//! 定义与 GitHub REST API v3 交互的底层接口。
 
 use crate::github::entity::GitHubUser;
 use crate::github::error::GitHubError;
@@ -6,7 +8,30 @@ use crate::pr::entity::PullRequestInfo;
 
 /// GitHub 仓储接口
 ///
-/// 提供 GitHub API 操作的接口定义。
+/// 提供与 GitHub REST API 交互的底层接口，封装了 Pull Request 和用户信息的操作。
+///
+/// # 功能范围
+///
+/// - Pull Request CRUD 操作（创建、读取、更新、删除）
+/// - PR 状态管理（合并、关闭、批准）
+/// - PR 协作（评论、diff 查看）
+/// - 用户信息查询
+///
+/// # 线程安全
+///
+/// 实现须满足 [`Send`] + [`Sync`]，以便在多线程或异步上下文中共享。
+///
+/// # 认证
+///
+/// 实现需要处理 GitHub 认证（Personal Access Token 或 OAuth），
+/// 认证逻辑由具体实现负责。
+///
+/// # 错误处理
+///
+/// 所有方法返回 [`GitHubError`]，包含：
+/// - HTTP 错误（401 未授权、403 禁止、404 未找到、422 验证失败等）
+/// - 网络错误
+/// - JSON 解析错误
 pub trait GitHubRepository: Send + Sync {
     /// 创建 Pull Request
     fn create_pull_request(

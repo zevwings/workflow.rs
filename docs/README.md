@@ -11,8 +11,8 @@
 ### [架构设计](./architecture.md)
 
 项目整体架构设计文档，包含：
-- 三层架构设计（CLI 入口层、命令封装层、核心业务逻辑层）
-- 核心模块说明
+- Workspace 与 Crate 结构（app、domain、storage、services、toolkit、prompt、registry）
+- 模块职责与数据流向
 - 数据存储说明
 
 ### [开发规范](./development.md)
@@ -21,7 +21,7 @@
 - 代码风格规范（格式化、Clippy、命名约定）
 - 错误处理规范（`anyhow::Result`、错误处理模式）
 - 命名规范（文件、函数、类型、常量、CLI 参数）
-- 模块组织规范（三层架构、模块职责）
+- 模块组织规范（workspace 与 crate 职责）
 - 文档规范（代码文档注释、文档命名和格式）
 - 提交规范（Conventional Commits）
 - 检查流程（pre-commit、review）

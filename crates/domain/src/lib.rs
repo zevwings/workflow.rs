@@ -6,14 +6,16 @@
 
 pub mod alias;
 pub mod branch;
+pub mod commit;
 pub mod completion;
 pub mod config;
 pub mod errors;
 pub mod git;
 pub mod github;
 pub mod jira;
-pub mod llm;
+pub mod path;
 pub mod pr;
+pub mod summary;
 pub mod template;
 
 // Re-export public types
@@ -58,22 +60,31 @@ pub use config::{
 
 // Re-export business domain types
 pub use branch::{
-    sanitize_branch_name, BranchService, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult,
-    BranchType, SourceBranchInfo, SyncStrategy,
+    sanitize_branch_name, BranchService, BranchServiceError, BranchSyncCallbacks,
+    BranchSyncOptions, BranchSyncResult, BranchType, SourceBranchInfo, SyncStrategy,
 };
+pub use commit::CommitMessageService;
 pub use completion::{
-    get_all_completion_filenames, get_completion_filename, get_shell_source_path,
-    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
-    ShellCompletionStatus, COMPLETIONS_FILE,
+    get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
+    get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,
+    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
+    CompletionService, ShellCompletionStatus,
+};
+pub use path::{
+    Dir, PathError, PathService, COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR,
+    JIRA_CONFIG_FILE, MAIN_DIR, PROJECT_CONFIG_FILE, USER_CONFIG_FILE, WORKFLOW_CONFIG_DIR,
+    WORKFLOW_CONFIG_FILE,
 };
 pub use pr::{
-    get_all_change_types, get_change_type_by_index, get_change_type_by_name, ChangeType, PrContent,
+    get_all_change_types, get_change_type_by_index, get_change_type_by_name,
+    get_change_type_index_by_branch_type, get_change_types_by_branch_type, ChangeType, PrContent,
     PrStatus, PullRequestInfo, PullRequestService, PullRequestStatus, CHANGE_TYPES,
 };
 
 // Re-export template types
 pub use template::{
-    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars,
+    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PrTitleTemplateVars,
+    PullRequestTemplateVars,
 };
 
 // Re-export error types
@@ -81,9 +92,10 @@ pub use errors::ServiceError;
 
 // Re-export git types
 pub use git::{
-    BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitInfo, FileStatusInfo,
-    FileStatusType, GitError, GitRepoRepository, GitRepository, MergeStrategy, RemoteInfo,
-    RepoInfo, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+    BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitChangeType, CommitFileChange,
+    CommitInfo, FileStatusInfo, FileStatusType, GitError, GitRepoRepository, GitRepository,
+    MergeStrategy, RemoteInfo, RepoInfo, TagCreateInfo, TagCreateScope, TagDeleteInfo,
+    TagDeleteScope, WorkingTreeStatus,
 };
 
 // Re-export external service types
@@ -95,7 +107,8 @@ pub use jira::{
     JiraTransition, JiraUser, JiraWorkHistoryRepository, ProjectStatusConfig, StatusConfigResult,
     WorkHistoryEntry,
 };
-pub use llm::{
-    LLMConfigContext, LLMError, LLMRepository, PullRequestContent, PullRequestReword,
-    PullRequestSummary, SupportedLanguage,
+
+pub use summary::{
+    CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
+    CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis,
 };

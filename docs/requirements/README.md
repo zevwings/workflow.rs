@@ -88,59 +88,18 @@
   - 通知系统（桌面通知、邮件通知）
 - **优先级**: 中优先级
 
-#### 4. [doc-check.md](./doc-check.md)
+#### 4. [i18n.md](./i18n.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
-- **分类**: 文档检查工具
+- **分类**: 国际化（i18n）支持
 - **内容**:
-  - 文档路径验证脚本
-  - 模块统计验证脚本
-  - 综合检查脚本（可选）
-  - CI 集成（可选）
-- **优先级**: P2（可选，但建议实施以提升效率）
-
-#### 5. [gix-migration.md](./gix-migration.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 依赖迁移
-- **内容**: Git 库迁移到 gix
-
-#### 6. [cursor-rules-enhancement.md](./cursor-rules-enhancement.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 开发工具配置
-- **内容**:
-  - 快速决策树机制（白名单/黑名单检查流程）
-  - 每次消息独立判断规则
-  - 规则优先级和执行保证
-  - 详细的文档分类和存储规范
-  - 文档命名规范和注意事项
-- **优先级**: 高优先级（确保规则正确执行）
-
-#### 7. [logger-enhancement.md](./logger-enhancement.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 日志系统增强
-- **内容**:
-  - 模块级日志分离（每个模块输出到独立文件）
-  - 自动模块识别（通过调用栈或显式指定）
-  - 日志轮转（大小限制、备份管理、自动压缩）
-  - 统一错误日志收集（`error.log`）
-  - 结构化日志字段支持（`WithField/WithFields/WithError`）
-  - JSON 格式输出支持
-- **优先级**: 中优先级（功能增强，非阻塞性）
-
-#### 8. [git-hooks-implementation.md](./git-hooks-implementation.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: Git 功能增强
-- **内容**:
-  - Git hooks 发现和执行机制
-  - 支持标准 Git hooks（pre-commit、pre-push、post-commit 等）
-  - Hook 执行器、发现器、配置管理
-  - 在 CommitService 和 RemoteService 中集成 hooks
-  - 跳过机制（--no-verify、环境变量）
-- **优先级**: P0（高优先级，保持与标准 Git 兼容性）
+  - 引入 rust-i18n 框架实现多语言支持
+  - CLI 命令、参数、帮助文本国际化
+  - 错误消息、日志、交互提示国际化
+  - LLM Prompt 模板输出语言支持
+  - 语言自动检测和手动切换机制
+  - 支持中英文双语（可扩展更多语言）
+- **优先级**: 高优先级（用户体验提升）
 
 ---
 
@@ -150,8 +109,8 @@
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 1 个 | 测试架构改进 |
-| ⏳ 待实施 | 6 个 | 集成扩展、文档检查工具、依赖迁移、Cursor 规则增强、日志系统增强、Git Hooks 实现 |
-| **总计** | **7 个** | - |
+| ⏳ 待实施 | 3 个 | 集成扩展、i18n 支持、单次提交 commit message 生成 |
+| **总计** | **5 个** | - |
 
 ---
 
@@ -189,12 +148,7 @@
 - **JIRA 相关** → [jira.md](./jira.md) 🚧 部分完成
 - **测试架构改进** → [test-architecture-improvement.md](./test-architecture-improvement.md) 🔄 进行中
 - **集成与扩展** → [integration.md](./integration.md) ⏳ 待实施
-- **文档检查工具** → [doc-check.md](./doc-check.md) ⏳ 待实施
-- **依赖迁移** → [gix-migration.md](./gix-migration.md) ⏳ 待实施
-- **Cursor 规则增强** → [cursor-rules-enhancement.md](./cursor-rules-enhancement.md) ⏳ 待实施
-- **日志系统增强** → [logger-enhancement.md](./logger-enhancement.md) ⏳ 待实施
-- **Git Hooks 实现** → [git-hooks-implementation.md](./git-hooks-implementation.md) ⏳ 待实施
-
+- **国际化支持** → [i18n.md](./i18n.md) ⏳ 待实施
 ---
 
 ## 📚 相关文档
@@ -206,4 +160,4 @@
 
 ---
 
-**最后更新**: 2025-02-05
+**最后更新**: 2026-02-09

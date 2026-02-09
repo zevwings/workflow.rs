@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::branch::BranchType;
+
 /// PR 变更类型结构体
 ///
 /// 包含变更类型的完整信息，包括名称、描述和示例
@@ -86,6 +88,30 @@ pub fn get_change_type_by_index(index: usize) -> Option<&'static ChangeType> {
 /// 根据名称查找变更类型信息
 pub fn get_change_type_by_name(name: &str) -> Option<&'static ChangeType> {
     CHANGE_TYPES.iter().find(|ct| ct.name == name)
+}
+
+/// 将分支类型映射到 PR 变更类型索引
+///
+/// 索引与 `CHANGE_TYPES` 顺序一致：0=Bug fix, 1=New feature, 2=Refactoring, 3=Hotfix, 4=Chore
+pub fn get_change_type_index_by_branch_type(branch_type: BranchType) -> Option<usize> {
+    match branch_type {
+        BranchType::Feature => Some(1),
+        BranchType::Bugfix => Some(0),
+        BranchType::Refactoring => Some(2),
+        BranchType::Hotfix => Some(3),
+        BranchType::Chore => Some(4),
+    }
+}
+
+/// 将分支类型映射为 PR 变更类型勾选向量
+///
+/// 返回长度为 `CHANGE_TYPES.len()` 的布尔向量，对应分支类型的那一项为 true
+pub fn get_change_types_by_branch_type(branch_type: BranchType) -> Vec<bool> {
+    let mut result = vec![false; CHANGE_TYPES.len()];
+    if let Some(index) = get_change_type_index_by_branch_type(branch_type) {
+        result[index] = true;
+    }
+    result
 }
 
 #[cfg(test)]
@@ -185,5 +211,56 @@ mod tests {
         // 部分匹配不应该成功
         assert!(get_change_type_by_name("Bug fix").is_none());
         assert!(get_change_type_by_name("New feature").is_none());
+    }
+
+    // ========================================================================
+    // map_branch_type_to_change_type_index 测试
+    // ========================================================================
+
+    #[test]
+    fn test_map_branch_type_to_change_type_index() {
+        use crate::branch::BranchType;
+
+        assert_eq!(
+            get_change_type_index_by_branch_type(BranchType::Feature),
+            Some(1)
+        );
+        assert_eq!(
+            get_change_type_index_by_branch_type(BranchType::Bugfix),
+            Some(0)
+        );
+        assert_eq!(
+            get_change_type_index_by_branch_type(BranchType::Refactoring),
+            Some(2)
+        );
+        assert_eq!(
+            get_change_type_index_by_branch_type(BranchType::Hotfix),
+            Some(3)
+        );
+        assert_eq!(
+            get_change_type_index_by_branch_type(BranchType::Chore),
+            Some(4)
+        );
+    }
+
+    // ========================================================================
+    // map_branch_type_to_change_types 测试
+    // ========================================================================
+
+    #[test]
+    fn test_map_branch_type_to_change_types() {
+        use crate::branch::BranchType;
+
+        let feature = get_change_types_by_branch_type(BranchType::Feature);
+        assert_eq!(feature.len(), 5);
+        assert!(!feature[0]);
+        assert!(feature[1]);
+        assert!(!feature[2]);
+        assert!(!feature[3]);
+        assert!(!feature[4]);
+
+        let bugfix = get_change_types_by_branch_type(BranchType::Bugfix);
+        assert!(bugfix[0]);
+        assert!(!bugfix[1]);
     }
 }

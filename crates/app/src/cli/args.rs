@@ -12,7 +12,7 @@ use domain::jira::validate_jira_ticket_format;
 /// 预览操作而不实际执行。
 #[derive(Args, Debug, Clone)]
 pub struct DryRunArgs {
-    /// Dry run mode (preview changes without actually executing)
+    /// Dry run 模式（预览变更但不实际执行）
     #[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
     pub dry_run: bool,
 }
@@ -30,8 +30,8 @@ impl DryRunArgs {
 /// 支持格式验证，确保输入的 JIRA ID 符合标准格式。
 #[derive(Args, Debug, Clone)]
 pub struct JiraIdArg {
-    /// Jira ticket ID (optional, will prompt interactively if not provided)
-    /// Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name)
+    /// Jira 工单 ID（可选，未提供时将交互式提示）
+    /// 期望格式：'PROJ-123'（工单）或 'PROJ'（项目名称）
     #[arg(value_name = "JIRA_ID", value_parser = Self::validate_jira_id)]
     pub jira_id: Option<String>,
 }
@@ -53,7 +53,7 @@ impl JiraIdArg {
         match validate_jira_ticket_format(value) {
             Ok(_) => Ok(value.to_string()),
             Err(e) => Err(format!(
-                "Invalid JIRA ID format: {}\n\nExpected formats:\n  • Ticket ID: PROJ-123 (project code + hyphen + number)\n  • Project name: PROJ (letters, numbers, underscores only)",
+                "无效的 JIRA ID 格式: {}\n\n期望格式:\n  • 工单 ID: PROJ-123（项目代码 + 连字符 + 数字）\n  • 项目名称: PROJ（仅字母、数字、下划线）",
                 e
             )),
         }
@@ -86,7 +86,7 @@ impl JiraIdArg {
 /// 用于跳过确认和检查，强制执行操作。
 #[derive(Args, Debug, Clone)]
 pub struct ForceArgs {
-    /// Force operation (skip checks and confirmations)
+    /// 强制执行操作（跳过检查和确认）
     #[arg(long, short = 'f', action = clap::ArgAction::SetTrue)]
     pub force: bool,
 }

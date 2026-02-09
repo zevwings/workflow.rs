@@ -1,4 +1,4 @@
-//! Log Workflow Stage (v2)
+//! 日志工作流阶段 (v2)
 
 use crate::workflows::core::context::WorkflowContext;
 use crate::workflows::core::stage::WorkflowStage;
@@ -7,11 +7,11 @@ use domain::{GlobalConfig, VerificationService};
 use prompt::{br, info, separator, ConfirmFormField, FormBuilder, SelectFormField};
 use std::error::Error;
 
-/// The Log workflow stage.
+/// 日志工作流阶段
 pub struct LogStage;
 
 impl LogStage {
-    /// Build and run the log configuration form.
+    /// 构建并运行日志配置表单
     fn run_form(
         settings: &GlobalConfig,
         current_level: &str,
@@ -19,13 +19,13 @@ impl LogStage {
         let has_level = settings.log.level.is_some();
         let default_enable_logging = has_level;
 
-        if has_level {
-            info!("Log configuration is detected!");
-            info!("  - Log Level: {}", settings.log.level.as_ref().unwrap());
+        if let Some(level) = &settings.log.level {
+            info!("检测到日志配置！");
+            info!("  - 日志级别: {}", level);
             br!();
         }
 
-        // Log level options
+        // 日志级别选项
         let level_options = vec![
             "error".to_string(),
             "warn".to_string(),
@@ -33,7 +33,7 @@ impl LogStage {
             "debug".to_string(),
         ];
 
-        // Calculate default index
+        // 计算默认索引
         let mut default_index = 2; // info
         for (i, lvl) in level_options.iter().enumerate() {
             if lvl == &current_level.to_lowercase() {
@@ -42,40 +42,37 @@ impl LogStage {
             }
         }
 
-        // Separator
-        separator!('─', 80, "Log Configuration");
+        // 分隔符
+        separator!('─', 80, "日志配置");
         br!();
 
-        // Build form
+        // 构建表单
         let builder = FormBuilder::new()
             .add_confirm(
-                ConfirmFormField::new("enable_logging", "Do you want to enable logging?")
+                ConfirmFormField::new("enable_logging", "是否启用日志？")
                     .default(default_enable_logging)
-                    .result_title("Enable logging"),
+                    .result_title("启用日志"),
             )
             .add_confirm(
-                ConfirmFormField::new(
-                    "enable_console",
-                    "Do you want to enable console output for tracing logs?",
-                )
-                .default(settings.log.enable_trace_console.unwrap_or(false))
-                .result_title("Enable console output")
-                .condition(Box::new(|result| result.get_bool("enable_logging"))),
+                ConfirmFormField::new("enable_console", "是否启用控制台输出以记录追踪日志？")
+                    .default(settings.log.enable_trace_console.unwrap_or(false))
+                    .result_title("启用控制台输出")
+                    .condition(Box::new(|result| result.get_bool("enable_logging"))),
             )
             .add_select(
                 SelectFormField::new(
                     "log_level",
-                    format!("Please select your log level [current: {}]", current_level),
+                    format!("请选择您的日志级别 [当前: {}]", current_level),
                     level_options.clone(),
                 )
                 .default(default_index)
-                .result_title("Your log level")
+                .result_title("您的日志级别")
                 .condition(Box::new(|result| result.get_bool("enable_logging"))),
             );
 
         let result = builder.run().map_err(|e| e.to_string())?;
 
-        // Extract results
+        // 提取结果
         let enable_logging = result
             .get_raw("enable_logging")
             .and_then(|v| v.downcast_ref::<bool>())
@@ -108,11 +105,11 @@ impl WorkflowStage for LogStage {
 
         let current_level = settings.log.level.clone().unwrap_or_else(|| "info".to_string());
 
-        // Build and run the form
+        // 构建并运行表单
         let (enable_logging, selected_level, enable_console) =
             Self::run_form(settings, &current_level)?;
 
-        // Update settings
+        // 更新设置
         if !enable_logging {
             settings.log.level = None;
             settings.log.enable_trace_console = None;
@@ -125,8 +122,8 @@ impl WorkflowStage for LogStage {
     }
 
     fn is_configured(&self, _settings: &GlobalConfig) -> bool {
-        // For log, we consider it configured if we can load the config.
-        // The original implementation always verified.
+        // 对于日志，如果能加载配置则认为已配置
+        // 原始实现总是验证
         true
     }
 
@@ -145,7 +142,7 @@ impl WorkflowStage for LogStage {
     }
 }
 
-/// Get the Log stage instance.
+/// 获取日志阶段实例
 pub fn log_stage() -> &'static dyn WorkflowStage {
     &LogStage
 }

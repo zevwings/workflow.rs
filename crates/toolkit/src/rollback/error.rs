@@ -9,10 +9,6 @@ pub enum RollbackError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// 路径错误
-    #[error("Path error: {0}")]
-    PathError(#[from] crate::PathError),
-
     /// 文件系统错误
     #[error("Filesystem error: {0}")]
     FsError(#[from] crate::util::FileError),

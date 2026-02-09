@@ -2,7 +2,6 @@
 //!
 //! 应用并删除 stash 条目。
 
-use color_eyre::Result;
 use prompt::{confirm, info, select, success, warning};
 
 use crate::registry;

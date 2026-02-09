@@ -3,7 +3,6 @@
 use crate::git::error::GitError;
 use crate::github::error::GitHubError;
 use crate::jira::error::JiraError;
-use crate::llm::error::LLMError;
 use thiserror::Error;
 
 /// 通用服务错误
@@ -17,9 +16,6 @@ pub enum ServiceError {
 
     #[error("Jira 错误: {0}")]
     Jira(#[from] JiraError),
-
-    #[error("LLM 错误: {0}")]
-    LLM(#[from] LLMError),
 
     #[error("{0}")]
     NotFound(String),
@@ -102,14 +98,6 @@ mod tests {
         let service_error: ServiceError = jira_error.into();
         assert!(matches!(service_error, ServiceError::Jira(_)));
         assert!(service_error.to_string().contains("Jira 错误"));
-    }
-
-    #[test]
-    fn test_service_error_from_llm_error() {
-        let llm_error = LLMError::AuthenticationFailed;
-        let service_error: ServiceError = llm_error.into();
-        assert!(matches!(service_error, ServiceError::LLM(_)));
-        assert!(service_error.to_string().contains("LLM 错误"));
     }
 
     #[test]

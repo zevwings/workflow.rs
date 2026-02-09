@@ -3,6 +3,7 @@
 //! 提供平台检测相关的工具函数，用于识别当前运行的操作系统和架构。
 
 use std::env;
+use std::path::PathBuf;
 use std::process::Command;
 
 use thiserror::Error;
@@ -128,7 +129,7 @@ impl Platform {
         }
 
         // 方法1: 检查是否是 Alpine Linux（通常使用 musl）
-        if let Ok(os_release) = file::read_string(std::path::Path::new("/etc/os-release")) {
+        if let Ok(os_release) = file::read_string(PathBuf::from("/etc/os-release")) {
             if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
                 return true;
             }

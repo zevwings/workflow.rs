@@ -2,8 +2,6 @@
 //!
 //! 检查 Shell Completion 配置状态。
 
-use color_eyre::{eyre::WrapErr, Result};
-
 use crate::registry::get_completion_service;
 
 /// Completion 检查命令
@@ -16,12 +14,14 @@ impl CompletionCheckCommand {
     }
 
     /// 运行检查命令
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Shell Completion Configuration Status:\n");
 
         // 调用 Service 检查状态
         let service = get_completion_service();
-        let result = service.check_status().wrap_err("Failed to check completion status")?;
+        let result = service
+            .check_status()
+            .map_err(|e| format!("Failed to check completion status: {}", e))?;
 
         // 显示当前 shell
         if let Some(ref shell) = result.current_shell {

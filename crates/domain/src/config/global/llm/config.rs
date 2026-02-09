@@ -74,8 +74,8 @@ impl LLMSettings {
     }
 
     /// 根据 Provider 获取默认模型
-    pub fn default_model(provider: &str) -> String {
-        match provider {
+    pub fn default_model(provider: impl AsRef<str>) -> String {
+        match provider.as_ref() {
             "openai" => "gpt-4.0".to_string(),
             "deepseek" => "deepseek-chat".to_string(),
             _ => String::new(), // proxy 必须输入，没有默认值

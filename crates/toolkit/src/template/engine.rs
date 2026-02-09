@@ -1,6 +1,6 @@
-//! Template engine wrapper
+//! 模板引擎封装
 //!
-//! Provides a unified interface for template rendering using handlebars.
+//! 使用 handlebars 提供统一的模板渲染接口。
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -9,77 +9,83 @@ use serde::Serialize;
 
 use crate::template::TemplateError;
 
-/// Template engine type
+/// 模板引擎类型
 #[derive(Debug, Clone, Copy)]
 pub enum TemplateEngineType {
-    /// Handlebars template engine
+    /// Handlebars 模板引擎
     Handlebars,
 }
 
-/// Template engine wrapper
+/// 模板引擎封装
 ///
-/// Provides a unified interface for template rendering.
+/// 提供统一的模板渲染接口。
 pub struct TemplateEngine {
     handlebars: Handlebars<'static>,
 }
 
 impl TemplateEngine {
-    /// Create a new template engine
+    /// 创建新的模板引擎
     pub fn new() -> Self {
         let mut handlebars = Handlebars::new();
         handlebars.set_strict_mode(false);
-        handlebars.register_escape_fn(handlebars::no_escape); // Don't escape HTML
+        handlebars.register_escape_fn(handlebars::no_escape); // 不转义 HTML
 
         Self { handlebars }
     }
 
-    /// Register a template
+    /// 注册模板
     ///
-    /// # Arguments
+    /// # 参数
     ///
-    /// * `name` - Template name
-    /// * `template` - Template string
-    pub fn register_template(&mut self, name: &str, template: &str) -> Result<(), TemplateError> {
-        self.handlebars.register_template_string(name, template)?;
+    /// * `name` - 模板名称
+    /// * `template` - 模板字符串
+    pub fn register_template(
+        &mut self,
+        name: impl AsRef<str>,
+        template: impl AsRef<str>,
+    ) -> Result<(), TemplateError> {
+        self.handlebars.register_template_string(name.as_ref(), template.as_ref())?;
         Ok(())
     }
 
-    /// Render a template with variables
+    /// 使用变量渲染模板
     ///
-    /// # Arguments
+    /// # 参数
     ///
-    /// * `name` - Template name
-    /// * `vars` - Template variables (must implement Serialize)
+    /// * `name` - 模板名称
+    /// * `vars` - 模板变量（必须实现 Serialize）
     ///
-    /// # Returns
+    /// # 返回
     ///
-    /// Rendered template string
-    pub fn render<T: Serialize>(&self, name: &str, vars: &T) -> Result<String, TemplateError> {
-        Ok(self.handlebars.render(name, vars)?)
-    }
-
-    /// Render a template string directly (without registration)
-    ///
-    /// # Arguments
-    ///
-    /// * `template` - Template string
-    /// * `vars` - Template variables (must implement Serialize)
-    ///
-    /// # Returns
-    ///
-    /// Rendered template string
-    pub fn render_string<T: Serialize>(
+    /// 渲染后的模板字符串
+    pub fn render<T: Serialize>(
         &self,
-        template: &str,
+        name: impl AsRef<str>,
         vars: &T,
     ) -> Result<String, TemplateError> {
-        // Register template with a temporary name
+        Ok(self.handlebars.render(name.as_ref(), vars)?)
+    }
+
+    /// 直接渲染模板字符串（无需注册）
+    ///
+    /// # 参数
+    ///
+    /// * `template` - 模板字符串
+    /// * `vars` - 模板变量（必须实现 Serialize）
+    ///
+    /// # 返回
+    ///
+    /// 渲染后的模板字符串
+    pub fn render_string<T: Serialize>(
+        &self,
+        template: impl AsRef<str>,
+        vars: &T,
+    ) -> Result<String, TemplateError> {
+        // 使用临时名称注册模板
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|duration| duration.as_nanos())
-            .map_err(|_| {
-                TemplateError::SystemTime("System time is before Unix epoch".to_string())
-            })?;
+            .map_err(|_| TemplateError::SystemTime("系统时间早于 Unix 纪元".to_string()))?;
 
         let temp_name = format!("__temp_{}", timestamp);
         let mut engine = TemplateEngine::new();

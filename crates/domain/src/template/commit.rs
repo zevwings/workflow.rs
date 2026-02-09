@@ -9,19 +9,19 @@ use serde::{Deserialize, Serialize};
 /// 描述提交的领域属性，用于生成提交消息。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CommitTemplateVars {
-    /// Commit type (e.g., "feat", "fix", "docs")
+    /// 提交类型（例如 "feat", "fix", "docs"）
     pub commit_type: String,
-    /// Commit scope (optional)
+    /// 提交范围（可选）
     pub scope: Option<String>,
-    /// Commit subject
+    /// 提交主题
     pub subject: String,
-    /// Commit body (optional)
+    /// 提交正文（可选）
     pub body: Option<String>,
-    /// JIRA ticket key (optional)
+    /// JIRA 工单键（可选）
     pub jira_key: Option<String>,
-    /// Whether to use scope (when no ticket id)
+    /// 是否使用范围（当没有工单 ID 时）
     ///
-    /// This value comes from configuration and is passed to the template
+    /// 该值来自配置并传递给模板
     pub use_scope: bool,
 }
 
@@ -30,7 +30,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_commit_template_vars_serialize() {
+    fn test_commit_template_vars_serialize() -> Result<(), serde_json::Error> {
         let vars = CommitTemplateVars {
             commit_type: "feat".to_string(),
             scope: Some("auth".to_string()),
@@ -40,15 +40,17 @@ mod tests {
             use_scope: true,
         };
 
-        let json = serde_json::to_string(&vars).unwrap();
+        let json = serde_json::to_string(&vars)?;
         assert!(json.contains("\"commit_type\":\"feat\""));
         assert!(json.contains("\"scope\":\"auth\""));
         assert!(json.contains("\"subject\":\"add login feature\""));
         assert!(json.contains("\"use_scope\":true"));
+
+        Ok(())
     }
 
     #[test]
-    fn test_commit_template_vars_deserialize() {
+    fn test_commit_template_vars_deserialize() -> Result<(), serde_json::Error> {
         let json = r#"{
             "commit_type": "fix",
             "scope": "api",
@@ -58,7 +60,7 @@ mod tests {
             "use_scope": false
         }"#;
 
-        let vars: CommitTemplateVars = serde_json::from_str(json).unwrap();
+        let vars: CommitTemplateVars = serde_json::from_str(json)?;
         assert_eq!(vars.commit_type, "fix");
         assert_eq!(vars.scope, Some("api".to_string()));
         assert_eq!(vars.subject, "fix null pointer exception");
@@ -68,26 +70,30 @@ mod tests {
         );
         assert_eq!(vars.jira_key, Some("BUG-456".to_string()));
         assert!(!vars.use_scope);
+
+        Ok(())
     }
 
     #[test]
-    fn test_commit_template_vars_deserialize_minimal() {
+    fn test_commit_template_vars_deserialize_minimal() -> Result<(), serde_json::Error> {
         let json = r#"{
             "commit_type": "docs",
             "subject": "update README",
             "use_scope": false
         }"#;
 
-        let vars: CommitTemplateVars = serde_json::from_str(json).unwrap();
+        let vars: CommitTemplateVars = serde_json::from_str(json)?;
         assert_eq!(vars.commit_type, "docs");
         assert_eq!(vars.scope, None);
         assert_eq!(vars.subject, "update README");
         assert_eq!(vars.body, None);
         assert_eq!(vars.jira_key, None);
+
+        Ok(())
     }
 
     #[test]
-    fn test_commit_template_vars_equality() {
+    fn test_commit_template_vars_equality() -> Result<(), serde_json::Error> {
         let vars1 = CommitTemplateVars {
             commit_type: "feat".to_string(),
             scope: None,
@@ -107,10 +113,12 @@ mod tests {
         };
 
         assert_eq!(vars1, vars2);
+
+        Ok(())
     }
 
     #[test]
-    fn test_commit_template_vars_clone() {
+    fn test_commit_template_vars_clone() -> Result<(), serde_json::Error> {
         let vars = CommitTemplateVars {
             commit_type: "refactor".to_string(),
             scope: Some("core".to_string()),
@@ -122,10 +130,12 @@ mod tests {
 
         let cloned = vars.clone();
         assert_eq!(vars, cloned);
+
+        Ok(())
     }
 
     #[test]
-    fn test_commit_template_vars_roundtrip() {
+    fn test_commit_template_vars_roundtrip() -> Result<(), serde_json::Error> {
         let original = CommitTemplateVars {
             commit_type: "test".to_string(),
             scope: Some("unit".to_string()),
@@ -135,13 +145,15 @@ mod tests {
             use_scope: true,
         };
 
-        let json = serde_json::to_string(&original).unwrap();
-        let deserialized: CommitTemplateVars = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&original)?;
+        let deserialized: CommitTemplateVars = serde_json::from_str(&json)?;
         assert_eq!(original, deserialized);
+
+        Ok(())
     }
 
     #[test]
-    fn test_commit_template_vars_with_chinese_content() {
+    fn test_commit_template_vars_with_chinese_content() -> Result<(), serde_json::Error> {
         let vars = CommitTemplateVars {
             commit_type: "feat".to_string(),
             scope: Some("用户模块".to_string()),
@@ -151,8 +163,10 @@ mod tests {
             use_scope: true,
         };
 
-        let json = serde_json::to_string(&vars).unwrap();
-        let deserialized: CommitTemplateVars = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&vars)?;
+        let deserialized: CommitTemplateVars = serde_json::from_str(&json)?;
         assert_eq!(vars, deserialized);
+
+        Ok(())
     }
 }

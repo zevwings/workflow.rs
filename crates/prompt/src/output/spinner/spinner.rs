@@ -70,7 +70,7 @@ impl Spinner {
                     }
                 }
 
-                // Check for Ctrl+C event in raw mode
+                // 在原始模式下检查 Ctrl+C 事件
                 if event::poll(Duration::from_millis(0)).unwrap_or(false) {
                     if let Ok(Event::Key(KeyEvent {
                         code: KeyCode::Char('c'),
@@ -78,7 +78,7 @@ impl Spinner {
                         ..
                     })) = event::read()
                     {
-                        // Ctrl+C detected - stop spinner and exit process
+                        // 检测到 Ctrl+C - 停止 spinner 并退出进程
                         if let Ok(mut running_guard) = running.lock() {
                             *running_guard = false;
                         }
@@ -86,7 +86,7 @@ impl Spinner {
                         // 注销全局终端状态
                         terminal_state::unregister_renderer();
 
-                        // Clean up terminal
+                        // 清理终端
                         let mut stderr = io::stderr();
                         let _ = stderr.queue(cursor::MoveToColumn(0));
                         let _ = stderr.queue(Clear(ClearType::CurrentLine));
@@ -94,7 +94,7 @@ impl Spinner {
                         let _ = stderr.flush();
                         let _ = terminal::disable_raw_mode();
 
-                        // Exit the process with SIGINT status
+                        // 以 SIGINT 状态退出进程
                         std::process::exit(130); // 128 + SIGINT(2) = 130
                     }
                 }

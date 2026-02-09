@@ -4,6 +4,7 @@ use domain::GitRepository;
 use prompt::{error, info, input, select, success};
 
 use crate::registry;
+use crate::workflows::get_jira_id_interactive_optional;
 use crate::workflows::utils::branch::{
     generate_branch_name_from_jira, select_branch_type, to_slug,
 };
@@ -62,12 +63,12 @@ impl BranchCreateCommand {
                 .map_err(|e| format!("Failed to get current branch: {}", e))?
         };
 
-        let jira_id =
-            crate::workflows::utils::jira::get_jira_id_interactive_optional(self.jira_id.clone())?;
+        let jira_id = get_jira_id_interactive_optional(self.jira_id.clone())?;
 
         // 生成分支名
         let branch_name = if let Some(jira_id) = jira_id {
-            generate_branch_name_from_jira(&jira_id)?
+            let result = generate_branch_name_from_jira(&jira_id)?;
+            result.branch_name
         } else {
             self.generate_branch_name_manual()?
         };
