@@ -20,12 +20,17 @@ pub enum JiraCommand {
     Attachments(AttachmentsArgs),
     /// 清理 Jira 附件目录
     Clean(CleanArgs),
+    /// 向 Jira ticket 添加评论
+    #[cfg(feature = "develop")]
+    Comment(CommentArgs),
     /// 设置 Jira 状态配置
     #[cfg(feature = "develop")]
     Status(JiraIdArg),
     /// 过渡 Jira 状态
+    #[cfg(feature = "develop")]
     Transition(JiraIdArg),
     /// 分配 Jira ticket 给当前用户
+    #[cfg(feature = "develop")]
     Assign(JiraIdArg),
 }
 
@@ -62,6 +67,18 @@ pub struct AttachmentsArgs {
     /// Jira ticket ID（可选，不提供会交互式输入）
     #[command(flatten)]
     pub jira_id: JiraIdArg,
+}
+
+/// Comment 命令参数
+#[cfg(feature = "develop")]
+#[derive(Args, Debug, Clone)]
+pub struct CommentArgs {
+    /// Jira ticket ID（可选，不提供会交互式输入）
+    #[command(flatten)]
+    pub jira_id: JiraIdArg,
+    /// 评论内容
+    #[arg(long, short = 'm', value_name = "MESSAGE", required = true)]
+    pub message: String,
 }
 
 /// Clean 命令参数

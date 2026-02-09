@@ -182,14 +182,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             #[cfg(feature = "develop")]
+            JiraCommand::Comment(args) => {
+                let cmd = commands::jira::JiraCommentCommand::new(
+                    args.jira_id.into_option(),
+                    args.message.clone(),
+                );
+                cmd.run()?;
+            }
+            #[cfg(feature = "develop")]
             JiraCommand::Status(args) => {
                 let cmd = commands::jira::JiraStatusCommand::new(args.jira_id);
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
             JiraCommand::Transition(args) => {
                 let cmd = commands::jira::JiraTransitionCommand::new(args.jira_id);
                 cmd.run()?;
             }
+            #[cfg(feature = "develop")]
             JiraCommand::Assign(args) => {
                 let cmd = commands::jira::JiraAssignCommand::new(args.jira_id);
                 cmd.run()?;
