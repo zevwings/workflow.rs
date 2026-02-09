@@ -65,7 +65,7 @@ impl CommitCreateCommand {
             msg.clone()
         } else {
             // 使用 AI 生成 commit message
-            info!("Analyzing changes and generating commit message...");
+            toolkit::log_info!("Analyzing changes and generating commit message...");
 
             let commit_message_service = registry::get_commit_message_service();
             let analysis =
@@ -76,17 +76,17 @@ impl CommitCreateCommand {
                 })?;
 
             // 显示生成的 commit message
-            info!("\n┌─ Generated Commit Message ────────────────────────");
-            info!("│");
-            info!("│  {}", analysis.commit_message.title);
-            info!("│");
+            toolkit::log_info!("\n┌─ Generated Commit Message ────────────────────────");
+            toolkit::log_info!("│");
+            toolkit::log_info!("│  {}", analysis.commit_message.title);
+            toolkit::log_info!("│");
             if !analysis.commit_message.body.is_empty() {
                 for line in analysis.commit_message.body.lines() {
-                    info!("│  {}", line);
+                    toolkit::log_info!("│  {}", line);
                 }
-                info!("│");
+                toolkit::log_info!("│");
             }
-            info!("└────────────────────────────────────────────────────\n");
+            toolkit::log_info!("└────────────────────────────────────────────────────\n");
 
             if self.dry_run {
                 info!(
@@ -118,6 +118,8 @@ impl CommitCreateCommand {
             );
             return Ok(());
         }
+
+        info!("Committing changes with message: {}", commit_message);
 
         // Step 4: 提交代码
         let oid = spinner!("Creating commit...")
