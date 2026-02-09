@@ -52,10 +52,11 @@ impl RepoConfigRepositoryImpl {
         clean_if_default!(template.branch.chore, default_branch.chore);
 
         // 清理 commit templates
-        clean_if_default!(template.commit.default, default_commit.default);
+        clean_if_default!(template.commit.message, default_commit.message);
 
         // 清理 PR templates
-        clean_if_default!(template.pull_requests.default, default_pr.default);
+        clean_if_default!(template.pull_requests.title, default_pr.title);
+        clean_if_default!(template.pull_requests.body, default_pr.body);
     }
 }
 

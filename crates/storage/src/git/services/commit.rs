@@ -5,6 +5,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use toolkit::log_debug;
+
 use crate::git::services::context::GitContext;
 use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
 use domain::git::{
@@ -416,8 +418,11 @@ impl CommitService for CommitServiceImpl {
     }
 
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
+        log_debug!("commit: start (all={})", all);
+
         // 获取签名（必须在获取 repo 锁之前，避免死锁）
         let signature = self.ctx.get_signature()?;
+        log_debug!("commit: got signature");
 
         // 获取路径信息（用于 hook 上下文）
         let (repo_path, git_dir) = {
@@ -434,7 +439,9 @@ impl CommitService for CommitServiceImpl {
 
         // 添加更改到暂存区（all 时复用 add_all，内部会写入索引）
         if all {
+            log_debug!("commit: add_all start");
             self.add_all()?;
+            log_debug!("commit: add_all done");
         }
 
         let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
@@ -449,6 +456,7 @@ impl CommitService for CommitServiceImpl {
         drop(repo);
 
         // [1] pre-commit hook
+        log_debug!("commit: pre-commit hook start");
         let hook_context =
             HookContext::for_pre_commit(repo_path.clone(), git_dir.clone(), staged_files);
 
@@ -492,8 +500,10 @@ impl CommitService for CommitServiceImpl {
             }
             HookResult::Success => {}
         }
+        log_debug!("commit: pre-commit hook done");
 
         // 重新获取 repo 锁执行提交
+        log_debug!("commit: writing tree and creating commit");
         let oid = {
             let repo = self.ctx.repository();
             let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
@@ -533,8 +543,10 @@ impl CommitService for CommitServiceImpl {
             }
             // repo 锁在这里自动释放
         };
+        log_debug!("commit: created oid {}", oid);
 
         // [2] commit-msg hook
+        log_debug!("commit: commit-msg hook start");
         let commit_msg_context = HookContext::for_commit_msg(
             repo_path.clone(),
             git_dir.clone(),
@@ -551,14 +563,17 @@ impl CommitService for CommitServiceImpl {
                 msg
             )));
         }
+        log_debug!("commit: commit-msg hook done");
 
         // [3] post-commit hook（失败不影响提交结果，仅记录警告）
+        log_debug!("commit: post-commit hook start");
         let post_commit_context =
             HookContext::new(repo_path, git_dir).with_commit_sha(oid.to_string());
         if let Err(e) = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context)
         {
             toolkit::log_warn!("post-commit hook failed (commit already succeeded): {}", e);
         }
+        log_debug!("commit: post-commit hook done, commit complete");
 
         Ok(oid.to_string())
     }

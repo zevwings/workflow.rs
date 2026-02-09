@@ -27,6 +27,21 @@ pub struct PullRequestTemplateVars {
     pub dependency: Option<String>,
 }
 
+/// PR 标题模板变量
+///
+/// 用于 Handlebars 渲染 PR 标题模板。变量：`jira_key`（可选）、`commit_type`、`scope`（可选）、`summary`。
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PrTitleTemplateVars {
+    /// JIRA 工单键（可选）
+    pub jira_key: Option<String>,
+    /// Conventional Commits type（如 feat / fix / refactor）
+    pub commit_type: String,
+    /// Scope（可选）
+    pub scope: Option<String>,
+    /// 摘要（标题后半段描述）
+    pub summary: String,
+}
+
 /// 变更类型项
 ///
 /// 用于 PR 模板中的变更类型选择。

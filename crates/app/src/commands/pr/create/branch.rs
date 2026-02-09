@@ -1,9 +1,13 @@
 //! 分支处理逻辑
 
-use domain::GitRepository;
+use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
 use prompt::{info, select, spinner, warning};
 
 use crate::registry;
+use crate::workflows::utils::{
+    branch::branch_type_from_branch_name,
+    pull_request::{generate_pull_request_body, generate_pull_request_title},
+};
 
 use super::commit::{check_needs_push, commit_changes, push_branch};
 use super::pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary};
@@ -82,23 +86,44 @@ fn handle_existing_pr(
         // 生成 PR 摘要（三阶段分析）
         let pr_summary = generate_pr_summary(None)?;
 
-        // 组合 PR 标题
-        let pr_title = format_pr_title(
+        // 使用模板生成 PR body（PR Ready + Types of changes + LLM 描述 + Jira 链接）
+        let branch_type =
+            branch_type_from_branch_name(ctx.current_branch).unwrap_or(BranchType::Feature);
+        let selected_change_types = get_change_types_by_branch_type(branch_type);
+        let pr_body = generate_pull_request_body(
+            &selected_change_types,
+            Some(&pr_summary.pr_body),
+            ctx.jira_id.as_deref(),
+            None,
+            None,
+        )?;
+
+        // 组合 PR 标题：优先使用模板，否则使用内置格式
+        let pr_title = generate_pull_request_title(
             &pr_summary.type_,
             pr_summary.scope.as_deref(),
+            ctx.jira_id.as_deref(),
             &commit_message,
-        );
+        )
+        .unwrap_or_else(|| {
+            format_pr_title(
+                &pr_summary.type_,
+                pr_summary.scope.as_deref(),
+                ctx.jira_id.as_deref(),
+                &commit_message,
+            )
+        });
 
         // 更新 PR
         if dry_run {
             info!("[DRY RUN] Would update PR #{}", pr_id);
             info!("  Title: {}", pr_title);
-            info!("  Description:\n{}", pr_summary.pr_body);
+            info!("  Description:\n{}", pr_body);
         } else {
             info!("Updating PR #{}...", pr_id);
             let pr_service = registry::get_pull_request_service();
             pr_service
-                .update_pull_request(pr_id, Some(&pr_title), Some(&pr_summary.pr_body))
+                .update_pull_request(pr_id, Some(&pr_title), Some(&pr_body))
                 .map_err(|e| format!("Failed to update PR: {}", e))?;
             prompt::success!("PR #{} updated successfully!", pr_id);
         }
@@ -161,12 +186,33 @@ fn handle_no_existing_pr(
     // 生成 PR 摘要（三阶段分析）
     let pr_summary = generate_pr_summary(None)?;
 
-    // 组合 PR 标题
-    let pr_title = format_pr_title(
+    // 使用模板生成 PR body（PR Ready + Types of changes + LLM 描述 + Jira 链接）
+    let branch_type =
+        branch_type_from_branch_name(ctx.current_branch).unwrap_or(BranchType::Feature);
+    let selected_change_types = get_change_types_by_branch_type(branch_type);
+    let pr_body = generate_pull_request_body(
+        &selected_change_types,
+        Some(&pr_summary.pr_body),
+        ctx.jira_id.as_deref(),
+        None,
+        None,
+    )?;
+
+    // 组合 PR 标题：优先使用模板，否则使用内置格式
+    let pr_title = generate_pull_request_title(
         &pr_summary.type_,
         pr_summary.scope.as_deref(),
+        ctx.jira_id.as_deref(),
         &commit_message,
-    );
+    )
+    .unwrap_or_else(|| {
+        format_pr_title(
+            &pr_summary.type_,
+            pr_summary.scope.as_deref(),
+            ctx.jira_id.as_deref(),
+            &commit_message,
+        )
+    });
 
     // 确定目标分支
     let target_branch = if dry_run {
@@ -191,7 +237,7 @@ fn handle_no_existing_pr(
         ctx.branch_repo,
         ctx.current_branch,
         &pr_title,
-        &pr_summary.pr_body,
+        &pr_body,
         Some(&target_branch),
         dry_run,
     )?;

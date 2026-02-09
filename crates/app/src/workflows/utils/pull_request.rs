@@ -1,9 +1,54 @@
 //! Pull Request 模板渲染工具
 
-use domain::{get_all_change_types, ChangeTypeItem, JiraIssue, PullRequestTemplateVars};
+use domain::{
+    get_all_change_types, ChangeTypeItem, JiraIssue, PrTitleTemplateVars, PullRequestTemplateVars,
+};
 use toolkit::TemplateEngine;
 
 use crate::registry::{get_global_config_repository, get_repo_config_repository};
+
+/// 使用配置的 PR 标题模板渲染标题
+///
+/// 变量：`jira_key`（可选）、`commit_type`、`scope`（可选）、`summary`。
+/// 若未配置标题模板或渲染失败，返回 `None`，调用方应回退到 `format_pr_title`。
+pub fn generate_pull_request_title(
+    type_: &str,
+    scope: Option<&str>,
+    jira_id: Option<&str>,
+    commit_message: &str,
+) -> Option<String> {
+    let config_repo = get_repo_config_repository();
+    let config = config_repo.load().ok()?;
+    let template_str = config.project.template.pull_requests.title.trim();
+    if template_str.is_empty() {
+        return None;
+    }
+
+    let jira_key = jira_id.and_then(|j| {
+        let t = j.trim();
+        if t.is_empty() {
+            None
+        } else {
+            Some(t.to_string())
+        }
+    });
+    let summary = match &jira_key {
+        Some(j) => commit_message
+            .strip_prefix(&format!("{}: ", j))
+            .unwrap_or(commit_message)
+            .trim()
+            .to_string(),
+        None => commit_message.trim().to_string(),
+    };
+    let vars = PrTitleTemplateVars {
+        jira_key,
+        commit_type: type_.trim().to_string(),
+        scope: scope.map(|s| s.trim()).filter(|s| !s.is_empty()).map(String::from),
+        summary,
+    };
+    let engine = TemplateEngine::new();
+    engine.render_string(template_str, &vars).ok()
+}
 
 /// 生成 PR body（使用模板系统）
 ///
@@ -24,7 +69,7 @@ pub fn generate_pull_request_body(
 ) -> Result<String, Box<dyn std::error::Error>> {
     let config_repo = get_repo_config_repository();
     let config = config_repo.load().map_err(|e| format!("Failed to load repo config: {}", e))?;
-    let template_str = config.project.template.pull_requests.default.clone();
+    let template_str = config.project.template.pull_requests.body.clone();
 
     // 使用 domain 的变更类型（与 BranchType 一致）
     let change_types: Vec<ChangeTypeItem> = get_all_change_types()

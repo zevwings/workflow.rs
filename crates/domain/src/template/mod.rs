@@ -9,4 +9,4 @@ pub mod pull_request;
 // Re-export public types
 pub use branch::BranchTemplateVars;
 pub use commit::CommitTemplateVars;
-pub use pull_request::{ChangeTypeItem, PullRequestTemplateVars};
+pub use pull_request::{ChangeTypeItem, PrTitleTemplateVars, PullRequestTemplateVars};

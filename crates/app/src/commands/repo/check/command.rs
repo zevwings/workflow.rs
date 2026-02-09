@@ -188,12 +188,12 @@ impl RepoCheckCommand {
                     }
 
                     // 检查模板（只显示用户配置的，不显示默认值）
-                    let default_commit_template = CommitTemplates::default_commit_template();
+                    let default_commit_message = CommitTemplates::default_message_template();
                     let (new_table, ct) = self.check_template_string(
                         table,
                         "Commit Template",
-                        &project_config.template.commit.default,
-                        &default_commit_template,
+                        &project_config.template.commit.message,
+                        &default_commit_message,
                     );
                     table = new_table;
                     commit_template = ct;
@@ -228,13 +228,12 @@ impl RepoCheckCommand {
 
                     // 如果没有任何用户配置的 branch template，不显示警告（因为默认值已经被隐藏）
 
-                    let default_pr_template =
-                        PullRequestsTemplates::default_pull_request_template();
+                    let default_pr_body = PullRequestsTemplates::default_body_template();
                     let (new_table, pt) = self.check_template_string(
                         table,
                         "Pull Request Template",
-                        &project_config.template.pull_requests.default,
-                        &default_pr_template,
+                        &project_config.template.pull_requests.body,
+                        &default_pr_body,
                     );
                     table = new_table;
                     pr_template = pt;

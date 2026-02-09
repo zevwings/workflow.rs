@@ -83,7 +83,8 @@ pub use pr::{
 
 // Re-export template types
 pub use template::{
-    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars,
+    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PrTitleTemplateVars,
+    PullRequestTemplateVars,
 };
 
 // Re-export error types

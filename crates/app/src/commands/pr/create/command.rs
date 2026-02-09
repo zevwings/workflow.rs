@@ -6,7 +6,9 @@ use crate::workflows::utils::branch::{
     generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
 };
 use crate::workflows::utils::jira::{ensure_jira_status_config, get_jira_id_interactive_optional};
-use crate::workflows::utils::pull_request::generate_pull_request_body;
+use crate::workflows::utils::pull_request::{
+    generate_pull_request_body, generate_pull_request_title,
+};
 
 use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
 use crate::commands::pr::create::commit::commit_changes;
@@ -239,18 +241,27 @@ impl PullRequestCreateCommand {
         let selected_change_types = get_change_types_by_branch_type(branch_type);
         let pr_body = generate_pull_request_body(
             &selected_change_types,
-            ctx.description,
+            Some(&pr_summary.pr_body),
             ctx.jira_id.as_deref(),
             None,
             ctx.jira_info,
         )?;
 
-        // 组合 PR 标题：type(scope): commit_message
-        let pr_title = format_pr_title(
+        // 组合 PR 标题：优先使用模板，否则使用内置格式
+        let pr_title = generate_pull_request_title(
             &pr_summary.type_,
             pr_summary.scope.as_deref(),
+            ctx.jira_id.as_deref(),
             &commit_message,
-        );
+        )
+        .unwrap_or_else(|| {
+            format_pr_title(
+                &pr_summary.type_,
+                pr_summary.scope.as_deref(),
+                ctx.jira_id.as_deref(),
+                &commit_message,
+            )
+        });
 
         // 创建 PR
         {

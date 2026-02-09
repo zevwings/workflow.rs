@@ -88,7 +88,7 @@ impl CommitSummaryServiceImpl {
             .get_current_branch()
             .map_err(|e| ServiceError::Other(format!("Failed to get current branch: {}", e)))?;
 
-        let base_branch = match base_branch {
+        let mut base_branch = match base_branch {
             Some(b) => b.to_string(),
             None => self
                 .git_repo
@@ -97,18 +97,51 @@ impl CommitSummaryServiceImpl {
                 .unwrap_or_else(|| "master".to_string()),
         };
 
-        // 2. 获取变更文件列表
-        let files = self
+        // 若推断出的基准分支与当前分支相同，则使用默认分支，避免 "nothing to analyze"
+        if base_branch == current_branch {
+            base_branch =
+                self.git_repo.get_default_branch().unwrap_or_else(|_| "master".to_string());
+        }
+
+        // 2. 获取变更文件列表（仅已提交：merge_base..current）
+        let mut files = self
             .git_repo
             .get_merge_changed_files(&current_branch, &base_branch)
             .map_err(|e| ServiceError::Other(format!("Failed to get changed files: {}", e)))?;
 
-        if files.is_empty() {
-            return Err(ServiceError::Other(format!(
-                "No changed files between branch {} and {}, nothing to analyze.",
-                current_branch, base_branch
-            )));
-        }
+        let (full_diff, commit_shas) = if files.is_empty() {
+            // 无已提交变更时，尝试使用暂存区变更进行分析
+            let staged_files = self
+                .git_repo
+                .get_staged_files()
+                .map_err(|e| ServiceError::Other(format!("Failed to get staged files: {}", e)))?;
+            if !staged_files.is_empty() {
+                files = staged_files;
+                let diff = self
+                    .git_repo
+                    .get_staged_diff()
+                    .map_err(|e| ServiceError::Other(format!("Failed to get staged diff: {}", e)))?
+                    .unwrap_or_default();
+                (diff, Vec::new())
+            } else {
+                return Err(ServiceError::Other(
+                    "No changed files to analyze: no commits ahead of base branch and no staged \
+                     changes. Please commit your changes or stage them (git add)."
+                        .to_string(),
+                ));
+            }
+        } else {
+            let diff = self
+                .git_repo
+                .get_merge_diff(&current_branch, &base_branch)
+                .map_err(|e| ServiceError::Other(format!("Failed to get merge diff: {}", e)))?
+                .unwrap_or_default();
+            let shas = self
+                .git_repo
+                .commits_to_merge(&current_branch, &base_branch)
+                .map_err(|e| ServiceError::Other(format!("Failed to get commit history: {}", e)))?;
+            (diff, shas)
+        };
 
         // 3. 获取 HEAD commit 元数据（阶段一分类需要 commit_id / author / timestamp）
         let commit_info = self
@@ -116,14 +149,7 @@ impl CommitSummaryServiceImpl {
             .get_commit_info("HEAD")
             .map_err(|e| ServiceError::Other(format!("Failed to get commit info: {}", e)))?;
 
-        // 3.1 获取分支提交历史
-        let commit_shas = self
-            .git_repo
-            .commits_to_merge(&current_branch, &base_branch)
-            .map_err(|e| ServiceError::Other(format!("Failed to get commit history: {}", e)))?;
         let commit_count = commit_shas.len() as u32;
-
-        // 逐条获取完整信息（超过 50 条时截断）
         const MAX_HISTORY: usize = 50;
         let commit_history: Vec<CommitInfo> = commit_shas
             .iter()
@@ -131,12 +157,7 @@ impl CommitSummaryServiceImpl {
             .filter_map(|sha| self.git_repo.get_commit_info(sha).ok())
             .collect();
 
-        // 4. 获取完整 merge diff 并按文件拆分
-        let full_diff = self
-            .git_repo
-            .get_merge_diff(&current_branch, &base_branch)
-            .map_err(|e| ServiceError::Other(format!("Failed to get merge diff: {}", e)))?
-            .unwrap_or_default();
+        // 4. 按文件拆分的 diff
         let file_diffs = parse_diff_per_file(&full_diff);
 
         // 5. 检查工作区状态
