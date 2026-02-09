@@ -36,7 +36,10 @@ impl LLMConversation for SummaryAnalyzeConversation {
 
         let language_name = SupportedLanguage::find(language_code)
             .map(|lang| lang.native_name)
-            .unwrap_or("English");
+            .unwrap_or("en");
+
+        toolkit::log_info!("language_name: {}", language_name);
+        toolkit::log_info!("language_code: {}", language_code);
 
         format!(
             r##"🌐 LANGUAGE REQUIREMENT:

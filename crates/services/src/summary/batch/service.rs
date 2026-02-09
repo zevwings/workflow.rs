@@ -42,7 +42,11 @@ impl BatchAnalyzeService {
 
         let pattern_type = detect_pattern_type(stage1);
         let pattern_desc = build_batch_pattern_description(stage1);
-        let sample_paths: Vec<&String> = batch_group.iter().take(3).collect();
+
+        // 使用智能采样替换 take(3)
+        let max_samples = 3;
+        let sampling_result = select_representative_samples(batch_group, files, max_samples);
+        let sample_paths = &sampling_result.selected_files;
 
         let mut sample_diffs = String::new();
         for (i, path) in sample_paths.iter().enumerate() {
@@ -61,19 +65,26 @@ impl BatchAnalyzeService {
             ));
         }
 
+        // 增强 user prompt，包含采样统计
         let user_prompt = format!(
             r##"## Batch Operation Information
 - Operation type: {}
-- Number of files affected: {}
+- Total files in batch: {}
+- Sampled files: {}
+- Files with zero changes: {}
 - Operation pattern: {}
 
-## Sample File Diffs (first {} representative files)
+## Sample File Diffs ({} representative files)
+Selection strategy: {}
 {}
 "##,
             pattern_type,
             batch_group.len(),
+            sample_paths.len(),
+            sampling_result.zero_change_count,
             pattern_desc,
             sample_paths.len(),
+            sampling_result.strategy_description,
             sample_diffs
         );
 
@@ -144,5 +155,243 @@ fn build_batch_pattern_description(stage1: &CommitFileClassification) -> String 
             .to_string()
     } else {
         parts.join("; ")
+    }
+}
+
+// ── Sampling Strategy ─────────────────────────────────────────
+
+/// 采样结果
+#[derive(Debug)]
+struct SamplingResult<'a> {
+    /// 选中的文件路径
+    selected_files: Vec<&'a String>,
+    /// 采样策略描述
+    strategy_description: String,
+    /// 零变更文件数量
+    zero_change_count: usize,
+}
+
+/// 文件信息（用于采样）
+#[derive(Debug, Clone)]
+struct FileInfo<'a> {
+    path: &'a String,
+    change_amount: u32,
+    directory: String,
+}
+
+/// 选择具有代表性的样本文件
+///
+/// 策略：
+/// 1. 按变更量（additions + deletions）降序排序
+/// 2. 确保样本来自不同子目录（提高多样性）
+/// 3. 优先选择非零变更文件
+fn select_representative_samples<'a>(
+    batch_group: &'a [String],
+    files: &[CommitFileChange],
+    max_samples: usize,
+) -> SamplingResult<'a> {
+    use std::collections::HashSet;
+
+    // 边界情况：文件数 ≤ max_samples，全部返回
+    if batch_group.len() <= max_samples {
+        let zero_count = count_zero_change_files(batch_group, files);
+        return SamplingResult {
+            selected_files: batch_group.iter().collect(),
+            strategy_description: "All files included (total ≤ max samples)".to_string(),
+            zero_change_count: zero_count,
+        };
+    }
+
+    // 构建文件信息列表
+    let mut file_infos: Vec<FileInfo<'a>> = batch_group
+        .iter()
+        .map(|path| {
+            let file_change = files.iter().find(|f| &f.path == path);
+            let additions = file_change.and_then(|f| f.additions).unwrap_or(0);
+            let deletions = file_change.and_then(|f| f.deletions).unwrap_or(0);
+            let change_amount = additions + deletions;
+            let directory = extract_directory(path);
+
+            FileInfo {
+                path,
+                change_amount,
+                directory,
+            }
+        })
+        .collect();
+
+    let zero_change_count = file_infos.iter().filter(|f| f.change_amount == 0).count();
+
+    // 策略1: 按变更量降序排序
+    file_infos.sort_by(|a, b| b.change_amount.cmp(&a.change_amount));
+
+    // 策略2: 确保目录多样性
+    let mut selected = Vec::with_capacity(max_samples);
+    let mut used_directories = HashSet::new();
+
+    // 第一轮：选择不同目录的文件
+    for info in &file_infos {
+        if selected.len() >= max_samples {
+            break;
+        }
+        if !used_directories.contains(&info.directory) {
+            selected.push(info.path);
+            used_directories.insert(info.directory.clone());
+        }
+    }
+
+    // 第二轮：补齐到 max_samples
+    if selected.len() < max_samples {
+        for info in &file_infos {
+            if selected.len() >= max_samples {
+                break;
+            }
+            if !selected.contains(&info.path) {
+                selected.push(info.path);
+            }
+        }
+    }
+
+    let strategy_desc = format!(
+        "Top {} files by change volume (from {} directories)",
+        selected.len(),
+        used_directories.len()
+    );
+
+    SamplingResult {
+        selected_files: selected,
+        strategy_description: strategy_desc,
+        zero_change_count,
+    }
+}
+
+/// 提取文件所在目录
+fn extract_directory(path: &str) -> String {
+    if let Some(pos) = path.rfind('/') {
+        path[..pos].to_string()
+    } else {
+        ".".to_string()
+    }
+}
+
+/// 统计零变更文件数量
+fn count_zero_change_files(paths: &[String], files: &[CommitFileChange]) -> usize {
+    paths
+        .iter()
+        .filter(|path| {
+            files
+                .iter()
+                .find(|f| &f.path == *path)
+                .map(|f| {
+                    let additions = f.additions.unwrap_or(0);
+                    let deletions = f.deletions.unwrap_or(0);
+                    additions + deletions == 0
+                })
+                .unwrap_or(true)
+        })
+        .count()
+}
+
+// ── Tests ─────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use domain::git::entity::CommitChangeType;
+
+    fn create_test_file(path: &str, additions: u32, deletions: u32) -> CommitFileChange {
+        CommitFileChange {
+            path: path.to_string(),
+            change_type: CommitChangeType::Modified,
+            old_path: None,
+            additions: Some(additions),
+            deletions: Some(deletions),
+        }
+    }
+
+    #[test]
+    fn test_select_samples_all_files_when_below_max() {
+        let batch_group = vec!["file1.rs".to_string(), "file2.rs".to_string()];
+        let files = vec![
+            create_test_file("file1.rs", 10, 5),
+            create_test_file("file2.rs", 20, 10),
+        ];
+
+        let result = select_representative_samples(&batch_group, &files, 3);
+
+        assert_eq!(result.selected_files.len(), 2);
+        assert!(result.strategy_description.contains("All files included"));
+    }
+
+    #[test]
+    fn test_select_samples_by_change_volume() {
+        let batch_group = vec![
+            "a/file1.rs".to_string(),
+            "b/file2.rs".to_string(),
+            "c/file3.rs".to_string(),
+            "d/file4.rs".to_string(),
+        ];
+        let files = vec![
+            create_test_file("a/file1.rs", 5, 2),    // 7
+            create_test_file("b/file2.rs", 50, 30),  // 80
+            create_test_file("c/file3.rs", 20, 10),  // 30
+            create_test_file("d/file4.rs", 100, 50), // 150
+        ];
+
+        let result = select_representative_samples(&batch_group, &files, 2);
+
+        assert_eq!(result.selected_files.len(), 2);
+        // 应选择变更量最大的两个：file4 (150) 和 file2 (80)
+        assert!(result.selected_files.contains(&&"d/file4.rs".to_string()));
+        assert!(result.selected_files.contains(&&"b/file2.rs".to_string()));
+    }
+
+    #[test]
+    fn test_select_samples_directory_diversity() {
+        let batch_group = vec![
+            "src/a/file1.rs".to_string(),
+            "src/a/file2.rs".to_string(),
+            "src/b/file3.rs".to_string(),
+            "src/c/file4.rs".to_string(),
+        ];
+        let files = vec![
+            create_test_file("src/a/file1.rs", 100, 50),
+            create_test_file("src/a/file2.rs", 80, 40),
+            create_test_file("src/b/file3.rs", 60, 30),
+            create_test_file("src/c/file4.rs", 40, 20),
+        ];
+
+        let result = select_representative_samples(&batch_group, &files, 3);
+
+        assert_eq!(result.selected_files.len(), 3);
+        // 应优先保证目录多样性：file1 (src/a), file3 (src/b), file4 (src/c)
+        let selected_dirs: std::collections::HashSet<_> =
+            result.selected_files.iter().map(|p| extract_directory(p)).collect();
+        assert_eq!(selected_dirs.len(), 3);
+    }
+
+    #[test]
+    fn test_count_zero_change_files() {
+        let paths = vec![
+            "file1.rs".to_string(),
+            "file2.rs".to_string(),
+            "file3.rs".to_string(),
+        ];
+        let files = vec![
+            create_test_file("file1.rs", 0, 0),
+            create_test_file("file2.rs", 10, 5),
+            create_test_file("file3.rs", 0, 0),
+        ];
+
+        let count = count_zero_change_files(&paths, &files);
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_extract_directory() {
+        assert_eq!(extract_directory("src/main.rs"), "src");
+        assert_eq!(extract_directory("src/services/summary.rs"), "src/services");
+        assert_eq!(extract_directory("main.rs"), ".");
+        assert_eq!(extract_directory("a/b/c/d/e.rs"), "a/b/c/d");
     }
 }

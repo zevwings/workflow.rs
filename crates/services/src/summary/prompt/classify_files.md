@@ -24,7 +24,28 @@ Please classify files according to the following dimensions:
 - Medium changes (medium): single file modification 20-100 lines
 - Small changes (small): single file modification <20 lines
 
-### 4. Identify Batch Operation Patterns
+### 4. Classification by Directory Clustering (by_directory)
+
+Analyze file changes at the directory level to identify high-level patterns:
+
+**Directory Statistics Analysis**:
+- Group files by top-level directory (up to 3 levels deep)
+- Calculate aggregated metrics: file_count, total_additions, total_deletions
+- Identify status distribution: added/deleted/modified/renamed files per directory
+
+**Directory-Level Patterns to Identify**:
+- **new_module**: Entire directory is newly added (all_new = true)
+  - Example: A new feature module with 10+ files
+- **removed_module**: Entire directory is deleted (all_deleted = true)
+  - Example: Deprecated feature removal
+- **migrated_module**: Files moved from one directory to another
+  - Example: Renamed files showing old_path → new_path pattern
+- **heavy_modification**: Directory with significant changes (500+ line changes)
+  - Example: Major refactoring within a module
+- **directory_split**: One directory split into multiple
+- **directory_merge**: Multiple directories merged into one
+
+### 5. Identify Batch Operation Patterns
 Analyze whether the following patterns exist:
 - Mass rename (mass_rename)
 - Mass formatting (formatting)
@@ -32,7 +53,7 @@ Analyze whether the following patterns exist:
 - Dependency version upgrade (dependency_upgrade)
 - Import path adjustment (import_path_change)
 
-### 5. Determine Analysis Strategy
+### 6. Determine Analysis Strategy
 Based on the above classification, divide files into:
 - Batch processing group: similar files that can be analyzed together
 - Focus analysis group: core files that require detailed analysis
@@ -70,6 +91,31 @@ Please output strictly in the following JSON format, without any additional expl
       "large": ["file list"],
       "medium": ["file list"],
       "small": ["file list"]
+    },
+    "by_directory": {
+      "directory_stats": [
+        {
+          "path": "src/services/summary",
+          "file_count": 15,
+          "total_additions": 450,
+          "total_deletions": 120,
+          "all_new": false,
+          "all_deleted": false,
+          "status_distribution": {
+            "added": 3,
+            "deleted": 0,
+            "modified": 12,
+            "renamed": 0
+          }
+        }
+      ],
+      "patterns": [
+        {
+          "pattern_type": "heavy_modification",
+          "directories": ["src/services/summary"],
+          "description": "Major refactoring of summary service module"
+        }
+      ]
     }
   },
   "patterns": {

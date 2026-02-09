@@ -6,7 +6,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use domain::git::entity::{CommitChangeType, CommitFileChange, CommitInfo};
-use domain::summary::entity::{CommitFileClassification, CommitSummaryAnalysis};
+use domain::summary::entity::{
+    CommitFileClassification, CommitSummaryAnalysis, DirectoryStats, DirectoryStatusDistribution,
+};
 use domain::{errors::ServiceError, GitRepository};
 use llm::{LLMConfigContext, LLMExecutor};
 
@@ -52,6 +54,8 @@ struct AnalysisContext {
     commit_history: Vec<CommitInfo>,
     /// 提交总数
     commit_count: u32,
+    /// 目录聚合统计
+    directory_stats: Vec<DirectoryStats>,
 }
 
 /// 提交总结服务实现
@@ -147,6 +151,9 @@ impl CommitSummaryServiceImpl {
         let total_additions: u32 = files.iter().filter_map(|f| f.additions).sum();
         let total_deletions: u32 = files.iter().filter_map(|f| f.deletions).sum();
 
+        // 6.5. 聚合目录统计
+        let directory_stats = aggregate_by_directory(&files);
+
         // 7. 语言代码
         let language_code = self.llm_context.get_language();
 
@@ -161,6 +168,7 @@ impl CommitSummaryServiceImpl {
             has_uncommitted_changes,
             commit_history,
             commit_count,
+            directory_stats,
         })
     }
 }
@@ -176,6 +184,7 @@ impl CommitSummaryServiceImpl {
             &ctx.commit_info.author_email,
             ctx.commit_info.author_time,
             &ctx.files,
+            &ctx.directory_stats,
             &ctx.language_code,
         )
     }
@@ -375,4 +384,104 @@ fn count_by_status(files: &[CommitFileChange]) -> FileStatusCount {
     }
 
     count
+}
+
+// ========== 目录聚合统计 ==========
+
+/// 按目录聚合文件变更统计
+///
+/// 提取前3级目录路径作为分组键，计算每个目录的变更指标。
+fn aggregate_by_directory(files: &[CommitFileChange]) -> Vec<DirectoryStats> {
+    use std::collections::HashMap;
+
+    let mut dir_map: HashMap<String, DirectoryStatsBuilder> = HashMap::new();
+
+    for file in files {
+        let dir_path = extract_top_level_directory(&file.path, 3);
+        let builder = dir_map.entry(dir_path).or_default();
+        builder.add_file(file);
+    }
+
+    let mut stats: Vec<DirectoryStats> =
+        dir_map.into_iter().map(|(path, builder)| builder.build(path)).collect();
+
+    // 按变更量降序排序（additions + deletions）
+    stats.sort_by(|a, b| {
+        let a_total = a.total_additions + a.total_deletions;
+        let b_total = b.total_additions + b.total_deletions;
+        b_total.cmp(&a_total)
+    });
+
+    stats
+}
+
+/// 提取目录路径的前 N 级
+///
+/// 例如: "src/services/summary/batch/service.rs" 提取前3级 -> "src/services/summary"
+fn extract_top_level_directory(path: &str, levels: usize) -> String {
+    let parts: Vec<&str> = path.split('/').collect();
+
+    // 根目录文件
+    if parts.len() == 1 {
+        return ".".to_string();
+    }
+
+    // 路径层级少于指定层数
+    if parts.len() <= levels {
+        if parts.len() > 1 {
+            return parts[..parts.len() - 1].join("/");
+        }
+        return ".".to_string();
+    }
+
+    parts[..levels].join("/")
+}
+
+/// DirectoryStats 构建器（内部辅助结构）
+#[derive(Debug, Default)]
+struct DirectoryStatsBuilder {
+    file_count: u32,
+    total_additions: u32,
+    total_deletions: u32,
+    added_count: u32,
+    deleted_count: u32,
+    modified_count: u32,
+    renamed_count: u32,
+}
+
+impl DirectoryStatsBuilder {
+    fn add_file(&mut self, file: &CommitFileChange) {
+        self.file_count += 1;
+        self.total_additions += file.additions.unwrap_or(0);
+        self.total_deletions += file.deletions.unwrap_or(0);
+
+        match file.change_type {
+            CommitChangeType::Added => self.added_count += 1,
+            CommitChangeType::Deleted => self.deleted_count += 1,
+            CommitChangeType::Modified
+            | CommitChangeType::Copied
+            | CommitChangeType::TypeChanged => self.modified_count += 1,
+            CommitChangeType::Renamed => self.renamed_count += 1,
+        }
+    }
+
+    fn build(self, path: String) -> DirectoryStats {
+        let all_new = self.added_count == self.file_count && self.file_count > 0;
+        let all_deleted = self.deleted_count == self.file_count && self.file_count > 0;
+
+        DirectoryStats {
+            path,
+            file_count: self.file_count,
+            total_additions: self.total_additions,
+            total_deletions: self.total_deletions,
+            all_new,
+            all_deleted,
+            status_distribution: DirectoryStatusDistribution {
+                added: self.added_count,
+                deleted: self.deleted_count,
+                modified: self.modified_count,
+                renamed: self.renamed_count,
+            },
+        }
+    }
 }

@@ -13,6 +13,14 @@ use crate::commands::pr::create::commit::commit_changes;
 use crate::commands::pr::create::pr::{create_pull_request, format_pr_title, generate_pr_summary};
 use crate::commands::pr::create::types::BranchHandleContext;
 
+/// 创建分支并创建 PR 时的 JIRA/描述上下文
+struct CreatePullRequrestContext<'a> {
+    jira_id: &'a Option<String>,
+    jira_created_status: &'a Option<String>,
+    description: Option<&'a str>,
+    jira_info: Option<&'a domain::JiraIssue>,
+}
+
 /// Pull Request Create 命令
 pub struct PullRequestCreateCommand {
     jira_id: Option<String>,
@@ -128,15 +136,18 @@ impl PullRequestCreateCommand {
 
         // 如果返回了分支名，说明需要创建新分支并创建 PR
         if let Some(new_branch_name) = final_branch_name {
+            let ctx = CreatePullRequrestContext {
+                jira_id: &jira_id,
+                jira_created_status: &jira_created_status,
+                description: description_for_commit.as_deref(),
+                jira_info: jira_issue_opt.as_ref(),
+            };
             self.create_branch_and_pr(
                 branch_repo.as_ref(),
                 &new_branch_name,
                 branch_type,
                 target_branch.as_deref(),
-                &jira_id,
-                &jira_created_status,
-                description_for_commit.as_deref(),
-                jira_issue_opt.as_ref(),
+                &ctx,
             )?;
         }
 
@@ -150,10 +161,7 @@ impl PullRequestCreateCommand {
         new_branch_name: &str,
         branch_type: BranchType,
         target_branch: Option<&str>,
-        jira_id: &Option<String>,
-        jira_created_status: &Option<String>,
-        description: Option<&str>,
-        jira_info: Option<&domain::JiraIssue>,
+        ctx: &CreatePullRequrestContext<'_>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 检查分支是否已存在
         let (exists_local, exists_remote) = branch_repo
@@ -200,11 +208,11 @@ impl PullRequestCreateCommand {
         }
 
         // 生成 commit message（用于提交和 PR 标题）
-        let commit_message = build_commit_message(jira_id, description)?;
+        let commit_message = build_commit_message(ctx.jira_id, ctx.description)?;
 
         // 先提交代码，确保 merge diff 可用
         if !self.dry_run {
-            commit_changes(branch_repo, jira_id, description)?;
+            commit_changes(branch_repo, ctx.jira_id, ctx.description)?;
         } else {
             let status = branch_repo
                 .get_working_tree_status()
@@ -231,10 +239,10 @@ impl PullRequestCreateCommand {
         let selected_change_types = get_change_types_by_branch_type(branch_type);
         let pr_body = generate_pull_request_body(
             &selected_change_types,
-            description,
-            jira_id.as_deref(),
+            ctx.description,
+            ctx.jira_id.as_deref(),
             None,
-            jira_info,
+            ctx.jira_info,
         )?;
 
         // 组合 PR 标题：type(scope): commit_message
@@ -257,14 +265,14 @@ impl PullRequestCreateCommand {
 
             // 如果 PR 创建成功，更新 Jira ticket
             if let Some(pr_result) = pr_result {
-                if jira_id.is_some() && jira_created_status.is_some() {
+                if ctx.jira_id.is_some() && ctx.jira_created_status.is_some() {
                     // 获取仓库 URL
                     let repo_info = branch_repo.get_repo_info();
                     let repository_url = repo_info.origin_url.as_deref().unwrap_or("");
 
                     self.update_jira_after_pr_created(
-                        jira_id,
-                        jira_created_status,
+                        ctx.jira_id,
+                        ctx.jira_created_status,
                         &pr_result.pr_id,
                         &pr_result.pr_url,
                         repository_url,

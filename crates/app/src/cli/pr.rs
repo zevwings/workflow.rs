@@ -58,4 +58,9 @@ pub enum PrSubcommand {
         /// PR ID（数字）
         pr_id: String,
     },
+    /// 基于三阶段提交分析重新生成 PR 描述并更新到远端
+    Reword {
+        #[command(flatten)]
+        dry_run: DryRunArgs,
+    },
 }

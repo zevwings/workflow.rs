@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use domain::errors::ServiceError;
 use domain::git::entity::{CommitChangeType, CommitFileChange};
-use domain::summary::entity::CommitFileClassification;
+use domain::summary::entity::{CommitFileClassification, DirectoryStats};
 use llm::parsers::JsonParser;
 use llm::LLMExecutor;
 
@@ -29,9 +29,10 @@ impl FileClassifyService {
         author: &str,
         timestamp: i64,
         files: &[CommitFileChange],
+        directory_stats: &[DirectoryStats],
         language_code: &str,
     ) -> Result<CommitFileClassification, ServiceError> {
-        let input_json = build_input_json(commit_id, author, timestamp, files);
+        let input_json = build_input_json(commit_id, author, timestamp, files, directory_stats);
         let conversation = FileClassifyConversation::new(input_json);
         let response = self
             .llm_executor
@@ -53,6 +54,7 @@ fn build_input_json(
     author: &str,
     timestamp: i64,
     files: &[CommitFileChange],
+    directory_stats: &[DirectoryStats],
 ) -> String {
     use serde_json::json;
     let files_json: Vec<_> = files
@@ -67,11 +69,35 @@ fn build_input_json(
             })
         })
         .collect();
+
+    // 序列化目录统计（取前10个最重要的目录）
+    let directory_json: Vec<_> = directory_stats
+        .iter()
+        .take(10)
+        .map(|d| {
+            json!({
+                "path": d.path,
+                "file_count": d.file_count,
+                "total_additions": d.total_additions,
+                "total_deletions": d.total_deletions,
+                "all_new": d.all_new,
+                "all_deleted": d.all_deleted,
+                "status_distribution": {
+                    "added": d.status_distribution.added,
+                    "deleted": d.status_distribution.deleted,
+                    "modified": d.status_distribution.modified,
+                    "renamed": d.status_distribution.renamed
+                }
+            })
+        })
+        .collect();
+
     json!({
         "commit_id": commit_id,
         "author": author,
         "timestamp": timestamp,
-        "files": files_json
+        "files": files_json,
+        "directory_stats": directory_json
     })
     .to_string()
 }

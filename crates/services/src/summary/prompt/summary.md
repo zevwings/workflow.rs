@@ -13,28 +13,145 @@ You are a Git commit message expert. Based on the commit history, stage 1 and st
   - Code snippets and terminal commands
 
 ### Understanding Commit Evolution
-- Review the commit history to understand how changes evolved over time
-- Identify whether this is a one-time major change or an iterative development
-- Consider the progression of commits when summarizing the overall purpose
-- Use commit messages to understand the developer's intent and thought process
 
-### Identifying Feature Domains
-When creating `changes_by_domain`, look for functional groupings that span multiple file types:
+Review the commit history to understand how changes evolved over time. Follow this structured approach:
 
-- **Look for common themes**: Files that work together to implement a single feature or fix a related set of issues
-- **Cross-cutting concerns**: Changes that affect business logic, configuration, and tests for the same functionality
-- **Typical domain examples**:
-  - "Authentication System Refactor" (spans services, models, config, tests)
-  - "API Error Handling" (spans controllers, middleware, documentation)
-  - "Database Migration to PostgreSQL" (spans models, config, migration scripts)
-  - "Build System Update" (spans config files, CI/CD, documentation)
+#### 1. Identify Development Stages
+Analyze the commit sequence to identify logical phases. Use **both commit messages and file change patterns**:
 
-- **Guidelines**:
-  - Identify 2-5 feature domains (not too granular, not too broad)
-  - Each domain should have a clear, unified purpose
-  - Avoid duplicating information from `details_by_category`
-  - Focus on "why these files changed together" rather than "what changed"
-  - If changes are too scattered or unrelated, it's okay to have fewer domains
+**Stage Recognition Signals:**
+- **Foundation**:
+  - Messages: "init", "setup", "scaffold", "add skeleton"
+  - File patterns: Many new files, new directories, config/dependency files
+- **Core Development**:
+  - Messages: "feat", "implement", "add [feature]"
+  - File patterns: Business logic files (*.rs, *.ts, etc.), new modules
+- **Refinement**:
+  - Messages: "fix", "optimize", "refactor", "cleanup", "update"
+  - File patterns: Modifications to existing files, small diffs, focused changes
+- **Documentation/Testing**:
+  - Messages: "docs", "test", "add tests"
+  - File patterns: *.md files, test files (*_test.*, *.test.*, tests/**)
+
+Example (good messages):
+```
+c9c6cc5 # update                  → Refinement phase (message ambiguous, check files)
+5394679 feat(pr): workflow refactor → Core development (clear from message)
+dc9eccf # 迁移                    → Foundation phase (migration = restructuring)
+69fcf9a # 重命名                  → Refinement phase (rename = cleanup)
+476708d # 提交代码的内容          → Core development (check files to confirm)
+```
+
+Example (poor messages - rely on file patterns):
+```
+c9c6cc5 update    → Check files: modified 3 existing .rs files → Refinement
+5394679 wip       → Check files: added new crate/ directory → Foundation
+dc9eccf fix       → Check files: changed 1 line in service.rs → Refinement
+69fcf9a .         → Check files: renamed modules, updated imports → Refinement
+```
+
+#### 2. Infer Developer Intent
+Based on commit order and messages:
+- **Iterative refinement**: Multiple commits around same area → gradual improvement
+- **Big-bang change**: Single large commit → one-time transformation
+- **Exploratory development**: Back-and-forth changes → trial and error
+
+**Fallback: When commit messages are low-quality** (e.g., "update", "fix", "wip", "."):
+- **Rely on file change patterns instead of messages**:
+  - Check if same files are modified across multiple commits → iterative work
+  - Check if commits touch completely different file sets → independent changes
+  - Analyze the progression of additions/deletions to infer workflow
+- **Look at the overall diff stats**:
+  - Single commit with huge diff → likely a big-bang change or squashed commits
+  - Many small commits with similar-sized diffs → likely iterative development
+- **Downgrade confidence in evolution analysis**:
+  - In `main_purpose`, be more conservative (e.g., "Refactored X" instead of "Gradually migrated X through 3-stage process")
+  - Avoid over-interpreting the commit sequence without good message context
+  - Focus more on the **end result** (what changed) rather than the **process** (how it evolved)
+
+#### 3. Recognize Migration Patterns
+Pay special attention to these commit patterns:
+- **Add-then-delete**: New files created → Old files removed (later commits) → **Module migration**
+- **Rename cascade**: Multiple rename commits → Path/namespace refactoring
+- **Split commits**: Single module → Multiple commits touching same files → Complex refactoring
+
+#### 4. Integrate Evolution Analysis
+Incorporate your findings into:
+- `structured_summary.main_purpose`: Use evolution context to explain "why" (e.g., "Gradually migrated X from A to B through 3-stage refactoring")
+- `structured_summary.changes_by_domain`: Use commit phases to group changes (e.g., domain: "Phase 1: HTTP Module Extraction")
+- `metadata.complexity`: Multi-phase evolution → higher complexity
+
+### Identifying Change Patterns and Feature Domains
+
+Before categorizing changes, first identify if the PR matches common high-level patterns:
+
+#### Common Change Patterns
+
+| Pattern | Recognition Signals | Summary Strategy |
+|---------|---------------------|------------------|
+| **Module Extraction** | Directory A: all new files + Directory B: all deleted files + Cargo.toml/package.json changes | Emphasize "Extract X as independent module/crate" |
+| **Feature Migration** | Bulk file moves from Dir A → Dir B + import path updates in many files | Emphasize "Migrate X functionality from A to B" |
+| **Interface Unification** | Many files changing same import/use paths + few core files with API changes | Emphasize "Unify usage of new X interface" |
+| **Layer Restructuring** | Code moving between architectural layers (domain → services → storage) | Emphasize "Adjust X's position in architecture" |
+| **Batch Update** | Many files with similar small changes (e.g., all updating same function signature) | Emphasize "Batch update X across N files" |
+| **New Feature Development** | Many new files + minimal deletions + mostly business logic code | Describe by functional domain |
+
+**Pattern Recognition Steps:**
+1. Check directory-level statistics (if available) for bulk add/delete patterns
+2. Look for rename cascades and import path changes
+3. Identify if changes span architectural boundaries
+4. If no clear pattern, default to functional domain grouping
+
+#### Creating Feature Domains
+
+After identifying patterns, create `changes_by_domain` entries that:
+
+- **Reflect the identified pattern** in the `domain` name:
+  - Good: "HTTP Client Module Extraction"
+  - Bad: "HTTP Client Changes" (too generic)
+
+- **Span multiple file types** to show the full scope:
+  - Include: business logic + config + tests + docs that work together
+  - Avoid: Single-file-type domains (that's what `details_by_category` is for)
+
+- **Focus on unified purpose**:
+  - Each domain should answer: "What overall goal do these files achieve together?"
+  - Example: "Authentication System Refactor" (not "Auth Service Changes" + "Auth Config Changes")
+
+- **Keep count reasonable**: 2-5 domains (not too granular, not too broad)
+  - Large refactor PR: 3-4 domains covering different aspects
+  - Focused feature PR: 1-2 domains
+  - Scattered fixes PR: It's OK to have no domains if changes are truly unrelated
+
+**Example Domains by Pattern:**
+
+*Module Extraction Pattern:*
+```json
+{
+  "domain": "HTTP Client Module Extraction",
+  "purpose": "Extract HTTP client from toolkit into standalone crate for better modularity",
+  "files": ["crates/http/**", "crates/toolkit/src/http/**", "Cargo.toml", "*/lib.rs"],
+  "changes": [
+    "Created new crates/http crate with all HTTP client code",
+    "Removed old toolkit/http module",
+    "Updated import paths across 15+ files"
+  ]
+}
+```
+
+*Interface Unification Pattern:*
+```json
+{
+  "domain": "LLM Provider Interface Unification",
+  "purpose": "Standardize all services to use new unified LLM provider trait",
+  "files": ["crates/services/**/analyzer.rs", "crates/llm/src/provider.rs"],
+  "changes": [
+    "Introduced LLMProvider trait in llm crate",
+    "Migrated 8 analyzer services from direct API calls to trait usage",
+    "Added provider-agnostic error handling"
+  ]
+}
+```
 
 ## Output Requirements
 

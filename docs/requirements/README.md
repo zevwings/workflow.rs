@@ -101,19 +101,6 @@
   - 支持中英文双语（可扩展更多语言）
 - **优先级**: 高优先级（用户体验提升）
 
-#### 5. [summary-pipeline-optimization.md](./summary-pipeline-optimization.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: Summary Pipeline 优化
-- **内容**:
-  - Stage2 四路分析并行执行（性能提升 3-4x）
-  - 引入目录聚类维度（提升大型 PR 总结质量）
-  - 批量分析采样策略优化（变更量排序 + 目录多样性）
-  - 提交历史演进分析引导（增强总结叙事性）
-  - 变更模式识别引导（模块提取/迁移/统一等模式）
-  - 清理冗余文件（batch/batch_analyze.rs）
-- **优先级**: 高优先级（性能 + 总结质量提升）
-
 ---
 
 ## 📊 当前统计
@@ -162,8 +149,6 @@
 - **测试架构改进** → [test-architecture-improvement.md](./test-architecture-improvement.md) 🔄 进行中
 - **集成与扩展** → [integration.md](./integration.md) ⏳ 待实施
 - **国际化支持** → [i18n.md](./i18n.md) ⏳ 待实施
-- **Summary Pipeline 优化** → [summary-pipeline-optimization.md](./summary-pipeline-optimization.md) ⏳ 待实施
-
 ---
 
 ## 📚 相关文档

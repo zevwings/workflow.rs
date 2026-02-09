@@ -49,6 +49,9 @@ pub struct FileClassificationCategories {
     pub by_status: ByStatusCategories,
     pub by_nature: ByNatureCategories,
     pub by_scale: ByScaleCategories,
+    /// 按目录聚类
+    #[serde(default)]
+    pub by_directory: ByDirectoryCategories,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,6 +85,59 @@ pub struct ByScaleCategories {
     pub large: Vec<String>,
     pub medium: Vec<String>,
     pub small: Vec<String>,
+}
+
+/// 按目录聚类的分类结果
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ByDirectoryCategories {
+    /// 目录统计列表（按变更量降序）
+    #[serde(default)]
+    pub directory_stats: Vec<DirectoryStats>,
+    /// 识别出的目录级别变更模式
+    #[serde(default)]
+    pub patterns: Vec<DirectoryPattern>,
+}
+
+/// 目录统计信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirectoryStats {
+    /// 目录路径（前3级）
+    pub path: String,
+    /// 该目录下的文件数量
+    pub file_count: u32,
+    /// 总新增行数
+    pub total_additions: u32,
+    /// 总删除行数
+    pub total_deletions: u32,
+    /// 是否所有文件都是新增
+    pub all_new: bool,
+    /// 是否所有文件都被删除
+    pub all_deleted: bool,
+    /// 状态分布
+    pub status_distribution: DirectoryStatusDistribution,
+}
+
+/// 目录中文件状态分布
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirectoryStatusDistribution {
+    pub added: u32,
+    pub deleted: u32,
+    pub modified: u32,
+    pub renamed: u32,
+}
+
+/// 目录变更模式
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirectoryPattern {
+    /// 模式类型 (new_module, removed_module, migrated_module, heavy_modification)
+    #[serde(default)]
+    pub pattern_type: String,
+    /// 涉及的目录路径
+    #[serde(default)]
+    pub directories: Vec<String>,
+    /// 模式描述
+    #[serde(default)]
+    pub description: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

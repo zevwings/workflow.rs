@@ -279,10 +279,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
                         cmd.run()?;
                     }
-                    CommitSubcommand::CommitSummary => {
-                        let cmd = commands::commit::CommitSummaryCommand::new();
-                        cmd.run()?;
-                    }
                 }
             } else if let Some(message) = &commit_cmd.message {
                 let cmd =
@@ -392,6 +388,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             PrSubcommand::Approve { pr_id } => {
                 let cmd = commands::pr::PullRequestApproveCommand::new(pr_id.clone());
+                cmd.run()?;
+            }
+            PrSubcommand::Reword { dry_run } => {
+                let cmd = commands::pr::PullRequestRewordCommand::new(dry_run.is_dry_run());
                 cmd.run()?;
             }
         },
