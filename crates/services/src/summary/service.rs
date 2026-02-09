@@ -182,48 +182,68 @@ impl CommitSummaryServiceImpl {
 
     /// 阶段二：分类分析
     ///
-    /// 顺序执行 4 个子服务，每个接收阶段一结果 + diff map，返回 JSON 字符串。
+    /// 并行执行 4 个子服务，每个接收阶段一结果 + diff map，返回 JSON 字符串。
+    ///
+    /// 使用 rayon 并行执行，总耗时从 T1+T2+T3+T4 降低到 max(T1,T2,T3,T4)。
     fn run_stage2(
         &self,
         ctx: &AnalysisContext,
         stage1: &CommitFileClassification,
     ) -> Result<Stage2Results, ServiceError> {
-        // 2.1 批量操作分析
-        let batch_json = BatchAnalyzeService::new(self.llm_executor.clone()).analyze(
-            stage1,
-            &ctx.file_diffs,
-            &ctx.files,
-            &ctx.language_code,
-        )?;
+        // 使用 rayon::join 并行执行四个子服务
+        // 采用嵌套 join 结构：((batch, logic), (config, test))
+        let ((batch_result, logic_result), (config_result, test_result)) = rayon::join(
+            || {
+                rayon::join(
+                    // 2.1 批量操作分析
+                    || {
+                        BatchAnalyzeService::new(self.llm_executor.clone()).analyze(
+                            stage1,
+                            &ctx.file_diffs,
+                            &ctx.files,
+                            &ctx.language_code,
+                        )
+                    },
+                    // 2.2 核心逻辑分析
+                    || {
+                        LogicAnalyzeService::new(self.llm_executor.clone()).analyze(
+                            stage1,
+                            &ctx.file_diffs,
+                            &ctx.files,
+                            &ctx.language_code,
+                        )
+                    },
+                )
+            },
+            || {
+                rayon::join(
+                    // 2.3 配置/文档分析
+                    || {
+                        ConfigAnalyzeService::new(self.llm_executor.clone()).analyze(
+                            stage1,
+                            &ctx.file_diffs,
+                            &ctx.files,
+                            &ctx.language_code,
+                        )
+                    },
+                    // 2.4 测试文件分析
+                    || {
+                        TestAnalyzeService::new(self.llm_executor.clone()).analyze(
+                            stage1,
+                            &ctx.file_diffs,
+                            &ctx.language_code,
+                        )
+                    },
+                )
+            },
+        );
 
-        // 2.2 核心逻辑分析
-        let logic_json = LogicAnalyzeService::new(self.llm_executor.clone()).analyze(
-            stage1,
-            &ctx.file_diffs,
-            &ctx.files,
-            &ctx.language_code,
-        )?;
-
-        // 2.3 配置/文档分析
-        let config_json = ConfigAnalyzeService::new(self.llm_executor.clone()).analyze(
-            stage1,
-            &ctx.file_diffs,
-            &ctx.files,
-            &ctx.language_code,
-        )?;
-
-        // 2.4 测试文件分析
-        let test_json = TestAnalyzeService::new(self.llm_executor.clone()).analyze(
-            stage1,
-            &ctx.file_diffs,
-            &ctx.language_code,
-        )?;
-
+        // 收集所有结果，任何一个失败都会中止
         Ok(Stage2Results {
-            batch_json,
-            logic_json,
-            config_json,
-            test_json,
+            batch_json: batch_result?,
+            logic_json: logic_result?,
+            config_json: config_result?,
+            test_json: test_result?,
         })
     }
 }

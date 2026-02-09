@@ -1,9 +1,15 @@
 //! 分支工作流模块
 
 use crate::registry;
-use domain::{sanitize_branch_name, BranchTemplateVars, BranchType};
+use domain::{sanitize_branch_name, BranchTemplateVars, BranchType, JiraIssue};
 use prompt::{info, select, spinner};
 use toolkit::TemplateEngine;
+
+pub struct GenerateBranchNameResult {
+    pub branch_name: String,
+    pub branch_type: BranchType,
+    pub jira_issue: JiraIssue,
+}
 
 /// 使用模板生成分支名
 ///
@@ -114,6 +120,19 @@ pub fn to_slug(summary: impl AsRef<str>) -> String {
     sanitize_branch_name(&slug)
 }
 
+/// 从分支名解析分支类型
+///
+/// 按 `/` 分割分支名，依次尝试每个片段与 `BranchType::parse` 匹配（如 `feature`、`bugfix`）。
+/// 适用于 `feature/xxx`、`zw/feature/xxx` 等格式。
+pub fn branch_type_from_branch_name(branch_name: &str) -> Option<BranchType> {
+    for segment in branch_name.split('/') {
+        if let Some(bt) = BranchType::parse(segment) {
+            return Some(bt);
+        }
+    }
+    None
+}
+
 /// 选择分支类型
 pub fn select_branch_type() -> Result<BranchType, Box<dyn std::error::Error>> {
     let branch_type_options: Vec<String> =
@@ -197,7 +216,7 @@ fn strip_branch_type_prefix(name: &str) -> String {
 /// 生成的分支名（如 "feature/proj-123-chat-unified-entry"）
 pub fn generate_branch_name_from_jira(
     jira_id: impl AsRef<str>,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<GenerateBranchNameResult, Box<dyn std::error::Error>> {
     let jira_id = jira_id.as_ref();
     // 获取 JiraRepository
     let jira_repo = registry::get_jira_repository();
@@ -216,5 +235,9 @@ pub fn generate_branch_name_from_jira(
     let branch_name =
         generate_branch_name_from_template(branch_type, &base_branch_name, Some(jira_id))?;
 
-    Ok(branch_name)
+    Ok(GenerateBranchNameResult {
+        branch_name,
+        branch_type,
+        jira_issue: issue,
+    })
 }

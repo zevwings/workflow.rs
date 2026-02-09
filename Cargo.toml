@@ -69,6 +69,7 @@ shellexpand = "3.1"
 whattheshell = "1.1"
 dashmap = "6.1"
 clipboard = "0.5"
+rayon = "1.10"
 
 # 终端控制
 crossterm = "0.28"

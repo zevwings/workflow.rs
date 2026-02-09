@@ -1,11 +1,12 @@
-use domain::GitRepository;
+use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
 use prompt::{error, info, input, spinner, success, warning};
 
 use crate::registry;
 use crate::workflows::utils::branch::{
-    generate_branch_name_from_jira, generate_branch_name_from_template,
+    generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
 };
 use crate::workflows::utils::jira::{ensure_jira_status_config, get_jira_id_interactive_optional};
+use crate::workflows::utils::pull_request::generate_pull_request_body;
 
 use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
 use crate::commands::pr::create::commit::commit_changes;
@@ -39,59 +40,64 @@ impl PullRequestCreateCommand {
             None
         };
 
-        // 保存 description 用于后续提交
-        let mut description_for_commit = None;
+        // 第一步：创建分支，并保存 description、jira_issue 用于后续提交和 PR body
+        let (branch_name, branch_type, description_for_commit, jira_issue_opt) =
+            if let Some(ref jira_id) = jira_id {
+                // 从 JIRA ID 生成分支名
+                let result = generate_branch_name_from_jira(jira_id)?;
+                let description_for_commit =
+                    Some(format!("{}: {}", jira_id, result.jira_issue.fields.summary));
+                (
+                    result.branch_name,
+                    result.branch_type,
+                    description_for_commit,
+                    Some(result.jira_issue),
+                )
+            } else {
+                // 如果没有 JIRA ID，让用户输入描述
+                let description = input!("Please enter ticket description:")
+                    .validator(|input: &str| {
+                        let trimmed = input.trim();
+                        if trimmed.is_empty() {
+                            Err("Description cannot be empty".to_string())
+                        } else {
+                            Ok(())
+                        }
+                    })
+                    .prompt()
+                    .map(|s: String| s.trim().to_string())
+                    .map_err(|e| format!("Failed to get description: {}", e))?;
 
-        // 第一步：创建分支
-        let branch_name = if let Some(ref jira_id) = jira_id {
-            // 从 JIRA ID 生成分支名
-            generate_branch_name_from_jira(jira_id)?
-        } else {
-            // 如果没有 JIRA ID，让用户输入描述
-            let description = input!("Please enter ticket description:")
-                .validator(|input: &str| {
-                    let trimmed = input.trim();
-                    if trimmed.is_empty() {
-                        Err("Description cannot be empty".to_string())
-                    } else {
-                        Ok(())
+                // 先让用户选择分支类型（在 Spinner 之外，避免 raw mode 冲突）
+                let branch_type = select_branch_type()
+                    .map_err(|e| format!("Failed to select branch type: {}", e))?;
+
+                // 然后使用 Spinner 生成分支名称
+                let base_branch_name = {
+                    let branch_repo = registry::get_git_repository();
+                    let exists_branches: Vec<String> = branch_repo
+                        .list_branches(false, true)
+                        .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
+                        .unwrap_or_default();
+
+                    let branch_service = registry::get_branch_service();
+                    match spinner!("Generating branch name...").with(|| {
+                        branch_service
+                            .generate_branch_name(Some(description.as_str()), &exists_branches)
+                    }) {
+                        Ok(name) => name,
+                        Err(e) => {
+                            warning!("LLM generation failed: {}, using fallback method", e);
+                            crate::workflows::utils::branch::to_slug(description.as_str())
+                        }
                     }
-                })
-                .prompt()
-                .map(|s: String| s.trim().to_string())
-                .map_err(|e| format!("Failed to get description: {}", e))?;
+                };
 
-            // 保存 description 用于后续提交
-            description_for_commit = Some(description.clone());
-
-            // 先让用户选择分支类型（在 Spinner 之外，避免 raw mode 冲突）
-            let branch_type = crate::workflows::utils::branch::select_branch_type()
-                .map_err(|e| format!("Failed to select branch type: {}", e))?;
-
-            // 然后使用 Spinner 生成分支名称
-            let base_branch_name = {
-                let branch_repo = registry::get_git_repository();
-                let exists_branches: Vec<String> = branch_repo
-                    .list_branches(false, true)
-                    .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
-                    .unwrap_or_default();
-
-                let branch_service = registry::get_branch_service();
-                match spinner!("Generating branch name...").with(|| {
-                    branch_service
-                        .generate_branch_name(Some(description.as_str()), &exists_branches)
-                }) {
-                    Ok(name) => name,
-                    Err(e) => {
-                        warning!("LLM generation failed: {}, using fallback method", e);
-                        crate::workflows::utils::branch::to_slug(description.as_str())
-                    }
-                }
+                // 使用模板将基础分支名与 branch_type 组合成完整分支名（不包含 JIRA ID）
+                let branch_name =
+                    generate_branch_name_from_template(branch_type, &base_branch_name, None)?;
+                (branch_name, branch_type, Some(description), None)
             };
-
-            // 使用模板将基础分支名与 branch_type 组合成完整分支名（不包含 JIRA ID）
-            generate_branch_name_from_template(branch_type, &base_branch_name, None)?
-        };
 
         // 获取默认分支和当前分支
         let default_branch = branch_repo
@@ -125,10 +131,12 @@ impl PullRequestCreateCommand {
             self.create_branch_and_pr(
                 branch_repo.as_ref(),
                 &new_branch_name,
+                branch_type,
                 target_branch.as_deref(),
                 &jira_id,
                 &jira_created_status,
                 description_for_commit.as_deref(),
+                jira_issue_opt.as_ref(),
             )?;
         }
 
@@ -140,10 +148,12 @@ impl PullRequestCreateCommand {
         &self,
         branch_repo: &dyn GitRepository,
         new_branch_name: &str,
+        branch_type: BranchType,
         target_branch: Option<&str>,
         jira_id: &Option<String>,
         jira_created_status: &Option<String>,
         description: Option<&str>,
+        jira_info: Option<&domain::JiraIssue>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 检查分支是否已存在
         let (exists_local, exists_remote) = branch_repo
@@ -212,8 +222,20 @@ impl PullRequestCreateCommand {
             }
         }
 
-        // 生成 PR 摘要（三阶段分析，需要在提交之后调用）
+        // 生成 PR 摘要（三阶段分析，用于 type/scope 和标题）
         let pr_summary = generate_pr_summary(target_branch)?;
+
+        // // 根据分支名解析分支类型，生成 PR body（模板 + 变更类型与分支类型一致）
+        // let branch_type = branch_type_from_branch_name(new_branch_name)
+        //     .unwrap_or(BranchType::Feature);
+        let selected_change_types = get_change_types_by_branch_type(branch_type);
+        let pr_body = generate_pull_request_body(
+            &selected_change_types,
+            description,
+            jira_id.as_deref(),
+            None,
+            jira_info,
+        )?;
 
         // 组合 PR 标题：type(scope): commit_message
         let pr_title = format_pr_title(
@@ -228,7 +250,7 @@ impl PullRequestCreateCommand {
                 branch_repo,
                 new_branch_name,
                 &pr_title,
-                &pr_summary.pr_body,
+                &pr_body,
                 target_branch,
                 self.dry_run,
             )?;

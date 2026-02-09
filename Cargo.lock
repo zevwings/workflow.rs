@@ -2536,6 +2536,7 @@ dependencies = [
  "domain",
  "llm",
  "once_cell",
+ "rayon",
  "registry",
  "serde_json",
  "serial_test",
