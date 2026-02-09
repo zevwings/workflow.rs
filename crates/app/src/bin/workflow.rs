@@ -280,14 +280,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         cmd.run()?;
                     }
                 }
-            } else if let Some(message) = &commit_cmd.message {
-                let cmd =
-                    commands::commit::CommitCreateCommand::new(message.clone(), commit_cmd.all);
-                cmd.run()?;
             } else {
-                eprintln!("Error: commit message is required. Use -m/--message.");
-                eprintln!("Usage: workflow commit -m <MESSAGE>");
-                std::process::exit(1);
+                let cmd = commands::commit::CommitCreateCommand::new(
+                    commit_cmd.all,
+                    commit_cmd.push,
+                    commit_cmd.dry_run.is_dry_run(),
+                    commit_cmd.message.clone(),
+                );
+                cmd.run()?;
             }
         }
         #[cfg(feature = "develop")]

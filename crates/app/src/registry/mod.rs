@@ -128,6 +128,11 @@ pub fn get_commit_summary_service() -> Arc<dyn domain::CommitSummaryService> {
     get_service::<dyn domain::CommitSummaryService>()
 }
 
+/// 获取 CommitMessageService（单次提交 message 生成）
+pub fn get_commit_message_service() -> Arc<dyn domain::commit::CommitMessageService> {
+    get_service::<dyn domain::commit::CommitMessageService>()
+}
+
 /// 获取 GitHubRepository
 pub fn get_github_repository() -> Arc<dyn domain::GitHubRepository> {
     get_service::<dyn domain::GitHubRepository>()

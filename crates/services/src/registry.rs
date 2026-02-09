@@ -9,6 +9,7 @@ use registry::{try_bind, Container, Scope};
 
 use crate::alias::AliasServiceImpl;
 use crate::branch::BranchServiceImpl;
+use crate::commit::CommitMessageServiceImpl;
 use crate::completion::CompletionServiceImpl;
 use crate::path::PathServiceImpl;
 use crate::pull_request::PullRequestServiceImpl;
@@ -59,6 +60,19 @@ pub fn register_services() -> registry::Result<()> {
         let llm_executor = c.get::<dyn LLMExecutor>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(CommitSummaryServiceImpl::new(
+            git_repo,
+            llm_executor,
+            llm_context,
+        )))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    // CommitMessageService - 依赖 GitRepository、LLMExecutor、LLMConfigContext
+    try_bind!(dyn domain::commit::CommitMessageService, |c: &Container| {
+        let git_repo = c.get::<dyn domain::GitRepository>()?;
+        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let llm_context = c.get::<dyn LLMConfigContext>()?;
+        Ok(Arc::new(CommitMessageServiceImpl::new(
             git_repo,
             llm_executor,
             llm_context,

@@ -183,6 +183,68 @@ pub trait GitRepository: Send + Sync {
     /// 获取工作树状态
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError>;
 
+    /// 获取暂存区文件列表
+    ///
+    /// 返回当前暂存区（staging area）中的文件变更列表，包括：
+    /// - 新增的文件（Added）
+    /// - 修改的文件（Modified）
+    /// - 删除的文件（Deleted）
+    /// - 重命名的文件（Renamed）
+    ///
+    /// # 返回
+    /// - `Ok(Vec<CommitFileChange>)`: 暂存区文件列表
+    /// - `Err`: 操作失败
+    ///
+    /// # 示例
+    /// ```rust,ignore
+    /// let staged_files = repo.get_staged_files()?;
+    /// for file in staged_files {
+    ///     println!("{}: +{} -{}", file.path, file.additions, file.deletions);
+    /// }
+    /// ```
+    fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError>;
+
+    /// 获取暂存区的完整 diff
+    ///
+    /// 返回暂存区相对于 HEAD 的完整 diff 内容，等价于 `git diff --cached`。
+    /// 这是即将被提交的变更内容。
+    ///
+    /// # 返回
+    /// - `Ok(Some(String))`: 返回 diff 内容
+    /// - `Ok(None)`: 暂存区为空
+    /// - `Err`: 操作失败
+    ///
+    /// # 示例
+    /// ```rust,ignore
+    /// if let Some(diff) = repo.get_staged_diff()? {
+    ///     println!("Staged changes:\n{}", diff);
+    /// } else {
+    ///     println!("No staged changes");
+    /// }
+    /// ```
+    fn get_staged_diff(&self) -> Result<Option<String>, GitError>;
+
+    /// 添加所有更改到暂存区
+    ///
+    /// 等价于 `git add -A`，将所有工作区的更改（包括新文件、修改和删除）添加到暂存区。
+    /// 此方法只添加文件到暂存区，不创建提交。
+    ///
+    /// # 性能优化（内部自动处理）
+    /// - 自动从 .gitignore 读取并排除大型目录
+    /// - 跳过匹配 ignore patterns 的路径以提高性能
+    ///
+    /// # 返回
+    /// - `Ok(())`: 添加成功
+    /// - `Err`: 操作失败
+    ///
+    /// # 示例
+    /// ```rust,ignore
+    /// repo.add_all()?;
+    /// let staged_files = repo.get_staged_files()?;
+    /// println!("Staged {} files", staged_files.len());
+    /// ```
+    fn add_all(&self) -> Result<(), GitError>;
+
     /// 创建提交
     ///
     /// # 参数

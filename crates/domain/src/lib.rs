@@ -6,6 +6,7 @@
 
 pub mod alias;
 pub mod branch;
+pub mod commit;
 pub mod completion;
 pub mod config;
 pub mod errors;
@@ -62,6 +63,7 @@ pub use branch::{
     sanitize_branch_name, BranchService, BranchServiceError, BranchSyncCallbacks,
     BranchSyncOptions, BranchSyncResult, BranchType, SourceBranchInfo, SyncStrategy,
 };
+pub use commit::CommitMessageService;
 pub use completion::{
     get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
     get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,

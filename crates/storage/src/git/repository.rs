@@ -140,6 +140,18 @@ impl GitRepository for GitRepositoryImpl {
         self.services.commit.get_working_tree_status()
     }
 
+    fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError> {
+        self.services.commit.get_staged_files()
+    }
+
+    fn get_staged_diff(&self) -> Result<Option<String>, GitError> {
+        self.services.diff.get_staged_diff()
+    }
+
+    fn add_all(&self) -> Result<(), GitError> {
+        self.services.commit.add_all()
+    }
+
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
         self.services.commit.commit(message, all)
     }

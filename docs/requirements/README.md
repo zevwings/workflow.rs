@@ -101,6 +101,18 @@
   - 支持中英文双语（可扩展更多语言）
 - **优先级**: 高优先级（用户体验提升）
 
+#### 5. [single-commit-message-generation.md](./single-commit-message-generation.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: Commit 功能增强
+- **内容**:
+  - 单次提交场景的轻量级 commit message 生成服务
+  - 单次 LLM 调用替代三阶段流程（降低成本和延迟）
+  - 支持 staged 变更和已有提交的分析
+  - 新增 CLI 命令：`workflow commit generate` 和 `workflow commit analyze`
+  - 扩展 GitRepository trait 支持单次提交分析
+- **优先级**: 高优先级（日常开发效率提升）
+
 ---
 
 ## 📊 当前统计
@@ -109,7 +121,7 @@
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 1 个 | 测试架构改进 |
-| ⏳ 待实施 | 3 个 | 集成扩展、i18n 支持、Summary Pipeline 优化 |
+| ⏳ 待实施 | 3 个 | 集成扩展、i18n 支持、单次提交 commit message 生成 |
 | **总计** | **5 个** | - |
 
 ---
@@ -149,6 +161,7 @@
 - **测试架构改进** → [test-architecture-improvement.md](./test-architecture-improvement.md) 🔄 进行中
 - **集成与扩展** → [integration.md](./integration.md) ⏳ 待实施
 - **国际化支持** → [i18n.md](./i18n.md) ⏳ 待实施
+- **Commit 功能增强** → [single-commit-message-generation.md](./single-commit-message-generation.md) ⏳ 待实施
 ---
 
 ## 📚 相关文档
@@ -160,4 +173,4 @@
 
 ---
 
-**最后更新**: 2026-02-08
+**最后更新**: 2026-02-09

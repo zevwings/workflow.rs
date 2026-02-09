@@ -5,6 +5,7 @@
 
 pub(crate) mod alias;
 pub(crate) mod branch;
+pub(crate) mod commit;
 pub(crate) mod completion;
 pub(crate) mod path;
 pub(crate) mod pull_request;
@@ -12,5 +13,6 @@ pub(crate) mod registry;
 pub(crate) mod summary;
 
 pub use branch::BranchServiceImpl;
+pub use commit::CommitMessageServiceImpl;
 pub use registry::register_services;
 pub use summary::CommitSummaryServiceImpl;

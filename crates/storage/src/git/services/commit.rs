@@ -30,6 +30,16 @@ pub trait CommitService: Send + Sync {
     /// 获取工作树状态
     fn get_working_tree_status(&self) -> Result<WorkingTreeStatus, GitError>;
 
+    /// 获取暂存区文件列表
+    ///
+    /// 返回当前暂存区（staging area）中的文件变更列表。
+    fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError>;
+
+    /// 添加所有更改到暂存区
+    ///
+    /// 等价于 `git add -A`。
+    fn add_all(&self) -> Result<(), GitError>;
+
     /// 创建提交
     ///
     /// # 参数
@@ -274,6 +284,137 @@ impl CommitService for CommitServiceImpl {
         })
     }
 
+    fn add_all(&self) -> Result<(), GitError> {
+        let repo = self.ctx.repository();
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+
+        // 获取需要跳过的目录模式（从 .gitignore 和常见大型目录）
+        // 即使这些目录在 .gitignore 中，扫描它们仍然很慢，
+        // 所以使用回调函数提前跳过以提高性能
+        let ignore_patterns = self.ctx.get_ignore_directory_patterns();
+
+        index
+            .add_all(
+                ["."].iter(),
+                git2::IndexAddOption::DEFAULT,
+                Some(&mut |path, _| {
+                    // 跳过大型目录以提高性能
+                    if let Some(path_str) = path.to_str() {
+                        if ignore_patterns.iter().any(|pattern| path_str.starts_with(pattern)) {
+                            return 1; // Skip this path
+                        }
+                    }
+                    0 // Add this path (git2 会自动处理 .gitignore)
+                }),
+            )
+            .map_err(|e| GitError::IndexError(e.to_string()))?;
+
+        // 写入索引到磁盘
+        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    fn get_staged_files(&self) -> Result<Vec<CommitFileChange>, GitError> {
+        let repo = self.ctx.repository();
+        let head = repo
+            .head()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get HEAD: {}", e)))?;
+        let head_tree = head
+            .peel_to_tree()
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get HEAD tree: {}", e)))?;
+
+        let index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+
+        let diff = repo
+            .diff_tree_to_index(Some(&head_tree), Some(&index), None)
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get staged diff: {}", e)))?;
+
+        // 使用 HashMap 来收集文件信息和统计
+        let mut file_map: HashMap<String, CommitFileChange> = HashMap::new();
+
+        // 第一次遍历：收集文件基本信息（路径、变更类型）
+        diff.foreach(
+            &mut |delta, _progress| {
+                let change_type = match delta.status() {
+                    git2::Delta::Added => CommitChangeType::Added,
+                    git2::Delta::Deleted => CommitChangeType::Deleted,
+                    git2::Delta::Modified => CommitChangeType::Modified,
+                    git2::Delta::Renamed => CommitChangeType::Renamed,
+                    git2::Delta::Copied => CommitChangeType::Copied,
+                    git2::Delta::Typechange => CommitChangeType::TypeChanged,
+                    _ => return true, // Skip other types
+                };
+
+                let path =
+                    delta.new_file().path().and_then(|p| p.to_str()).unwrap_or("").to_string();
+
+                if path.is_empty() {
+                    return true;
+                }
+
+                let old_path = if matches!(change_type, CommitChangeType::Renamed) {
+                    delta.old_file().path().and_then(|p| p.to_str()).map(String::from)
+                } else {
+                    None
+                };
+
+                file_map.insert(
+                    path.clone(),
+                    CommitFileChange {
+                        path,
+                        old_path,
+                        change_type,
+                        additions: Some(0), // 初始化为 0，稍后在 print 回调中计算
+                        deletions: Some(0), // 初始化为 0，稍后在 print 回调中计算
+                    },
+                );
+
+                true
+            },
+            None,
+            None,
+            None,
+        )
+        .map_err(|e| GitError::OperationFailed(format!("Failed to iterate diff: {}", e)))?;
+
+        // 第二次遍历：使用 print 回调计算每个文件的行数统计
+        diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
+            let path = delta.new_file().path().and_then(|p| p.to_str()).unwrap_or("");
+
+            if path.is_empty() {
+                return true;
+            }
+
+            if let Some(file) = file_map.get_mut(path) {
+                // 统计新增和删除的行数
+                match line.origin() {
+                    '+' => {
+                        // 新增行（不包括 +++ 文件头）
+                        if let Some(adds) = file.additions.as_mut() {
+                            *adds += 1;
+                        }
+                    }
+                    '-' => {
+                        // 删除行（不包括 --- 文件头）
+                        if let Some(dels) = file.deletions.as_mut() {
+                            *dels += 1;
+                        }
+                    }
+                    _ => {
+                        // 其他行（上下文、文件头等）不计数
+                    }
+                }
+            }
+
+            true
+        })
+        .map_err(|e| GitError::OperationFailed(format!("Failed to calculate file stats: {}", e)))?;
+
+        // 转换为 Vec 并返回
+        Ok(file_map.into_values().collect())
+    }
+
     fn commit(&self, message: &str, all: bool) -> Result<String, GitError> {
         // 获取签名（必须在获取 repo 锁之前，避免死锁）
         let signature = self.ctx.get_signature()?;
@@ -290,35 +431,16 @@ impl CommitService for CommitServiceImpl {
         };
 
         let repo = self.ctx.repository();
-        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
 
-        // 添加更改到暂存区
+        // 添加更改到暂存区（all 时复用 add_all，内部会写入索引）
         if all {
-            // 获取需要跳过的目录模式（从 .gitignore 和常见大型目录）
-            // 即使这些目录在 .gitignore 中，扫描它们仍然很慢，
-            // 所以使用回调函数提前跳过以提高性能
-            let ignore_patterns = self.ctx.get_ignore_directory_patterns();
-
-            index
-                .add_all(
-                    ["."].iter(),
-                    git2::IndexAddOption::DEFAULT,
-                    Some(&mut |path, _| {
-                        // 跳过大型目录以提高性能
-                        if let Some(path_str) = path.to_str() {
-                            if ignore_patterns.iter().any(|pattern| path_str.starts_with(pattern)) {
-                                return 1; // Skip this path
-                            }
-                        }
-                        0 // Add this path (git2 会自动处理 .gitignore)
-                    }),
-                )
-                .map_err(|e| GitError::IndexError(e.to_string()))?;
+            self.add_all()?;
         }
-        // 如果 all=false，直接使用已暂存的文件进行提交
 
-        // 写入索引到磁盘
-        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+        if !all {
+            index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
+        }
 
         // 获取暂存文件列表（用于 hook 上下文）
         let staged_files = Self::get_staged_files(&index);
