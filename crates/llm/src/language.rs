@@ -183,58 +183,6 @@ impl SupportedLanguage {
             })
     }
 
-    /// 增强 system prompt 中的语言要求
-    ///
-    /// 在给定的 system prompt 开头添加强化的语言要求，确保 LLM 严格按照指定语言生成内容。
-    ///
-    /// # 参数
-    ///
-    /// * `system_prompt` - 原始 system prompt
-    /// * `config` - LLM 配置提供者（可选，如果为 None，则使用默认配置）
-    ///
-    /// # 返回
-    ///
-    /// 返回增强后的 system prompt，包含强化的语言要求
-    ///
-    /// # 说明
-    ///
-    /// 语言选择优先级：配置提供者 > 默认值（"en"）
-    /// 如果配置提供者中的语言代码不在支持列表中，将使用英文作为默认语言。
-    ///
-    /// # 示例
-    ///
-    /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
-    ///
-    /// let original = "You are a helpful assistant.";
-    /// let enhanced = SupportedLanguage::get_requirement(original, "en");
-    /// // 返回包含强化语言要求的 prompt
-    /// ```
-    pub fn get_requirement(system_prompt: &str, language_code: &str) -> String {
-        let language_instruction = Self::get_instruction(language_code);
-        let language_info =
-            Self::find(language_code).map(|lang| lang.native_name).unwrap_or("English");
-
-        format!(
-            r#"## CRITICAL LANGUAGE REQUIREMENT
-
-{}
-
-**IMPORTANT REMINDER**: The entire output, including all sections, headings, content, and text MUST be written in {} only. This is a strict requirement. Do NOT use English or any other language. Every single word in the output must be in {}.
-
----
-
-{}
-
----
-
-## REMINDER: Language Requirement
-
-Remember: ALL output must be in {} only. No exceptions."#,
-            language_instruction, language_info, language_info, system_prompt, language_info
-        )
-    }
-
     /// 获取所有支持的语言代码列表
     ///
     /// # 返回
@@ -381,40 +329,6 @@ mod tests {
     }
 
     // ========================================================================
-    // get_requirement 测试
-    // ========================================================================
-
-    #[test]
-    fn test_get_requirement_english() {
-        let prompt = "You are a helpful assistant.";
-        let enhanced = SupportedLanguage::get_requirement(prompt, "en");
-
-        assert!(enhanced.contains("CRITICAL LANGUAGE REQUIREMENT"));
-        assert!(enhanced.contains(prompt));
-        assert!(enhanced.contains("English"));
-    }
-
-    #[test]
-    fn test_get_requirement_chinese() {
-        let prompt = "你是一个有帮助的助手。";
-        let enhanced = SupportedLanguage::get_requirement(prompt, "zh-CN");
-
-        assert!(enhanced.contains("CRITICAL LANGUAGE REQUIREMENT"));
-        assert!(enhanced.contains(prompt));
-        assert!(enhanced.contains("简体中文"));
-    }
-
-    #[test]
-    fn test_get_requirement_fallback() {
-        let prompt = "Original prompt";
-        let enhanced = SupportedLanguage::get_requirement(prompt, "invalid");
-
-        // 找不到语言时使用英文
-        assert!(enhanced.contains("English"));
-        assert!(enhanced.contains(prompt));
-    }
-
-    // ========================================================================
     // supported_codes 测试
     // ========================================================================
 
@@ -469,21 +383,6 @@ mod tests {
         let instruction = SupportedLanguage::get_instruction("");
         assert!(!instruction.is_empty());
         assert!(instruction.contains("English"));
-    }
-
-    #[test]
-    fn test_get_requirement_with_empty_prompt() {
-        // 空 prompt 应该仍然包含语言要求
-        let enhanced = SupportedLanguage::get_requirement("", "zh-CN");
-        assert!(enhanced.contains("CRITICAL LANGUAGE REQUIREMENT"));
-        assert!(enhanced.contains("简体中文"));
-    }
-
-    #[test]
-    fn test_get_requirement_preserves_original_prompt() {
-        let prompt = "Custom system prompt";
-        let enhanced = SupportedLanguage::get_requirement(prompt, "en");
-        assert!(enhanced.contains(prompt));
     }
 
     #[test]

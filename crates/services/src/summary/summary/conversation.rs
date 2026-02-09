@@ -2,7 +2,7 @@
 //!
 //! 综合阶段一分类结果与阶段二各分析结果，生成结构化的 commit 总结。
 
-use llm::LLMConversation;
+use llm::{LLMConversation, SupportedLanguage};
 
 use crate::summary::{prompt, summary::SummaryAnalyzeInput};
 
@@ -24,7 +24,7 @@ impl LLMConversation for SummaryAnalyzeConversation {
         prompt::summary().to_string()
     }
 
-    fn get_user_prompt(&self, _language_code: &str) -> String {
+    fn get_user_prompt(&self, language_code: &str) -> String {
         let i = &self.input;
 
         // 构建未提交变更警告（如果存在）
@@ -34,8 +34,15 @@ impl LLMConversation for SummaryAnalyzeConversation {
             ""
         };
 
+        let language_name = SupportedLanguage::find(language_code)
+            .map(|lang| lang.native_name)
+            .unwrap_or("English");
+
         format!(
-            r##"## Input Information
+            r##"🌐 LANGUAGE REQUIREMENT:
+The RESPOND LANGUAGE MUST use the {}({})
+
+## Input Information
 
 ### Commit History (Total: {} commits)
 ```
@@ -76,6 +83,8 @@ impl LLMConversation for SummaryAnalyzeConversation {
 - Modified: {}
 - Renamed: {}
 - Line changes: +{} -{}{}"##,
+            language_name,
+            language_code,
             i.commit_count,
             i.commit_history_summary,
             i.stage1_classification,

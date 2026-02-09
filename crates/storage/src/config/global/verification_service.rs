@@ -43,9 +43,8 @@ impl VerifyConversation {
 }
 
 impl LLMConversation for VerifyConversation {
-    fn get_system_prompt(&self, language_code: &str) -> String {
-        let base_prompt = "You are a helpful assistant.";
-        SupportedLanguage::get_requirement(base_prompt, language_code)
+    fn get_system_prompt(&self, _language_code: &str) -> String {
+        "You are a helpful assistant.".to_string()
     }
 
     fn get_user_prompt(&self, language_code: &str) -> String {
