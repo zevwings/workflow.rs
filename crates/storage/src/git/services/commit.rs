@@ -3,7 +3,6 @@
 //! 提供提交相关的业务逻辑实现。
 
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::Arc;
 
 use toolkit::log_debug;
@@ -66,56 +65,60 @@ impl CommitServiceImpl {
         Self { ctx, hook_service }
     }
 
-    /// 仅将工作区中已变更的路径加入暂存区（基于 status），避免全树扫描，大仓库下更快。
-    fn add_changed_paths(&self) -> Result<(), GitError> {
-        log_debug!("commit: add_changed_paths start (get_working_tree_status)");
-        let status = self.get_working_tree_status()?;
-        let paths: Vec<&Path> = status
-            .unstaged
-            .iter()
-            .chain(status.untracked.iter())
-            .map(|s| s.path.as_str())
-            .map(Path::new)
-            .collect();
-        log_debug!(
-            "commit: add_changed_paths status done (unstaged={}, untracked={})",
-            status.unstaged.len(),
-            status.untracked.len()
-        );
-        if paths.is_empty() {
-            log_debug!("commit: add_changed_paths skipped (no unstaged/untracked)");
-            return Ok(());
-        }
-        let repo = self.ctx.repository();
-        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
-        index
-            .add_all(paths.iter(), git2::IndexAddOption::DEFAULT, None)
-            .map_err(|e| GitError::IndexError(e.to_string()))?;
-        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
-        log_debug!("commit: add_changed_paths added {} path(s)", paths.len());
-        Ok(())
-    }
-
-    /// 全树扫描并添加（等价于 `git add .`），大仓库较慢；供 add_all 在 add_changed_paths 失败时回退。
+    /// 全树扫描并添加（等价于 `git add -A`）。
+    ///
+    /// 使用 git2 的 statuses() 获取变更文件，然后逐个添加/删除。
+    /// 比 add_all(["."]) 快，因为 StatusOptions 会自动排除被忽略的文件。
     fn add_all_full_tree(&self) -> Result<(), GitError> {
-        log_debug!("commit: add_all_full_tree start (using git command)");
+        log_debug!("commit: add_all_full_tree start (using git2 statuses)");
 
-        // 使用 git 命令代替 libgit2 API，性能更好
-        let workdir = self.ctx.workdir();
-        let output = std::process::Command::new("git")
-            .arg("add")
-            .arg("-A")
-            .current_dir(workdir)
-            .output()
-            .map_err(|e| GitError::OperationFailed(format!("Failed to execute git add: {}", e)))?;
+        let repo = self.ctx.repository();
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitError::OperationFailed(format!(
-                "git add failed: {}",
-                stderr
-            )));
+        // 使用 StatusOptions 获取变更（自动排除 .gitignore 中的文件）
+        let mut opts = git2::StatusOptions::new();
+        opts.include_untracked(true)
+            .recurse_untracked_dirs(true)
+            .include_ignored(false) // 关键：排除被忽略的文件
+            .exclude_submodules(true);
+
+        log_debug!("commit: fetching file statuses");
+        let statuses = repo
+            .statuses(Some(&mut opts))
+            .map_err(|e| GitError::OperationFailed(format!("Failed to get statuses: {}", e)))?;
+
+        log_debug!("commit: found {} files with changes", statuses.len());
+
+        let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
+
+        // 遍历每个文件，根据状态添加或删除
+        for entry in statuses.iter() {
+            let path = entry
+                .path()
+                .ok_or_else(|| GitError::OperationFailed("Invalid file path".into()))?;
+            let status = entry.status();
+
+            // 跳过冲突文件（需要手动解决）
+            if status.is_conflicted() {
+                continue;
+            }
+
+            // 处理删除的文件
+            if status.is_wt_deleted() {
+                index
+                    .remove_path(std::path::Path::new(path))
+                    .map_err(|e| GitError::IndexError(e.to_string()))?;
+                continue;
+            }
+
+            // 添加新文件或修改的文件
+            if status.is_wt_new() || status.is_wt_modified() || status.is_wt_typechange() {
+                index
+                    .add_path(std::path::Path::new(path))
+                    .map_err(|e| GitError::IndexError(e.to_string()))?;
+            }
         }
+
+        index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
 
         log_debug!("commit: add_all_full_tree done");
         Ok(())
@@ -467,8 +470,6 @@ impl CommitService for CommitServiceImpl {
             (repo_path, git_dir)
         };
 
-        let repo = self.ctx.repository();
-
         // 添加更改到暂存区（add_all 内部优先按变更路径添加，失败时回退全树扫描）
         if all {
             log_debug!("commit: staging changes (add_all)");
@@ -476,6 +477,8 @@ impl CommitService for CommitServiceImpl {
             log_debug!("commit: staging done");
         }
 
+        // 在 add_all() 之后获取 repo 锁，避免死锁
+        let repo = self.ctx.repository();
         let mut index = repo.index().map_err(|e| GitError::IndexError(e.to_string()))?;
         if !all {
             index.write().map_err(|e| GitError::IndexError(e.to_string()))?;

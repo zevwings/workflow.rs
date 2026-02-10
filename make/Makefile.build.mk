@@ -50,10 +50,10 @@ clean:
 # 直接调用 cargo build --release 确保总是重新构建并安装最新代码
 # 清理增量编译缓存以确保使用最新代码
 install:
-	@echo "构建 release 版本（确保使用最新代码）..."
+	@echo "构建 release 版本（排除 develop feature，确保使用最新代码）..."
 	@echo "清理增量编译缓存以确保重新编译..."
 	@rm -rf target/release/incremental/*/$(BINARY_NAME)-* 2>/dev/null || true
-	@CARGO_INCREMENTAL=0 cargo build --release || cargo build --release
+	@CARGO_INCREMENTAL=0 cargo build --release --no-default-features -p app || cargo build --release --no-default-features -p app
 	@echo ""
 	@echo "安装 Workflow CLI (二进制文件 + shell completion)..."
 	@./target/release/install

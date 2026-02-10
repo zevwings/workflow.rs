@@ -9,6 +9,8 @@ use clap::Subcommand;
 pub enum RepoCommand {
     /// 交互式初始化仓库配置
     Setup,
+    /// 查看仓库状态
+    Status,
     /// 验证仓库配置
     Check,
 }

@@ -171,14 +171,22 @@ impl LLMClientImpl {
         tracing::debug!(target: "llm", "LLM response: {:?}", completion);
 
         // 提取内容
-        let content = completion
-            .choices
-            .first()
+        let first = completion.choices.first();
+        let content = first
             .and_then(|choice| choice.message.content.as_ref())
             .ok_or_else(|| {
-                LLMError::ApiError(
-                    "No content in response: choices array is empty or content is null".to_string(),
-                )
+                let reason = first
+                    .map(|c| c.finish_reason.as_str())
+                    .unwrap_or("unknown");
+                let msg = if reason == "length" {
+                    "No content in response: 响应因达到最大 token 限制被截断 (finish_reason=length)，API 未返回内容。请减少输入或为此次调用设置较小的 max_tokens 以获取完整输出。".to_string()
+                } else {
+                    format!(
+                        "No content in response: choices array is empty or content is null (finish_reason={})",
+                        reason
+                    )
+                };
+                LLMError::ApiError(msg)
             })?;
 
         Ok(content.trim().to_string())

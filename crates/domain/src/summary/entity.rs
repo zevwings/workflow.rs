@@ -56,9 +56,14 @@ pub struct FileClassificationCategories {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ByStatusCategories {
+    #[serde(default)]
     pub added: Vec<String>,
+    #[serde(default)]
     pub deleted: Vec<String>,
+    /// 重命名文件列表；LLM 可能不返回此字段，反序列化时缺省为空
+    #[serde(default)]
     pub renamed: Vec<RenamedFileEntry>,
+    #[serde(default)]
     pub modified: Vec<String>,
 }
 
@@ -120,9 +125,14 @@ pub struct DirectoryStats {
 /// 目录中文件状态分布
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirectoryStatusDistribution {
+    #[serde(default)]
     pub added: u32,
+    #[serde(default)]
     pub deleted: u32,
+    #[serde(default)]
     pub modified: u32,
+    /// LLM 可能不返回此字段，反序列化时缺省为 0
+    #[serde(default)]
     pub renamed: u32,
 }
 
