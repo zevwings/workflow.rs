@@ -384,9 +384,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     commands::pr::PullRequestCommentCommand::new(pr_id.clone(), comment.clone());
                 cmd.run()?;
             }
-            PrSubcommand::Update { pr_id, message } => {
-                let cmd =
-                    commands::pr::PullRequestUpdateCommand::new(pr_id.clone(), message.clone());
+            PrSubcommand::Update {
+                pr_id,
+                message,
+                dry_run,
+            } => {
+                let cmd = commands::pr::PullRequestUpdateCommand::new(
+                    pr_id.clone(),
+                    message.clone(),
+                    dry_run.is_dry_run(),
+                );
                 cmd.run()?;
             }
             PrSubcommand::Merge { pr_id, force } => {

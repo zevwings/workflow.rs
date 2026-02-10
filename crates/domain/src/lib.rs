@@ -105,8 +105,8 @@ pub use jira::{
     extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
     AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraComponent,
     JiraConfigContext, JiraError, JiraIssue, JiraPriority, JiraRepository, JiraStatusConfig,
-    JiraTransition, JiraUser, JiraWorkHistoryRepository, ProjectStatusConfig, StatusConfigResult,
-    WorkHistoryEntry,
+    JiraTransition, JiraUser, JiraWorkHistoryRepository, ProgressCallback, ProjectStatusConfig,
+    StatusConfigResult, WorkHistoryEntry,
 };
 
 pub use summary::{

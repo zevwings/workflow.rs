@@ -23,6 +23,15 @@ pub enum JiraError {
     #[error("验证错误: {0}")]
     ValidationError(String),
 
+    #[error("IO 错误: {0}")]
+    IoError(String),
+
+    #[error("网络错误: {0}")]
+    NetworkError(String),
+
+    #[error("配置错误: {0}")]
+    ConfigError(String),
+
     #[error("其他错误: {0}")]
     Other(String),
 }

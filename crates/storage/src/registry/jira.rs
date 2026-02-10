@@ -5,9 +5,9 @@ use std::sync::Arc;
 use registry::{try_bind, Container, RegistryError, Scope};
 
 use crate::jira::{
-    IssueService, IssueServiceImpl, JiraClient, JiraClientImpl, JiraRepositoryImpl,
-    JiraWorkHistoryRepositoryImpl, StatusService, StatusServiceImpl, UserService, UserServiceImpl,
-    WorkHistoryService, WorkHistoryServiceImpl,
+    AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, JiraClient,
+    JiraClientImpl, JiraRepositoryImpl, JiraWorkHistoryRepositoryImpl, StatusService,
+    StatusServiceImpl, UserService, UserServiceImpl, WorkHistoryService, WorkHistoryServiceImpl,
 };
 use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathService};
 
@@ -48,15 +48,28 @@ pub(super) fn register_jira() -> Result<(), RegistryError> {
     })
     .in_scope(Scope::Singleton)?;
 
+    // Attachment Service
+    try_bind!(dyn AttachmentService, |c: &Container| {
+        let issue_service = c.get::<dyn IssueService>()?;
+        let config_context = c.get::<dyn JiraConfigContext>()?;
+        Ok(Arc::new(AttachmentServiceImpl::new(
+            issue_service,
+            config_context,
+        )))
+    })
+    .in_scope(Scope::Singleton)?;
+
     // Jira Repository
     try_bind!(dyn JiraRepository, |c: &Container| {
         let issue_service = c.get::<dyn IssueService>()?;
         let status_service = c.get::<dyn StatusService>()?;
         let user_service = c.get::<dyn UserService>()?;
+        let attachment_service = c.get::<dyn AttachmentService>()?;
         Ok(Arc::new(JiraRepositoryImpl::new(
             issue_service,
             status_service,
             user_service,
+            attachment_service,
         )))
     })
     .in_scope(Scope::Singleton)?;

@@ -8,7 +8,7 @@ pub use llm_context::LLMConfigContextImpl;
 
 use std::sync::Arc;
 
-use domain::{GitHubContext, GlobalConfigRepository, JiraConfigContext};
+use domain::{GitHubContext, GlobalConfigRepository, JiraConfigContext, PathService};
 use llm::LLMConfigContext;
 use registry::{try_bind, Container, RegistryError, Scope};
 
@@ -29,7 +29,11 @@ pub fn register_context() -> Result<(), RegistryError> {
     // Jira Config Context
     try_bind!(dyn JiraConfigContext, |c: &Container| {
         let global_config = c.get::<dyn GlobalConfigRepository>()?;
-        Ok(Arc::new(JiraConfigContextImpl::new(global_config)))
+        let path_service = c.get::<dyn PathService>()?;
+        Ok(Arc::new(JiraConfigContextImpl::new(
+            global_config,
+            path_service,
+        )))
     })
     .in_scope(Scope::Singleton)?;
 

@@ -1,19 +1,21 @@
 //! 提交本地更改并推送到 PR 命令
 //!
-//! 该命令获取当前分支关联的 PR 标题作为 commit message，
-//! 提交本地更改并推送到远端。
+//! 将更改加入暂存区，用 AI 根据暂存内容生成 commit message，
+//! 若有 Jira key 则以「jira_key: ai_message」形式提交并推送。
 
-use domain::GitRepository;
-use prompt::{info, spinner, success, warning};
+use domain::{extract_jira_ticket_id, GitRepository};
+use prompt::{error, info, spinner, success};
+use toolkit::{log_info, log_info_with_fields};
 
-use crate::registry;
+use crate::registry::{get_commit_message_service, get_git_repository, get_pull_request_service};
 
 /// Pull Request Update 命令
 ///
-/// 获取 PR 标题作为 commit message，提交本地更改并推送到远端
+/// 基于暂存区 → AI 生成 message → 以 jira_key: message 提交并推送
 pub struct PullRequestUpdateCommand {
     pr_id: Option<String>,
     message: Option<String>,
+    dry_run: bool,
 }
 
 impl PullRequestUpdateCommand {
@@ -21,66 +23,137 @@ impl PullRequestUpdateCommand {
     ///
     /// # 参数
     /// * `pr_id` - PR ID（可选，不提供时自动检测当前分支的 PR）
-    /// * `message` - 自定义 commit message（可选，不提供时使用 PR 标题）
-    pub fn new(pr_id: Option<String>, message: Option<String>) -> Self {
-        Self { pr_id, message }
+    /// * `message` - 自定义 commit message（可选，不提供时由 AI 根据暂存内容生成）
+    /// * `dry_run` - 是否仅预览不提交不推送
+    pub fn new(pr_id: Option<String>, message: Option<String>, dry_run: bool) -> Self {
+        Self {
+            pr_id,
+            message,
+            dry_run,
+        }
     }
 
     /// 运行 `workflow pr update` 命令
     ///
     /// 工作流程：
-    /// 1. 获取当前分支关联的 PR（如果没有提供 PR ID）
-    /// 2. 获取 PR 标题作为 commit message（如果没有提供自定义 message）
-    /// 3. 提交本地更改
-    /// 4. 推送到远端
+    /// 1. 获取当前分支关联的 PR 及从标题解析 jira_key
+    /// 2. 检查暂存区有变更；无则报错
+    /// 3. 生成 commit message：自定义或 AI 根据暂存内容生成
+    /// 4. 若有 jira_key，格式为「jira_key: message」
+    /// 5. 提交并推送到远端（dry_run 则仅打印不执行）
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let pr_service = registry::get_pull_request_service();
-        let git_repo = registry::get_git_repository();
+        let pr_service = get_pull_request_service();
+        let git_repo = get_git_repository();
 
-        // 1. 获取 PR 状态（包含 PR ID 和标题）
+        // 1. 获取 PR 状态并从标题解析 Jira key
         let pr_status = spinner!("Fetching PR information...")
             .with(|| pr_service.get_pr_status(self.pr_id.as_deref()))
             .map_err(|e| format!("Failed to get PR status: {}", e))?;
 
         info!("Found PR #{}: {}", pr_status.id, pr_status.title);
 
-        // 2. 确定 commit message
-        let commit_message = self.message.clone().unwrap_or_else(|| pr_status.title.clone());
+        let jira_key = extract_jira_ticket_id(pr_status.title.as_str());
 
-        // 3. 检查是否有更改需要提交
-        let status = git_repo
-            .get_working_tree_status()
-            .map_err(|e| format!("Failed to get working tree status: {}", e))?;
+        // 2. 添加所有更改到暂存区
+        git_repo
+            .add_all()
+            .map_err(|e| format!("Failed to add all files to staging area: {}", e))?;
 
-        if status.is_clean() {
-            warning!("No changes to commit, skipping commit step");
-        } else {
-            // 提交更改
-            self.commit_changes(&*git_repo, &commit_message)?;
+        // 3. 检查暂存区是否有变更
+        let staged_files = git_repo
+            .get_staged_files()
+            .map_err(|e| format!("Failed to get staged files: {}", e))?;
+
+        if staged_files.is_empty() {
+            error!("No staged changes to commit. Use 'git add' to stage files first.");
+            return Err("No staged changes".into());
         }
 
-        // 4. 推送到远端
+        info!("Found {} staged file(s) to commit", staged_files.len());
+
+        // 4. 生成或使用 commit message
+        let raw_message = if let Some(msg) = &self.message {
+            msg.clone()
+        } else {
+            log_info!("Analyzing staged changes and generating commit message...");
+
+            let commit_message_service = get_commit_message_service();
+            let analysis =
+                spinner!("Analyzing changes and generating commit message...").with(|| {
+                    commit_message_service
+                        .generate_for_staged()
+                        .map_err(|e| format!("Failed to generate commit message: {}", e))
+                })?;
+
+            log_info_with_fields!(
+                title = % analysis.commit_message.title,
+                body = % analysis.commit_message.body,
+                footer = % analysis.commit_message.footer,
+                "Generated commit message"
+            );
+
+            let mut full = analysis.commit_message.title.clone();
+            if !analysis.commit_message.body.is_empty() {
+                full.push_str("\n\n");
+                full.push_str(&analysis.commit_message.body);
+            }
+            if !analysis.commit_message.footer.is_empty() {
+                full.push_str("\n\n");
+                full.push_str(&analysis.commit_message.footer);
+            }
+            full
+        };
+
+        // 5. 若有 jira_key，格式为「jira_key: message」
+        let commit_message = match &jira_key {
+            Some(jk) => {
+                let first_line = raw_message.lines().next().unwrap_or("");
+                let rest: String = raw_message.lines().skip(1).collect::<Vec<_>>().join("\n");
+                if rest.is_empty() {
+                    format!("{}: {}", jk, first_line)
+                } else {
+                    format!("{}: {}\n{}", jk, first_line, rest)
+                }
+            }
+            None => raw_message,
+        };
+
+        if self.dry_run {
+            info!(
+                "[DRY RUN] Would commit with message: {}",
+                commit_message.lines().next().unwrap_or("")
+            );
+            return Ok(());
+        }
+
+        // 6. 提交（暂存区已就绪）
+        self.commit_changes(&*git_repo, &commit_message)?;
+
+        // 7. 推送到远端
         self.push_branch(&*git_repo)?;
 
         success!(
             "Successfully updated PR #{} with commit: {}",
             pr_status.id,
-            commit_message
+            commit_message.lines().next().unwrap_or("")
         );
 
         Ok(())
     }
 
-    /// 提交本地更改
+    /// 提交暂存区更改
     fn commit_changes(
         &self,
         git_repo: &dyn GitRepository,
         commit_message: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Committing changes with message: {}", commit_message);
+        info!(
+            "Committing changes with message: {}",
+            commit_message.lines().next().unwrap_or("")
+        );
 
         let commit_sha = spinner!("Committing changes...")
-            .with(|| git_repo.commit(commit_message, true))
+            .with(|| git_repo.commit(commit_message, false))
             .map_err(|e| {
                 let err_msg = e.to_string();
                 if err_msg.contains("nothing to commit") {

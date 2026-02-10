@@ -4,6 +4,11 @@ use std::path::{Path, PathBuf};
 
 use crate::{JiraAttachment, JiraError, JiraIssue, JiraStatusConfig, JiraUser};
 
+/// 进度回调函数类型
+///
+/// 用于报告下载进度。每下载完一个文件时调用一次。
+pub type ProgressCallback = Box<dyn Fn() + Send + Sync>;
+
 /// 附件下载结果
 #[derive(Debug, Clone)]
 pub struct AttachmentDownloadResult {
@@ -53,6 +58,7 @@ pub trait JiraRepository: Send + Sync {
     ///
     /// * `issue_id` - Jira ticket ID
     /// * `base_dir` - 基础目录路径（用于创建下载目录）
+    /// * `on_progress` - 进度回调函数（可选），每下载完一个文件时调用
     ///
     /// # 返回
     ///
@@ -61,6 +67,7 @@ pub trait JiraRepository: Send + Sync {
         &self,
         issue_id: &str,
         base_dir: &Path,
+        on_progress: Option<ProgressCallback>,
     ) -> Result<AttachmentDownloadResult, JiraError>;
 
     /// 清理附件目录

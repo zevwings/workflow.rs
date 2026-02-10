@@ -30,8 +30,8 @@ mod history;
 
 // 仅在本 crate 内（registry）使用
 pub(crate) use api::{
-    IssueService, IssueServiceImpl, JiraRepositoryImpl, StatusService, StatusServiceImpl,
-    UserService, UserServiceImpl,
+    AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, JiraRepositoryImpl,
+    StatusService, StatusServiceImpl, UserService, UserServiceImpl,
 };
 pub(crate) use client::{JiraClient, JiraClientImpl};
 pub(crate) use history::{

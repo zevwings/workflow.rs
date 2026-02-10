@@ -1,6 +1,6 @@
 //! 下载 Jira ticket 附件命令
 
-use prompt::{error, info, spinner, success};
+use prompt::{br, error, info, spinner, success};
 use toolkit::expand;
 
 use crate::registry::{get_jira_repository, get_path_service};
@@ -37,27 +37,47 @@ impl JiraAttachmentsCommand {
             )
         })?;
 
-        // 下载所有附件（通过 domain 接口）
-        info!("Downloading all attachments for {}...", jira_id);
+        // 1. 先获取附件列表以确定总数
+        let attachments = spinner!("Getting attachments info for {}...", jira_id)
+            .with(|| jira_repo.get_attachments(&jira_id))
+            .map_err(|e| format!("Failed to get attachments: {}", e))?;
 
-        let result = spinner!("Downloading attachments for {}...", jira_id)
-            .with(|| jira_repo.download_attachments(&jira_id, &base_dir))
+        let total_files = attachments.len();
+
+        if total_files == 0 {
+            error!("No attachments found for {}", jira_id);
+            return Err("No attachments found".into());
+        }
+
+        // 2. 显示将要下载的文件数量
+        info!("{} file(s) will be downloaded", total_files);
+        br!();
+
+        // 3. 使用 spinner 显示下载进度
+        let result = spinner!("Downloading {} attachment(s)...", total_files)
+            .with(|| jira_repo.download_attachments(&jira_id, &base_dir, None))
             .map_err(|e| format!("Failed to download attachments: {}", e))?;
 
         if result.downloaded_files.is_empty() {
             error!("No attachments were downloaded");
-            return Err("No attachments found or all downloads failed".into());
+            return Err("All downloads failed".into());
         }
 
-        success!(
-            "Downloaded {} attachment(s) to: {}",
-            result.downloaded_files.len(),
-            result.base_dir.display()
-        );
+        success!("Download completed!");
+        info!("");
+        info!("Downloaded {} file(s):", result.downloaded_files.len());
+        for file_path in &result.downloaded_files {
+            if let Some(file_name) = file_path.file_name() {
+                info!("  ✓ {}", file_name.to_string_lossy());
+            }
+        }
+        info!("");
+        info!("Files located at: {}", result.base_dir.display());
 
         if !result.failed_files.is_empty() {
+            error!("");
             error!(
-                "Failed to download {} attachment(s):",
+                "Warning: {} attachment(s) failed to download:",
                 result.failed_files.len()
             );
             for (filename, error_msg) in &result.failed_files {

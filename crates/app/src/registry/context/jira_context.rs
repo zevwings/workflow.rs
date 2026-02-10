@@ -2,20 +2,28 @@
 //!
 //! 实现 `domain::JiraConfigContext` trait，提供配置获取逻辑。
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
-use domain::{GlobalConfigRepository, JiraConfigContext};
+use domain::{GlobalConfigRepository, JiraConfigContext, JiraError, PathService};
 
 /// Jira 配置上下文实现
 ///
 /// 实现 `JiraConfigContext` trait，提供基于配置适配器的配置获取逻辑。
 pub struct JiraConfigContextImpl {
     config: Arc<dyn GlobalConfigRepository>,
+    path_service: Arc<dyn PathService>,
 }
 
 impl JiraConfigContextImpl {
-    pub fn new(config: Arc<dyn GlobalConfigRepository>) -> Self {
-        Self { config }
+    pub fn new(
+        config: Arc<dyn GlobalConfigRepository>,
+        path_service: Arc<dyn PathService>,
+    ) -> Self {
+        Self {
+            config,
+            path_service,
+        }
     }
 }
 
@@ -30,5 +38,11 @@ impl JiraConfigContext for JiraConfigContextImpl {
 
     fn get_jira_service_address(&self) -> String {
         self.config.load().map(|c| c.jira.service_address.clone()).unwrap_or_default()
+    }
+
+    fn get_download_dir(&self) -> Result<PathBuf, JiraError> {
+        self.path_service
+            .get_download_dir()
+            .map_err(|e| JiraError::ConfigError(format!("Failed to get download dir: {}", e)))
     }
 }

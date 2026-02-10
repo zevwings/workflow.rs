@@ -5,10 +5,10 @@
 
 use std::sync::Arc;
 
-use crate::jira::api::services::{IssueService, StatusService, UserService};
+use crate::jira::api::services::{AttachmentService, IssueService, StatusService, UserService};
 use domain::{
     AttachmentDownloadResult, JiraAttachment, JiraError, JiraIssue, JiraRepository,
-    JiraStatusConfig, JiraUser,
+    JiraStatusConfig, JiraUser, ProgressCallback,
 };
 
 /// Jira 仓储实现
@@ -18,6 +18,7 @@ pub struct JiraRepositoryImpl {
     issue_service: Arc<dyn IssueService>,
     status_service: Arc<dyn StatusService>,
     user_service: Arc<dyn UserService>,
+    attachment_service: Arc<dyn AttachmentService>,
 }
 
 impl JiraRepositoryImpl {
@@ -25,11 +26,13 @@ impl JiraRepositoryImpl {
         issue_service: Arc<dyn IssueService>,
         status_service: Arc<dyn StatusService>,
         user_service: Arc<dyn UserService>,
+        attachment_service: Arc<dyn AttachmentService>,
     ) -> Self {
         Self {
             issue_service,
             status_service,
             user_service,
+            attachment_service,
         }
     }
 }
@@ -77,14 +80,15 @@ impl JiraRepository for JiraRepositoryImpl {
 
     fn download_attachments(
         &self,
-        _issue_id: &str,
-        _base_dir: &std::path::Path,
+        issue_id: &str,
+        base_dir: &std::path::Path,
+        on_progress: Option<ProgressCallback>,
     ) -> Result<AttachmentDownloadResult, JiraError> {
-        unimplemented!()
+        self.attachment_service.download_attachments(issue_id, base_dir, on_progress)
     }
 
-    fn clean_attachments(&self, _jira_id: Option<&str>) -> Result<(), JiraError> {
-        unimplemented!()
+    fn clean_attachments(&self, jira_id: Option<&str>) -> Result<(), JiraError> {
+        self.attachment_service.clean_attachments(jira_id)
     }
 
     fn get_project_statuses(&self, project: &str) -> Result<Vec<String>, JiraError> {
