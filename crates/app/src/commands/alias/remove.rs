@@ -2,6 +2,7 @@
 //!
 //! 移除已定义的别名。
 
+use domain::AliasService;
 use prompt::{br, info, success, SelectBuilder};
 
 use crate::registry::get_alias_service;
@@ -44,7 +45,7 @@ impl AliasRemoveCommand {
     /// 交互式选择要移除的别名
     fn interactive_select(
         &self,
-        service: &std::sync::Arc<dyn domain::alias::AliasService>,
+        service: &std::sync::Arc<dyn AliasService>,
     ) -> Result<String, Box<dyn std::error::Error>> {
         // 获取别名列表
         let list_result = service.list().map_err(|e| format!("Failed to get alias list: {}", e))?;

@@ -8,7 +8,7 @@ use domain::{
     CommitChangeType, CommitFileChange, CommitMessageService, CommitSummaryAnalysis, GitRepository,
     ServiceError,
 };
-use llm::{parsers::JsonParser, LLMConfigContext, LLMExecutor};
+use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
 use crate::commit::message::CommitMessageConversation;
 

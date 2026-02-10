@@ -1,7 +1,7 @@
 // use crate::jira::types::JiraAttachment;
 // use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-// use domain::jira::JiraConfigContext;
+// use domain::JiraConfigContext;
 // use reqwest::header::HeaderMap;
 // use std::fs::File;
 // use std::path::{Path, PathBuf};

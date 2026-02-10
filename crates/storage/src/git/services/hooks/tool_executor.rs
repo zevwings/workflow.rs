@@ -3,7 +3,7 @@
 //! 负责执行 pre-commit/prek 等外部工具管理的 hooks。
 
 use super::context::{HookContext, HookResult};
-use domain::git::GitError;
+use domain::GitError;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::Duration;

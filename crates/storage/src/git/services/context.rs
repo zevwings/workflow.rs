@@ -2,7 +2,7 @@
 //!
 //! 提供 git2::Repository 的管理和访问。
 
-use domain::git::{CodePlatform, GitError, RepoInfo};
+use domain::{CodePlatform, GitError, RepoInfo};
 use git2::{CertificateCheckStatus, Repository};
 use once_cell::sync::Lazy;
 use regex::Regex;

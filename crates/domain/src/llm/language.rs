@@ -92,7 +92,7 @@ impl SupportedLanguage {
     /// # 示例
     ///
     /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
+    /// use domain::SupportedLanguage;
     ///
     /// let default_lang = SupportedLanguage::default_language();
     /// assert_eq!(default_lang.code, "en");
@@ -110,7 +110,7 @@ impl SupportedLanguage {
     /// # 示例
     ///
     /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
+    /// use domain::SupportedLanguage;
     ///
     /// let languages = SupportedLanguage::get();
     /// assert!(!languages.is_empty());
@@ -139,7 +139,7 @@ impl SupportedLanguage {
     /// # 示例
     ///
     /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
+    /// use domain::SupportedLanguage;
     ///
     /// let lang = SupportedLanguage::find("zh-CN");
     /// assert!(lang.is_some());
@@ -169,7 +169,7 @@ impl SupportedLanguage {
     /// # 示例
     ///
     /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
+    /// use domain::SupportedLanguage;
     ///
     /// let instruction = SupportedLanguage::get_instruction("zh-CN");
     /// assert!(!instruction.is_empty());
@@ -204,7 +204,7 @@ impl SupportedLanguage {
     /// # 示例
     ///
     /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
+    /// use domain::SupportedLanguage;
     ///
     /// let original = "You are a helpful assistant.";
     /// let enhanced = SupportedLanguage::get_requirement(original, "en");
@@ -244,7 +244,7 @@ Remember: ALL output must be in {} only. No exceptions."#,
     /// # 示例
     ///
     /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
+    /// use domain::SupportedLanguage;
     ///
     /// let codes = SupportedLanguage::supported_codes();
     /// assert!(!codes.is_empty());
@@ -264,7 +264,7 @@ Remember: ALL output must be in {} only. No exceptions."#,
     /// # 示例
     ///
     /// ```rust,ignore
-    /// use domain::llm::SupportedLanguage;
+    /// use domain::SupportedLanguage;
     ///
     /// let names = SupportedLanguage::supported_display_names();
     /// assert!(!names.is_empty());

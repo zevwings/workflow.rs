@@ -3,7 +3,7 @@
 //! 该命令获取当前分支关联的 PR 标题作为 commit message，
 //! 提交本地更改并推送到远端。
 
-use domain::git::GitRepository;
+use domain::GitRepository;
 use prompt::{info, spinner, success, warning};
 
 use crate::registry;

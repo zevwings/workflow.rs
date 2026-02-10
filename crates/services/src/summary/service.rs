@@ -5,11 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use domain::git::entity::{CommitChangeType, CommitFileChange, CommitInfo};
-use domain::summary::entity::{
-    CommitFileClassification, CommitSummaryAnalysis, DirectoryStats, DirectoryStatusDistribution,
-};
-use domain::{errors::ServiceError, GitRepository};
+use domain::{CommitSummaryService,CommitChangeType, CommitFileChange, CommitInfo, CommitFileClassification, CommitSummaryAnalysis, DirectoryStats, DirectoryStatusDistribution, ServiceError, GitRepository};
 use llm::{LLMConfigContext, LLMExecutor};
 
 use super::{
@@ -290,7 +286,7 @@ struct Stage2Results {
     test_json: String,
 }
 
-impl domain::CommitSummaryService for CommitSummaryServiceImpl {
+impl CommitSummaryService for CommitSummaryServiceImpl {
     fn run_analysis(
         &self,
         base_branch: Option<&str>,

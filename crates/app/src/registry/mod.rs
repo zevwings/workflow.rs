@@ -7,6 +7,13 @@ mod context;
 
 use std::sync::{Arc, LazyLock};
 
+use domain::{
+    AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
+    GlobalConfigRepository, GitHubRepository, GitRepository, JiraRepository,
+    JiraWorkHistoryRepository, PathService, PullRequestService, RepoConfigRepository,
+    VerificationService,
+};
+
 /// 应用程序初始化标记
 ///
 /// 确保所有模块都已注册。
@@ -76,7 +83,7 @@ fn ensure_initialized() {
 /// # 示例
 ///
 /// ```rust,ignore
-/// let repo = get_service::<dyn domain::GlobalConfigRepository>();
+/// let repo = get_service::<dyn GlobalConfigRepository>();
 /// ```
 pub fn get_service<T: 'static + Send + Sync + ?Sized>() -> Arc<T> {
     ensure_initialized();
@@ -94,71 +101,71 @@ pub fn get_service<T: 'static + Send + Sync + ?Sized>() -> Arc<T> {
 // ============================================================================
 
 /// 获取 AliasService
-pub fn get_alias_service() -> Arc<dyn domain::alias::AliasService> {
-    get_service::<dyn domain::alias::AliasService>()
+pub fn get_alias_service() -> Arc<dyn AliasService> {
+    get_service::<dyn AliasService>()
 }
 
 /// 获取 BranchService
-pub fn get_branch_service() -> Arc<dyn domain::branch::BranchService> {
-    get_service::<dyn domain::branch::BranchService>()
+pub fn get_branch_service() -> Arc<dyn BranchService> {
+    get_service::<dyn BranchService>()
 }
 
 /// 获取 GlobalConfigRepository
-pub fn get_global_config_repository() -> Arc<dyn domain::GlobalConfigRepository> {
-    get_service::<dyn domain::GlobalConfigRepository>()
+pub fn get_global_config_repository() -> Arc<dyn GlobalConfigRepository> {
+    get_service::<dyn GlobalConfigRepository>()
 }
 
 /// 获取 RepoConfigRepository
-pub fn get_repo_config_repository() -> Arc<dyn domain::RepoConfigRepository> {
-    get_service::<dyn domain::RepoConfigRepository>()
+pub fn get_repo_config_repository() -> Arc<dyn RepoConfigRepository> {
+    get_service::<dyn RepoConfigRepository>()
 }
 
 /// 获取 VerificationService
-pub fn get_verification_service() -> Arc<dyn domain::VerificationService> {
-    get_service::<dyn domain::VerificationService>()
+pub fn get_verification_service() -> Arc<dyn VerificationService> {
+    get_service::<dyn VerificationService>()
 }
 
 /// 获取 GitRepository（完整 Git 操作）
-pub fn get_git_repository() -> Arc<dyn domain::GitRepository> {
-    get_service::<dyn domain::GitRepository>()
+pub fn get_git_repository() -> Arc<dyn GitRepository> {
+    get_service::<dyn GitRepository>()
 }
 
 /// 获取 CommitSummaryService（三阶段提交分析）
-pub fn get_commit_summary_service() -> Arc<dyn domain::CommitSummaryService> {
-    get_service::<dyn domain::CommitSummaryService>()
+pub fn get_commit_summary_service() -> Arc<dyn CommitSummaryService> {
+    get_service::<dyn CommitSummaryService>()
 }
 
 /// 获取 CommitMessageService（单次提交 message 生成）
-pub fn get_commit_message_service() -> Arc<dyn domain::commit::CommitMessageService> {
-    get_service::<dyn domain::commit::CommitMessageService>()
+pub fn get_commit_message_service() -> Arc<dyn CommitMessageService> {
+    get_service::<dyn CommitMessageService>()
 }
 
 /// 获取 GitHubRepository
-pub fn get_github_repository() -> Arc<dyn domain::GitHubRepository> {
-    get_service::<dyn domain::GitHubRepository>()
+pub fn get_github_repository() -> Arc<dyn GitHubRepository> {
+    get_service::<dyn GitHubRepository>()
 }
 
 /// 获取 JiraRepository
-pub fn get_jira_repository() -> Arc<dyn domain::JiraRepository> {
-    get_service::<dyn domain::JiraRepository>()
+pub fn get_jira_repository() -> Arc<dyn JiraRepository> {
+    get_service::<dyn JiraRepository>()
 }
 
 /// 获取 JiraWorkHistoryRepository
-pub fn get_jira_work_history_repository() -> Arc<dyn domain::JiraWorkHistoryRepository> {
-    get_service::<dyn domain::JiraWorkHistoryRepository>()
+pub fn get_jira_work_history_repository() -> Arc<dyn JiraWorkHistoryRepository> {
+    get_service::<dyn JiraWorkHistoryRepository>()
 }
 
 /// 获取 PullRequestService
-pub fn get_pull_request_service() -> Arc<dyn domain::pr::service::PullRequestService> {
-    get_service::<dyn domain::pr::service::PullRequestService>()
+pub fn get_pull_request_service() -> Arc<dyn PullRequestService> {
+    get_service::<dyn PullRequestService>()
 }
 
 /// 获取 CompletionService
-pub fn get_completion_service() -> Arc<dyn domain::completion::service::CompletionService> {
-    get_service::<dyn domain::completion::service::CompletionService>()
+pub fn get_completion_service() -> Arc<dyn CompletionService> {
+    get_service::<dyn CompletionService>()
 }
 
 /// 获取 PathService
-pub fn get_path_service() -> Arc<dyn domain::path::service::PathService> {
-    get_service::<dyn domain::path::service::PathService>()
+pub fn get_path_service() -> Arc<dyn PathService> {
+    get_service::<dyn PathService>()
 }

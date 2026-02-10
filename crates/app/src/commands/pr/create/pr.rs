@@ -1,7 +1,6 @@
 //! PR 创建和摘要生成逻辑
 
-use domain::git::CodePlatform;
-use domain::GitRepository;
+use domain::{CodePlatform, GitRepository};
 use prompt::{error, info, select, spinner, success, warning};
 use toolkit::BrowserExt;
 

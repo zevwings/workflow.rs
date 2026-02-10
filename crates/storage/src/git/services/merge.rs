@@ -5,7 +5,7 @@
 use git2::BranchType;
 
 use super::GitContext;
-use domain::git::{GitError, MergeStrategy};
+use domain::{GitError, MergeStrategy};
 
 /// Merge 服务接口
 pub trait MergeService: Send + Sync {

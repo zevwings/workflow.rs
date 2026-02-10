@@ -4,10 +4,10 @@
 
 use std::sync::Arc;
 
-use domain::git::{
-    BlameLineInfo, CommitFileChange, CommitInfo, GitError, GitRepository, MergeStrategy, RepoInfo,
-    StashApplyResult, StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo,
-    TagDeleteScope, WorkingTreeStatus,
+use domain::{
+    BlameLineInfo, BranchInfo, CommitFileChange, CommitInfo, GitError, GitRepository, MergeStrategy,
+    RepoInfo, StashApplyResult, StashEntry, StashPopResult, TagCreateInfo, TagCreateScope,
+    TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
 };
 
 use crate::git::services::{
@@ -95,7 +95,7 @@ impl GitRepository for GitRepositoryImpl {
         &self,
         remove_prefix: bool,
         all: bool,
-    ) -> Result<Vec<domain::BranchInfo>, GitError> {
+    ) -> Result<Vec<BranchInfo>, GitError> {
         self.services.branch.list_branches(remove_prefix, all)
     }
 

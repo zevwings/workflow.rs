@@ -228,7 +228,7 @@ const VALIDATION_JIRA_ID_EMPTY: &str = "JIRA ID cannot be empty";
 ///
 /// # 示例
 /// ```
-/// use domain::jira::extract_jira_project;
+/// use domain::extract_jira_project;
 /// assert_eq!(extract_jira_project("PROJ-123"), Some("PROJ"));
 /// assert_eq!(extract_jira_project("PROJ"), None);
 /// ```
@@ -246,7 +246,7 @@ pub fn extract_jira_project(ticket: &str) -> Option<&str> {
 ///
 /// # 示例
 /// ```
-/// use domain::jira::extract_jira_ticket_id;
+/// use domain::extract_jira_ticket_id;
 /// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123".to_string()));
 /// assert_eq!(extract_jira_ticket_id("No ticket here"), None);
 /// assert_eq!(extract_jira_ticket_id("feature/ABC-456-test"), Some("ABC-456".to_string()));
@@ -262,7 +262,7 @@ pub fn extract_jira_ticket_id(text: &str) -> Option<String> {
 ///
 /// # 示例
 /// ```
-/// use domain::jira::validate_jira_ticket_format;
+/// use domain::validate_jira_ticket_format;
 /// assert!(validate_jira_ticket_format("PROJ-123").is_ok());
 /// assert!(validate_jira_ticket_format("PROJ").is_ok());
 /// assert!(validate_jira_ticket_format("PROJ-123-456").is_ok());

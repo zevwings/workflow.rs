@@ -4,6 +4,6 @@ pub mod service;
 
 pub use entity::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
-    CommitSummaryAnalysis, CommitTestAnalysis,
+    CommitSummaryAnalysis, CommitTestAnalysis, DirectoryStats, DirectoryStatusDistribution,
 };
 pub use service::CommitSummaryService;

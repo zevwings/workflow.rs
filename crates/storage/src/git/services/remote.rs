@@ -9,7 +9,7 @@ use git2::PushOptions;
 use crate::git::services::context::GitContext;
 use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
 use crate::git::services::merge::{MergeService, MergeServiceImpl};
-use domain::git::{GitError, MergeStrategy};
+use domain::{GitError, MergeStrategy};
 use toolkit::log_debug;
 
 /// 远程服务接口

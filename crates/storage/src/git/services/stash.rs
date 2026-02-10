@@ -5,7 +5,7 @@
 use chrono::{Local, TimeZone};
 
 use super::GitContext;
-use domain::git::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
+use domain::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
 use toolkit::log_warn;
 
 /// Stash 服务接口

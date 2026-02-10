@@ -1,4 +1,4 @@
-use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
+use domain::{get_change_types_by_branch_type, BranchType, GitRepository, JiraIssue};
 use prompt::{error, info, input, spinner, success, warning};
 use toolkit::{log_debug, log_error};
 
@@ -22,7 +22,7 @@ struct CreatePullRequrestContext<'a> {
     jira_id: &'a Option<String>,
     jira_created_status: &'a Option<String>,
     description: Option<&'a str>,
-    jira_info: Option<&'a domain::JiraIssue>,
+    jira_info: Option<&'a JiraIssue>,
 }
 
 /// Pull Request Create 命令

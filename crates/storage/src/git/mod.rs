@@ -5,13 +5,13 @@
 //! # 架构设计
 //!
 //! - **GitContext**: 管理 git2::Repository 实例，提供仓库访问
-//! - **GitRepositoryImpl**: 实现 domain::git::GitRepository trait
+//! - **GitRepositoryImpl**: 实现 domain::GitRepository trait
 //!
 //! # 使用示例
 //!
 //! ```rust,no_run
 //! use storage::git::{GitContext, GitRepositoryImpl};
-//! use domain::git::GitRepository;
+//! use domain::GitRepository;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 创建上下文

@@ -5,7 +5,7 @@
 use std::path::Path;
 
 use super::GitContext;
-use domain::git::{BlameLineInfo, GitError};
+use domain::{BlameLineInfo, GitError};
 
 /// Blame 服务接口
 pub trait BlameService: Send + Sync {

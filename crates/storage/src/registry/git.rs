@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use domain::{GitRepoRepository, GitRepository};
+use domain::{GitRepoRepository, GitRepository, RepoInfo};
 use registry::{Container, RegistryError, Scope, try_bind};
 
 use crate::git::services::{
@@ -17,7 +17,7 @@ use crate::git::{GitRepositoryImpl, GitRepositoryServices};
 struct GitRepoRepositoryWrapper(Arc<dyn GitRepository>);
 
 impl GitRepoRepository for GitRepoRepositoryWrapper {
-    fn get_repo_info(&self) -> domain::RepoInfo {
+    fn get_repo_info(&self) -> RepoInfo {
         self.0.get_repo_info()
     }
 }

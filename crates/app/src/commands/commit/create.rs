@@ -2,8 +2,10 @@
 //!
 //! 智能生成 commit message 并提交代码。
 
-use crate::registry;
+use domain::GitRepository;
 use prompt::{error, info, spinner, success};
+
+use crate::registry;
 use toolkit::{log_info, log_info_with_fields};
 
 /// Commit Create 命令
@@ -142,7 +144,7 @@ impl CommitCreateCommand {
     /// 推送到远端
     fn push_to_remote(
         &self,
-        git_repo: &std::sync::Arc<dyn domain::GitRepository>,
+        git_repo: &std::sync::Arc<dyn GitRepository>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let branch_name = git_repo
             .get_current_branch()

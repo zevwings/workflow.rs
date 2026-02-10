@@ -4,6 +4,10 @@
 
 use std::sync::Arc;
 
+use domain::{
+    AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
+    GlobalConfigRepository, GitHubRepository, GitRepository, PathService, PullRequestService,
+};
 use llm::{LLMConfigContext, LLMExecutor};
 use registry::{Container, RegistryError, Scope, try_bind};
 
@@ -27,13 +31,13 @@ use crate::summary::CommitSummaryServiceImpl;
 /// 如果服务注册失败，返回 `registry::Error`。
 pub fn register_services() -> Result<(), RegistryError> {
     // AliasService - 依赖 GlobalConfigRepository
-    try_bind!(dyn domain::AliasService, |c: &Container| {
-        let config_repo = c.get::<dyn domain::GlobalConfigRepository>()?;
+    try_bind!(dyn AliasService, |c: &Container| {
+        let config_repo = c.get::<dyn GlobalConfigRepository>()?;
         Ok(Arc::new(AliasServiceImpl::new(config_repo)))
     })
     .in_scope(Scope::Singleton)?;
 
-    try_bind!(dyn domain::BranchService, |c: &Container| {
+    try_bind!(dyn BranchService, |c: &Container| {
         let llm_executor = c.get::<dyn LLMExecutor>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(BranchServiceImpl::new(llm_executor, llm_context)))
@@ -41,10 +45,10 @@ pub fn register_services() -> Result<(), RegistryError> {
     .in_scope(Scope::Singleton)?;
 
     // PullRequestService - 依赖 GitRepository、GitHubRepository、CommitSummaryService
-    try_bind!(dyn domain::PullRequestService, |c: &Container| {
-        let git_repo = c.get::<dyn domain::GitRepository>()?;
-        let github_repo = c.get::<dyn domain::GitHubRepository>()?;
-        let commit_summary_service = c.get::<dyn domain::CommitSummaryService>()?;
+    try_bind!(dyn PullRequestService, |c: &Container| {
+        let git_repo = c.get::<dyn GitRepository>()?;
+        let github_repo = c.get::<dyn GitHubRepository>()?;
+        let commit_summary_service = c.get::<dyn CommitSummaryService>()?;
 
         Ok(Arc::new(PullRequestServiceImpl::new(
             git_repo,
@@ -55,8 +59,8 @@ pub fn register_services() -> Result<(), RegistryError> {
     .in_scope(Scope::Singleton)?;
 
     // CommitSummaryService - 依赖 GitRepository、LLMExecutor、LLMConfigContext
-    try_bind!(dyn domain::CommitSummaryService, |c: &Container| {
-        let git_repo = c.get::<dyn domain::GitRepository>()?;
+    try_bind!(dyn CommitSummaryService, |c: &Container| {
+        let git_repo = c.get::<dyn GitRepository>()?;
         let llm_executor = c.get::<dyn LLMExecutor>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(CommitSummaryServiceImpl::new(
@@ -68,8 +72,8 @@ pub fn register_services() -> Result<(), RegistryError> {
     .in_scope(Scope::Singleton)?;
 
     // CommitMessageService - 依赖 GitRepository、LLMExecutor、LLMConfigContext
-    try_bind!(dyn domain::commit::CommitMessageService, |c: &Container| {
-        let git_repo = c.get::<dyn domain::GitRepository>()?;
+    try_bind!(dyn CommitMessageService, |c: &Container| {
+        let git_repo = c.get::<dyn GitRepository>()?;
         let llm_executor = c.get::<dyn LLMExecutor>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(CommitMessageServiceImpl::new(
@@ -81,13 +85,13 @@ pub fn register_services() -> Result<(), RegistryError> {
     .in_scope(Scope::Singleton)?;
 
     // CompletionService - 依赖 PathService
-    try_bind!(dyn domain::CompletionService, |c: &Container| {
-        let path_service = c.get::<dyn domain::PathService>()?;
+    try_bind!(dyn CompletionService, |c: &Container| {
+        let path_service = c.get::<dyn PathService>()?;
         Ok(Arc::new(CompletionServiceImpl::new(path_service)))
     })
     .in_scope(Scope::Singleton)?;
 
-    try_bind!(dyn domain::PathService, |_c: &Container| {
+    try_bind!(dyn PathService, |_c: &Container| {
         Ok(Arc::new(PathServiceImpl::new()))
     })
     .in_scope(Scope::Singleton)?;

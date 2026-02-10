@@ -1,21 +1,16 @@
 //! 存储实现层（Storage Adapters）
 //!
-//! 实现各种仓储接口，提供数据持久化和外部服务调用
+//! 实现各种仓储接口，提供数据持久化和外部服务调用。
 //!
-//! # 模块导出策略
+//! # 对外 API
 //!
-//! - **`git`**: 公开导出，提供 Git 操作的核心 API（`GitContext`, `GitRepositoryImpl`）
-//!   - 外部需要直接使用这些类型进行 Git 仓库操作
-//!   - 包含测试工具模块（`testing`, `performance`）
+//! 业务代码（如 app）仅通过 [`register_storage`] 注册到依赖注入容器，通过 trait 接口访问实现。
 //!
-//! - **其他模块**（`config`, `github`, `jira`）: 内部实现
-//!   - 仅通过 [`register_storage`] 函数注册到依赖注入容器
-//!   - 外部通过 trait 接口访问，无需直接依赖实现类型
+//! - **`git`** 为 `pub`，供本 crate 的 examples 与 benches 使用（二者为独立编译单元，需公开 API）。
+//! - 其余模块为内部实现，仅通过 `register_storage` 暴露。
 
-// Git 模块 - 公开导出以提供核心 Git 操作 API
 pub mod git;
 
-// 内部实现模块 - 通过依赖注入访问
 pub(crate) mod config;
 pub(crate) mod github;
 pub(crate) mod jira;

@@ -7,7 +7,7 @@
 
 use super::services::context::GitContext;
 use super::services::hooks::{HookContext, HookResult, HookService};
-use domain::git::GitError;
+use domain::GitError;
 use std::env;
 use std::path::Path;
 use std::sync::{Arc, Mutex};

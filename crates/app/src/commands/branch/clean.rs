@@ -1,6 +1,6 @@
 //! 清理本地分支命令
 
-use domain::GitError;
+use domain::{GitError, GitRepository};
 use prompt::{confirm, error, info, success, warning};
 
 use crate::registry;
@@ -106,7 +106,7 @@ impl BranchCleanCommand {
     /// 删除分支列表，返回 (成功数量, 失败列表)
     fn delete_branches(
         &self,
-        git_repo: &dyn domain::GitRepository,
+        git_repo: &dyn GitRepository,
         branches: &[String],
     ) -> Result<DeleteBranchesResult, Box<dyn std::error::Error>> {
         let mut deleted = 0;

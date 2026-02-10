@@ -10,7 +10,7 @@ use std::{fs, path::Path, sync::Arc};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-use domain::{extract_jira_project, JiraError, JiraStatusConfig, PathService, ProjectStatusConfig};
+use domain::{JiraError, JiraStatusConfig, PathService, ProjectStatusConfig, extract_jira_project, validate_jira_ticket_format};
 use toolkit::{file, log_debug};
 
 use crate::jira::JiraClient;
@@ -250,7 +250,7 @@ impl StatusService for StatusServiceImpl {
         jira_ticket: &str,
     ) -> Result<Option<String>, JiraError> {
         // 先验证 ticket 格式
-        domain::validate_jira_ticket_format(jira_ticket)
+        validate_jira_ticket_format(jira_ticket)
             .map_err(|e| JiraError::ApiError(format!("Invalid Jira ticket format: {}", e)))?;
 
         let project = extract_jira_project(jira_ticket).ok_or_else(|| {
@@ -284,7 +284,7 @@ impl StatusService for StatusServiceImpl {
         jira_ticket: &str,
     ) -> Result<Option<String>, JiraError> {
         // 先验证 ticket 格式
-        domain::validate_jira_ticket_format(jira_ticket)
+        validate_jira_ticket_format(jira_ticket)
             .map_err(|e| JiraError::ApiError(format!("Invalid Jira ticket format: {}", e)))?;
 
         let project = extract_jira_project(jira_ticket).ok_or_else(|| {

@@ -314,7 +314,7 @@ mod tests {
     use domain::{get_completion_shell_dir, get_completion_shell_path};
     use once_cell::sync::Lazy;
     use tempfile::tempdir;
-    use toolkit::shell::{config_file_path, shell_from_string};
+    use toolkit::{config_file_path, shell_from_string};
 
     static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 

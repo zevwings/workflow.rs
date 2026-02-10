@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use git2::{BranchType, PushOptions};
 
 use super::GitContext;
-use domain::git::GitError;
+use domain::{BranchInfo, GitError};
 
 /// 分支服务接口
 pub trait BranchService: Send + Sync {
@@ -28,7 +28,7 @@ pub trait BranchService: Send + Sync {
         &self,
         remove_prefix: bool,
         all: bool,
-    ) -> Result<Vec<domain::BranchInfo>, GitError>;
+    ) -> Result<Vec<BranchInfo>, GitError>;
 
     /// 切换分支
     fn checkout_branch(&self, name: &str) -> Result<(), GitError>;
@@ -191,7 +191,7 @@ impl BranchService for BranchServiceImpl {
         &self,
         remove_prefix: bool,
         all: bool,
-    ) -> Result<Vec<domain::BranchInfo>, GitError> {
+    ) -> Result<Vec<BranchInfo>, GitError> {
         let repo = self.ctx.repository();
 
         let mut branches: HashMap<String, (bool, bool)> = HashMap::new(); // (has_local, has_remote)
@@ -235,7 +235,7 @@ impl BranchService for BranchServiceImpl {
         }
 
         // 构建结果列表
-        let mut result: Vec<domain::BranchInfo> = branches
+        let mut result: Vec<BranchInfo> = branches
             .into_iter()
             .map(|(name, (has_local, has_remote))| {
                 let display_name = if has_remote {
@@ -250,13 +250,13 @@ impl BranchService for BranchServiceImpl {
                 // name 字段保存不带 origin/ 前缀的短名称
                 // 这样 has_branch 可以正确检查本地和远程
                 if has_local {
-                    let mut info = domain::BranchInfo::local(name);
+                    let mut info = BranchInfo::local(name);
                     info.display_name = display_name;
                     info.is_remote = has_remote;
                     info
                 } else {
                     // 仅存在于远程的分支
-                    domain::BranchInfo::remote(name, display_name)
+                    BranchInfo::remote(name, display_name)
                 }
             })
             .collect();

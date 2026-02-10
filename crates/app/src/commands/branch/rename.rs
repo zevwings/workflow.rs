@@ -1,6 +1,6 @@
 //! 重命名分支命令
 
-use domain::git::GitError;
+use domain::GitError;
 use prompt::{confirm, error, info, input, select, success, warning};
 
 use crate::registry;

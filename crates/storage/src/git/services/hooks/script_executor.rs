@@ -3,7 +3,7 @@
 //! 负责执行 Git hooks 脚本，包括环境变量设置、标准输入处理和输出捕获。
 
 use super::context::{HookContext, HookResult};
-use domain::git::GitError;
+use domain::GitError;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 use toolkit::log_info;

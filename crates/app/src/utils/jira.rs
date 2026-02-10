@@ -1,5 +1,4 @@
-use domain::jira::validate_jira_ticket_format;
-use domain::{extract_jira_project, JiraRepository, JiraStatusConfig};
+use domain::{validate_jira_ticket_format, extract_jira_project, JiraRepository, JiraStatusConfig};
 use prompt::{info, input, select, spinner, success};
 
 /// 交互式获取 JIRA ID（必填）

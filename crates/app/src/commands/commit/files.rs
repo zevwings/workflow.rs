@@ -1,6 +1,6 @@
 //! workflow commit files：测试 GitRepository::get_commit_changed_files
 
-use domain::git::entity::CommitChangeType;
+use domain::CommitChangeType;
 use prompt::info;
 
 use crate::registry::get_git_repository;

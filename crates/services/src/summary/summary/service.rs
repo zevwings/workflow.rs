@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use domain::errors::ServiceError;
-use domain::summary::entity::CommitSummaryAnalysis;
+use domain::{ServiceError,CommitSummaryAnalysis};
 use llm::{JsonParser, LLMExecutor};
 
 use super::{SummaryAnalyzeConversation, SummaryAnalyzeInput};

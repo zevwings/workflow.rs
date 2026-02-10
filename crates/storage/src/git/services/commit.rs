@@ -9,7 +9,7 @@ use toolkit::{log_debug, log_info, log_warn};
 
 use crate::git::services::context::GitContext;
 use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
-use domain::git::{
+use domain::{
     CommitChangeType, CommitFileChange, CommitInfo, FileStatusInfo, FileStatusType, GitError,
     WorkingTreeStatus,
 };
