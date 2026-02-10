@@ -1,5 +1,6 @@
 //! 表单构建器核心
 
+#[cfg(any(test, feature = "testing"))]
 use crate::backend::Backend;
 use crate::form::field::FormField;
 use crate::form::types::FormGroup;
@@ -59,6 +60,7 @@ impl FormBuilder {
     }
 
     /// 使用指定后端执行表单并收集用户输入（内部使用，仅测试时调用）
+    #[cfg(any(test, feature = "testing"))]
     #[allow(dead_code)]
     pub(crate) fn run_with_backend<B: Backend>(
         self,

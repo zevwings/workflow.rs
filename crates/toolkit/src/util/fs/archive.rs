@@ -11,7 +11,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
-use tar::Archive as TarArchive;
+use tar::Archive;
 use zip::ZipArchive;
 
 use super::directory;
@@ -107,7 +107,7 @@ pub fn extract_tar_gz(archive_path: &Path, output_dir: &Path) -> Result<(), File
 
     // 创建 Gzip 解码器
     let decoder = GzDecoder::new(file);
-    let mut archive = TarArchive::new(decoder);
+    let mut archive = Archive::new(decoder);
 
     // 解压到目标目录
     archive
@@ -224,7 +224,7 @@ pub fn list_contents(archive_path: &Path) -> Result<Vec<String>, FileError> {
 fn list_tar_gz_contents(archive_path: &Path) -> Result<Vec<String>, FileError> {
     let file = File::open(archive_path)?;
     let decoder = GzDecoder::new(file);
-    let mut archive = TarArchive::new(decoder);
+    let mut archive = Archive::new(decoder);
 
     let mut contents = Vec::new();
     for entry in archive
@@ -356,7 +356,7 @@ mod tests {
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use std::io::Write;
-    use tar::Builder as TarBuilder;
+    use tar::{Builder, Header};
     use tempfile::TempDir;
     use zip::write::FileOptions;
     use zip::ZipWriter;
@@ -370,11 +370,11 @@ mod tests {
         let archive_path = dir.join("test.tar.gz");
         let file = File::create(&archive_path).unwrap();
         let encoder = GzEncoder::new(file, Compression::default());
-        let mut builder = TarBuilder::new(encoder);
+        let mut builder = Builder::new(encoder);
 
         // 添加一个测试文件
         let test_content = b"Hello from tar.gz!";
-        let mut header = tar::Header::new_gnu();
+        let mut header = Header::new_gnu();
         header.set_path("test_file.txt").unwrap();
         header.set_size(test_content.len() as u64);
         header.set_mode(0o644);
@@ -382,7 +382,7 @@ mod tests {
         builder.append(&header, &test_content[..]).unwrap();
 
         // 添加一个子目录和文件
-        let mut header2 = tar::Header::new_gnu();
+        let mut header2 = Header::new_gnu();
         header2.set_path("subdir/nested.txt").unwrap();
         header2.set_size(12);
         header2.set_mode(0o644);

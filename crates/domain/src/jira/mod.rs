@@ -14,6 +14,6 @@ pub use api::{
 };
 pub use error::JiraError;
 
-pub use api::{AttachmentDownloadResult, JiraRepository};
+pub use api::{AttachmentDownloadResult, JiraRepository, ProgressCallback};
 pub use context::JiraConfigContext;
 pub use history::{DeleteHistoryResult, JiraWorkHistoryRepository, WorkHistoryEntry};

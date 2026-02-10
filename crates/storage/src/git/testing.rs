@@ -8,6 +8,7 @@
 use super::services::context::GitContext;
 use super::services::hooks::{HookContext, HookResult, HookService};
 use domain::GitError;
+use git2::Signature;
 use std::env;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -155,7 +156,7 @@ pub fn setup_repo_with_config(config: TestRepoConfig) -> (TempDir, GitContext) {
             index.write().unwrap();
         }
 
-        let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+        let sig = Signature::now("Test", "test@example.com").unwrap();
         let tree_id = repo.index().unwrap().write_tree().unwrap();
         let tree = repo.find_tree(tree_id).unwrap();
         repo.commit(Some("HEAD"), &sig, &sig, "Initial commit", &tree, &[]).unwrap();
@@ -189,7 +190,7 @@ pub fn setup_repo_with_files(file_count: usize) -> (TempDir, GitContext) {
             index.write().unwrap();
         }
 
-        let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+        let sig = Signature::now("Test", "test@example.com").unwrap();
         let tree_id = repo.index().unwrap().write_tree().unwrap();
         let tree = repo.find_tree(tree_id).unwrap();
         repo.commit(
@@ -257,7 +258,7 @@ pub fn setup_repo_with_large_file(line_count: usize) -> (TempDir, GitContext) {
         index.add_path(Path::new("large_file.txt")).unwrap();
         index.write().unwrap();
 
-        let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+        let sig = Signature::now("Test", "test@example.com").unwrap();
         let tree_id = repo.index().unwrap().write_tree().unwrap();
         let tree = repo.find_tree(tree_id).unwrap();
         repo.commit(
@@ -287,7 +288,7 @@ pub fn setup_repo_with_commits(commit_count: usize) -> (TempDir, GitContext) {
 
     {
         let repo = ctx.repository();
-        let sig = git2::Signature::now("Test", "test@example.com").unwrap();
+        let sig = Signature::now("Test", "test@example.com").unwrap();
 
         let mut parent_commit = None;
 

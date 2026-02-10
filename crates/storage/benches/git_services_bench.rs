@@ -3,6 +3,7 @@
 //! 使用 Criterion 进行性能基准测试，评估各个 Git 服务的性能表现。
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use git2::IndexAddOption;
 use storage::git::services::*;
 use storage::git::testing::*;
 
@@ -67,9 +68,7 @@ fn bench_commit_create_without_all(c: &mut Criterion) {
                         {
                             let repo = ctx.repository();
                             let mut index = repo.index().unwrap();
-                            index
-                                .add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None)
-                                .unwrap();
+                            index.add_all(["."].iter(), IndexAddOption::DEFAULT, None).unwrap();
                             index.write().unwrap();
                         }
                         (tmp, ctx)

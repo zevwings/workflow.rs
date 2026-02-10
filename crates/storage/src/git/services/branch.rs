@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use git2::{BranchType, PushOptions};
+use git2::{BranchType, ErrorCode, PushOptions, Repository};
 
 use super::GitContext;
 use domain::{BranchInfo, GitError};
@@ -79,7 +79,7 @@ impl BranchService for BranchServiceImpl {
 
         // 创建分支
         repo.branch(name, &commit, false).map_err(|e| {
-            if e.code() == git2::ErrorCode::Exists {
+            if e.code() == ErrorCode::Exists {
                 GitError::OperationFailed(format!("Branch '{}' already exists", name))
             } else {
                 GitError::OperationFailed(e.to_string())
@@ -141,7 +141,7 @@ impl BranchService for BranchServiceImpl {
 
         remote.push(&[&refspec], Some(&mut opts)).map_err(|e| {
             // 检查是否是因为远程分支不存在
-            if e.code() == git2::ErrorCode::NotFound || e.code() == git2::ErrorCode::Locked {
+            if e.code() == ErrorCode::NotFound || e.code() == ErrorCode::Locked {
                 GitError::BranchNotFound(format!("origin/{}", name))
             } else {
                 GitError::RemoteError(e.to_string())
@@ -173,7 +173,7 @@ impl BranchService for BranchServiceImpl {
         };
 
         branch.rename(new_name, false).map_err(|e| {
-            if e.code() == git2::ErrorCode::Exists {
+            if e.code() == ErrorCode::Exists {
                 GitError::OperationFailed(format!("Branch '{}' already exists", new_name))
             } else {
                 GitError::OperationFailed(e.to_string())
@@ -404,7 +404,7 @@ impl BranchServiceImpl {
     /// # 参数
     /// - `repo`: Git 仓库引用（需要外部传入以避免死锁）
     /// - `refname`: 引用名称（如 `refs/heads/main`）
-    fn checkout_to_ref(&self, repo: &git2::Repository, refname: &str) -> Result<(), GitError> {
+    fn checkout_to_ref(&self, repo: &Repository, refname: &str) -> Result<(), GitError> {
         let obj = repo
             .revparse_single(refname)
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;

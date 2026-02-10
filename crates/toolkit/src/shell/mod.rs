@@ -5,7 +5,7 @@
 //! - 获取 Shell 配置文件路径
 //! - 提供 Shell 重载提示
 
-pub mod config;
+pub(crate) mod config;
 mod error;
 
 use std::path::PathBuf;

@@ -59,7 +59,7 @@ struct AnalysisContext {
 }
 
 /// 提交总结服务实现
-pub struct CommitSummaryServiceImpl {
+pub(crate) struct CommitSummaryServiceImpl {
     git_repo: Arc<dyn GitRepository>,
     llm_executor: Arc<dyn LLMExecutor>,
     llm_context: Arc<dyn LLMConfigContext>,

@@ -29,7 +29,7 @@ pub use branch::{BranchSubcommand, IgnoreSubcommand};
 pub use commit::{CommitCommand, CommitSubcommand};
 pub use completion::CompletionCommand;
 pub use github::GithubCommand;
-pub use jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand};
+pub use jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand, OutputFormat};
 pub use llm::LlmCommand;
 pub use log::LogCommand;
 pub use main::{Cli, Command, UninstallArgs, UpdateArgs};

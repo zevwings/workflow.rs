@@ -1879,15 +1879,15 @@ mod tests {
         // 压力测试：绑定大量服务
         let container = Container::new();
 
-        // 使用具体类型绑定多个服务
+        // 使用具体类型绑定多个服务（同一类型只有第一个会成功，后续返回 AlreadyBound）
         for i in 0..100 {
             let value = i;
-            container
+            let _ = container
                 .bind_instance(Arc::new(TestServiceImpl {
                     value,
                     id: i as usize,
                 }))
-                .in_scope(Scope::Singleton)?; // 由于所有都是同一类型，只有第一个会成功
+                .in_scope(Scope::Singleton);
         }
 
         // 至少绑定了一个

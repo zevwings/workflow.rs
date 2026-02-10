@@ -2,7 +2,6 @@
 //!
 //! 提供 PR 相关的业务用例编排，组合 GitHub 仓储和 LLM 服务。
 
-pub mod service;
+mod service;
 
-// Re-export public types
-pub use service::PullRequestServiceImpl;
+pub(crate) use service::PullRequestServiceImpl;

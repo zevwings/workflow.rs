@@ -4,20 +4,19 @@
 //!
 //! 按业务域组织，每个业务域包含相关的实体、服务接口、仓储接口和错误类型。
 
-pub mod alias;
-pub mod branch;
-pub mod commit;
-pub mod completion;
-pub mod config;
-pub mod errors;
-pub mod git;
-pub mod github;
-pub mod jira;
-pub mod llm;
-pub mod path;
-pub mod pr;
-pub mod summary;
-pub mod template;
+pub(crate) mod alias;
+pub(crate) mod branch;
+pub(crate) mod commit;
+pub(crate) mod completion;
+pub(crate) mod config;
+pub(crate) mod errors;
+pub(crate) mod git;
+pub(crate) mod github;
+pub(crate) mod jira;
+pub(crate) mod path;
+pub(crate) mod pr;
+pub(crate) mod summary;
+pub(crate) mod template;
 
 // Re-export public types
 // 避免使用 glob 导出以防止与子模块名称冲突（如 `template`）
@@ -106,8 +105,8 @@ pub use jira::{
     extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
     AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraComponent,
     JiraConfigContext, JiraError, JiraIssue, JiraPriority, JiraRepository, JiraStatusConfig,
-    JiraTransition, JiraUser, JiraWorkHistoryRepository, ProjectStatusConfig, StatusConfigResult,
-    WorkHistoryEntry,
+    JiraTransition, JiraUser, JiraWorkHistoryRepository, ProgressCallback, ProjectStatusConfig,
+    StatusConfigResult, WorkHistoryEntry,
 };
 
 pub use summary::{

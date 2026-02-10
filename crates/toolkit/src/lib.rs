@@ -28,7 +28,6 @@ pub mod __tracing {
 }
 
 // Logger 模块
-pub use logger::init as logger_init;
 pub use logger::{LoggerConfig, LoggerError};
 
 // Paths 模块 - 导出路径相关函数

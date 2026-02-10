@@ -11,5 +11,6 @@ pub mod services;
 
 pub use repository::JiraRepositoryImpl;
 pub use services::{
-    IssueService, IssueServiceImpl, StatusService, StatusServiceImpl, UserService, UserServiceImpl,
+    AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, StatusService,
+    StatusServiceImpl, UserService, UserServiceImpl,
 };

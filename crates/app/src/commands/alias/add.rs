@@ -2,7 +2,7 @@
 //!
 //! 添加新的别名。
 
-use clap::CommandFactory;
+use clap::{Command, CommandFactory};
 use prompt::{br, info, success, warning, InputBuilder, SelectBuilder};
 
 use crate::cli::Cli;
@@ -117,7 +117,7 @@ fn get_available_commands() -> Vec<(String, String)> {
 }
 
 /// 递归收集所有命令
-fn collect_commands(cmd: &clap::Command, prefix: &str, commands: &mut Vec<(String, String)>) {
+fn collect_commands(cmd: &Command, prefix: &str, commands: &mut Vec<(String, String)>) {
     for subcmd in cmd.get_subcommands() {
         let name = subcmd.get_name();
 

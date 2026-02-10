@@ -7,8 +7,7 @@
 //! cargo run -p prompt --example progress_demo
 //! ```
 
-use prompt::output::terminal_state::{resume, suspend};
-use prompt::progress_bar;
+use prompt::{progress_bar, terminal_state};
 use std::io::{self, Write};
 use std::thread;
 use std::time::Duration;
@@ -186,7 +185,7 @@ fn demo_indeterminate_progress() {
 /// 模拟日志输出（在实际应用中由 tracing 触发）
 fn simulate_log_output(message: &str) {
     // 暂停终端渲染
-    suspend();
+    terminal_state::suspend();
 
     // 输出日志
     let mut stderr = io::stderr();
@@ -194,7 +193,7 @@ fn simulate_log_output(message: &str) {
     stderr.flush().unwrap();
 
     // 恢复终端渲染
-    resume();
+    terminal_state::resume();
 }
 
 /// 演示 6：ProgressBar 与日志协调

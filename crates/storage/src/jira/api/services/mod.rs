@@ -4,13 +4,14 @@
 //! - Issue 数据获取服务
 //! - 状态管理服务
 //! - 用户信息服务
-//! - 附件下载服务（暂时禁用）
+//! - 附件下载服务
 
 mod attachment;
 mod issue;
 pub mod status;
 mod user;
 
+pub use attachment::{AttachmentService, AttachmentServiceImpl};
 pub use issue::{IssueService, IssueServiceImpl};
 pub use status::{StatusService, StatusServiceImpl};
 pub use user::{UserService, UserServiceImpl};

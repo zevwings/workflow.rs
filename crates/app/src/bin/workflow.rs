@@ -3,7 +3,7 @@
 //! 这里只负责解析顶层命令，将实际逻辑委托给 `commands` 模块。
 
 use clap::Parser;
-use prompt::{terminal_resume, terminal_suspend};
+use prompt::terminal_state;
 use toolkit::{log_info, logger, register_spinner_handlers, LoggerConfig};
 
 use app::cli::{
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = logger::init(command_name, &logger_config);
 
         // 注册终端处理器，让 tracing 输出时能协调 spinner/progress
-        register_spinner_handlers(terminal_suspend, terminal_resume);
+        register_spinner_handlers(terminal_state::suspend, terminal_state::resume);
 
         log_info!(
             "Logger initialized (console={}, level={})",
@@ -384,9 +384,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     commands::pr::PullRequestCommentCommand::new(pr_id.clone(), comment.clone());
                 cmd.run()?;
             }
-            PrSubcommand::Update { pr_id, message } => {
-                let cmd =
-                    commands::pr::PullRequestUpdateCommand::new(pr_id.clone(), message.clone());
+            PrSubcommand::Update {
+                pr_id,
+                message,
+                dry_run,
+            } => {
+                let cmd = commands::pr::PullRequestUpdateCommand::new(
+                    pr_id.clone(),
+                    message.clone(),
+                    dry_run.is_dry_run(),
+                );
                 cmd.run()?;
             }
             PrSubcommand::Merge { pr_id, force } => {

@@ -5,5 +5,4 @@
 mod conversation;
 mod service;
 
-pub use conversation::CommitMessageConversation;
-pub use service::CommitMessageServiceImpl;
+pub(crate) use service::CommitMessageServiceImpl;

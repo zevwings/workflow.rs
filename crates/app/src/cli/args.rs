@@ -4,7 +4,7 @@
 //!
 //! 使用 clap 的 `Args` trait 和 `#[command(flatten)]` 特性来实现参数复用。
 
-use clap::Args;
+use clap::{ArgAction, Args};
 use domain::validate_jira_ticket_format;
 
 /// Dry run 模式选项
@@ -13,7 +13,7 @@ use domain::validate_jira_ticket_format;
 #[derive(Args, Debug, Clone)]
 pub struct DryRunArgs {
     /// Dry run 模式（预览变更但不实际执行）
-    #[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
+    #[arg(long, short = 'n', action = ArgAction::SetTrue)]
     pub dry_run: bool,
 }
 
@@ -87,7 +87,7 @@ impl JiraIdArg {
 #[derive(Args, Debug, Clone)]
 pub struct ForceArgs {
     /// 强制执行操作（跳过检查和确认）
-    #[arg(long, short = 'f', action = clap::ArgAction::SetTrue)]
+    #[arg(long, short = 'f', action = ArgAction::SetTrue)]
     pub force: bool,
 }
 

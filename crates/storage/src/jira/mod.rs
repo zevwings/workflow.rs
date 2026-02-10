@@ -24,18 +24,16 @@
 //!   - `services` - WorkHistory 服务
 //! - `types` - 数据模型定义（API 响应类型）
 
-pub(crate) mod api;
-pub(crate) mod client;
-pub(crate) mod history;
+mod api;
+mod client;
+mod history;
 
-// 重新导出 client
-pub use client::{JiraClient, JiraClientImpl};
-
-// 重新导出 API 领域
-pub use api::{
-    IssueService, IssueServiceImpl, JiraRepositoryImpl, StatusService, StatusServiceImpl,
-    UserService, UserServiceImpl,
+// 仅在本 crate 内（registry）使用
+pub(crate) use api::{
+    AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, JiraRepositoryImpl,
+    StatusService, StatusServiceImpl, UserService, UserServiceImpl,
 };
-
-// 重新导出 History 领域
-pub use history::{JiraWorkHistoryRepositoryImpl, WorkHistoryService, WorkHistoryServiceImpl};
+pub(crate) use client::{JiraClient, JiraClientImpl};
+pub(crate) use history::{
+    JiraWorkHistoryRepositoryImpl, WorkHistoryService, WorkHistoryServiceImpl,
+};

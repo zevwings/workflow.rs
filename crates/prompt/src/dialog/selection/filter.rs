@@ -91,21 +91,6 @@ impl FuzzyFilter {
 
         (indices, filtered)
     }
-
-    /// 检查查询是否匹配选项
-    ///
-    /// # 参数
-    /// - `option`: 选项文本
-    /// - `query`: 搜索查询字符串
-    ///
-    /// # 返回
-    /// 如果匹配返回 `Some(分数)`，否则返回 `None`
-    pub fn matches(&self, option: &str, query: &str) -> Option<i64> {
-        if query.is_empty() {
-            return Some(1000); // 空查询匹配所有选项
-        }
-        self.matcher.fuzzy_match(option, query)
-    }
 }
 
 impl Default for FuzzyFilter {
@@ -158,7 +143,11 @@ mod tests {
     #[case("feature/user-auth", "", true)]
     fn test_matches(#[case] option: &str, #[case] query: &str, #[case] should_match: bool) {
         let filter = FuzzyFilter::new();
-        let result = filter.matches(option, query);
-        assert_eq!(result.is_some(), should_match);
+        let options = [option];
+        let (indices, filtered) = filter.filter(&options, query);
+        assert_eq!(
+            !indices.is_empty() && filtered.contains(&&option),
+            should_match
+        );
     }
 }

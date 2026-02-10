@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use git2::PushOptions;
+use git2::{BranchType, FetchOptions, PushOptions, Repository};
 
 use crate::git::services::context::GitContext;
 use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
@@ -85,7 +85,7 @@ impl RemoteService for RemoteServiceImpl {
         // 设置上游跟踪分支
         if set_upstream {
             let mut branch = repo
-                .find_branch(branch_name, git2::BranchType::Local)
+                .find_branch(branch_name, BranchType::Local)
                 .map_err(|_| GitError::BranchNotFound(branch_name.to_string()))?;
 
             let upstream_name = format!("origin/{}", branch_name);
@@ -106,7 +106,7 @@ impl RemoteService for RemoteServiceImpl {
 
             // Fetch
             let callbacks = GitContext::create_callbacks();
-            let mut fetch_opts = git2::FetchOptions::new();
+            let mut fetch_opts = FetchOptions::new();
             fetch_opts.remote_callbacks(callbacks);
 
             remote
@@ -164,13 +164,10 @@ impl RemoteServiceImpl {
     /// 获取将要推送的提交列表
     ///
     /// 返回本地分支相对于远程分支的新提交 SHA 列表
-    fn get_commits_to_push(
-        repo: &git2::Repository,
-        branch_name: &str,
-    ) -> Result<Vec<String>, GitError> {
+    fn get_commits_to_push(repo: &Repository, branch_name: &str) -> Result<Vec<String>, GitError> {
         // 获取本地分支
         let local_branch = repo
-            .find_branch(branch_name, git2::BranchType::Local)
+            .find_branch(branch_name, BranchType::Local)
             .map_err(|_| GitError::BranchNotFound(branch_name.to_string()))?;
 
         let local_commit = local_branch

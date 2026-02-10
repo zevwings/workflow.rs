@@ -2,6 +2,6 @@
 //!
 //! 提供 commit 相关的服务实现。
 
-pub mod message;
+pub(crate) mod message;
 
-pub use message::CommitMessageServiceImpl;
+pub(crate) use message::CommitMessageServiceImpl;

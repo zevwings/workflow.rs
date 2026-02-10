@@ -11,13 +11,13 @@ pub struct Message {
     writer: Box<dyn Write + Send>,
 }
 
-/// 用于测试的模拟写入器
-#[cfg(any(test, feature = "testing"))]
+/// 用于测试的模拟写入器（仅测试构建时编译，避免 lib 构建下 dead_code）
+#[cfg(test)]
 pub struct MockWriter {
     buffer: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 impl MockWriter {
     /// 创建新的模拟写入器
     pub fn new() -> Self {
@@ -37,21 +37,16 @@ impl MockWriter {
         let mut buffer = self.buffer.lock().unwrap();
         buffer.clear();
     }
-
-    /// 克隆内部缓冲区以供共享
-    pub fn clone_buffer(&self) -> std::sync::Arc<std::sync::Mutex<Vec<u8>>> {
-        std::sync::Arc::clone(&self.buffer)
-    }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 impl Default for MockWriter {
     fn default() -> Self {
         Self::new()
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 impl Write for MockWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let mut buffer = self.buffer.lock().unwrap();
@@ -64,7 +59,7 @@ impl Write for MockWriter {
     }
 }
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 impl Clone for MockWriter {
     fn clone(&self) -> Self {
         Self {
@@ -131,7 +126,7 @@ impl Message {
     }
 
     /// 创建带自定义 writer 的消息输出器（用于测试）
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(test)]
     pub fn with_writer<W: Write + Send + 'static>(writer: W) -> Self {
         Self {
             theme: get_theme(),
@@ -140,7 +135,7 @@ impl Message {
     }
 
     /// 创建不带颜色的消息输出器（用于测试验证输出内容）
-    #[cfg(any(test, feature = "testing"))]
+    #[cfg(test)]
     pub fn with_writer_no_color<W: Write + Send + 'static>(writer: W) -> Self {
         let mut theme = get_theme();
         theme.enable_color = false;

@@ -3,6 +3,8 @@
 use std::fmt;
 use std::str::FromStr;
 
+use reqwest::Method as ReqwestMethod;
+
 /// HTTP 请求方法
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum HttpMethod {
@@ -38,16 +40,16 @@ impl HttpMethod {
     }
 }
 
-impl From<HttpMethod> for reqwest::Method {
+impl From<HttpMethod> for ReqwestMethod {
     fn from(method: HttpMethod) -> Self {
         match method {
-            HttpMethod::GET => reqwest::Method::GET,
-            HttpMethod::POST => reqwest::Method::POST,
-            HttpMethod::PUT => reqwest::Method::PUT,
-            HttpMethod::DELETE => reqwest::Method::DELETE,
-            HttpMethod::PATCH => reqwest::Method::PATCH,
-            HttpMethod::HEAD => reqwest::Method::HEAD,
-            HttpMethod::OPTIONS => reqwest::Method::OPTIONS,
+            HttpMethod::GET => ReqwestMethod::GET,
+            HttpMethod::POST => ReqwestMethod::POST,
+            HttpMethod::PUT => ReqwestMethod::PUT,
+            HttpMethod::DELETE => ReqwestMethod::DELETE,
+            HttpMethod::PATCH => ReqwestMethod::PATCH,
+            HttpMethod::HEAD => ReqwestMethod::HEAD,
+            HttpMethod::OPTIONS => ReqwestMethod::OPTIONS,
         }
     }
 }

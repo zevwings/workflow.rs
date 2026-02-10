@@ -6,4 +6,4 @@ pub use entity::{
     JiraComment, JiraComponent, JiraIssue, JiraPriority, JiraStatusConfig, JiraTransition,
     JiraUser, ProjectStatusConfig, StatusConfigResult,
 };
-pub use repository::{AttachmentDownloadResult, JiraRepository};
+pub use repository::{AttachmentDownloadResult, JiraRepository, ProgressCallback};

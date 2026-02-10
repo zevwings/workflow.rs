@@ -3,7 +3,9 @@
 use std::time::{Duration, Instant};
 
 use reqwest::blocking::multipart::Form;
+use reqwest::blocking::{RequestBuilder as ReqwestRequestBuilder, Response as ReqwestResponse};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use reqwest::{Error as ReqwestError, Method as ReqwestMethod};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -141,8 +143,18 @@ impl<'a> Request<'a> {
         }
 
         if let Some(retry_config) = self.retry.take() {
+            let retryable_status_codes = retry_config.retryable_status_codes.clone();
             let executor = RetryExecutor::new(&retry_config);
-            executor.execute(|| self.execute_for_retry())
+            executor.execute(|| {
+                let response = self.execute_for_retry()?;
+                if response.is_success() {
+                    Ok(response)
+                } else if retryable_status_codes.contains(&response.status) {
+                    response.ensure_success()
+                } else {
+                    Ok(response)
+                }
+            })
         } else {
             self.execute_once()
         }
@@ -163,7 +175,7 @@ impl<'a> Request<'a> {
     }
 
     /// 发送请求并获取原始响应（流式）
-    pub fn stream(mut self) -> Result<reqwest::blocking::Response, HttpError> {
+    pub fn stream(mut self) -> Result<ReqwestResponse, HttpError> {
         let start = Instant::now();
         let request = self.build_request_mut()?;
 
@@ -216,7 +228,7 @@ impl<'a> Request<'a> {
     }
 
     /// 构建请求（可变，消费 multipart）
-    fn build_request_mut(&mut self) -> Result<reqwest::blocking::RequestBuilder, HttpError> {
+    fn build_request_mut(&mut self) -> Result<ReqwestRequestBuilder, HttpError> {
         let mut request = match self.method {
             HttpMethod::GET => self.client.client.get(&self.url),
             HttpMethod::POST => self.client.client.post(&self.url),
@@ -224,7 +236,7 @@ impl<'a> Request<'a> {
             HttpMethod::DELETE => self.client.client.delete(&self.url),
             HttpMethod::PATCH => self.client.client.patch(&self.url),
             HttpMethod::HEAD => self.client.client.head(&self.url),
-            HttpMethod::OPTIONS => self.client.client.request(reqwest::Method::OPTIONS, &self.url),
+            HttpMethod::OPTIONS => self.client.client.request(ReqwestMethod::OPTIONS, &self.url),
         };
 
         // 设置 multipart 或 body（multipart 优先）
@@ -259,7 +271,7 @@ impl<'a> Request<'a> {
     }
 
     /// 构建请求（引用，用于重试，不含 multipart）
-    fn build_request_ref(&self) -> Result<reqwest::blocking::RequestBuilder, HttpError> {
+    fn build_request_ref(&self) -> Result<ReqwestRequestBuilder, HttpError> {
         let mut request = match self.method {
             HttpMethod::GET => self.client.client.get(&self.url),
             HttpMethod::POST => self.client.client.post(&self.url),
@@ -267,7 +279,7 @@ impl<'a> Request<'a> {
             HttpMethod::DELETE => self.client.client.delete(&self.url),
             HttpMethod::PATCH => self.client.client.patch(&self.url),
             HttpMethod::HEAD => self.client.client.head(&self.url),
-            HttpMethod::OPTIONS => self.client.client.request(reqwest::Method::OPTIONS, &self.url),
+            HttpMethod::OPTIONS => self.client.client.request(ReqwestMethod::OPTIONS, &self.url),
         };
 
         // 只设置 body（不含 multipart）
@@ -302,9 +314,9 @@ impl<'a> Request<'a> {
     /// 应用认证
     fn apply_auth(
         &self,
-        request: reqwest::blocking::RequestBuilder,
+        request: ReqwestRequestBuilder,
         auth: &Authorization,
-    ) -> Result<reqwest::blocking::RequestBuilder, HttpError> {
+    ) -> Result<ReqwestRequestBuilder, HttpError> {
         match auth {
             Authorization::Basic { username, password } => {
                 Ok(request.basic_auth(username, Some(password)))
@@ -334,11 +346,7 @@ impl<'a> Request<'a> {
     }
 
     /// 转换 reqwest 错误
-    fn convert_reqwest_error(
-        &self,
-        error: reqwest::Error,
-        context: Box<ErrorContext>,
-    ) -> HttpError {
+    fn convert_reqwest_error(&self, error: ReqwestError, context: Box<ErrorContext>) -> HttpError {
         if error.is_timeout() {
             HttpError::Timeout { context }
         } else if error.is_connect() {

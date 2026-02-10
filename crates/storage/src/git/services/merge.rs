@@ -2,7 +2,8 @@
 //!
 //! 提供合并相关的业务逻辑实现。
 
-use git2::BranchType;
+use git2::build::CheckoutBuilder;
+use git2::{AnnotatedCommit, BranchType, Oid, Repository, Signature};
 
 use super::GitContext;
 use domain::{GitError, MergeStrategy};
@@ -17,7 +18,7 @@ pub trait MergeService: Send + Sync {
     /// 用于 pull 等操作复用合并逻辑。
     fn merge_from_annotated(
         &self,
-        annotated_commit: &git2::AnnotatedCommit,
+        annotated_commit: &AnnotatedCommit,
         source_name: &str,
         strategy: MergeStrategy,
     ) -> Result<(), GitError>;
@@ -27,7 +28,7 @@ pub trait MergeService: Send + Sync {
     /// 用于需要避免借用冲突的场景（如 pull 操作）。
     fn merge_from_commit_id(
         &self,
-        commit_id: git2::Oid,
+        commit_id: Oid,
         source_name: &str,
         strategy: MergeStrategy,
     ) -> Result<(), GitError>;
@@ -66,8 +67,8 @@ impl MergeServiceImpl {
     /// 执行 fast-forward 合并（内部使用，接受 repo 引用避免死锁）
     fn do_fast_forward_with_repo(
         &self,
-        repo: &git2::Repository,
-        annotated_commit: &git2::AnnotatedCommit,
+        repo: &Repository,
+        annotated_commit: &AnnotatedCommit,
     ) -> Result<(), GitError> {
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let refname = head
@@ -86,7 +87,7 @@ impl MergeServiceImpl {
 
         repo.set_head(refname).map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
-        repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))
+        repo.checkout_head(Some(CheckoutBuilder::default().force()))
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         Ok(())
@@ -95,8 +96,8 @@ impl MergeServiceImpl {
     /// 执行普通合并（内部使用，接受 repo 引用避免死锁）
     fn do_normal_merge_with_repo(
         &self,
-        repo: &git2::Repository,
-        annotated_commit: &git2::AnnotatedCommit,
+        repo: &Repository,
+        annotated_commit: &AnnotatedCommit,
         source_branch: &str,
     ) -> Result<(), GitError> {
         // 执行合并
@@ -118,7 +119,7 @@ impl MergeServiceImpl {
         // 从 repo 获取 signature，避免再次获取锁
         let signature = repo
             .signature()
-            .or_else(|_| git2::Signature::now("User", "user@example.com"))
+            .or_else(|_| Signature::now("User", "user@example.com"))
             .map_err(|e| GitError::SignatureError(e.to_string()))?;
 
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -150,8 +151,8 @@ impl MergeServiceImpl {
     /// 执行 squash 合并（内部使用，接受 repo 引用避免死锁）
     fn do_squash_merge_with_repo(
         &self,
-        repo: &git2::Repository,
-        annotated_commit: &git2::AnnotatedCommit,
+        repo: &Repository,
+        annotated_commit: &AnnotatedCommit,
     ) -> Result<(), GitError> {
         // 执行合并但不创建提交
         repo.merge(&[annotated_commit], None, None)
@@ -198,7 +199,7 @@ impl MergeService for MergeServiceImpl {
 
     fn merge_from_annotated(
         &self,
-        annotated_commit: &git2::AnnotatedCommit,
+        annotated_commit: &AnnotatedCommit,
         source_name: &str,
         strategy: MergeStrategy,
     ) -> Result<(), GitError> {
@@ -239,7 +240,7 @@ impl MergeService for MergeServiceImpl {
 
     fn merge_from_commit_id(
         &self,
-        commit_id: git2::Oid,
+        commit_id: Oid,
         source_name: &str,
         strategy: MergeStrategy,
     ) -> Result<(), GitError> {

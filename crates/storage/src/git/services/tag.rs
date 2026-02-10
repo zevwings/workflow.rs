@@ -2,7 +2,7 @@
 //!
 //! 提供 Tag 相关的业务逻辑实现。
 
-use git2::PushOptions;
+use git2::{Direction, PushOptions};
 use glob::Pattern;
 
 use super::GitContext;
@@ -99,7 +99,7 @@ impl TagService for TagServiceImpl {
 
         // 连接到远程
         let callbacks = GitContext::create_callbacks();
-        if remote.connect_auth(git2::Direction::Fetch, Some(callbacks), None).is_err() {
+        if remote.connect_auth(Direction::Fetch, Some(callbacks), None).is_err() {
             return Ok(Vec::new());
         }
 

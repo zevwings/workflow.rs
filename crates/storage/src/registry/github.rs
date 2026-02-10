@@ -25,7 +25,7 @@ use crate::github::{
 /// 6. **其他服务** (依赖上述服务)
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
-pub fn register_github() -> Result<(), RegistryError> {
+pub(super) fn register_github() -> Result<(), RegistryError> {
     // 注册 GitHub Client (依赖外部的 GitHubContext)
     try_bind!(dyn GitHubClient, |c: &Container| {
         let context = c.get::<dyn GitHubContext>()?;

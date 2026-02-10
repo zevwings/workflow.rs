@@ -32,14 +32,16 @@ pub enum PrSubcommand {
     },
     /// 提交本地更改并推送到 PR
     ///
-    /// 获取当前分支关联的 PR 标题作为 commit message，
-    /// 提交本地更改并推送到远端
+    /// 基于暂存区内容用 AI 生成 commit message，
+    /// 若有 Jira key 则以「jira_key: ai_message」形式提交并推送。
     Update {
         /// PR ID（数字，可选，不提供时使用当前分支关联的 PR）
         pr_id: Option<String>,
-        /// 自定义 commit message（可选，不提供时使用 PR 标题）
+        /// 自定义 commit message（可选，不提供时由 AI 根据暂存内容生成）
         #[arg(long, short)]
         message: Option<String>,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
     /// 合并 Pull Request
     Merge {

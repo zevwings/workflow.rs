@@ -7,13 +7,11 @@ use std::sync::Arc;
 
 use domain::{GitHubError, GitHubRepository, GitHubUser, PullRequestInfo, PullRequestStatus};
 
-use crate::github::{
-    services::{
-        PullRequestDiffService, PullRequestMutationService, PullRequestQueryService,
-        PullRequestReviewService,
-    },
-    types::PullRequestInfo as GitHubPullRequestInfo,
+use crate::github::services::{
+    PullRequestDiffService, PullRequestMutationService, PullRequestQueryService,
+    PullRequestReviewService,
 };
+use crate::github::types::PullRequestInfo as GitHubPrInfo;
 
 /// GitHub 仓储实现
 ///
@@ -49,7 +47,7 @@ impl GitHubRepositoryImpl {
     }
 
     /// 将 GitHub API 的 PullRequestInfo 转换为 domain 的 PullRequestInfo
-    fn convert_pr_info(pr_info: GitHubPullRequestInfo) -> PullRequestInfo {
+    fn convert_pr_info(pr_info: GitHubPrInfo) -> PullRequestInfo {
         let status = PullRequestStatus {
             state: pr_info.state,
             merged: pr_info.merged,

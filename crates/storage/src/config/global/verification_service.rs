@@ -64,7 +64,7 @@ impl LLMConversation for VerifyConversation {
 }
 
 /// 验证服务实现
-pub struct VerificationServiceImpl {
+pub(crate) struct VerificationServiceImpl {
     llm_executor: Arc<dyn LLMExecutor>,
     config_repository: Arc<dyn GlobalConfigRepository>,
     jira_repository: Arc<dyn JiraRepository>,

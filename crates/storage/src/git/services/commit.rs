@@ -5,6 +5,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use git2::{
+    Delta, DiffDelta, DiffFormat, DiffHunk, DiffLine, Index, IndexAddOption, StatusOptions,
+};
 use toolkit::{log_debug, log_info, log_warn};
 
 use crate::git::services::context::GitContext;
@@ -75,7 +78,7 @@ impl CommitServiceImpl {
         let repo = self.ctx.repository();
 
         // 使用 StatusOptions 获取变更（自动排除 .gitignore 中的文件）
-        let mut opts = git2::StatusOptions::new();
+        let mut opts = StatusOptions::new();
         opts.include_untracked(true)
             .recurse_untracked_dirs(true)
             .include_ignored(false) // 关键：排除被忽略的文件
@@ -180,24 +183,23 @@ impl CommitService for CommitServiceImpl {
         // 按文件统计增删行数（仅统计文本 diff，二进制等无统计）
         let mut path_stats: HashMap<String, (u32, u32)> =
             HashMap::with_capacity(diff.deltas().len());
-        let mut line_cb = |delta: git2::DiffDelta<'_>,
-                           _hunk: Option<git2::DiffHunk<'_>>,
-                           line: git2::DiffLine<'_>| {
-            let path = delta
-                .new_file()
-                .path()
-                .or_else(|| delta.old_file().path())
-                .and_then(|p: &std::path::Path| p.to_str().map(String::from));
-            if let Some(path) = path {
-                let entry = path_stats.entry(path).or_insert((0, 0));
-                match line.origin() {
-                    '+' => entry.0 = entry.0.saturating_add(1),
-                    '-' => entry.1 = entry.1.saturating_add(1),
-                    _ => {}
+        let mut line_cb =
+            |delta: DiffDelta<'_>, _hunk: Option<DiffHunk<'_>>, line: DiffLine<'_>| {
+                let path = delta
+                    .new_file()
+                    .path()
+                    .or_else(|| delta.old_file().path())
+                    .and_then(|p: &std::path::Path| p.to_str().map(String::from));
+                if let Some(path) = path {
+                    let entry = path_stats.entry(path).or_insert((0, 0));
+                    match line.origin() {
+                        '+' => entry.0 = entry.0.saturating_add(1),
+                        '-' => entry.1 = entry.1.saturating_add(1),
+                        _ => {}
+                    }
                 }
-            }
-            true
-        };
+                true
+            };
         if let Err(e) = diff.foreach(
             &mut |_delta, _progress| true,
             None,
@@ -235,7 +237,7 @@ impl CommitService for CommitServiceImpl {
         let repo = self.ctx.repository();
 
         // 配置 status 选项以提高性能
-        let mut opts = git2::StatusOptions::new();
+        let mut opts = StatusOptions::new();
         opts.include_untracked(true)
             .recurse_untracked_dirs(true)
             .include_ignored(false) // 排除被忽略的文件
@@ -374,12 +376,12 @@ impl CommitService for CommitServiceImpl {
         diff.foreach(
             &mut |delta, _progress| {
                 let change_type = match delta.status() {
-                    git2::Delta::Added => CommitChangeType::Added,
-                    git2::Delta::Deleted => CommitChangeType::Deleted,
-                    git2::Delta::Modified => CommitChangeType::Modified,
-                    git2::Delta::Renamed => CommitChangeType::Renamed,
-                    git2::Delta::Copied => CommitChangeType::Copied,
-                    git2::Delta::Typechange => CommitChangeType::TypeChanged,
+                    Delta::Added => CommitChangeType::Added,
+                    Delta::Deleted => CommitChangeType::Deleted,
+                    Delta::Modified => CommitChangeType::Modified,
+                    Delta::Renamed => CommitChangeType::Renamed,
+                    Delta::Copied => CommitChangeType::Copied,
+                    Delta::Typechange => CommitChangeType::TypeChanged,
                     _ => return true, // Skip other types
                 };
 
@@ -416,7 +418,7 @@ impl CommitService for CommitServiceImpl {
         .map_err(|e| GitError::OperationFailed(format!("Failed to iterate diff: {}", e)))?;
 
         // 第二次遍历：使用 print 回调计算每个文件的行数统计
-        diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
+        diff.print(DiffFormat::Patch, |delta, _hunk, line| {
             let path = delta.new_file().path().and_then(|p| p.to_str()).unwrap_or("");
 
             if path.is_empty() {
@@ -515,7 +517,7 @@ impl CommitService for CommitServiceImpl {
                 index
                     .add_all(
                         ["."].iter(),
-                        git2::IndexAddOption::DEFAULT | git2::IndexAddOption::CHECK_PATHSPEC,
+                        IndexAddOption::DEFAULT | IndexAddOption::CHECK_PATHSPEC,
                         Some(&mut |path, _| {
                             if let Some(path_str) = path.to_str() {
                                 if ignore_patterns
@@ -614,8 +616,7 @@ impl CommitService for CommitServiceImpl {
     }
 }
 
-fn delta_status_to_commit_change_type(status: git2::Delta) -> CommitChangeType {
-    use git2::Delta;
+fn delta_status_to_commit_change_type(status: Delta) -> CommitChangeType {
     match status {
         Delta::Added => CommitChangeType::Added,
         Delta::Modified | Delta::Unmodified => CommitChangeType::Modified,
@@ -629,7 +630,7 @@ fn delta_status_to_commit_change_type(status: git2::Delta) -> CommitChangeType {
 
 impl CommitServiceImpl {
     /// 获取暂存区文件列表
-    fn get_staged_files(index: &git2::Index) -> Vec<String> {
+    fn get_staged_files(index: &Index) -> Vec<String> {
         index
             .iter()
             .filter_map(|entry| std::str::from_utf8(&entry.path).ok().map(String::from))

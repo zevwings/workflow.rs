@@ -21,15 +21,15 @@
 //! use toolkit::{archive, calculate_sha256, Browser, ClipboardExt, Platform, Sensitive};
 //! ```
 
-pub mod checksum;
-pub mod fs;
-pub mod platform;
-pub mod traits;
+pub(crate) mod checksum;
+pub(crate) mod fs;
+pub(crate) mod platform;
+pub(crate) mod traits;
 
 // Checksum 模块
 pub use checksum::{
-    build_checksum_url, calculate_sha256, parse_hash_from_content, verify as verify_checksum,
-    verify_lenient as verify_checksum_lenient, ChecksumError, VerifyResult as ChecksumVerifyResult,
+    build_checksum_url, calculate_sha256, parse_hash_from_content, verify_checksum,
+    verify_checksum_lenient, ChecksumError, ChecksumVerifyResult,
 };
 
 // FS 模块

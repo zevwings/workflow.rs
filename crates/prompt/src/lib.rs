@@ -39,12 +39,12 @@
 //! ```
 
 pub(crate) mod backend; // 终端后端抽象（内部使用）
-pub mod dialog; // 交互式对话框（input, confirm, select, multiselect）
-pub mod error; // 错误类型定义
-pub mod form; // 表单构建器（FormBuilder, FormResult）
-pub mod output; // 输出功能（message, table, spinner）
-pub mod style {
-    pub mod theme;
+pub(crate) mod dialog; // 交互式对话框（input, confirm, select, multiselect）
+pub(crate) mod error; // 错误类型定义
+pub(crate) mod form; // 表单构建器（FormBuilder, FormResult）
+pub(crate) mod output; // 输出功能（message, table, spinner）
+pub(crate) mod style {
+    pub(crate) mod theme;
 }
 
 // 重新导出公共 API（仅导出外部使用的 API，内部实现不导出）
@@ -58,7 +58,7 @@ pub use form::{
     GroupConfig, InputFormField, MultiSelectFormField, NestedFormField, PasswordFormField,
     SelectFormField,
 };
-pub use output::terminal_state::{resume as terminal_resume, suspend as terminal_suspend};
+pub use output::terminal_state;
 pub use output::{
     progress_bar, spinner, table, Alignment, Message, MessageRef, Progress, ProgressBar,
     ProgressBarBuilder, Spinner, SpinnerBuilder, TableBuilder, TableStyle, Tabled,
