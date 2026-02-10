@@ -2,7 +2,7 @@
 //!
 //! 检查 Shell Completion 配置状态。
 
-use crate::registry::get_completion_service;
+use crate::bootstrap::get_completion_service;
 
 /// Completion 检查命令
 pub struct CompletionCheckCommand;

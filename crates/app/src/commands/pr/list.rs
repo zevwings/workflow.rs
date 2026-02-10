@@ -2,7 +2,7 @@
 
 use prompt::info;
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Pull Request List 命令
 pub struct PullRequestListCommand {
@@ -18,7 +18,7 @@ impl PullRequestListCommand {
 
     /// 运行 `workflow pr list` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let pr_service = registry::get_pull_request_service();
+        let pr_service = bootstrap::get_pull_request_service();
 
         // 列出 Pull Requests
         let prs = pr_service

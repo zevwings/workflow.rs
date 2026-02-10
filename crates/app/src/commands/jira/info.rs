@@ -3,9 +3,9 @@
 use domain::JiraIssue;
 use prompt::{info, spinner, success};
 
-use crate::cli::OutputFormat;
-use crate::registry;
-use crate::utils::get_jira_id_interactive;
+use super::utils::get_jira_id_interactive;
+use super::OutputFormat;
+use crate::bootstrap;
 
 /// Jira Info 命令
 pub struct JiraInfoCommand {
@@ -25,7 +25,7 @@ impl JiraInfoCommand {
         let jira_id = get_jira_id_interactive(self.jira_id.clone())?;
 
         // 获取 JiraRepository
-        let jira_repo = registry::get_jira_repository();
+        let jira_repo = bootstrap::get_jira_repository();
 
         // 获取 ticket 信息
         let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)

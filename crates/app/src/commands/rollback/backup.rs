@@ -5,7 +5,7 @@
 use prompt::{br, info, warning};
 use toolkit::backup;
 
-use crate::registry::get_path_service;
+use crate::bootstrap::get_path_service;
 
 /// Backup 命令
 pub struct BackupCommand;

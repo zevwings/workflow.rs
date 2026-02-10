@@ -2,8 +2,8 @@
 
 use prompt::{spinner, success};
 
-use crate::registry;
-use crate::utils::get_jira_id_interactive;
+use super::utils::get_jira_id_interactive;
+use crate::bootstrap;
 
 /// Jira Comment 命令
 pub struct JiraCommentCommand {
@@ -20,7 +20,7 @@ impl JiraCommentCommand {
     /// 运行 `workflow jira comment` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let jira_id = get_jira_id_interactive(self.jira_id.clone())?;
-        let jira_repo = registry::get_jira_repository();
+        let jira_repo = bootstrap::get_jira_repository();
 
         spinner!("Adding comment to Jira ticket {}...", jira_id).with(|| {
             jira_repo

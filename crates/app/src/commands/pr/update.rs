@@ -7,7 +7,7 @@ use domain::{extract_jira_ticket_id, GitRepository};
 use prompt::{error, info, spinner, success};
 use toolkit::{log_info, log_info_with_fields};
 
-use crate::registry::{get_commit_message_service, get_git_repository, get_pull_request_service};
+use crate::bootstrap::{get_commit_message_service, get_git_repository, get_pull_request_service};
 
 /// Pull Request Update 命令
 ///

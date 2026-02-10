@@ -140,7 +140,7 @@ mod tests {
 
     use super::*;
     use crate::auth::Authorization;
-    use crate::mock::MockServer;
+    use crate::testing::MockServer;
     use crate::RetryConfig;
 
     #[test]

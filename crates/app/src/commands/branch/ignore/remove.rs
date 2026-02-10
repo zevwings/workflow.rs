@@ -1,6 +1,6 @@
 //! 从忽略列表移除分支
 
-use crate::registry;
+use crate::bootstrap;
 use prompt::{info, success, MultiSelectBuilder};
 
 /// Branch Ignore Remove 命令
@@ -16,7 +16,7 @@ impl BranchIgnoreRemoveCommand {
 
     /// 从忽略列表移除分支
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let repo = registry::get_repo_config_repository();
+        let repo = bootstrap::get_repo_config_repository();
 
         let mut user_config = repo
             .load_user_config()

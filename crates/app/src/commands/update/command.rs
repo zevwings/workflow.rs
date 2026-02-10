@@ -14,7 +14,7 @@ use super::verify::{run_installer, verify_installation};
 use super::version::{
     compare_versions, get_current_version, get_target_version, VersionComparison,
 };
-use crate::registry::get_path_service;
+use crate::bootstrap::get_path_service;
 
 /// 更新命令
 pub struct UpdateCommand {

@@ -140,8 +140,8 @@ mod tests {
 
         assert!(parent.exists(), "Log directory should exist: {:?}", parent);
 
-        let expected_dir = test_config.logs_dir.join("tracing");
-        assert_eq!(parent, expected_dir);
+        // 实现将日志文件直接放在 logs_dir，无 tracing 子目录
+        assert_eq!(parent, test_config.logs_dir);
     }
 
     /// 测试不同命令名的路径生成

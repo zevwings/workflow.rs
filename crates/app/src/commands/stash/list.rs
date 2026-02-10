@@ -4,7 +4,7 @@
 
 use prompt::{info, success, TableBuilder, TableStyle};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Stash list 命令
 pub struct StashListCommand;
@@ -12,7 +12,7 @@ pub struct StashListCommand;
 impl StashListCommand {
     /// 执行 stash list 命令
     pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-        let repo = registry::get_git_repository();
+        let repo = bootstrap::get_git_repository();
 
         let entries =
             repo.stash_list().map_err(|e| format!("Failed to list stash entries: {}", e))?;

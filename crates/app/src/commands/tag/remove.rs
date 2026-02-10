@@ -3,7 +3,7 @@
 use domain::{GitRepository, TagDeleteScope};
 use prompt::{confirm, error, info, select, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Tag Remove 命令
 pub struct TagRemoveCommand {
@@ -37,7 +37,7 @@ impl TagRemoveCommand {
 
     /// 运行 `workflow tag remove` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let tag_repo = registry::get_git_repository();
+        let tag_repo = bootstrap::get_git_repository();
 
         // 确定删除范围
         let scope = if self.local {

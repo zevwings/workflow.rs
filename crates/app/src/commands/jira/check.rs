@@ -1,7 +1,7 @@
 //! 检查 Jira 配置命令
 
-use crate::workflows::core::stage::WorkflowExecutor;
-use crate::workflows::platforms::jira::jira_stage;
+use crate::interactive::core::stage::WorkflowExecutor;
+use crate::interactive::platforms::jira::jira_stage;
 use prompt::{br, separator};
 
 /// Jira Check 命令

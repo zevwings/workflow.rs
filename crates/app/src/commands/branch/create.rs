@@ -3,9 +3,9 @@
 use domain::GitRepository;
 use prompt::{error, info, input, select, success};
 
-use crate::registry;
-use crate::utils::get_jira_id_interactive_optional;
-use crate::utils::{generate_branch_name_from_jira, select_branch_type, to_slug};
+use super::utils::{generate_branch_name_from_jira, select_branch_type, to_slug};
+use crate::bootstrap;
+use crate::commands::jira::utils::get_jira_id_interactive_optional;
 
 /// 源分支选项
 #[derive(Clone)]
@@ -48,7 +48,7 @@ impl BranchCreateCommand {
 
     /// 运行 `workflow branch create` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let branch_repo = registry::get_git_repository();
+        let branch_repo = bootstrap::get_git_repository();
 
         // 确定源分支
         let source_branch = if self.from_default {

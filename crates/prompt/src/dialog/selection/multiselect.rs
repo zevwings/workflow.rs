@@ -88,20 +88,8 @@ where
 
     /// 执行提示（使用默认终端后端）
     pub fn prompt(self) -> Result<Vec<T>> {
-        let mut backend = TerminalBackend::default();
-        self.prompt_with_backend(&mut backend)
-    }
-
-    /// 使用指定后端执行提示（内部使用）
-    pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<Vec<T>> {
-        if self.options.is_empty() {
-            return Err(PromptError::InvalidInput("选项列表不能为空".to_string()));
-        }
-
-        // 检查是否在交互式终端中运行
         use std::io::IsTerminal;
         if !std::io::stdin().is_terminal() {
-            // 不是交互式终端，使用默认选项或返回空
             let default_selections: Vec<T> = self
                 .default
                 .iter()
@@ -110,6 +98,15 @@ where
                 .map(|idx| self.options[idx].clone())
                 .collect();
             return Ok(default_selections);
+        }
+        let mut backend = TerminalBackend::default();
+        self.prompt_with_backend(&mut backend)
+    }
+
+    /// 使用指定后端执行提示（内部使用）
+    pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<Vec<T>> {
+        if self.options.is_empty() {
+            return Err(PromptError::InvalidInput("选项列表不能为空".to_string()));
         }
 
         let theme = get_theme();

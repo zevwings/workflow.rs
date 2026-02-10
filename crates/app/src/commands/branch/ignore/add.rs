@@ -1,6 +1,6 @@
 //! 添加分支到忽略列表
 
-use crate::registry;
+use crate::bootstrap;
 use prompt::{info, success};
 
 /// Branch Ignore Add 命令
@@ -16,7 +16,7 @@ impl BranchIgnoreAddCommand {
 
     /// 添加分支到忽略列表
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let repo = registry::get_repo_config_repository();
+        let repo = bootstrap::get_repo_config_repository();
 
         let mut user_config = repo
             .load_user_config()

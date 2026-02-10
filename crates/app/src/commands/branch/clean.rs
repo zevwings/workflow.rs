@@ -3,7 +3,7 @@
 use domain::{GitError, GitRepository};
 use prompt::{confirm, error, info, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// 保护分支列表（不可删除）
 const PROTECTED_BRANCHES: &[&str] = &["develop", "dev"];
@@ -24,13 +24,13 @@ impl BranchCleanCommand {
 
     /// 运行 `workflow branch clean` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let git_repo = registry::get_git_repository();
+        let git_repo = bootstrap::get_git_repository();
 
         let default_branch = git_repo.get_default_branch()?;
         let current_branch = git_repo.get_current_branch()?;
 
         // 获取忽略列表
-        let ignore_list = registry::get_repo_config_repository()
+        let ignore_list = bootstrap::get_repo_config_repository()
             .load_user_config()
             .map(|c| c.branch.ignore)
             .unwrap_or_default();

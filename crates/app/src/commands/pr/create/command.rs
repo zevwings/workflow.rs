@@ -2,15 +2,13 @@ use domain::{get_change_types_by_branch_type, BranchType, GitRepository, JiraIss
 use prompt::{error, info, input, spinner, success, warning};
 use toolkit::{log_debug, log_error};
 
-use crate::registry;
-use crate::utils::{
+use crate::bootstrap;
+use crate::commands::branch::utils::{
     generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type, to_slug,
 };
 
-use crate::utils::{
-    ensure_jira_status_config, generate_pull_request_body, generate_pull_request_title,
-    get_jira_id_interactive_optional,
-};
+use super::super::utils::{generate_pull_request_body, generate_pull_request_title};
+use crate::commands::jira::utils::{ensure_jira_status_config, get_jira_id_interactive_optional};
 
 use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
 use crate::commands::pr::create::commit::commit_changes;
@@ -39,8 +37,8 @@ impl PullRequestCreateCommand {
 
     /// 运行 `workflow pr create` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let git_repo = registry::get_git_repository();
-        let jira_repo = registry::get_jira_repository();
+        let git_repo = bootstrap::get_git_repository();
+        let jira_repo = bootstrap::get_jira_repository();
 
         // 获取 JIRA ID（交互式或从参数）
         let jira_id = get_jira_id_interactive_optional(self.jira_id.clone())?;
@@ -86,13 +84,13 @@ impl PullRequestCreateCommand {
 
                 // 然后使用 Spinner 生成分支名称
                 let base_branch_name = {
-                    let branch_repo = registry::get_git_repository();
+                    let branch_repo = bootstrap::get_git_repository();
                     let exists_branches: Vec<String> = branch_repo
                         .list_branches(false, true)
                         .map(|branches| branches.iter().map(|b| b.name.clone()).collect())
                         .unwrap_or_default();
 
-                    let branch_service = registry::get_branch_service();
+                    let branch_service = bootstrap::get_branch_service();
                     match spinner!("Generating branch name...").with(|| {
                         branch_service
                             .generate_branch_name(Some(description.as_str()), &exists_branches)
@@ -333,8 +331,8 @@ impl PullRequestCreateCommand {
             return Ok(());
         };
 
-        let jira_repo = registry::get_jira_repository();
-        let work_history_repo = registry::get_jira_work_history_repository();
+        let jira_repo = bootstrap::get_jira_repository();
+        let work_history_repo = bootstrap::get_jira_work_history_repository();
 
         // 更新 Jira ticket
         spinner!("Updating Jira ticket {}...", ticket).with(
@@ -417,7 +415,7 @@ fn build_commit_message(
         if jira_id.trim().is_empty() {
             return Ok(description.unwrap_or("Update").to_string());
         }
-        let jira_repo = registry::get_jira_repository();
+        let jira_repo = bootstrap::get_jira_repository();
         match spinner!("Fetching JIRA ticket '{}'...", jira_id)
             .with(|| jira_repo.get_issue_info(jira_id))
         {

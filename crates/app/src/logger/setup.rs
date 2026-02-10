@@ -1,11 +1,11 @@
 use prompt::terminal_state;
 use toolkit::{log_info, logger, register_spinner_handlers, LoggerConfig};
 
+use crate::bootstrap::{get_global_config_repository, get_path_service};
 use crate::cli::Command;
-use crate::registry::{get_global_config_repository, get_path_service};
 
 pub fn setup_logger(command: &Command) -> Result<(), Box<dyn std::error::Error>> {
-    let global_config_repository = get_global_config_repository();
+    let global_config_repository: std::sync::Arc<dyn GlobalConfigRepository> = get_global_config_repository();
     let global_config = global_config_repository.load()?;
 
     // RUST_LOG 优先于配置文件，便于调试时用 RUST_LOG=debug 看详细日志

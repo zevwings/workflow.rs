@@ -2,7 +2,7 @@
 
 use prompt::{error, input, spinner, success};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Pull Request Comment 命令
 pub struct PullRequestCommentCommand {
@@ -18,7 +18,7 @@ impl PullRequestCommentCommand {
 
     /// 运行 `workflow pr comment` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let pr_service = registry::get_pull_request_service();
+        let pr_service = bootstrap::get_pull_request_service();
 
         // 获取评论内容
         let comment = if let Some(c) = &self.comment {

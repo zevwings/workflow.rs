@@ -2,7 +2,7 @@
 
 use prompt::{info, success};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Branch InferSource 命令
 #[derive(Default)]
@@ -16,7 +16,7 @@ impl BranchInferSourceCommand {
 
     /// 运行 `workflow branch infer-source` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let branch_repo = registry::get_git_repository();
+        let branch_repo = bootstrap::get_git_repository();
 
         let current_branch = branch_repo
             .get_current_branch()

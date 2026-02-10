@@ -7,7 +7,7 @@
 //!
 //! 所有 API 都通过 `toolkit::{xx}` 直接访问：
 //! ```rust
-//! use toolkit::{HttpClient, TemplateEngine, Platform, log_info};
+//! use toolkit::{TemplateEngine, Platform, expand};
 //! ```
 
 // pub use workflow_http as http;

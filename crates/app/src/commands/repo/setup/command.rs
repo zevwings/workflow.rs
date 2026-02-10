@@ -11,7 +11,7 @@ use domain::{
 use prompt::{br, confirm, info, success, warning};
 use prompt::{ConfirmFormField, FormBuilder, FormResult, GroupConfig, InputFormField};
 
-use crate::registry::{get_git_repository, get_path_service, get_repo_config_repository};
+use crate::bootstrap::{get_git_repository, get_path_service, get_repo_config_repository};
 
 /// 确保仓库配置存在
 ///

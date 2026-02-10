@@ -73,6 +73,11 @@ where
 
     /// 执行提示（使用默认终端后端）
     pub fn prompt(self) -> Result<T> {
+        use std::io::IsTerminal;
+        if !std::io::stdin().is_terminal() {
+            let default_idx = self.default.filter(|&idx| idx < self.options.len()).unwrap_or(0);
+            return Ok(self.options[default_idx].clone());
+        }
         let mut backend = TerminalBackend::default();
         self.prompt_with_backend(&mut backend)
     }
@@ -81,14 +86,6 @@ where
     pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<T> {
         if self.options.is_empty() {
             return Err(PromptError::InvalidInput("选项列表不能为空".to_string()));
-        }
-
-        // 检查是否在交互式终端中运行
-        use std::io::IsTerminal;
-        if !std::io::stdin().is_terminal() {
-            // 不是交互式终端，使用默认值或返回第一个选项
-            let default_idx = self.default.filter(|&idx| idx < self.options.len()).unwrap_or(0);
-            return Ok(self.options[default_idx].clone());
         }
 
         let theme = get_theme();

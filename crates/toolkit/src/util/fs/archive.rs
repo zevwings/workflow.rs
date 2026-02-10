@@ -46,7 +46,7 @@ use super::FileError;
 ///
 /// ```no_run
 /// use std::path::Path;
-/// use toolkit::util::fs::archive;
+/// use toolkit::archive;
 ///
 /// archive::extract(
 ///     Path::new("release.tar.gz"),
@@ -85,7 +85,7 @@ pub fn extract(archive_path: &Path, output_dir: &Path) -> Result<(), FileError> 
 ///
 /// ```no_run
 /// use std::path::Path;
-/// use toolkit::util::fs::archive;
+/// use toolkit::archive;
 ///
 /// archive::extract_tar_gz(
 ///     Path::new("archive.tar.gz"),
@@ -140,7 +140,7 @@ pub fn extract_tar_gz(archive_path: &Path, output_dir: &Path) -> Result<(), File
 ///
 /// ```no_run
 /// use std::path::Path;
-/// use toolkit::util::fs::archive;
+/// use toolkit::archive;
 ///
 /// archive::extract_zip(
 ///     Path::new("archive.zip"),
@@ -275,7 +275,7 @@ fn list_zip_contents(archive_path: &Path) -> Result<Vec<String>, FileError> {
 ///
 /// ```no_run
 /// use std::path::{Path, PathBuf};
-/// use toolkit::util::fs::archive;
+/// use toolkit::archive;
 ///
 /// let split_files = vec![
 ///     PathBuf::from("file.zip.001"),

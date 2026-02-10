@@ -5,7 +5,7 @@
 use domain::AliasService;
 use prompt::{br, info, success, SelectBuilder};
 
-use crate::registry::get_alias_service;
+use crate::bootstrap::get_alias_service;
 
 /// 别名移除命令
 pub struct AliasRemoveCommand {

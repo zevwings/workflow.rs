@@ -4,7 +4,7 @@ use domain::{CodePlatform, GitRepository};
 use prompt::{error, info, select, spinner, success, warning};
 use toolkit::BrowserExt;
 
-use crate::registry;
+use crate::bootstrap;
 
 use super::types::TargetBranchOption;
 
@@ -124,7 +124,7 @@ pub fn create_pull_request(
 
     // 创建 PR
     info!("Creating Pull Request...");
-    let pr_service = registry::get_pull_request_service();
+    let pr_service = bootstrap::get_pull_request_service();
     let pr_id = spinner!("Creating Pull Request...")
         .with(|| {
             pr_service.create_pull_request(
@@ -243,7 +243,7 @@ pub fn generate_pr_summary(
 ) -> Result<PrSummaryResult, Box<dyn std::error::Error>> {
     info!("Generating PR summary...");
 
-    let summary_service = registry::get_commit_summary_service();
+    let summary_service = bootstrap::get_commit_summary_service();
     let analysis = spinner!("Analyzing commit changes (3-stage analysis)...")
         .with(|| summary_service.run_analysis(base_branch))
         .map_err(|e| format!("Failed to generate PR summary: {}", e))?;

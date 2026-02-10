@@ -3,7 +3,7 @@
 use domain::CommitChangeType;
 use prompt::info;
 
-use crate::registry::get_git_repository;
+use crate::bootstrap::get_git_repository;
 
 /// 获取指定 commit 变更的文件列表
 pub struct CommitFilesCommand {

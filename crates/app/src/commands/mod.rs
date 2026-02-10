@@ -2,6 +2,12 @@
 //!
 //! CLI 命令封装，负责参数解析、用户交互、输出格式化
 
+// 共享参数模块
+pub mod args;
+
+// CLI 定义模块（顶层命令结构）
+pub mod cli;
+
 // 命令模块
 pub mod alias;
 pub mod branch;

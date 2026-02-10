@@ -5,7 +5,7 @@
 use domain::WorkingTreeStatus;
 use prompt::{br, error, info, spinner, success, warning};
 
-use crate::registry::get_git_repository;
+use crate::bootstrap::get_git_repository;
 
 /// Repo Status 命令
 pub struct RepoStatusCommand;

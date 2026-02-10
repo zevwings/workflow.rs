@@ -11,7 +11,7 @@ use std::process::Command;
 use prompt::{br, info, print, success, warning, ConfirmBuilder};
 use toolkit::{detect_shell, log_debug, reload_shell};
 
-use crate::registry::{get_completion_service, get_path_service};
+use crate::bootstrap::{get_completion_service, get_path_service};
 
 /// 卸载命令
 pub struct UninstallCommand {

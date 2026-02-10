@@ -2,7 +2,7 @@
 
 use prompt::info;
 
-use crate::registry::get_git_repository;
+use crate::bootstrap::get_git_repository;
 
 /// 列出将源分支合并到目标分支时会引入的 commit
 pub struct CommitToMergeCommand {

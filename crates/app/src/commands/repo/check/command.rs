@@ -5,7 +5,7 @@
 use domain::{BranchTemplates, CommitTemplates, PullRequestsTemplates};
 use prompt::{br, info, print, separator, success, warning, TableBuilder};
 
-use crate::registry::{get_git_repository, get_path_service, get_repo_config_repository};
+use crate::bootstrap::{get_git_repository, get_path_service, get_repo_config_repository};
 
 /// Repo Check 命令
 pub struct RepoCheckCommand;

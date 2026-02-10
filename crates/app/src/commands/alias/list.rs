@@ -4,7 +4,7 @@
 
 use prompt::{br, info, print};
 
-use crate::registry::get_alias_service;
+use crate::bootstrap::get_alias_service;
 
 /// 别名列表命令
 pub struct AliasListCommand;

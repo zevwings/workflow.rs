@@ -82,16 +82,16 @@ mod tests {
 
     use super::*;
 
-    /// 创建测试用的日志目录结构
+    /// 创建测试用的日志目录结构（与 path.rs 一致：日志文件直接在 logs_dir 下）
     fn setup_tracing_dir(temp_dir: &TempDir) -> PathBuf {
-        let tracing_dir = temp_dir.path().join("tracing");
-        fs::create_dir_all(&tracing_dir).unwrap();
-        tracing_dir
+        let logs_dir = temp_dir.path();
+        fs::create_dir_all(logs_dir).unwrap();
+        logs_dir.to_path_buf()
     }
 
-    /// 在 tracing 目录中创建一个日志文件
-    fn create_log_file(tracing_dir: &Path, name: &str) -> PathBuf {
-        let path = tracing_dir.join(name);
+    /// 在日志目录中创建一个日志文件
+    fn create_log_file(logs_dir: &Path, name: &str) -> PathBuf {
+        let path = logs_dir.join(name);
         let mut file = File::create(&path).unwrap();
         writeln!(file, "test log content").unwrap();
         path

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use prompt::{br, info, warning};
 use toolkit::rollback;
 
-use crate::registry::get_path_service;
+use crate::bootstrap::get_path_service;
 
 /// Restore 命令
 pub struct RestoreCommand {

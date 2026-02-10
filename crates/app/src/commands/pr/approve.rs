@@ -2,7 +2,7 @@
 
 use prompt::{spinner, success};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Pull Request Approve 命令
 pub struct PullRequestApproveCommand {
@@ -17,7 +17,7 @@ impl PullRequestApproveCommand {
 
     /// 运行 `workflow pr approve` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let pr_service = registry::get_pull_request_service();
+        let pr_service = bootstrap::get_pull_request_service();
 
         // 批准 PR
         spinner!("Approving PR #{}...", self.pr_id)

@@ -3,7 +3,7 @@
 use domain::{TagCreateScope, TagDeleteScope};
 use prompt::{error, info, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Tag Create 命令
 pub struct TagCreateCommand {
@@ -34,7 +34,7 @@ impl TagCreateCommand {
 
     /// 运行 `workflow tag create` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let tag_repo = registry::get_git_repository();
+        let tag_repo = bootstrap::get_git_repository();
 
         // 检查 tag 是否已存在
         let (exists_local, exists_remote) = tag_repo
