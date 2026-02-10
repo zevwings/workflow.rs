@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use domain::{GitHubContext, GitHubRepository, GitRepoRepository};
-use registry::{try_bind, Container, Scope};
+use registry::{Container, RegistryError, Scope, try_bind};
 
 use crate::github::{
     GitHubClient, GitHubClientImpl, GitHubRepositoryImpl, PullRequestDiffService,
@@ -25,7 +25,7 @@ use crate::github::{
 /// 6. **其他服务** (依赖上述服务)
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
-pub fn register_github() -> registry::Result<()> {
+pub fn register_github() -> Result<(), RegistryError> {
     // 注册 GitHub Client (依赖外部的 GitHubContext)
     try_bind!(dyn GitHubClient, |c: &Container| {
         let context = c.get::<dyn GitHubContext>()?;

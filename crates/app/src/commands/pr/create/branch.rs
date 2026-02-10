@@ -1,7 +1,7 @@
 //! 分支处理逻辑
 
 use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
-use prompt::{info, select, spinner, warning};
+use prompt::{info, select, spinner, success, warning};
 
 use crate::registry;
 use crate::utils::branch_type_from_branch_name;
@@ -123,7 +123,7 @@ fn handle_existing_pr(
             pr_service
                 .update_pull_request(pr_id, Some(&pr_title), Some(&pr_body))
                 .map_err(|e| format!("Failed to update PR: {}", e))?;
-            prompt::success!("PR #{} updated successfully!", pr_id);
+            success!("PR #{} updated successfully!", pr_id);
         }
     } else {
         info!("Operation cancelled");

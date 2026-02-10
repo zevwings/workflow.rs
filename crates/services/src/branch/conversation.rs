@@ -2,10 +2,6 @@
 //!
 //! 用于根据标题生成分支名。
 
-// use domain::{sanitize_branch_name, LLMError};
-
-// use crate::llm::services::{parsers::JsonParser, LLMConversation};
-
 use llm::LLMConversation;
 
 /// 分支名对话

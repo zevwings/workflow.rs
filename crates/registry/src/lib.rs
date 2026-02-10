@@ -62,11 +62,21 @@
 //! - 通过类型约束和测试确保正确性
 
 use std::sync::Arc;
+use std::result::Result;
 
 pub mod binding;
 mod container;
 mod error;
 mod scope;
+
+// 重新导出所有公共类型和函数
+pub use binding::{
+    Binding, BindingBuilder, FallibleBinding, FallibleBindingBuilder, IntoFactory,
+    IntoFallibleFactory,
+};
+pub use container::Container;
+pub use error::RegistryError;
+pub use scope::Scope;
 
 // ============================================================================
 // 简化绑定的宏
@@ -165,26 +175,17 @@ macro_rules! try_bind {
             dyn for<'a> ::std::ops::Fn(
                     &'a $crate::Container,
                 )
-                    -> $crate::Result<::std::sync::Arc<$trait_type>>
+                    -> Result<::std::sync::Arc<$trait_type>, $crate::RegistryError>
                 + ::std::marker::Send
                 + ::std::marker::Sync,
         > = ::std::boxed::Box::new(
-            move |c: &$crate::Container| -> $crate::Result<::std::sync::Arc<$trait_type>> {
+            move |c: &$crate::Container| -> Result<::std::sync::Arc<$trait_type>, $crate::RegistryError> {
                 factory_fn(c).map(|v| v as ::std::sync::Arc<$trait_type>)
             },
         );
         $crate::Container::global().try_bind::<$trait_type>(wrapped)
     }};
 }
-
-// 重新导出所有公共类型和函数
-pub use binding::{
-    Binding, BindingBuilder, FallibleBinding, FallibleBindingBuilder, IntoFactory,
-    IntoFallibleFactory,
-};
-pub use container::Container;
-pub use error::{RegistryError, Result};
-pub use scope::Scope;
 
 // ============================================================================
 // 从全局容器获取服务
@@ -206,7 +207,7 @@ pub use scope::Scope;
 /// // 或获取具体类型
 /// let service: Arc<ConfigServiceImpl> = resolve::<ConfigServiceImpl>()?;
 /// ```
-pub fn resolve<T: 'static + Send + Sync + ?Sized>() -> Result<Arc<T>> {
+pub fn resolve<T: 'static + Send + Sync + ?Sized>() -> Result<Arc<T>, RegistryError> {
     let container = Container::global();
     container.get::<T>()
 }
@@ -257,7 +258,7 @@ macro_rules! get_it {
 #[macro_export]
 macro_rules! registry {
     (|$container:ident| { $($body:tt)* }) => {
-        $crate::Container::register(|$container| -> $crate::Result<()> {
+        $crate::Container::register(|$container| -> Result<(), RegistryError> {
             $($body)*
             Ok(())
         })
@@ -322,7 +323,7 @@ mod tests {
 
         // 尝试获取未绑定的服务
         trait NonExistent: Send + Sync {}
-        let result: Result<Arc<dyn NonExistent>> = resolve();
+        let result: Result<Arc<dyn NonExistent>, RegistryError> = resolve();
         assert!(result.is_err());
         assert!(matches!(result, Err(RegistryError::NotBound(_))));
     }
@@ -485,7 +486,7 @@ mod tests {
         .in_scope(Scope::Singleton)
         .unwrap();
 
-        let result: Result<Arc<dyn TestService>> = Container::global().get();
+        let result: Result<Arc<dyn TestService>, RegistryError> = Container::global().get();
         assert!(result.is_err());
     }
 

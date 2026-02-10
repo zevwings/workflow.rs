@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use llm::{LLMConfigContext, LLMExecutor};
-use registry::{try_bind, Container, Scope};
+use registry::{Container, RegistryError, Scope, try_bind};
 
 use crate::alias::AliasServiceImpl;
 use crate::branch::BranchServiceImpl;
@@ -25,7 +25,7 @@ use crate::summary::CommitSummaryServiceImpl;
 /// # 错误
 ///
 /// 如果服务注册失败，返回 `registry::Error`。
-pub fn register_services() -> registry::Result<()> {
+pub fn register_services() -> Result<(), RegistryError> {
     // AliasService - 依赖 GlobalConfigRepository
     try_bind!(dyn domain::AliasService, |c: &Container| {
         let config_repo = c.get::<dyn domain::GlobalConfigRepository>()?;

@@ -25,10 +25,8 @@ use domain::{
     JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult, LLMVerificationStatus,
     LogConfigInfo, LogVerificationResult, ServiceError, VerificationService,
 };
-use llm::LLMExecutor;
+use llm::{LLMConversation, LLMExecutor, SupportedLanguage};
 use toolkit::Sensitive;
-
-use llm::{LLMConversation, SupportedLanguage};
 
 /// 验证对话
 ///

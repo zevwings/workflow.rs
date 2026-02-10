@@ -1,6 +1,6 @@
 //! 合并 Pull Request 命令
 
-use domain::GitError;
+use domain::{GitError, extract_jira_ticket_id};
 use prompt::{confirm, error, info, input, spinner, success, validators, warning};
 
 use crate::registry;
@@ -212,8 +212,6 @@ impl PullRequestMergeCommand {
         pr_title: Option<&str>,
         repository_url: Option<&str>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        use domain::extract_jira_ticket_id;
-        use prompt::warning;
 
         let jira_repo = registry::get_jira_repository();
         let work_history_repo = registry::get_jira_work_history_repository();

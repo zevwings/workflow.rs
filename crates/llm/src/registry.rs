@@ -5,14 +5,14 @@ use std::sync::Arc;
 use crate::{
     client::LLMClientImpl, executor::LLMExecutorImpl, LLMClient, LLMConfigContext, LLMExecutor,
 };
-use registry::{try_bind, Container, Scope};
+use registry::{Container, RegistryError, Scope, try_bind};
 
 /// 注册 LLM 相关服务
 ///
 /// # 注册顺序和依赖关系
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
-pub fn register_llm() -> registry::Result<()> {
+pub fn register_llm() -> Result<(), RegistryError> {
     try_bind!(dyn LLMClient, |c: &Container| {
         let context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(LLMClientImpl::new(context)))

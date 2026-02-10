@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use registry::{try_bind, Container, Scope};
+use registry::{Container, RegistryError, Scope, try_bind};
 
 use crate::jira::{
     IssueService, IssueServiceImpl, JiraClient, JiraClientImpl, JiraRepositoryImpl,
@@ -16,7 +16,7 @@ use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathS
 /// # 注册顺序和依赖关系
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
-pub fn register_jira() -> registry::Result<()> {
+pub fn register_jira() -> Result<(), RegistryError> {
     // Jira Client
     try_bind!(dyn JiraClient, |c: &Container| {
         let context = c.get::<dyn JiraConfigContext>()?;

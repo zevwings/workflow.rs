@@ -7,8 +7,7 @@ use std::sync::Arc;
 use domain::errors::ServiceError;
 use domain::git::entity::{CommitChangeType, CommitFileChange};
 use domain::summary::entity::{CommitFileClassification, DirectoryStats};
-use llm::parsers::JsonParser;
-use llm::LLMExecutor;
+use llm::{JsonParser, LLMExecutor};
 
 use super::FileClassifyConversation;
 
