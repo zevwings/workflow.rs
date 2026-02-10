@@ -143,8 +143,18 @@ impl<'a> Request<'a> {
         }
 
         if let Some(retry_config) = self.retry.take() {
+            let retryable_status_codes = retry_config.retryable_status_codes.clone();
             let executor = RetryExecutor::new(&retry_config);
-            executor.execute(|| self.execute_for_retry())
+            executor.execute(|| {
+                let response = self.execute_for_retry()?;
+                if response.is_success() {
+                    Ok(response)
+                } else if retryable_status_codes.contains(&response.status) {
+                    response.ensure_success()
+                } else {
+                    Ok(response)
+                }
+            })
         } else {
             self.execute_once()
         }

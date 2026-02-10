@@ -10,7 +10,6 @@ pub enum HookResult {
     /// Hook 执行成功
     Success,
     /// Hook 执行失败，包含错误消息
-    #[allow(dead_code)]
     Failure(String),
     /// Hook 修改了文件，需要重新暂存
     Modified,
@@ -104,7 +103,6 @@ impl HookContext {
     /// - `repo_path`: 仓库根目录路径
     /// - `git_dir`: Git 目录路径（.git）
     /// - `branch_name`: 分支名称
-    /// - `remote_url`: 远程 URL
     /// - `commits_to_push`: 要推送的提交列表
     pub fn for_pre_push(
         repo_path: PathBuf,
@@ -158,7 +156,6 @@ impl HookContext {
     }
 
     /// 设置提交 SHA
-    #[allow(dead_code)]
     pub fn with_commit_sha(mut self, sha: impl Into<String>) -> Self {
         self.commit_sha = Some(sha.into());
         self

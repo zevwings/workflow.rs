@@ -100,7 +100,6 @@ impl GitContext {
 
     /// 初始化新的 Git 仓库
     #[cfg(any(test, feature = "testing"))]
-    #[allow(dead_code)]
     pub fn init<P: AsRef<Path>>(path: P) -> Result<Self, GitError> {
         let repo = Repository::init(&path).map_err(|e| {
             GitError::OperationFailed(format!(

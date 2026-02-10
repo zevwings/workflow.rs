@@ -18,7 +18,6 @@ pub enum RegistryError {
     TypeCast(String),
 
     /// 锁错误（保留用于并发场景）
-    #[allow(dead_code)]
     #[error("Lock error: {0}")]
     LockError(String),
 
