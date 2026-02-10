@@ -11,12 +11,12 @@
 //! - `path_ext` - 路径显示扩展 trait（`PathExt`）
 //! - `size_ext` - 文件大小显示扩展 trait（`SizeExt`）
 
-pub mod browser_ext;
-pub mod clipboard_ext;
-pub mod path_ext;
-pub mod sensitive_ext;
-pub mod size_ext;
-pub mod truncate_ext;
+pub(crate) mod browser_ext;
+pub(crate) mod clipboard_ext;
+pub(crate) mod path_ext;
+pub(crate) mod sensitive_ext;
+pub(crate) mod size_ext;
+pub(crate) mod truncate_ext;
 
 // 重新导出所有扩展 trait 和类型
 pub use browser_ext::{Browser, BrowserError, BrowserExt};

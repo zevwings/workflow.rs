@@ -11,6 +11,5 @@ mod multiselect;
 mod renderer;
 mod select;
 
-pub use filter::FuzzyFilter;
 pub use multiselect::MultiSelectBuilder;
 pub use select::SelectBuilder;

@@ -20,4 +20,4 @@ pub(crate) use logic::LogicAnalyzeService;
 pub(crate) use summary::{SummaryAnalyzeInput, SummaryAnalyzeService};
 pub(crate) use tests::TestAnalyzeService;
 
-pub use service::CommitSummaryServiceImpl;
+pub(crate) use service::CommitSummaryServiceImpl;

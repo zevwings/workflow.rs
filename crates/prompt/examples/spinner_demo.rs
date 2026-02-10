@@ -7,8 +7,7 @@
 //! cargo run -p prompt --example spinner_demo
 //! ```
 
-use prompt::output::terminal_state::{register_renderer, resume, suspend};
-use prompt::spinner;
+use prompt::{spinner, terminal_state};
 use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -156,7 +155,7 @@ fn demo_update_message() {
 /// 模拟日志输出（在实际应用中由 tracing 触发）
 fn simulate_log_output(message: &str) {
     // 暂停终端渲染
-    suspend();
+    terminal_state::suspend();
 
     // 输出日志
     let mut stderr = io::stderr();
@@ -164,7 +163,7 @@ fn simulate_log_output(message: &str) {
     stderr.flush().unwrap();
 
     // 恢复终端渲染
-    resume();
+    terminal_state::resume();
 }
 
 /// 演示 6：Spinner 与日志协调
@@ -190,7 +189,7 @@ fn demo_manual_registration() {
     let running_clone = Arc::clone(&running);
 
     // 注册渲染器
-    register_renderer(|| {
+    terminal_state::register_renderer(|| {
         // 这里可以放重绘逻辑，但渲染线程会自动重绘
     });
 
@@ -201,7 +200,7 @@ fn demo_manual_registration() {
 
         while running_clone.load(Ordering::SeqCst) {
             // 检查是否暂停
-            if !prompt::output::terminal_state::is_suspended() {
+            if !prompt::terminal_state::is_suspended() {
                 let mut stderr = io::stderr();
                 write!(stderr, "\r{} Custom spinner...", frames[idx % frames.len()]).unwrap();
                 stderr.flush().unwrap();
@@ -228,7 +227,7 @@ fn demo_manual_registration() {
     handle.join().unwrap();
 
     // 注销渲染器
-    prompt::output::terminal_state::unregister_renderer();
+    prompt::terminal_state::unregister_renderer();
 
     println!("✓ Custom spinner finished!");
 }

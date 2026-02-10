@@ -33,7 +33,7 @@ impl GitRepoRepository for GitRepoRepositoryWrapper {
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），
 /// 而非运行时错误。如果触发 panic，说明注册顺序不正确。
-pub fn register_git() -> Result<(), RegistryError> {
+pub(super) fn register_git() -> Result<(), RegistryError> {
     // 第一步：注册 GitContextHolder (基础服务，无依赖)
     // 注意：GitContext::discover() 要求程序在 Git 仓库中运行
     try_bind!(dyn GitContextHolder, |_: &Container| {

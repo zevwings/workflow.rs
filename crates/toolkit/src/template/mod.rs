@@ -2,7 +2,7 @@
 //!
 //! Provides template rendering functionality.
 
-pub mod engine;
+pub(crate) mod engine;
 mod error;
 
 pub use engine::{TemplateEngine, TemplateEngineType};

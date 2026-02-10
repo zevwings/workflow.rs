@@ -64,7 +64,7 @@
 use std::result::Result;
 use std::sync::Arc;
 
-pub mod binding;
+mod binding;
 mod container;
 mod error;
 mod scope;

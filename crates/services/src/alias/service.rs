@@ -10,7 +10,7 @@ use domain::{
 };
 
 /// 别名服务实现
-pub struct AliasServiceImpl {
+pub(crate) struct AliasServiceImpl {
     /// 全局配置仓储
     config_repo: Arc<dyn GlobalConfigRepository>,
 }

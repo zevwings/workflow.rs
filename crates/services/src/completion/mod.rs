@@ -4,4 +4,4 @@
 
 mod service;
 
-pub use service::CompletionServiceImpl;
+pub(crate) use service::CompletionServiceImpl;

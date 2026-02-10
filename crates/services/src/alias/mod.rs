@@ -4,4 +4,4 @@
 
 mod service;
 
-pub use service::AliasServiceImpl;
+pub(crate) use service::AliasServiceImpl;

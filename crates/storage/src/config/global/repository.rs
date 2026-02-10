@@ -11,7 +11,7 @@ use toolkit::{file, log_error};
 static GLOBAL_CONFIG: OnceLock<Mutex<Option<GlobalConfig>>> = OnceLock::new();
 
 /// 全局配置仓储实现
-pub struct GlobalConfigRepositoryImpl {
+pub(crate) struct GlobalConfigRepositoryImpl {
     path_service: Arc<dyn PathService>,
 }
 

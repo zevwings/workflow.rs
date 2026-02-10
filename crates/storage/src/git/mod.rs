@@ -10,7 +10,8 @@
 //! # 使用示例
 //!
 //! ```rust,no_run
-//! use storage::git::{GitContext, GitRepositoryImpl};
+//! use storage::git::services::GitContext;
+//! use storage::git::GitRepositoryImpl;
 //! use domain::GitRepository;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {

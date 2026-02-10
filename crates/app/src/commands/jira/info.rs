@@ -3,20 +3,9 @@
 use domain::JiraIssue;
 use prompt::{info, spinner, success};
 
+use crate::cli::OutputFormat;
 use crate::registry;
 use crate::utils::get_jira_id_interactive;
-
-/// 输出格式
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum OutputFormat {
-    /// 人类可读格式（默认）
-    #[default]
-    HumanReadable,
-    /// JSON 格式
-    Json,
-    /// Markdown 格式
-    Markdown,
-}
 
 /// Jira Info 命令
 pub struct JiraInfoCommand {

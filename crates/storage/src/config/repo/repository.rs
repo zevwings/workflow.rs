@@ -15,7 +15,7 @@ use toolkit::{file, log_warn};
 /// 仓库配置仓储实现
 ///
 /// 实现 `RepoConfigRepository` trait，提供仓库配置的持久化操作。
-pub struct RepoConfigRepositoryImpl {
+pub(crate) struct RepoConfigRepositoryImpl {
     path_service: Arc<dyn PathService>,
 }
 

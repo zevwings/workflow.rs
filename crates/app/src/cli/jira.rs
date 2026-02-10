@@ -5,7 +5,18 @@
 use clap::{Args, Subcommand};
 
 use super::args::JiraIdArg;
-use crate::commands::jira::info::OutputFormat;
+
+/// 输出格式（用于 `workflow jira info`）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OutputFormat {
+    /// 人类可读格式（默认）
+    #[default]
+    HumanReadable,
+    /// JSON 格式
+    Json,
+    /// Markdown 格式
+    Markdown,
+}
 
 /// Jira 配置管理子命令
 #[derive(Subcommand)]

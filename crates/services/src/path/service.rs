@@ -15,7 +15,7 @@ use toolkit::log_error;
 ///
 /// 管理应用程序的配置文件、数据目录等路径。
 /// 支持 iCloud 同步（macOS）和本地存储两种模式。
-pub struct PathServiceImpl {
+pub(crate) struct PathServiceImpl {
     is_icloud_available: bool,
 }
 

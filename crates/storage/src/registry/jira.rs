@@ -16,7 +16,7 @@ use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathS
 /// # 注册顺序和依赖关系
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
-pub fn register_jira() -> Result<(), RegistryError> {
+pub(super) fn register_jira() -> Result<(), RegistryError> {
     // Jira Client
     try_bind!(dyn JiraClient, |c: &Container| {
         let context = c.get::<dyn JiraConfigContext>()?;

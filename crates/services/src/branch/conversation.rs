@@ -7,7 +7,7 @@ use llm::LLMConversation;
 /// 分支名对话
 ///
 /// 负责构建 prompt 和业务逻辑，不直接调用 LLM API。
-pub struct BranchNameConversation {
+pub(super) struct BranchNameConversation {
     title: Option<String>,
     exists_branches: Vec<String>,
 }

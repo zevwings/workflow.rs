@@ -9,10 +9,10 @@ use std::sync::Arc;
 
 // 项目内部
 use domain::{
-    errors::ServiceError, get_all_completion_filenames, get_completion_filename,
-    get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,
-    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
-    CompletionService, PathService, ShellCompletionStatus,
+    get_all_completion_filenames, get_completion_filename, get_completion_shell_dir,
+    get_completion_shell_path, get_completion_source_shell_path, get_shell_source_path,
+    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
+    PathService, ServiceError, ShellCompletionStatus,
 };
 use toolkit::{
     add_source, config_file_path, detect_shell, directory, file, has_source, reload_hint,
@@ -20,7 +20,7 @@ use toolkit::{
 };
 
 /// Shell Completion 服务实现
-pub struct CompletionServiceImpl {
+pub(crate) struct CompletionServiceImpl {
     path_service: Arc<dyn PathService>,
 }
 

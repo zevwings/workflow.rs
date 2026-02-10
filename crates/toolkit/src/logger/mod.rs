@@ -43,7 +43,7 @@
 //! ```
 
 pub(crate) mod cleanup;
-pub mod config;
+pub(crate) mod config;
 pub(crate) mod error;
 pub(crate) mod path;
 pub(crate) mod subscriber;

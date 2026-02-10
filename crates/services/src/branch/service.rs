@@ -3,12 +3,12 @@ use std::sync::Arc;
 use domain::{sanitize_branch_name, BranchService, BranchServiceError};
 use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
-use super::BranchNameConversation;
+use super::conversation::BranchNameConversation;
 
 /// 分支服务实现
 ///
 /// 使用 LLM 生成语义化的分支名称。
-pub struct BranchServiceImpl {
+pub(crate) struct BranchServiceImpl {
     llm_executor: Arc<dyn LLMExecutor>,
     llm_context: Arc<dyn LLMConfigContext>,
 }

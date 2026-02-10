@@ -44,7 +44,7 @@ pub enum ChecksumError {
 
 /// 校验和验证结果
 #[derive(Debug, Clone)]
-pub struct VerifyResult {
+pub struct ChecksumVerifyResult {
     /// 是否验证通过
     pub verified: bool,
     /// 期望的哈希值
@@ -147,7 +147,7 @@ pub fn parse_hash_from_content(content: impl AsRef<str>) -> Result<String, Check
 ///
 /// # 返回
 ///
-/// 返回 `VerifyResult`，包含验证状态和哈希值信息。
+/// 返回 `ChecksumVerifyResult`，包含验证状态和哈希值信息。
 ///
 /// # 错误
 ///
@@ -159,9 +159,9 @@ pub fn parse_hash_from_content(content: impl AsRef<str>) -> Result<String, Check
 ///
 /// ```no_run
 /// use std::path::Path;
-/// use toolkit::util::checksum::verify;
+/// use toolkit::util::checksum::verify_checksum;
 ///
-/// let result = verify(
+/// let result = verify_checksum(
 ///     Path::new("file.tar.gz"),
 ///     "abc123def456..."
 /// ).unwrap();
@@ -170,15 +170,15 @@ pub fn parse_hash_from_content(content: impl AsRef<str>) -> Result<String, Check
 ///     println!("File integrity verified!");
 /// }
 /// ```
-pub fn verify(
+pub fn verify_checksum(
     file_path: &Path,
     expected_hash: impl AsRef<str>,
-) -> Result<VerifyResult, ChecksumError> {
+) -> Result<ChecksumVerifyResult, ChecksumError> {
     let expected_hash = expected_hash.as_ref();
     let actual_hash = calculate_sha256(file_path)?;
 
     if actual_hash == expected_hash {
-        Ok(VerifyResult {
+        Ok(ChecksumVerifyResult {
             verified: true,
             expected: expected_hash.to_string(),
             actual: actual_hash,
@@ -193,7 +193,7 @@ pub fn verify(
 
 /// 验证文件完整性（非严格模式）
 ///
-/// 与 `verify` 类似，但不匹配时不返回错误，而是返回 `VerifyResult`。
+/// 与 `verify_checksum` 类似，但不匹配时不返回错误，而是返回 `ChecksumVerifyResult`。
 ///
 /// # 参数
 ///
@@ -202,16 +202,16 @@ pub fn verify(
 ///
 /// # 返回
 ///
-/// 返回 `VerifyResult`，`verified` 字段指示是否匹配。
-pub fn verify_lenient(
+/// 返回 `ChecksumVerifyResult`，`verified` 字段指示是否匹配。
+pub fn verify_checksum_lenient(
     file_path: &Path,
     expected_hash: impl AsRef<str>,
-) -> Result<VerifyResult, ChecksumError> {
+) -> Result<ChecksumVerifyResult, ChecksumError> {
     let expected_hash = expected_hash.as_ref();
     let actual_hash = calculate_sha256(file_path)?;
     let verified = actual_hash == expected_hash;
 
-    Ok(VerifyResult {
+    Ok(ChecksumVerifyResult {
         verified,
         expected: expected_hash.to_string(),
         actual: actual_hash,
@@ -294,7 +294,7 @@ mod tests {
         file.flush().unwrap();
 
         let expected = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
-        let result = verify(file.path(), expected).unwrap();
+        let result = verify_checksum(file.path(), expected).unwrap();
         assert!(result.verified);
     }
 
@@ -304,7 +304,7 @@ mod tests {
         file.write_all(b"hello world").unwrap();
         file.flush().unwrap();
 
-        let result = verify(file.path(), "wrong_hash");
+        let result = verify_checksum(file.path(), "wrong_hash");
         assert!(matches!(
             result,
             Err(ChecksumError::VerificationFailed { .. })
@@ -312,18 +312,18 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_lenient() {
+    fn test_verify_checksum_lenient() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"hello world").unwrap();
         file.flush().unwrap();
 
         // 正确的哈希
         let expected = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
-        let result = verify_lenient(file.path(), expected).unwrap();
+        let result = verify_checksum_lenient(file.path(), expected).unwrap();
         assert!(result.verified);
 
         // 错误的哈希（不报错，返回 verified = false）
-        let result = verify_lenient(file.path(), "wrong_hash").unwrap();
+        let result = verify_checksum_lenient(file.path(), "wrong_hash").unwrap();
         assert!(!result.verified);
     }
 

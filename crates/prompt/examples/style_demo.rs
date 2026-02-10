@@ -8,7 +8,7 @@
 //! ```
 
 use crossterm::style::Color;
-use prompt::style::theme::{get_theme, set_theme, Style, Theme};
+use prompt::{get_theme, set_theme, Style, Theme};
 
 fn main() {
     println!("样式与主题功能演示");

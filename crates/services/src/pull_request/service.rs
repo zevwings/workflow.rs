@@ -6,14 +6,14 @@
 use std::sync::Arc;
 
 use domain::{
-    errors::ServiceError, CodePlatform, CommitSummaryService, GitHubRepository, GitRepository,
-    PrStatus, PullRequestInfo, PullRequestService,
+    CodePlatform, CommitSummaryService, GitHubRepository, GitRepository, PrStatus, PullRequestInfo,
+    PullRequestService, ServiceError,
 };
 
 /// Pull Request 服务实现
 ///
 /// 组合 GitHub 仓储、LLM 服务和 Git 仓储，实现完整的 PR 业务用例。
-pub struct PullRequestServiceImpl {
+pub(crate) struct PullRequestServiceImpl {
     git_repo: Arc<dyn GitRepository>,
     github_repo: Arc<dyn GitHubRepository>,
     commit_summary_service: Arc<dyn CommitSummaryService>,

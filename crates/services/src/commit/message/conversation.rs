@@ -7,7 +7,7 @@ use llm::LLMConversation;
 use super::service::FileStatistics;
 
 /// Commit Message 对话构建器
-pub struct CommitMessageConversation {
+pub(super) struct CommitMessageConversation {
     file_summary: String,
     diff_content: String,
     stats: FileStatistics,

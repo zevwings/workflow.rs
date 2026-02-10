@@ -10,7 +10,7 @@ use domain::{
 };
 use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
-use crate::commit::message::CommitMessageConversation;
+use super::conversation::CommitMessageConversation;
 
 /// 分析输入数据
 struct AnalysisInput {
@@ -21,7 +21,7 @@ struct AnalysisInput {
 
 /// 文件统计信息
 #[derive(Debug, Clone)]
-pub struct FileStatistics {
+pub(super) struct FileStatistics {
     pub total_files: u32,
     pub added_count: u32,
     pub modified_count: u32,
@@ -35,7 +35,7 @@ pub struct FileStatistics {
 const MAX_DIFF_LINES: usize = 2000;
 
 /// Commit Message 生成服务实现
-pub struct CommitMessageServiceImpl {
+pub(crate) struct CommitMessageServiceImpl {
     git_repo: Arc<dyn GitRepository>,
     llm_executor: Arc<dyn LLMExecutor>,
     llm_context: Arc<dyn LLMConfigContext>,

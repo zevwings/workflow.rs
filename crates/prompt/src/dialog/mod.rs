@@ -35,4 +35,4 @@ pub const UNSELECTED_PREFIX: &str = "  ";
 // 重新导出公共 API
 pub use confirm::ConfirmBuilder;
 pub use input::{validators, InputBuilder, ValidationResult, Validator};
-pub use selection::{FuzzyFilter, MultiSelectBuilder, SelectBuilder};
+pub use selection::{MultiSelectBuilder, SelectBuilder};

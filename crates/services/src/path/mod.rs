@@ -1,3 +1,3 @@
 mod service;
 
-pub use service::PathServiceImpl;
+pub(crate) use service::PathServiceImpl;
