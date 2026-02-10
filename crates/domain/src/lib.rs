@@ -110,12 +110,6 @@ pub use jira::{
     WorkHistoryEntry,
 };
 
-// Re-export LLM types
-pub use llm::{
-    LLMConfigContext, LLMError, LLMRepository, PullRequestReword, PullRequestSummary,
-    SupportedLanguage,
-};
-
 pub use summary::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
     CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis, DirectoryStats,

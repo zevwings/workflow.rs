@@ -24,11 +24,7 @@ pub trait BranchService: Send + Sync {
     fn rename_branch(&self, old_name: Option<&str>, new_name: &str) -> Result<(), GitError>;
 
     /// 获取分支列表
-    fn list_branches(
-        &self,
-        remove_prefix: bool,
-        all: bool,
-    ) -> Result<Vec<BranchInfo>, GitError>;
+    fn list_branches(&self, remove_prefix: bool, all: bool) -> Result<Vec<BranchInfo>, GitError>;
 
     /// 切换分支
     fn checkout_branch(&self, name: &str) -> Result<(), GitError>;
@@ -187,11 +183,7 @@ impl BranchService for BranchServiceImpl {
         Ok(())
     }
 
-    fn list_branches(
-        &self,
-        remove_prefix: bool,
-        all: bool,
-    ) -> Result<Vec<BranchInfo>, GitError> {
+    fn list_branches(&self, remove_prefix: bool, all: bool) -> Result<Vec<BranchInfo>, GitError> {
         let repo = self.ctx.repository();
 
         let mut branches: HashMap<String, (bool, bool)> = HashMap::new(); // (has_local, has_remote)

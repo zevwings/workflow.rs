@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use domain::{ServiceError,CommitFileChange,CommitFileClassification, CommitLogicAnalysis};
+use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, ServiceError};
 use llm::{JsonParser, LLMExecutor};
 
 use super::LogicAnalyzeConversation;

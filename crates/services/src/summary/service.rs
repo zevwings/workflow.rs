@@ -5,7 +5,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use domain::{CommitSummaryService,CommitChangeType, CommitFileChange, CommitInfo, CommitFileClassification, CommitSummaryAnalysis, DirectoryStats, DirectoryStatusDistribution, ServiceError, GitRepository};
+use domain::{
+    CommitChangeType, CommitFileChange, CommitFileClassification, CommitInfo,
+    CommitSummaryAnalysis, CommitSummaryService, DirectoryStats, DirectoryStatusDistribution,
+    GitRepository, ServiceError,
+};
 use llm::{LLMConfigContext, LLMExecutor};
 
 use super::{

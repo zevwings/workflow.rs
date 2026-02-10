@@ -9,10 +9,13 @@ use std::sync::{Arc, LazyLock};
 
 use domain::{
     AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
-    GlobalConfigRepository, GitHubRepository, GitRepository, JiraRepository,
+    GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository,
     JiraWorkHistoryRepository, PathService, PullRequestService, RepoConfigRepository,
     VerificationService,
 };
+use llm::register_llm;
+use services::register_services;
+use storage::register_storage;
 
 /// 应用程序初始化标记
 ///
@@ -34,19 +37,19 @@ static APP_INITIALIZED: LazyLock<()> = LazyLock::new(|| {
     }
 
     // 1. 注册 LLM 层服务（LLMClient, LLMExecutor）
-    if let Err(e) = llm::register_llm() {
+    if let Err(e) = register_llm() {
         eprintln!("Fatal: Failed to register llm module: {e}");
         panic!("Failed to register llm module: {e}");
     }
 
     // 2. 注册 storage 层服务（基础仓储实现）
-    if let Err(e) = storage::register_storage() {
+    if let Err(e) = register_storage() {
         eprintln!("Fatal: Failed to register storage module: {e}");
         panic!("Failed to register storage module: {e}");
     }
 
     // 3. 然后注册 services 层服务（应用服务，依赖 storage 和 llm）
-    if let Err(e) = services::register_services() {
+    if let Err(e) = register_services() {
         eprintln!("Fatal: Failed to register services module: {e}");
         panic!("Failed to register services module: {e}");
     }

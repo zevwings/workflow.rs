@@ -23,7 +23,11 @@ description: 审查当前分支相对于基准分支的 Rust 代码变更，检�
 - [ ] 无 dead code / unused imports
 
 ### 代码组织
-- [ ] 导入顺序：标准库 → 第三方 → 项目内部
+- [ ] **导入顺序**（严格按以下顺序，组间空行）：
+  1. **系统**：`std`、`core` 等
+  2. **三方**：外部依赖（如 `anyhow`、`serde`、`git2`）
+  3. **模块外部**：工作区内其他 crate（如 `domain`、`toolkit`、`registry`）
+  4. **模块内部**：当前 crate（`crate::`）或同模块（`super::`）
 - [ ] 测试模块导入放在 `mod tests {}` 顶部
 - [ ] 最小化可见性：优先 `pub(crate)` / `pub(super)`
 - [ ] 内部实现保持私有
@@ -36,6 +40,9 @@ description: 审查当前分支相对于基准分支的 Rust 代码变更，检�
 - [ ] 层层导出需要公开的类型到 crate 根
 - [ ] 避免导出仅在 crate 内部使用的子模块
 - [ ] crate 根 `lib.rs` 只 re-export 真正需要公开的 API
+- [ ] **services / storage**：对外仅暴露注册函数，外部不得依赖其子模块
+  - **services**：对外只有 `pub use registry::register_services`，禁止 `use services::xxx::yy`
+  - **storage**：对外只有 `pub use registry::register_storage` 被使用（`storage::git` 仅供本 crate 的 examples/benches），禁止外部 `use storage::jira` / `storage::config` 等
 
 ### 模块导入规则
 - [ ] **同一模块内部**：使用 `super::` 引用兄弟模块
@@ -47,6 +54,9 @@ description: 审查当前分支相对于基准分支的 Rust 代码变更，检�
 - [ ] **crate 外部**：从 crate 根导入
   - 单个：`use toolkit::create_backup`
   - 多个：`use toolkit::{create_backup, rollback, BackupInfo}`
+- [ ] **统一导出约束**（适用于 http / llm / prompt / registry / toolkit / domain 等对外 crate）
+  - 禁止 `use [module]::sub::xx`，一律从 crate 根导入：`use [module]::{xx, yy}`
+  - 禁止在使用类型/方法时写 `[module]::xx`，应先 `use [module]::xx` 再直接使用 `xx`
 
 ### API 设计
 - [ ] 超过 3 个参数封装为结构体

@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use domain::{JiraConfigContext, GlobalConfigRepository};
+use domain::{GlobalConfigRepository, JiraConfigContext};
 
 /// Jira 配置上下文实现
 ///

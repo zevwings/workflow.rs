@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::{
     client::LLMClientImpl, executor::LLMExecutorImpl, LLMClient, LLMConfigContext, LLMExecutor,
 };
-use registry::{Container, RegistryError, Scope, try_bind};
+use registry::{try_bind, Container, RegistryError, Scope};
 
 /// 注册 LLM 相关服务
 ///

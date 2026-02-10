@@ -7,8 +7,7 @@
 //! - 更新工作历史记录的合并时间
 //! - 删除工作历史记录条目
 
-use crate::jira::error::JiraError;
-use crate::jira::history::entity::{DeleteHistoryResult, WorkHistoryEntry};
+use crate::{DeleteHistoryResult, JiraError, WorkHistoryEntry};
 
 // ============================================================================
 // Repository Trait

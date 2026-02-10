@@ -2,8 +2,9 @@
 //!
 //! 定义与大语言模型（LLM）交互的底层接口，支持各种 AI 辅助功能。
 
-use crate::llm::error::LLMError;
-use crate::summary::entity::{
+use super::entity::SummarizeCommitInput;
+use super::error::LLMError;
+use crate::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
     CommitSummaryAnalysis, CommitTestAnalysis,
 };
@@ -94,18 +95,6 @@ pub trait LLMRepository: Send + Sync {
     /// 综合阶段一分类结果与阶段二各分析结果及统计信息，生成结构化的 commit 总结（标题、描述、影响分析等）。
     fn summarize_commit_analysis(
         &self,
-        stage1_json: &str,
-        stage2_batch_json: &str,
-        stage2_logic_json: &str,
-        stage2_config_json: &str,
-        stage2_test_json: &str,
-        total_files: u32,
-        added_count: u32,
-        deleted_count: u32,
-        modified_count: u32,
-        renamed_count: u32,
-        total_additions: u32,
-        total_deletions: u32,
+        input: &SummarizeCommitInput<'_>,
     ) -> Result<CommitSummaryAnalysis, LLMError>;
-
 }

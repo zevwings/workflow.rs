@@ -6,7 +6,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::jira::error::JiraError;
+use crate::JiraError;
 
 /// 预编译的 Jira ticket 正则表达式
 ///

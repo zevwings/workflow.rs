@@ -15,8 +15,7 @@
 //! - 分阶段可以提供更精准的上下文给 LLM，提升分析质量
 //! - 便于并行处理和缓存中间结果
 
-use crate::errors::ServiceError;
-use crate::summary::entity::CommitSummaryAnalysis;
+use crate::{CommitSummaryAnalysis, ServiceError};
 
 /// 提交总结服务接口
 ///

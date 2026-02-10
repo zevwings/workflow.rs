@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use domain::{GitRepoRepository, GitRepository, RepoInfo};
-use registry::{Container, RegistryError, Scope, try_bind};
+use registry::{try_bind, Container, RegistryError, Scope};
 
 use crate::git::services::{
     BlameService, BlameServiceImpl, BranchService, BranchServiceImpl, CommitService,

@@ -1,9 +1,12 @@
 //! 合并 Pull Request 命令
 
-use domain::{GitError, extract_jira_ticket_id};
+use domain::{extract_jira_ticket_id, GitError};
 use prompt::{confirm, error, info, input, spinner, success, validators, warning};
 
-use crate::registry;
+use crate::registry::{
+    get_git_repository, get_jira_repository, get_jira_work_history_repository,
+    get_pull_request_service,
+};
 
 /// Pull Request Merge 命令
 pub struct PullRequestMergeCommand {
@@ -19,8 +22,8 @@ impl PullRequestMergeCommand {
 
     /// 运行 `workflow pr merge` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let pr_service = registry::get_pull_request_service();
-        let git_repo = registry::get_git_repository();
+        let pr_service = get_pull_request_service();
+        let git_repo = get_git_repository();
 
         if self.force {
             info!("Force mode enabled: remote branch will be deleted after merge");
@@ -212,9 +215,8 @@ impl PullRequestMergeCommand {
         pr_title: Option<&str>,
         repository_url: Option<&str>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-
-        let jira_repo = registry::get_jira_repository();
-        let work_history_repo = registry::get_jira_work_history_repository();
+        let jira_repo = get_jira_repository();
+        let work_history_repo = get_jira_work_history_repository();
 
         // 如果没有仓库 URL，跳过工作历史相关操作
         let repo_url = repository_url.unwrap_or("");

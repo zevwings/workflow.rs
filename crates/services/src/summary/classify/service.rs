@@ -4,7 +4,9 @@
 
 use std::sync::Arc;
 
-use domain::{ServiceError,CommitChangeType, CommitFileChange, DirectoryStats, CommitFileClassification};
+use domain::{
+    CommitChangeType, CommitFileChange, CommitFileClassification, DirectoryStats, ServiceError,
+};
 use llm::{JsonParser, LLMExecutor};
 
 use super::FileClassifyConversation;

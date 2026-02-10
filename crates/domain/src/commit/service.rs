@@ -1,7 +1,6 @@
 //! Commit 服务接口定义
 
-use crate::errors::ServiceError;
-use crate::summary::entity::CommitSummaryAnalysis;
+use crate::{CommitSummaryAnalysis, ServiceError};
 
 /// Commit Message 生成服务
 ///

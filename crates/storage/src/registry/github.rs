@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use domain::{GitHubContext, GitHubRepository, GitRepoRepository};
-use registry::{Container, RegistryError, Scope, try_bind};
+use registry::{try_bind, Container, RegistryError, Scope};
 
 use crate::github::{
     GitHubClient, GitHubClientImpl, GitHubRepositoryImpl, PullRequestDiffService,

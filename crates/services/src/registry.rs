@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use domain::{
     AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
-    GlobalConfigRepository, GitHubRepository, GitRepository, PathService, PullRequestService,
+    GitHubRepository, GitRepository, GlobalConfigRepository, PathService, PullRequestService,
 };
 use llm::{LLMConfigContext, LLMExecutor};
-use registry::{Container, RegistryError, Scope, try_bind};
+use registry::{try_bind, Container, RegistryError, Scope};
 
 use crate::alias::AliasServiceImpl;
 use crate::branch::BranchServiceImpl;

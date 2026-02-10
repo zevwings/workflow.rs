@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use llm::LLMExecutor;
-use registry::{Container, RegistryError, Scope, try_bind};
+use registry::{try_bind, Container, RegistryError, Scope};
 
 use crate::config::VerificationServiceImpl;
 use domain::{GitHubRepository, GlobalConfigRepository, JiraRepository, VerificationService};

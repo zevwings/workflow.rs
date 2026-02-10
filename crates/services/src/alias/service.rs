@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use domain::{
-    AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService, ServiceError,
-    GlobalConfigRepository,
+    AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService,
+    GlobalConfigRepository, ServiceError,
 };
 
 /// 别名服务实现

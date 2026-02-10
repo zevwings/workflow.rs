@@ -10,7 +10,10 @@ use std::{fs, path::Path, sync::Arc};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-use domain::{JiraError, JiraStatusConfig, PathService, ProjectStatusConfig, extract_jira_project, validate_jira_ticket_format};
+use domain::{
+    extract_jira_project, validate_jira_ticket_format, JiraError, JiraStatusConfig, PathService,
+    ProjectStatusConfig,
+};
 use toolkit::{file, log_debug};
 
 use crate::jira::JiraClient;

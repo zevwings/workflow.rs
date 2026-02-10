@@ -8,8 +8,8 @@ use git2::DiffOptions;
 use toolkit::log_warn;
 
 use super::GitContext;
-use domain::{CommitChangeType, CommitFileChange};
 use domain::GitError;
+use domain::{CommitChangeType, CommitFileChange};
 
 /// Diff 服务接口
 pub trait DiffService: Send + Sync {
