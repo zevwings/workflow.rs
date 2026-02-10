@@ -5,11 +5,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use domain::errors::ServiceError;
-use domain::git::entity::CommitFileChange;
-use domain::summary::entity::{CommitFileClassification, CommitLogicAnalysis};
-use llm::parsers::JsonParser;
-use llm::LLMExecutor;
+use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, ServiceError};
+use llm::{JsonParser, LLMExecutor};
 
 use super::LogicAnalyzeConversation;
 

@@ -8,8 +8,8 @@ use std::path::Path;
 
 use prompt::{info, success, warning, Progress, Spinner};
 use toolkit::{
-    archive, build_checksum_url, calculate_sha256, parse_hash_from_content, verify_checksum,
-    SizeExt,
+    archive, build_checksum_url, calculate_sha256, log_debug, parse_hash_from_content,
+    verify_checksum, SizeExt,
 };
 
 use http::HttpClient;
@@ -43,13 +43,13 @@ pub fn download_file(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let url = url.as_ref();
     info!("Downloading update package...");
-    toolkit::log_debug!("Download URL: {}", url);
-    toolkit::log_debug!("Saving to: {}", output_path.display());
+    log_debug!("Download URL: {}", url);
+    log_debug!("Saving to: {}", output_path.display());
 
     // 如果文件已存在且不完整，先删除它
     if output_path.exists() {
         if let Err(e) = fs::remove_file(output_path) {
-            toolkit::log_debug!("Failed to delete incomplete file: {}", e);
+            log_debug!("Failed to delete incomplete file: {}", e);
         }
     }
 
@@ -114,7 +114,7 @@ pub fn verify_file_checksum(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let checksum_url = build_checksum_url(download_url);
 
-    toolkit::log_debug!("Checksum URL: {}", checksum_url);
+    log_debug!("Checksum URL: {}", checksum_url);
 
     let http_client = HttpClient::global()?;
 
@@ -182,8 +182,8 @@ pub fn extract_archive(
     archive_path: &Path,
     output_dir: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    toolkit::log_debug!("Extracting: {}", archive_path.display());
-    toolkit::log_debug!("Extracting to: {}", output_dir.display());
+    log_debug!("Extracting: {}", archive_path.display());
+    log_debug!("Extracting to: {}", output_dir.display());
 
     let spinner = Spinner::new("Extracting update package...");
     let spinner_instance = spinner.start();

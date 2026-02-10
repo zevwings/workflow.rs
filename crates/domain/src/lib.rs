@@ -13,6 +13,7 @@ pub mod errors;
 pub mod git;
 pub mod github;
 pub mod jira;
+pub mod llm;
 pub mod path;
 pub mod pr;
 pub mod summary;
@@ -37,6 +38,7 @@ pub use config::{
     GlobalConfig,
     GlobalConfigRepository,
     JiraConfigInfo,
+    JiraSettings,
     JiraVerificationResult,
     JiraVerificationStatus,
     LLMConfig,
@@ -94,8 +96,8 @@ pub use errors::ServiceError;
 pub use git::{
     BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitChangeType, CommitFileChange,
     CommitInfo, FileStatusInfo, FileStatusType, GitError, GitRepoRepository, GitRepository,
-    MergeStrategy, RemoteInfo, RepoInfo, TagCreateInfo, TagCreateScope, TagDeleteInfo,
-    TagDeleteScope, WorkingTreeStatus,
+    MergeStrategy, RemoteInfo, RepoInfo, StashApplyResult, StashEntry, StashPopResult, StashStat,
+    TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
 };
 
 // Re-export external service types
@@ -110,5 +112,6 @@ pub use jira::{
 
 pub use summary::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
-    CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis,
+    CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis, DirectoryStats,
+    DirectoryStatusDistribution,
 };

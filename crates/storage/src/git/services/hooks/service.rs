@@ -1,4 +1,4 @@
-use domain::git::GitError;
+use domain::GitError;
 
 use super::{
     pre_commit_hooks, HookContext, HookDiscoverer, HookResult, HookTool, HookToolDetector,

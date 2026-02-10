@@ -25,3 +25,34 @@ pub struct PullRequestSummary {
     /// 文件名（不含路径和扩展名）
     pub filename: String,
 }
+
+/// 阶段三全局总结的输入参数
+///
+/// 综合阶段一分类与阶段二各分析结果及统计信息，供 LLM 生成 commit 总结。
+#[derive(Debug, Clone)]
+pub struct SummarizeCommitInput<'a> {
+    /// 阶段一文件分类 JSON
+    pub stage1_json: &'a str,
+    /// 阶段二批量分析 JSON
+    pub stage2_batch_json: &'a str,
+    /// 阶段二逻辑分析 JSON
+    pub stage2_logic_json: &'a str,
+    /// 阶段二配置分析 JSON
+    pub stage2_config_json: &'a str,
+    /// 阶段二测试分析 JSON
+    pub stage2_test_json: &'a str,
+    /// 总文件数
+    pub total_files: u32,
+    /// 新增文件数
+    pub added_count: u32,
+    /// 删除文件数
+    pub deleted_count: u32,
+    /// 修改文件数
+    pub modified_count: u32,
+    /// 重命名文件数
+    pub renamed_count: u32,
+    /// 总新增行数
+    pub total_additions: u32,
+    /// 总删除行数
+    pub total_deletions: u32,
+}

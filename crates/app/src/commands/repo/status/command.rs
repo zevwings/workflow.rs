@@ -2,6 +2,7 @@
 //!
 //! 查看当前仓库状态。
 
+use domain::WorkingTreeStatus;
 use prompt::{br, error, info, spinner, success, warning};
 
 use crate::registry::get_git_repository;
@@ -64,7 +65,7 @@ impl RepoStatusCommand {
     }
 
     /// 按状态分组显示未提交的文件
-    fn display_uncommitted_files(&self, status: &domain::WorkingTreeStatus) {
+    fn display_uncommitted_files(&self, status: &WorkingTreeStatus) {
         let groups = [
             ("Staged files:", &status.staged),
             ("Unstaged changes:", &status.unstaged),

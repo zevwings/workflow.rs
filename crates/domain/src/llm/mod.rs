@@ -9,7 +9,7 @@ pub mod language;
 pub mod repository;
 
 pub use context::LLMConfigContext;
-pub use entity::{PullRequestReword, PullRequestSummary};
+pub use entity::{PullRequestReword, PullRequestSummary, SummarizeCommitInput};
 pub use error::LLMError;
 pub use language::SupportedLanguage;
 pub use repository::LLMRepository;

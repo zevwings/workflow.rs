@@ -35,6 +35,7 @@ impl WorkflowContext {
     }
 
     /// 使用默认设置创建新上下文（用于初始设置）
+    #[allow(dead_code)]
     pub fn new_with_defaults(mode: WorkflowMode) -> Self {
         Self {
             settings: GlobalConfig::default(),

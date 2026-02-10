@@ -1,7 +1,7 @@
 // //! Attachment 服务实体定义
 
 // use crate::jira::types::JiraAttachment;
-// use domain::jira::JiraConfigContext;
+// use domain::JiraConfigContext;
 // use regex::Regex;
 // use std::collections::HashMap;
 

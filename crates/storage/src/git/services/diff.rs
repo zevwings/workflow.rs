@@ -8,8 +8,8 @@ use git2::DiffOptions;
 use toolkit::log_warn;
 
 use super::GitContext;
-use domain::git::entity::{CommitChangeType, CommitFileChange};
-use domain::git::GitError;
+use domain::GitError;
+use domain::{CommitChangeType, CommitFileChange};
 
 /// Diff 服务接口
 pub trait DiffService: Send + Sync {
@@ -431,7 +431,7 @@ impl DiffService for DiffServiceImpl {
             None,
             Some(&mut line_cb),
         ) {
-            toolkit::log_warn!("Failed to iterate diff lines: {}", e);
+            log_warn!("Failed to iterate diff lines: {}", e);
         }
 
         let files: Vec<CommitFileChange> = diff

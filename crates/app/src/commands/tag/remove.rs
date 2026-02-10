@@ -1,6 +1,6 @@
 //! 删除 Tag 命令
 
-use domain::TagDeleteScope;
+use domain::{GitRepository, TagDeleteScope};
 use prompt::{confirm, error, info, select, success, warning};
 
 use crate::registry;
@@ -161,7 +161,7 @@ impl TagRemoveCommand {
     /// 按模式删除 tag
     fn remove_by_pattern(
         &self,
-        tag_repo: &dyn domain::GitRepository,
+        tag_repo: &dyn GitRepository,
         pattern: &str,
         scope: TagDeleteScope,
     ) -> Result<(), Box<dyn std::error::Error>> {

@@ -5,11 +5,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use domain::errors::ServiceError;
-use domain::git::entity::CommitFileChange;
-use domain::summary::entity::{CommitBatchAnalysis, CommitFileClassification};
-use llm::parsers::JsonParser;
-use llm::LLMExecutor;
+use domain::{CommitBatchAnalysis, CommitFileChange, CommitFileClassification, ServiceError};
+use llm::{JsonParser, LLMExecutor};
 
 use super::BatchAnalyzeConversation;
 
@@ -297,7 +294,7 @@ fn count_zero_change_files(paths: &[String], files: &[CommitFileChange]) -> usiz
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::git::entity::CommitChangeType;
+    use domain::CommitChangeType;
 
     fn create_test_file(path: &str, additions: u32, deletions: u32) -> CommitFileChange {
         CommitFileChange {

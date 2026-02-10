@@ -9,8 +9,8 @@ use domain::{
 use prompt::{confirm, info, spinner, success, warning};
 
 use crate::registry::{get_commit_summary_service, get_git_repository, get_pull_request_service};
-use crate::workflows::utils::branch::branch_type_from_branch_name;
-use crate::workflows::utils::pull_request::generate_pull_request_body;
+use crate::utils::branch_type_from_branch_name;
+use crate::utils::generate_pull_request_body;
 
 /// PR 重写命令（基于三阶段分析 + 模板更新 description）
 pub struct PullRequestRewordCommand {

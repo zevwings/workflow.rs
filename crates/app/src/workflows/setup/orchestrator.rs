@@ -2,10 +2,9 @@
 //!
 //! 使用阶段架构编排完整的设置工作流。
 
-use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
-use crate::workflows::core::stage::{WorkflowExecutor, WorkflowStage};
-use crate::workflows::platforms::{
-    github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage,
+use crate::workflows::{
+    github_stage, jira_stage, llm_stage, log_stage, WorkflowContext, WorkflowExecutor,
+    WorkflowMode, WorkflowStage,
 };
 use prompt::{br, info, is_user_cancelled, separator, success, warning};
 use std::error::Error;

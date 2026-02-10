@@ -3,8 +3,8 @@
 use prompt::{error, info, spinner, success};
 use toolkit::expand;
 
-use crate::registry;
-use crate::workflows::utils::jira::get_jira_id_interactive;
+use crate::registry::{get_jira_repository, get_path_service};
+use crate::utils::get_jira_id_interactive;
 
 /// Jira Attachments 命令
 pub struct JiraAttachmentsCommand {
@@ -23,9 +23,9 @@ impl JiraAttachmentsCommand {
         let jira_id = get_jira_id_interactive(self.jira_id.clone())?;
 
         // 获取 JiraRepository
-        let jira_repo = registry::get_jira_repository();
-
-        let path_service = registry::get_path_service();
+        let jira_repo = get_jira_repository();
+        // 获取 PathService
+        let path_service = get_path_service();
 
         // 获取基础目录（使用 domain 层的配置函数）
         let base_dir = path_service.get_download_dir()?;

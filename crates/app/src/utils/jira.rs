@@ -1,5 +1,4 @@
-use domain::jira::validate_jira_ticket_format;
-use domain::{extract_jira_project, JiraRepository, JiraStatusConfig};
+use domain::{extract_jira_project, validate_jira_ticket_format, JiraRepository, JiraStatusConfig};
 use prompt::{info, input, select, spinner, success};
 
 /// 交互式获取 JIRA ID（必填）
@@ -103,14 +102,9 @@ pub fn ensure_jira_status_config(
     let config_result = configure_jira_status_interactive(jira_repo, ticket)?;
 
     success!("Jira 状态配置已保存");
-    info!(
-        "  PR 创建状态: {}",
-        config_result.created_pull_request_status
-    );
-    info!(
-        "  PR 合并状态: {}",
-        config_result.merged_pull_request_status
-    );
+    info!("项目名称: {}", config_result.project);
+    info!("PR 创建状态: {}", config_result.created_pull_request_status);
+    info!("PR 合并状态: {}", config_result.merged_pull_request_status);
 
     Ok(Some(config_result.created_pull_request_status))
 }
@@ -186,27 +180,4 @@ fn configure_jira_status_interactive(
         created_pull_request_status,
         merged_pull_request_status,
     })
-}
-
-/// 从 PR URL 提取 PR ID
-///
-/// 支持 GitHub PR URL 格式：`https://github.com/owner/repo/pull/123`
-pub fn extract_pr_id_from_url(pr_url: impl AsRef<str>) -> Option<String> {
-    let pr_url = pr_url.as_ref();
-    // 匹配 /pull/123 或 /pulls/123 格式
-    let parts: Vec<&str> = pr_url.split('/').collect();
-
-    // 查找 "pull" 或 "pulls" 后面的数字
-    for (i, part) in parts.iter().enumerate() {
-        if (*part == "pull" || *part == "pulls") && i + 1 < parts.len() {
-            let pr_id = parts[i + 1];
-            // 移除可能的查询参数
-            let pr_id = pr_id.split('?').next().unwrap_or(pr_id);
-            if pr_id.chars().all(|c| c.is_ascii_digit()) {
-                return Some(pr_id.to_string());
-            }
-        }
-    }
-
-    None
 }

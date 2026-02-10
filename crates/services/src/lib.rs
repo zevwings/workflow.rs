@@ -1,7 +1,10 @@
 //! 服务层（Application Service Layer）
 //!
-//! 组合 storage，实现业务用例
-//! 实现领域服务接口
+//! 组合 storage，实现业务用例与领域服务接口。
+//!
+//! # 对外 API
+//!
+//! 外部仅通过 [`register_services`] 注册到依赖注入容器，通过 trait 接口访问实现，不直接依赖本 crate 的其他类型。
 
 pub(crate) mod alias;
 pub(crate) mod branch;
@@ -12,7 +15,4 @@ pub(crate) mod pull_request;
 pub(crate) mod registry;
 pub(crate) mod summary;
 
-pub use branch::BranchServiceImpl;
-pub use commit::CommitMessageServiceImpl;
 pub use registry::register_services;
-pub use summary::CommitSummaryServiceImpl;

@@ -1,10 +1,8 @@
 //! Jira 仓储接口
 
-use crate::jira::api::entity::JiraStatusConfig;
-use crate::jira::api::entity::{JiraAttachment, JiraIssue};
-use crate::jira::error::JiraError;
-use crate::JiraUser;
 use std::path::{Path, PathBuf};
+
+use crate::{JiraAttachment, JiraError, JiraIssue, JiraStatusConfig, JiraUser};
 
 /// 附件下载结果
 #[derive(Debug, Clone)]

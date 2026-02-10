@@ -5,9 +5,8 @@
 use std::sync::Arc;
 
 use domain::{
-    alias::{AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService},
-    errors::ServiceError,
-    GlobalConfigRepository,
+    AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService,
+    GlobalConfigRepository, ServiceError,
 };
 
 /// 别名服务实现
@@ -121,7 +120,7 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
 
-    use domain::config::global::config::GlobalConfig;
+    use domain::GlobalConfig;
 
     struct MockGlobalConfigRepository {
         config: Mutex<GlobalConfig>,

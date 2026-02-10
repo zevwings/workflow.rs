@@ -7,6 +7,7 @@ use std::sync::Arc;
 use serde_json::Value;
 
 use domain::GitHubError;
+use toolkit::log_debug;
 
 use crate::github::client::GitHubClient;
 use crate::github::services::ServiceContext;
@@ -65,7 +66,7 @@ impl PullRequestDiffServiceImpl {
         }
 
         let files_to_process = if files.len() > MAX_FILES {
-            toolkit::log_debug!(
+            log_debug!(
                 "PR has {} files, limiting to first {} files",
                 files.len(),
                 MAX_FILES
@@ -170,9 +171,7 @@ impl PullRequestDiffService for PullRequestDiffServiceImpl {
             };
 
             if is_too_large {
-                toolkit::log_debug!(
-                    "PR diff exceeds GitHub API limit (20000 lines), using fallback method"
-                );
+                log_debug!("PR diff exceeds GitHub API limit (20000 lines), using fallback method");
                 return self.get_pull_request_diff_fallback(&owner, &repo_name, pr_number);
             }
         }

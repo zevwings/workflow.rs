@@ -263,7 +263,7 @@ fn bench_blame_get_file_blame_range(c: &mut Criterion) {
 
 /// 测试创建 tag 的性能
 fn bench_tag_create(c: &mut Criterion) {
-    use domain::git::TagCreateScope;
+    use domain::TagCreateScope;
 
     c.bench_function("tag_create", |b| {
         b.iter_batched(

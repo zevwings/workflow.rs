@@ -18,7 +18,7 @@
 // use crate::jira::types::JiraAttachment;
 // use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-// use domain::jira::JiraConfigContext;
+// use domain::JiraConfigContext;
 // use domain::{AttachmentDownloadResult, JiraError, JiraIssue};
 // use std::path::{Path, PathBuf};
 // use std::sync::mpsc;

@@ -4,7 +4,7 @@
 
 use clap::Parser;
 use prompt::{terminal_resume, terminal_suspend};
-use toolkit::{logger, register_spinner_handlers, LoggerConfig};
+use toolkit::{log_info, logger, register_spinner_handlers, LoggerConfig};
 
 use app::cli::{
     AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
@@ -79,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 注册终端处理器，让 tracing 输出时能协调 spinner/progress
         register_spinner_handlers(terminal_suspend, terminal_resume);
 
-        toolkit::log_info!(
+        log_info!(
             "Logger initialized (console={}, level={})",
             logger_config.enable_console,
             logger_config.level.as_deref().unwrap_or("off")

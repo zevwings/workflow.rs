@@ -1,5 +1,6 @@
 //! 平台配置流程
 
+use domain::GlobalConfig;
 use prompt::{br, info, separator, SelectBuilder};
 
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
@@ -18,7 +19,7 @@ pub fn configure_platform<S, A, F, U>(
     update_account_fn: U,
 ) -> Result<(), String>
 where
-    domain::GlobalConfig: GlobalConfigAccessor<S>,
+    GlobalConfig: GlobalConfigAccessor<S>,
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
     F: Fn(&mut WorkflowContext, AccountSetMode) -> Result<String, String>,
@@ -132,7 +133,7 @@ fn handle_action<S, A, U>(
     update_account_fn: U,
 ) -> Result<(), String>
 where
-    domain::GlobalConfig: GlobalConfigAccessor<S>,
+    GlobalConfig: GlobalConfigAccessor<S>,
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
     U: Fn(&mut WorkflowContext) -> Result<(), String>,

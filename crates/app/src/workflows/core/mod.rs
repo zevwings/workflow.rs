@@ -7,9 +7,4 @@ pub mod platform;
 pub mod stage;
 
 pub use context::{WorkflowContext, WorkflowMode};
-pub use platform::{
-    add_account_generic, configure_platform, remove_account_generic, switch_account_generic,
-    AccountAction, AccountSetMode, GlobalConfigAccessor, PlatformAccount, PlatformConfigurator,
-    PlatformSettings,
-};
 pub use stage::{WorkflowExecutor, WorkflowStage};

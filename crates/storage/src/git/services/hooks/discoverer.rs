@@ -2,7 +2,7 @@
 //!
 //! 负责发现标准 Git hooks（`.git/hooks/` 或 `core.hooksPath` 指向的目录）。
 
-use domain::git::GitError;
+use domain::GitError;
 use std::path::{Path, PathBuf};
 
 /// Hook 发现器

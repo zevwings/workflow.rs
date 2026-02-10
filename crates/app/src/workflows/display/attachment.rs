@@ -7,6 +7,7 @@ use prompt::Tabled;
 /// JIRA 附件表格行
 ///
 /// 用于在表格中显示 JIRA 附件信息。
+#[allow(dead_code)]
 pub struct AttachmentRow {
     pub index: String,
     pub filename: String,

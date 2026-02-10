@@ -2,12 +2,13 @@
 //!
 //! 提供 git2::Repository 的管理和访问。
 
-use domain::git::{CodePlatform, GitError, RepoInfo};
+use domain::{CodePlatform, GitError, RepoInfo};
 use git2::{CertificateCheckStatus, Repository};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use toolkit::log_info;
 
 /// URL 解析器模式
 static URL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
@@ -229,7 +230,7 @@ impl GitContext {
         let mut callbacks = git2::RemoteCallbacks::new();
         // libgit2 使用 libssh2，不读 OpenSSH 的 known_hosts，必须显式接受主机密钥
         callbacks.certificate_check(|_cert, host| {
-            toolkit::log_info!(
+            log_info!(
                 "create_callbacks: certificate_check invoked, host = {}",
                 host
             );
@@ -249,7 +250,7 @@ impl GitContext {
 
             const MAX_RETRIES: u32 = 3;
             if *count > MAX_RETRIES {
-                toolkit::log_info!(
+                log_info!(
                     "create_callbacks: max retries ({}) exceeded, failing authentication",
                     MAX_RETRIES
                 );
@@ -258,7 +259,7 @@ impl GitContext {
                 ));
             }
 
-            toolkit::log_info!(
+            log_info!(
                 "create_callbacks: credentials invoked (attempt {}), url = {}, allowed_types = {:?}",
                 *count,
                 url,
@@ -267,26 +268,26 @@ impl GitContext {
 
             if allowed_types.contains(git2::CredentialType::SSH_KEY) {
                 let username = username_from_url.unwrap_or("git");
-                toolkit::log_info!("create_callbacks: trying ssh_key_from_agent(username = {})", username);
+                log_info!("create_callbacks: trying ssh_key_from_agent(username = {})", username);
                 match git2::Cred::ssh_key_from_agent(username) {
                     Ok(cred) => {
-                        toolkit::log_info!("create_callbacks: ssh_key_from_agent ok");
+                        log_info!("create_callbacks: ssh_key_from_agent ok");
                         return Ok(cred);
                     }
                     Err(e) => {
-                        toolkit::log_info!("create_callbacks: ssh_key_from_agent failed: {}", e);
+                        log_info!("create_callbacks: ssh_key_from_agent failed: {}", e);
                     }
                 }
             }
             if allowed_types.contains(git2::CredentialType::DEFAULT) {
-                toolkit::log_info!("create_callbacks: trying Cred::default()");
+                log_info!("create_callbacks: trying Cred::default()");
                 return git2::Cred::default();
             }
-            toolkit::log_info!("create_callbacks: no authentication available");
+            log_info!("create_callbacks: no authentication available");
             Err(git2::Error::from_str("no authentication available"))
         });
         callbacks.push_transfer_progress(|current, total, bytes| {
-            toolkit::log_info!(
+            log_info!(
                 "create_callbacks: push_transfer_progress current={} total={} bytes={}",
                 current,
                 total,

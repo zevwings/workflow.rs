@@ -1,8 +1,6 @@
 //! 通用服务错误
 
-use crate::git::error::GitError;
-use crate::github::error::GitHubError;
-use crate::jira::error::JiraError;
+use crate::{GitError, GitHubError, JiraError};
 use thiserror::Error;
 
 /// 通用服务错误

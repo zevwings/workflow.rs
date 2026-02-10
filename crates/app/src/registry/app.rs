@@ -10,7 +10,7 @@
 use std::sync::Arc;
 
 #[allow(unused_imports)]
-use registry::{bind, try_bind, Container, Scope};
+use registry::{bind, try_bind, Container, RegistryError, Scope};
 
 /// 注册应用层服务
 ///
@@ -35,7 +35,7 @@ use registry::{bind, try_bind, Container, Scope};
 ///
 /// // 实现服务（在 app 层）
 /// pub struct AppServiceImpl {
-///     repo: Arc<dyn domain::SomeRepository>,
+///     repo: Arc<dyn SomeRepository>,
 /// }
 ///
 /// impl AppService for AppServiceImpl {
@@ -47,7 +47,7 @@ use registry::{bind, try_bind, Container, Scope};
 ///
 /// // 在 register_app() 中注册
 /// try_bind!(dyn AppService, |c: &Container| {
-///     let repo = c.get::<dyn domain::SomeRepository>()?;
+///     let repo = c.get::<dyn SomeRepository>()?;
 ///     Ok(Arc::new(AppServiceImpl::new(repo)))
 /// })
 /// .in_scope(Scope::Singleton)?;
@@ -73,14 +73,14 @@ use registry::{bind, try_bind, Container, Scope};
 /// })
 /// .in_scope(Scope::Singleton)?;
 /// ```
-pub fn register_app() -> registry::Result<()> {
+pub fn register_app() -> Result<(), RegistryError> {
     // TODO: 在这里注册应用层特有的服务
     //
     // 示例：注册一个应用层服务
     //
     // try_bind!(dyn SomeAppService, |c: &Container| {
-    //     let repo = c.get::<dyn domain::SomeRepository>()?;
-    //     let service = c.get::<dyn domain::SomeService>()?;
+    //     let repo = c.get::<dyn SomeRepository>()?;
+    //     let service = c.get::<dyn SomeService>()?;
     //     Ok(Arc::new(SomeAppServiceImpl::new(repo, service)))
     // })
     // .in_scope(Scope::Singleton)?;

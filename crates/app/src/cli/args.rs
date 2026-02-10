@@ -5,7 +5,7 @@
 //! 使用 clap 的 `Args` trait 和 `#[command(flatten)]` 特性来实现参数复用。
 
 use clap::Args;
-use domain::jira::validate_jira_ticket_format;
+use domain::validate_jira_ticket_format;
 
 /// Dry run 模式选项
 ///

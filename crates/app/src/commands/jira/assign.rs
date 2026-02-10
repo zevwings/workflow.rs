@@ -4,7 +4,7 @@ use domain::extract_jira_project;
 use prompt::{spinner, success};
 
 use crate::registry;
-use crate::workflows::get_jira_id_interactive;
+use crate::utils::get_jira_id_interactive;
 
 /// Jira Setup 命令
 pub struct JiraAssignCommand {

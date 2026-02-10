@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use domain::errors::ServiceError;
-use domain::summary::entity::{CommitFileClassification, CommitTestAnalysis};
-use llm::parsers::JsonParser;
-use llm::LLMExecutor;
+use domain::{CommitFileClassification, CommitTestAnalysis, ServiceError};
+use llm::{JsonParser, LLMExecutor};
 
 use super::TestAnalyzeConversation;
 

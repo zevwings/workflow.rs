@@ -2,12 +2,11 @@
 //!
 //! 提供 Git 仓库的完整操作接口定义。
 
-use crate::git::entity::{
-    BlameLineInfo, CommitFileChange, CommitInfo, MergeStrategy, RepoInfo, StashApplyResult,
-    StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
-    WorkingTreeStatus,
+use crate::{
+    BlameLineInfo, CommitFileChange, CommitInfo, GitError, MergeStrategy, RepoInfo,
+    StashApplyResult, StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo,
+    TagDeleteScope, WorkingTreeStatus,
 };
-use crate::git::error::GitError;
 
 /// 仅提供仓库信息的仓储接口（兼容 GitHub 等依赖）
 pub trait GitRepoRepository: Send + Sync {

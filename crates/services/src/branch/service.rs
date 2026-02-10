@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use domain::{sanitize_branch_name, BranchService, BranchServiceError};
-use llm::parsers::JsonParser;
-use llm::{LLMConfigContext, LLMExecutor};
+use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
 use super::BranchNameConversation;
 

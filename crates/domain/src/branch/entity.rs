@@ -89,7 +89,7 @@ impl fmt::Display for BranchType {
 /// # 示例
 ///
 /// ```
-/// use domain::branch::sanitize_branch_name;
+/// use domain::sanitize_branch_name;
 ///
 /// assert_eq!(sanitize_branch_name("feature/abc-123"), "feature/abc-123");
 /// assert_eq!(sanitize_branch_name("feature@test#123"), "featuretest123");

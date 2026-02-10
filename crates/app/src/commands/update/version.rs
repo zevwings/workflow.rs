@@ -2,10 +2,10 @@
 //!
 //! 提供版本获取和比较功能。
 
+use super::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
 use http::{Authorization, HttpClient, Response};
 use prompt::{info, success, Spinner};
-
-use super::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
+use toolkit::log_debug;
 
 // Re-export VersionComparison from types for convenience
 pub use super::types::VersionComparison;
@@ -48,7 +48,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String, Box<dyn st
 
     // 构建请求并发送
     let response = if let Some(token) = github_token {
-        toolkit::log_debug!("Using GitHub token for API request");
+        log_debug!("Using GitHub token for API request");
         http_client.get(&url).auth(Authorization::bearer(token)).send()
     } else {
         http_client.get(&url).send()

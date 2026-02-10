@@ -9,6 +9,7 @@ pub enum AccountSetMode {
     #[default]
     SetAsCurrent,
     /// 仅添加，不设为当前
+    #[allow(dead_code)]
     AddOnly,
 }
 
@@ -49,7 +50,7 @@ impl std::fmt::Display for AccountAction {
             AccountAction::UseExisting {
                 account_display, ..
             } => {
-                write!(f, "Use exists account {}", account_display)
+                write!(f, "Use existing account {}", account_display)
             }
             AccountAction::AddNew { platform_name } => {
                 write!(f, "Add new {} account", platform_name)

@@ -1,5 +1,6 @@
 //! 账户操作函数
 
+use domain::GlobalConfig;
 use prompt::{br, confirm, info, success, warning, SelectBuilder};
 
 use crate::workflows::core::context::{WorkflowContext, WorkflowMode};
@@ -18,7 +19,7 @@ pub fn add_account_generic<S, A, F>(
     verify_fn: Option<fn() -> Result<(), String>>,
 ) -> Result<String, String>
 where
-    domain::GlobalConfig: GlobalConfigAccessor<S>,
+    GlobalConfig: GlobalConfigAccessor<S>,
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
     F: FnOnce() -> Result<A, String>,
@@ -74,7 +75,7 @@ pub fn switch_account_generic<S, A>(
     configurator: &impl PlatformConfigurator,
 ) -> Result<(), String>
 where
-    domain::GlobalConfig: GlobalConfigAccessor<S>,
+    GlobalConfig: GlobalConfigAccessor<S>,
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
 {
@@ -168,7 +169,7 @@ pub fn remove_account_generic<S, A>(
     platform_name: &str,
 ) -> Result<(), String>
 where
-    domain::GlobalConfig: GlobalConfigAccessor<S>,
+    GlobalConfig: GlobalConfigAccessor<S>,
     S: PlatformSettings<Account = A>,
     A: PlatformAccount,
 {

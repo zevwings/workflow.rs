@@ -14,6 +14,7 @@ use serde::Serialize;
 
 use domain::{JiraConfigContext, JiraError};
 use http::{Authorization, HttpClient, HttpMethod};
+use toolkit::log_debug;
 
 use crate::jira::client::types::JiraResponse;
 
@@ -133,7 +134,7 @@ impl JiraClientImpl {
         // 构建请求并发送
         let response = match method {
             HttpMethod::GET => {
-                toolkit::log_debug!("Jira request: {} {}", method, url);
+                log_debug!("Jira request: {} {}", method, url);
                 client.get(&url).auth(auth).send()
             }
             HttpMethod::POST => {
@@ -141,11 +142,11 @@ impl JiraClientImpl {
                     let body_value = serde_json::to_value(body).map_err(|e| {
                         JiraError::ApiError(format!("Failed to serialize request body: {}", e))
                     })?;
-                    toolkit::log_debug!("Jira request: {} {}", method, url);
-                    toolkit::log_debug!("Jira request body: {}", body_value);
+                    log_debug!("Jira request: {} {}", method, url);
+                    log_debug!("Jira request body: {}", body_value);
                     client.post(&url).auth(auth).body(&body_value).send()
                 } else {
-                    toolkit::log_debug!("Jira request: {} {}", method, url);
+                    log_debug!("Jira request: {} {}", method, url);
                     client.post(&url).auth(auth).send()
                 }
             }
@@ -154,11 +155,11 @@ impl JiraClientImpl {
                     let body_value = serde_json::to_value(body).map_err(|e| {
                         JiraError::ApiError(format!("Failed to serialize request body: {}", e))
                     })?;
-                    toolkit::log_debug!("Jira request: {} {}", method, url);
-                    toolkit::log_debug!("Jira request body: {}", body_value);
+                    log_debug!("Jira request: {} {}", method, url);
+                    log_debug!("Jira request body: {}", body_value);
                     client.put(&url).auth(auth).body(&body_value).send()
                 } else {
-                    toolkit::log_debug!("Jira request: {} {}", method, url);
+                    log_debug!("Jira request: {} {}", method, url);
                     client.put(&url).auth(auth).send()
                 }
             }

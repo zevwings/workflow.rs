@@ -32,7 +32,7 @@ pub enum RegistryError {
 }
 
 /// Result 类型别名
-pub type Result<T> = std::result::Result<T, RegistryError>;
+pub(crate) type Result<T> = std::result::Result<T, RegistryError>;
 
 #[cfg(test)]
 mod tests {

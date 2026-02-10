@@ -1,8 +1,7 @@
 //! 设置 Jira 配置命令
 
 use crate::registry;
-use crate::workflows::get_jira_id_interactive_optional;
-use crate::workflows::utils::jira::ensure_jira_status_config;
+use crate::utils::{ensure_jira_status_config, get_jira_id_interactive_optional};
 
 /// Jira Setup 命令
 pub struct JiraStatusCommand {

@@ -3,7 +3,7 @@
 use prompt::{spinner, success};
 
 use crate::registry;
-use crate::workflows::utils::jira::get_jira_id_interactive;
+use crate::utils::get_jira_id_interactive;
 
 /// Jira Comment 命令
 pub struct JiraCommentCommand {
