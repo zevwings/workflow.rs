@@ -4,8 +4,8 @@ use prompt::{confirm, error, info, multiselect, spinner, success};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::registry;
-use crate::utils::get_jira_id_interactive;
+use super::utils::get_jira_id_interactive;
+use crate::bootstrap;
 
 /// Jira Clean 命令
 pub struct JiraCleanCommand {
@@ -22,8 +22,8 @@ impl JiraCleanCommand {
     /// 运行 `workflow jira clean` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 获取 JiraRepository 和 PathService
-        let jira_repo = registry::get_jira_repository();
-        let path_service = registry::get_path_service();
+        let jira_repo = bootstrap::get_jira_repository();
+        let path_service = bootstrap::get_path_service();
 
         if self.all {
             // 第一步：询问是否清理所有附件

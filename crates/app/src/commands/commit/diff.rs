@@ -2,7 +2,7 @@
 
 use prompt::info;
 
-use crate::registry::get_git_repository;
+use crate::bootstrap::get_git_repository;
 
 /// 获取指定 commit 的 diff 内容
 pub struct CommitDiffCommand {

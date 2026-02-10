@@ -50,7 +50,8 @@ pub(crate) mod style {
 // 重新导出公共 API（仅导出外部使用的 API，内部实现不导出）
 // 注意：confirm, input, select, multiselect 现在只通过宏使用（confirm!, input!, select!, multiselect!）
 pub use dialog::{
-    validators, ConfirmBuilder, InputBuilder, MultiSelectBuilder, SelectBuilder, Validator,
+    validators, ConfirmBuilder, FuzzyFilter, InputBuilder, MultiSelectBuilder, SelectBuilder,
+    Validator,
 };
 pub use error::{is_user_cancelled, PromptError, Result};
 pub use form::{

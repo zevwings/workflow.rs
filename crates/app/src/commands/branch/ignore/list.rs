@@ -1,6 +1,6 @@
 //! 列出忽略分支
 
-use crate::registry;
+use crate::bootstrap;
 use prompt::info;
 
 /// Branch Ignore List 命令
@@ -20,7 +20,7 @@ impl BranchIgnoreListCommand {
 
     /// 列出当前仓库的忽略分支
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let repo = registry::get_repo_config_repository();
+        let repo = bootstrap::get_repo_config_repository();
 
         let user_config = repo
             .load_user_config()

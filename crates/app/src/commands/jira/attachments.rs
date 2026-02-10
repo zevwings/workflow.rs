@@ -3,8 +3,8 @@
 use prompt::{br, error, info, spinner, success};
 use toolkit::expand;
 
-use crate::registry::{get_jira_repository, get_path_service};
-use crate::utils::get_jira_id_interactive;
+use super::utils::get_jira_id_interactive;
+use crate::bootstrap::{get_jira_repository, get_path_service};
 
 /// Jira Attachments 命令
 pub struct JiraAttachmentsCommand {

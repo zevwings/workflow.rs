@@ -143,7 +143,7 @@ pub fn list_direct_files(path: &Path) -> Result<Vec<std::path::PathBuf>, FileErr
 ///
 /// ```rust
 /// use std::path::Path;
-/// use toolkit::util::fs::directory;
+/// use toolkit::directory;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let test_dir = std::env::temp_dir().join("test_dir");
@@ -169,7 +169,7 @@ pub fn ensure_exists(path: &Path) -> Result<(), FileError> {
 ///
 /// ```rust
 /// use std::path::Path;
-/// use toolkit::util::fs::directory;
+/// use toolkit::directory;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let file_path = std::env::temp_dir().join("some/nested/file.txt");

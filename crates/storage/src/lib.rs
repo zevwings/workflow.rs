@@ -13,9 +13,9 @@
 
 pub mod git;
 
+pub(crate) mod bootstrap;
 pub(crate) mod config;
 pub(crate) mod github;
 pub(crate) mod jira;
-pub(crate) mod registry;
 
-pub use registry::register_storage;
+pub use bootstrap::register_storage;

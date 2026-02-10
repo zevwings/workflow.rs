@@ -4,7 +4,7 @@
 
 use prompt::{info, input, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Stash push 命令
 pub struct StashPushCommand;
@@ -15,7 +15,7 @@ impl StashPushCommand {
     /// 保存当前工作目录和暂存区的未提交更改到 stash。
     /// 提示用户输入可选的消息来标识 stash 条目。
     pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-        let repo = registry::get_git_repository();
+        let repo = bootstrap::get_git_repository();
 
         // 检查是否有未提交的更改
         let status = repo

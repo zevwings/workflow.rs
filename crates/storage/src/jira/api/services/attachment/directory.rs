@@ -77,7 +77,7 @@ mod tests {
         let download_dir = DirectoryManager::prepare_directory(base_dir, "PROJ-123").unwrap();
 
         assert!(download_dir.exists());
-        assert_eq!(download_dir, base_dir.join("PROJ-123"));
+        assert_eq!(download_dir, base_dir.join("jira").join("PROJ-123"));
     }
 
     #[test]

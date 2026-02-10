@@ -4,7 +4,7 @@
 //! - 交互式配置 GitHub / Jira / LLM / 日志
 //! - 保存配置并给出提示
 
-use crate::workflows::setup::run_setup_workflow;
+use crate::interactive::setup::run_setup_workflow;
 
 /// Setup 命令
 pub struct SetupCommand;

@@ -3,7 +3,7 @@
 use domain::GitError;
 use prompt::{confirm, error, info, select, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Branch Switch 命令
 pub struct BranchSwitchCommand {
@@ -18,7 +18,7 @@ impl BranchSwitchCommand {
 
     /// 运行 `workflow branch switch` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let branch_repo = registry::get_git_repository();
+        let branch_repo = bootstrap::get_git_repository();
 
         let target_branch = if let Some(name) = &self.branch_name {
             name.clone()

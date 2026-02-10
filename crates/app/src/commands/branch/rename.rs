@@ -3,7 +3,7 @@
 use domain::GitError;
 use prompt::{confirm, error, info, input, select, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Branch Rename 命令
 pub struct BranchRenameCommand;
@@ -22,7 +22,7 @@ impl BranchRenameCommand {
 
     /// 运行 `workflow branch rename` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let branch_repo = registry::get_git_repository();
+        let branch_repo = bootstrap::get_git_repository();
 
         // 列出所有本地分支
         let branch_items = branch_repo

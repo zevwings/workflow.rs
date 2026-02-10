@@ -3,7 +3,7 @@
 use domain::{extract_jira_ticket_id, GitError};
 use prompt::{confirm, error, info, input, spinner, success, validators, warning};
 
-use crate::registry::{
+use crate::bootstrap::{
     get_git_repository, get_jira_repository, get_jira_work_history_repository,
     get_pull_request_service,
 };

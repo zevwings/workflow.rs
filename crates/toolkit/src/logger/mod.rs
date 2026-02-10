@@ -4,10 +4,10 @@
 //!
 //! ## 模块组织
 //!
-//! - [`config`] - 日志配置结构体
-//! - [`subscriber`] - Tracing subscriber 配置实现
-//! - [`path`] - 日志文件路径管理
-//! - [`macros`] - 日志宏定义
+//! - config - 日志配置结构体
+//! - subscriber - Tracing subscriber 配置实现
+//! - path - 日志文件路径管理
+//! - 日志宏（log_debug!, log_info! 等）定义于 crate 根
 //!
 //! ## 使用示例
 //!

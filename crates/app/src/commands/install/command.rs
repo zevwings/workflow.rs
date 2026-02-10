@@ -17,8 +17,8 @@ use domain::get_completion_cache_shell_dir;
 use prompt::{br, info, print, success, warning};
 use toolkit::{detect_shell, directory, log_debug, shell_to_string};
 
-use crate::cli::Cli;
-use crate::registry::{get_completion_service, get_path_service};
+use crate::bootstrap::{get_completion_service, get_path_service};
+use crate::commands::cli::Cli;
 
 /// 安装命令
 pub struct InstallCommand {

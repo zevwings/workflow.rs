@@ -8,8 +8,8 @@ use domain::get_completion_cache_shell_dir;
 use prompt::{info, success};
 use toolkit::{detect_shell, shell_from_string, shell_to_string};
 
-use crate::cli::Cli;
-use crate::registry::get_completion_service;
+use crate::bootstrap::get_completion_service;
+use crate::commands::cli::Cli;
 
 /// Completion 生成命令
 pub struct CompletionGenerateCommand {

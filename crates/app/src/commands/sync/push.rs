@@ -1,7 +1,7 @@
 use prompt::{info, success};
 use toolkit::log_debug;
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Push 命令
 pub struct PushCommand;
@@ -19,7 +19,7 @@ impl PushCommand {
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         log_debug!("push: getting git repository");
-        let git_repo = registry::get_git_repository();
+        let git_repo = bootstrap::get_git_repository();
 
         log_debug!("push: getting current branch");
         let branch_name = git_repo

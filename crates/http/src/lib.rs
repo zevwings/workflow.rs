@@ -47,5 +47,6 @@ pub use request::Request;
 pub use response::Response;
 pub use retry::{RetryConfig, RetryResult};
 
-#[cfg(test)]
-pub(crate) mod mock;
+// Testing 模块在测试或启用 testing feature 时可用
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;

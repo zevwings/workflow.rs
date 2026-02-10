@@ -2,10 +2,10 @@
 
 use prompt::{br, info, separator, success, warning};
 
-use crate::registry::{get_global_config_repository, get_path_service};
+use crate::bootstrap::{get_global_config_repository, get_path_service};
 
-use crate::workflows::core::stage::{WorkflowExecutor, WorkflowStage};
-use crate::workflows::platforms::{
+use crate::interactive::core::stage::{WorkflowExecutor, WorkflowStage};
+use crate::interactive::platforms::{
     github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage,
 };
 

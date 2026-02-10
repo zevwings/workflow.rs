@@ -4,21 +4,16 @@
 //!
 //! ## 使用示例
 //!
-//! ```rust,no_run
-//! use prompt::dialog::FuzzyFilter;
+//! ```rust
+//! use prompt::FuzzyFilter;
 //!
 //! let options = vec!["feature/user-auth", "feature/payment", "bugfix/login"];
 //! let filter = FuzzyFilter::new();
 //!
 //! // 过滤选项
 //! let (indices, filtered) = filter.filter(&options, "feat");
-//! // indices: [0, 1] - 匹配项的原始索引
-//! // filtered: [&"feature/user-auth", &"feature/payment"] - 匹配的选项
-//!
-//! // 检查单个选项是否匹配
-//! if let Some(score) = filter.matches("feature/user-auth", "feat") {
-//!     println!("匹配分数: {}", score);
-//! }
+//! assert_eq!(indices, vec![0, 1]);
+//! assert_eq!(filtered.len(), 2);
 //! ```
 
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -53,7 +48,7 @@ impl FuzzyFilter {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use prompt::dialog::FuzzyFilter;
+    /// use prompt::FuzzyFilter;
     ///
     /// let options = vec!["feature/user-auth", "feature/payment", "bugfix/login"];
     /// let filter = FuzzyFilter::new();

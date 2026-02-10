@@ -1,7 +1,7 @@
 //! 设置 LLM 配置命令
 
-use crate::workflows::core::stage::WorkflowExecutor;
-use crate::workflows::platforms::llm::llm_stage;
+use crate::interactive::core::stage::WorkflowExecutor;
+use crate::interactive::platforms::llm::llm_stage;
 
 /// Llm Setup 命令
 pub struct LlmSetupCommand;

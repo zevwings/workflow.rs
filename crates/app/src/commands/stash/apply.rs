@@ -4,7 +4,7 @@
 
 use prompt::{confirm, error, info, select, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Stash apply 命令
 pub struct StashApplyCommand;
@@ -12,7 +12,7 @@ pub struct StashApplyCommand;
 impl StashApplyCommand {
     /// 执行 stash apply 命令
     pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-        let repo = registry::get_git_repository();
+        let repo = bootstrap::get_git_repository();
 
         // 获取所有 stash 条目
         let entries =

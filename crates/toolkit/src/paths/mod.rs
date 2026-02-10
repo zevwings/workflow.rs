@@ -7,9 +7,10 @@
 //!
 //! ## 使用方式
 //!
-//! 所有路径 API 都通过模块级函数直接访问：
+//! 路径展开等 API 通过 `toolkit::expand` 访问：
 //! ```rust
-//! use toolkit::paths::{config_dir, workflow_config_path, binary_install_dir};
+//! use toolkit::expand;
+//! let path = expand("~/config").unwrap();
 //! ```
 
 mod constants;

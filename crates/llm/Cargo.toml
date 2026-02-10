@@ -7,7 +7,7 @@ description = "LLM 客户端与对话抽象，提供配置驱动的 API 调用�
 
 [dependencies]
 http.workspace = true
-registry.workspace = true
+di.workspace = true
 tracing.workspace = true
 
 serde.workspace = true

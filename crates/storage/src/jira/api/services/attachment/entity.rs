@@ -169,7 +169,8 @@ mod tests {
         "#;
 
         let attachments = UrlResolver::parse_attachments_from_description(description);
-        assert_eq!(attachments.len(), 3);
+        // 仅解析 .txt/.log/.zip 或 URL 含 attachments 的项，image.png 被过滤
+        assert_eq!(attachments.len(), 2);
         assert_eq!(attachments[0].filename, "log.txt");
         assert_eq!(attachments[1].filename, "error.log");
     }

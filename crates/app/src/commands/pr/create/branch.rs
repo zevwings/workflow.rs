@@ -3,9 +3,9 @@
 use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
 use prompt::{info, select, spinner, success, warning};
 
-use crate::registry;
-use crate::utils::branch_type_from_branch_name;
-use crate::utils::{generate_pull_request_body, generate_pull_request_title};
+use super::super::utils::{generate_pull_request_body, generate_pull_request_title};
+use crate::bootstrap;
+use crate::commands::branch::utils::branch_type_from_branch_name;
 
 use super::commit::{check_needs_push, commit_changes, push_branch};
 use super::pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary};
@@ -42,7 +42,7 @@ fn handle_use_current_branch(
     ctx: &BranchHandleContext<'_>,
     dry_run: bool,
 ) -> Result<(Option<String>, Option<String>), Box<dyn std::error::Error>> {
-    let pr_service = registry::get_pull_request_service();
+    let pr_service = bootstrap::get_pull_request_service();
 
     // 检查当前分支是否已有 PR
     let existing_pr_id = pr_service
@@ -78,7 +78,7 @@ fn handle_existing_pr(
     .map_err(|e| format!("Failed to select update option: {}", e))?;
 
     if update_selected == ConfirmOption::Yes {
-        let pr_service = registry::get_pull_request_service();
+        let pr_service = bootstrap::get_pull_request_service();
 
         // 生成 commit message（用于组合 PR 标题）
         let commit_message = build_commit_message(ctx.jira_id, ctx.description)?;
@@ -364,7 +364,7 @@ fn build_commit_message(
         if jira_id.trim().is_empty() {
             return Ok(description.unwrap_or("Update").to_string());
         }
-        let jira_repo = registry::get_jira_repository();
+        let jira_repo = bootstrap::get_jira_repository();
         match spinner!("Fetching JIRA ticket '{}'...", jira_id)
             .with(|| jira_repo.get_issue_info(jira_id))
         {

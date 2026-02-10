@@ -14,7 +14,7 @@ domain.workspace = true
 http.workspace = true
 llm.workspace = true
 toolkit.workspace = true
-registry.workspace = true
+di.workspace = true
 
 # HTTP 客户端
 reqwest.workspace = true

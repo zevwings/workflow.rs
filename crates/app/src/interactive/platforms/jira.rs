@@ -1,0 +1,130 @@
+//! Jira 工作流阶段 (v2)
+
+use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
+use crate::interactive::core::stage::WorkflowStage;
+use crate::interactive::display::VerificationResultFormatter;
+use domain::{GlobalConfig, VerificationService};
+use prompt::{
+    br, confirm, info, separator, FormBuilder, InputFormField, PasswordFormField, PromptError,
+};
+use std::error::Error;
+use toolkit::Sensitive;
+
+/// Jira 工作流阶段
+pub struct JiraStage;
+
+impl JiraStage {
+    /// 运行 Jira 配置表单
+    fn run_form(settings: &mut GlobalConfig) -> Result<(), String> {
+        info!("配置 Jira 服务地址、邮箱和 API 令牌。留空字段以保留默认值或跳过。");
+        br!();
+
+        let jira = &mut settings.jira;
+        let current_service = jira.service_address.clone();
+        let current_email = jira.email.clone();
+        let current_token = jira.api_token.clone();
+
+        let builder = FormBuilder::new()
+            .with_title("Jira 配置")
+            .add_input(
+                InputFormField::new("service_address", "请输入您的 Jira 服务地址")
+                    .default(current_service)
+                    .result_title("您的 Jira 服务地址")
+                    .required(),
+            )
+            .add_input(
+                InputFormField::new("email", "请输入您的 Jira 邮箱")
+                    .default(current_email)
+                    .result_title("您的 Jira 邮箱")
+                    .required(),
+            )
+            .add_password(
+                PasswordFormField::new("api_token", "请输入您的 Jira API 令牌")
+                    .default(current_token)
+                    .result_title("您的 Jira API 令牌")
+                    .required(),
+            );
+
+        let result = builder.run().map_err(|e| e.to_string())?;
+        let service_address = result.get_string("service_address");
+        let email = result.get_string("email");
+        let api_token = result.get_string("api_token");
+
+        if !service_address.trim().is_empty() {
+            jira.service_address = service_address.trim().to_string();
+        }
+        if !email.trim().is_empty() {
+            jira.email = email.trim().to_string();
+        }
+        if !api_token.trim().is_empty() {
+            jira.api_token = api_token;
+        }
+
+        Ok(())
+    }
+}
+
+impl WorkflowStage for JiraStage {
+    fn stage_name(&self) -> &'static str {
+        "Jira"
+    }
+
+    fn configure(&self, context: &mut WorkflowContext) -> Result<(), Box<dyn Error>> {
+        let mode = context.mode();
+        let settings = context.settings_mut();
+
+        separator!('─', 80, "Jira 配置");
+        br!();
+
+        let jira = &settings.jira;
+        let has_jira = !jira.email.is_empty()
+            || !jira.api_token.is_empty()
+            || !jira.service_address.is_empty();
+
+        if has_jira {
+            info!("检测到 Jira 配置！");
+            info!("  - 服务地址: {}", jira.service_address);
+            info!("  - Jira 邮箱: {}", jira.email);
+            if !jira.api_token.is_empty() {
+                info!("  - API 令牌: {}", jira.api_token.mask());
+            }
+            br!();
+        }
+
+        // 处理模式特定的交互
+        if mode == WorkflowMode::Setup && has_jira {
+            let keep = confirm!("检测到现有 Jira 配置。是否保留当前值？")
+                .default(true)
+                .result_title("保留 Jira 配置")
+                .prompt()
+                .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
+
+            if keep {
+                return Ok(());
+            }
+        }
+
+        Self::run_form(settings)?;
+
+        Ok(())
+    }
+
+    fn is_configured(&self, settings: &GlobalConfig) -> bool {
+        !settings.jira.is_empty()
+    }
+
+    fn verify(
+        &self,
+        service: &dyn VerificationService,
+    ) -> Result<Box<dyn VerificationResultFormatter>, Box<dyn Error>> {
+        service
+            .verify_jira_config()
+            .map(|r| Box::new(r) as Box<dyn VerificationResultFormatter>)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+    }
+}
+
+/// 获取 Jira 阶段实例
+pub fn jira_stage() -> &'static dyn WorkflowStage {
+    &JiraStage
+}

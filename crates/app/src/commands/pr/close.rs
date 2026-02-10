@@ -2,7 +2,7 @@
 
 use prompt::{spinner, success};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Pull Request Close 命令
 pub struct PullRequestCloseCommand {
@@ -17,7 +17,7 @@ impl PullRequestCloseCommand {
 
     /// 运行 `workflow pr close` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let pr_service = registry::get_pull_request_service();
+        let pr_service = bootstrap::get_pull_request_service();
 
         // 关闭 PR
         spinner!("Closing PR #{}...", self.pr_id)

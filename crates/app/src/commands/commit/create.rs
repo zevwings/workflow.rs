@@ -5,7 +5,7 @@
 use domain::GitRepository;
 use prompt::{error, info, spinner, success};
 
-use crate::registry;
+use crate::bootstrap;
 use toolkit::{log_info, log_info_with_fields};
 
 /// Commit Create 命令
@@ -39,7 +39,7 @@ impl CommitCreateCommand {
 
     /// 运行 `workflow commit create` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let git_repo = registry::get_git_repository();
+        let git_repo = bootstrap::get_git_repository();
 
         // Step 1: Stage 代码（如果需要）
         if self.all {
@@ -69,7 +69,7 @@ impl CommitCreateCommand {
             // 使用 AI 生成 commit message
             log_info!("Analyzing changes and generating commit message...");
 
-            let commit_message_service = registry::get_commit_message_service();
+            let commit_message_service = bootstrap::get_commit_message_service();
             let analysis =
                 spinner!("Analyzing changes and generating commit message...").with(|| {
                     commit_message_service

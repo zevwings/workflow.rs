@@ -1,7 +1,7 @@
 //! 检查日志级别命令
 
-use crate::workflows::core::stage::WorkflowExecutor;
-use crate::workflows::platforms::log::log_stage;
+use crate::interactive::core::stage::WorkflowExecutor;
+use crate::interactive::platforms::log::log_stage;
 use prompt::{br, separator};
 
 /// Log Check 命令

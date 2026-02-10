@@ -4,7 +4,7 @@
 
 use prompt::{confirm, info, multiselect, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// Stash drop 命令
 pub struct StashDropCommand;
@@ -12,7 +12,7 @@ pub struct StashDropCommand;
 impl StashDropCommand {
     /// 执行 stash drop 命令
     pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-        let repo = registry::get_git_repository();
+        let repo = bootstrap::get_git_repository();
 
         // 获取所有 stash 条目
         let entries =

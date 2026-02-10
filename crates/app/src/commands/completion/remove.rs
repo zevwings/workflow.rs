@@ -2,7 +2,7 @@
 //!
 //! 移除 Shell Completion 配置和脚本文件。
 
-use crate::registry::get_completion_service;
+use crate::bootstrap::get_completion_service;
 
 /// Completion 移除命令
 pub struct CompletionRemoveCommand {

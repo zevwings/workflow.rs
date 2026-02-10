@@ -8,7 +8,7 @@ members = [
     "crates/app",
     "crates/toolkit",
     "crates/prompt",
-    "crates/registry",
+    "crates/di",
 ]
 resolver = "2"
 
@@ -91,6 +91,6 @@ storage = { path = "crates/storage" }
 services = { path = "crates/services" }
 toolkit = { path = "crates/toolkit" }
 prompt = { path = "crates/prompt" }
-registry = { path = "crates/registry" }
+di = { path = "crates/di" }
 http = { path = "crates/http" }
 llm = { path = "crates/llm" }

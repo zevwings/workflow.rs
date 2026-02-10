@@ -29,7 +29,7 @@ pub mod git_hooks {
 /// pre-commit/prek 工具支持的 hooks
 ///
 /// 这些是 pre-commit 框架官方支持的 hook 类型。
-/// 参考: https://pre-commit.com/#supported-git-hooks
+/// 参考: <https://pre-commit.com/#supported-git-hooks>
 pub mod pre_commit_hooks {
     pub use super::git_hooks::{
         COMMIT_MSG, POST_CHECKOUT, POST_COMMIT, POST_MERGE, POST_REWRITE, PREPARE_COMMIT_MSG,

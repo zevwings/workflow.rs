@@ -3,7 +3,7 @@
 use domain::{GitError, GitRepository};
 use prompt::{error, info, multiselect, success, warning};
 
-use crate::registry;
+use crate::bootstrap;
 
 /// 处理未合并分支的结果
 enum UnmergedBranchAction {
@@ -46,7 +46,7 @@ impl BranchRemoveCommand {
 
     /// 运行 `workflow branch remove` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let branch_repo = registry::get_git_repository();
+        let branch_repo = bootstrap::get_git_repository();
 
         // 确定要删除的分支
         let target_branches = if let Some(name) = &self.branch_name {
@@ -72,7 +72,7 @@ impl BranchRemoveCommand {
                 .map_err(|e| format!("Failed to get default branch: {}", e))?;
 
             // 获取忽略列表
-            let config_repo = registry::get_repo_config_repository();
+            let config_repo = bootstrap::get_repo_config_repository();
             let user_config = config_repo
                 .load_user_config()
                 .map_err(|e| format!("Failed to load user config: {}", e))

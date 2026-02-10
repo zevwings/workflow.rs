@@ -99,13 +99,13 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "clap_complete",
+ "di",
  "domain",
  "git2",
  "http 0.0.1",
  "llm",
  "once_cell",
  "prompt",
- "registry",
  "serde_json",
  "services",
  "storage",
@@ -592,6 +592,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "di"
+version = "0.0.1"
+dependencies = [
+ "criterion",
+ "dashmap",
+ "insta",
+ "once_cell",
+ "pretty_assertions",
+ "rstest",
+ "serial_test",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1064,6 +1078,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
+ "tempfile",
  "tracing",
 ]
 
@@ -1547,8 +1562,8 @@ checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 name = "llm"
 version = "0.0.1"
 dependencies = [
+ "di",
  "http 0.0.1",
- "registry",
  "serde",
  "serde_json",
  "serde_with",
@@ -2155,20 +2170,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
-name = "registry"
-version = "0.0.1"
-dependencies = [
- "criterion",
- "dashmap",
- "insta",
- "once_cell",
- "pretty_assertions",
- "rstest",
- "serial_test",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "relative-path"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2532,12 +2533,12 @@ dependencies = [
 name = "services"
 version = "0.0.1"
 dependencies = [
+ "di",
  "dirs 5.0.1",
  "domain",
  "llm",
  "once_cell",
  "rayon",
- "registry",
  "serde_json",
  "serial_test",
  "tempfile",
@@ -2701,6 +2702,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "criterion",
+ "di",
  "dirs 5.0.1",
  "domain",
  "duct",
@@ -2711,7 +2713,6 @@ dependencies = [
  "llm",
  "once_cell",
  "regex",
- "registry",
  "reqwest",
  "serde",
  "serde_json",

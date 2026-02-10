@@ -1,3 +1,4 @@
-pub(crate) mod setup;
+mod manager;
 
-pub use setup::setup_logger;
+pub use manager::LoggerManager;
+pub use manager::LoggerManagerImpl;

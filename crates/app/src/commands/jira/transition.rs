@@ -3,8 +3,8 @@
 use domain::extract_jira_project;
 use prompt::{select, spinner, success};
 
-use crate::registry;
-use crate::utils::get_jira_id_interactive;
+use super::utils::get_jira_id_interactive;
+use crate::bootstrap;
 
 /// Jira Setup 命令
 pub struct JiraTransitionCommand {
@@ -25,7 +25,7 @@ impl JiraTransitionCommand {
 
     /// 运行 `workflow jira setup` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let jira_repo = registry::get_jira_repository();
+        let jira_repo = bootstrap::get_jira_repository();
         // 获取 JIRA ID（交互式或从参数）
         let jira_id = get_jira_id_interactive(self.jira_id.clone())?;
 
