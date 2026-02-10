@@ -181,8 +181,27 @@ fn handle_no_existing_pr(
     // 生成 commit message（用于组合 PR 标题）
     let commit_message = build_commit_message(ctx.jira_id, ctx.description)?;
 
-    // 生成 PR 摘要（三阶段分析）
-    let pr_summary = generate_pr_summary(None)?;
+    // 先确定目标分支（在生成 summary 之前，以便用正确的 base 做 diff 分析）
+    let target_branch = if dry_run {
+        // 直接使用默认分支，跳过耗时的推断和交互
+        let default_branch = ctx
+            .branch_repo
+            .get_default_branch()
+            .map_err(|e| format!("Failed to get default branch: {}", e))?;
+        info!("[DRY RUN] Target branch: {}", default_branch);
+        default_branch
+    } else {
+        // 非 dry-run 模式：推断目标分支并询问用户确认
+        let inferred_target = ctx
+            .branch_repo
+            .infer_target_branch(ctx.current_branch)
+            .map_err(|e| format!("Failed to infer target branch: {}", e))?;
+
+        confirm_target_branch(ctx.branch_repo, inferred_target.as_deref())?
+    };
+
+    // 生成 PR 摘要（三阶段分析，基于已选目标分支的 diff）
+    let pr_summary = generate_pr_summary(Some(&target_branch))?;
 
     // 使用模板生成 PR body（PR Ready + Types of changes + LLM 描述 + Jira 链接）
     let branch_type =
@@ -211,25 +230,6 @@ fn handle_no_existing_pr(
             &commit_message,
         )
     });
-
-    // 确定目标分支
-    let target_branch = if dry_run {
-        // 直接使用默认分支，跳过耗时的推断和交互
-        let default_branch = ctx
-            .branch_repo
-            .get_default_branch()
-            .map_err(|e| format!("Failed to get default branch: {}", e))?;
-        info!("[DRY RUN] Target branch: {}", default_branch);
-        default_branch
-    } else {
-        // 非 dry-run 模式：推断目标分支并询问用户确认
-        let inferred_target = ctx
-            .branch_repo
-            .infer_target_branch(ctx.current_branch)
-            .map_err(|e| format!("Failed to infer target branch: {}", e))?;
-
-        confirm_target_branch(ctx.branch_repo, inferred_target.as_deref())?
-    };
 
     create_pull_request(
         ctx.branch_repo,
