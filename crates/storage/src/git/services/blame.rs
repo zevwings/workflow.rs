@@ -4,6 +4,8 @@
 
 use std::path::Path;
 
+use git2::BlameOptions;
+
 use super::GitContext;
 use domain::{BlameLineInfo, GitError};
 
@@ -56,7 +58,7 @@ impl BlameServiceImpl {
         };
 
         // 配置 blame 选项
-        let mut opts = git2::BlameOptions::new();
+        let mut opts = BlameOptions::new();
         opts.newest_commit(newest_commit);
 
         if let (Some(start), Some(end)) = (start_line, end_line) {

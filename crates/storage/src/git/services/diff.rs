@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use git2::DiffOptions;
+use git2::{Delta, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions};
 use toolkit::log_warn;
 
 use super::GitContext;
@@ -82,7 +82,7 @@ impl DiffService for DiffServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         let mut patch = String::new();
-        diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        diff.print(DiffFormat::Patch, |_delta, _hunk, line| {
             if let Ok(s) = std::str::from_utf8(line.content()) {
                 patch.push_str(s);
             }
@@ -118,7 +118,7 @@ impl DiffService for DiffServiceImpl {
 
         // Generate patch
         let mut patch = String::new();
-        diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        diff.print(DiffFormat::Patch, |_delta, _hunk, line| {
             if let Ok(s) = std::str::from_utf8(line.content()) {
                 patch.push_str(s);
             }
@@ -159,9 +159,9 @@ impl DiffService for DiffServiceImpl {
         let ignore_patterns = self.ctx.get_ignore_directory_patterns();
 
         // 辅助闭包：处理单个 diff
-        let mut process_diff = |diff: &git2::Diff| -> Result<(), GitError> {
+        let mut process_diff = |diff: &Diff| -> Result<(), GitError> {
             // 尝试先使用 print，如果失败则手动构建
-            let print_result = diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
+            let print_result = diff.print(DiffFormat::Patch, |delta, _hunk, line| {
                 if size_limit_reached {
                     return true;
                 }
@@ -212,7 +212,7 @@ impl DiffService for DiffServiceImpl {
                     }
 
                     // 对于新文件，读取内容并生成简单的 diff 格式
-                    if delta.status() == git2::Delta::Untracked {
+                    if delta.status() == Delta::Untracked {
                         if let Some(path) = delta.new_file().path() {
                             // 获取工作目录，如果是 bare repository 则跳过
                             let Some(workdir) = repo.workdir() else {
@@ -350,7 +350,7 @@ impl DiffService for DiffServiceImpl {
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
         let mut patch = String::new();
-        diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        diff.print(DiffFormat::Patch, |_delta, _hunk, line| {
             if let Ok(s) = std::str::from_utf8(line.content()) {
                 patch.push_str(s);
             }
@@ -407,24 +407,23 @@ impl DiffService for DiffServiceImpl {
 
         let mut path_stats: HashMap<String, (u32, u32)> =
             HashMap::with_capacity(diff.deltas().len());
-        let mut line_cb = |delta: git2::DiffDelta<'_>,
-                           _hunk: Option<git2::DiffHunk<'_>>,
-                           line: git2::DiffLine<'_>| {
-            let path = delta
-                .new_file()
-                .path()
-                .or_else(|| delta.old_file().path())
-                .and_then(|p: &std::path::Path| p.to_str().map(String::from));
-            if let Some(path) = path {
-                let entry = path_stats.entry(path).or_insert((0, 0));
-                match line.origin() {
-                    '+' => entry.0 = entry.0.saturating_add(1),
-                    '-' => entry.1 = entry.1.saturating_add(1),
-                    _ => {}
+        let mut line_cb =
+            |delta: DiffDelta<'_>, _hunk: Option<DiffHunk<'_>>, line: DiffLine<'_>| {
+                let path = delta
+                    .new_file()
+                    .path()
+                    .or_else(|| delta.old_file().path())
+                    .and_then(|p: &std::path::Path| p.to_str().map(String::from));
+                if let Some(path) = path {
+                    let entry = path_stats.entry(path).or_insert((0, 0));
+                    match line.origin() {
+                        '+' => entry.0 = entry.0.saturating_add(1),
+                        '-' => entry.1 = entry.1.saturating_add(1),
+                        _ => {}
+                    }
                 }
-            }
-            true
-        };
+                true
+            };
         if let Err(e) = diff.foreach(
             &mut |_delta, _progress| true,
             None,
@@ -460,8 +459,7 @@ impl DiffService for DiffServiceImpl {
     }
 }
 
-fn delta_status_to_commit_change_type(status: git2::Delta) -> CommitChangeType {
-    use git2::Delta;
+fn delta_status_to_commit_change_type(status: Delta) -> CommitChangeType {
     match status {
         Delta::Added => CommitChangeType::Added,
         Delta::Modified | Delta::Unmodified => CommitChangeType::Modified,

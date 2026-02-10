@@ -3,7 +3,11 @@
 //! 提供 git2::Repository 的管理和访问。
 
 use domain::{CodePlatform, GitError, RepoInfo};
-use git2::{CertificateCheckStatus, Repository};
+use git2::{
+    BranchType, CertificateCheckStatus, Cred, CredentialType, RemoteCallbacks, Repository,
+    Signature,
+};
+use git2::{Error as Git2Error, Oid};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -226,8 +230,8 @@ impl GitContext {
     ///
     /// 用于远程操作（push/pull/fetch）的认证。
     /// 优先使用 SSH agent，然后尝试默认凭据。
-    pub fn create_callbacks<'a>() -> git2::RemoteCallbacks<'a> {
-        let mut callbacks = git2::RemoteCallbacks::new();
+    pub fn create_callbacks<'a>() -> RemoteCallbacks<'a> {
+        let mut callbacks = RemoteCallbacks::new();
         // libgit2 使用 libssh2，不读 OpenSSH 的 known_hosts，必须显式接受主机密钥
         callbacks.certificate_check(|_cert, host| {
             log_info!(
@@ -254,7 +258,7 @@ impl GitContext {
                     "create_callbacks: max retries ({}) exceeded, failing authentication",
                     MAX_RETRIES
                 );
-                return Err(git2::Error::from_str(
+                return Err(Git2Error::from_str(
                     "Authentication failed after maximum retry attempts"
                 ));
             }
@@ -266,10 +270,10 @@ impl GitContext {
                 allowed_types
             );
 
-            if allowed_types.contains(git2::CredentialType::SSH_KEY) {
+            if allowed_types.contains(CredentialType::SSH_KEY) {
                 let username = username_from_url.unwrap_or("git");
                 log_info!("create_callbacks: trying ssh_key_from_agent(username = {})", username);
-                match git2::Cred::ssh_key_from_agent(username) {
+                match Cred::ssh_key_from_agent(username) {
                     Ok(cred) => {
                         log_info!("create_callbacks: ssh_key_from_agent ok");
                         return Ok(cred);
@@ -279,12 +283,12 @@ impl GitContext {
                     }
                 }
             }
-            if allowed_types.contains(git2::CredentialType::DEFAULT) {
+            if allowed_types.contains(CredentialType::DEFAULT) {
                 log_info!("create_callbacks: trying Cred::default()");
-                return git2::Cred::default();
+                return Cred::default();
             }
             log_info!("create_callbacks: no authentication available");
-            Err(git2::Error::from_str("no authentication available"))
+            Err(Git2Error::from_str("no authentication available"))
         });
         callbacks.push_transfer_progress(|current, total, bytes| {
             log_info!(
@@ -300,20 +304,20 @@ impl GitContext {
     /// 获取签名
     ///
     /// 优先使用仓库配置，如果失败则使用默认值。
-    pub fn get_signature(&self) -> Result<git2::Signature<'static>, GitError> {
+    pub fn get_signature(&self) -> Result<Signature<'static>, GitError> {
         self.inner
             .repo
             .lock()
             .map_err(|_| GitError::OperationFailed("Failed to lock repository".into()))?
             .signature()
-            .or_else(|_| git2::Signature::now("User", "user@example.com"))
+            .or_else(|_| Signature::now("User", "user@example.com"))
             .map_err(|e| GitError::SignatureError(e.to_string()))
     }
 
     /// 解析引用到 commit
     ///
     /// 支持分支名、tag 名、SHA 等各种引用格式。
-    pub fn resolve_commit(&self, reference: impl AsRef<str>) -> Result<git2::Oid, GitError> {
+    pub fn resolve_commit(&self, reference: impl AsRef<str>) -> Result<Oid, GitError> {
         let reference = reference.as_ref();
         let repo = self.repository();
         let obj = repo
@@ -324,7 +328,7 @@ impl GitContext {
     }
 
     /// 获取 HEAD 指向的 commit
-    pub fn head_commit(&self) -> Result<git2::Oid, GitError> {
+    pub fn head_commit(&self) -> Result<Oid, GitError> {
         let repo = self.repository();
         let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
         let commit = head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -340,11 +344,7 @@ impl GitContext {
     /// # 返回
     /// 分支指向的 commit ID
     #[allow(dead_code)]
-    pub fn get_branch_commit(
-        &self,
-        name: &str,
-        branch_type: git2::BranchType,
-    ) -> Result<git2::Oid, GitError> {
+    pub fn get_branch_commit(&self, name: &str, branch_type: BranchType) -> Result<Oid, GitError> {
         let repo = self.repository();
         let branch = repo
             .find_branch(name, branch_type)

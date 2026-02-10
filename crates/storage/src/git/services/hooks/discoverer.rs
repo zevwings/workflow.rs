@@ -2,8 +2,10 @@
 //!
 //! 负责发现标准 Git hooks（`.git/hooks/` 或 `core.hooksPath` 指向的目录）。
 
-use domain::GitError;
 use std::path::{Path, PathBuf};
+
+use domain::GitError;
+use git2::Repository;
 
 /// Hook 发现器
 ///
@@ -49,7 +51,7 @@ impl HookDiscoverer {
     /// 使用 git2 库读取配置，不依赖系统安装的 git 命令。
     fn get_core_hooks_path(repo_path: &Path) -> Result<PathBuf, GitError> {
         // 使用 git2 打开仓库并读取配置
-        let repo = git2::Repository::open(repo_path)
+        let repo = Repository::open(repo_path)
             .map_err(|e| GitError::OperationFailed(format!("Failed to open repository: {}", e)))?;
 
         let config = repo

@@ -2,7 +2,7 @@
 //!
 //! Jira 配置管理子命令结构定义
 
-use clap::{Args, Subcommand};
+use clap::{ArgAction, Args, Subcommand};
 
 use super::args::JiraIdArg;
 
@@ -52,10 +52,10 @@ pub struct InfoArgs {
     #[command(flatten)]
     pub jira_id: JiraIdArg,
     /// JSON 格式输出
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     pub json: bool,
     /// Markdown 格式输出
-    #[arg(long, action = clap::ArgAction::SetTrue)]
+    #[arg(long, action = ArgAction::SetTrue)]
     pub markdown: bool,
 }
 
@@ -99,6 +99,6 @@ pub struct CleanArgs {
     #[command(flatten)]
     pub jira_id: JiraIdArg,
     /// 清理所有附件目录
-    #[arg(long, short = 'a', action = clap::ArgAction::SetTrue)]
+    #[arg(long, short = 'a', action = ArgAction::SetTrue)]
     pub all: bool,
 }

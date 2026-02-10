@@ -3,6 +3,7 @@
 //! 提供 Git stash 相关的业务逻辑实现。
 
 use chrono::{Local, TimeZone};
+use git2::{StashApplyOptions, StashFlags};
 
 use super::GitContext;
 use domain::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
@@ -148,7 +149,7 @@ impl StashService for StashServiceImpl {
         let signature = repo.signature().map_err(|e| GitError::SignatureError(e.to_string()))?;
 
         let stash_message = message.unwrap_or("Stashed changes");
-        let flags = git2::StashFlags::INCLUDE_UNTRACKED;
+        let flags = StashFlags::INCLUDE_UNTRACKED;
 
         repo.stash_save(&signature, stash_message, Some(flags))
             .map_err(|e| GitError::OperationFailed(e.to_string()))?;
@@ -202,7 +203,7 @@ impl StashService for StashServiceImpl {
         let stat = self.get_stash_stat(index);
 
         let mut repo = self.ctx.repository_mut();
-        let mut options = git2::StashApplyOptions::default();
+        let mut options = StashApplyOptions::default();
 
         let result = repo.stash_apply(index, Some(&mut options));
 

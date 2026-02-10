@@ -78,11 +78,16 @@ fn handle_existing_pr(
     .map_err(|e| format!("Failed to select update option: {}", e))?;
 
     if update_selected == ConfirmOption::Yes {
+        let pr_service = registry::get_pull_request_service();
+
         // 生成 commit message（用于组合 PR 标题）
         let commit_message = build_commit_message(ctx.jira_id, ctx.description)?;
 
-        // 生成 PR 摘要（三阶段分析）
-        let pr_summary = generate_pr_summary(None)?;
+        // 获取该 PR 的 base 分支，使摘要分析基于正确基准（与 handle_no_existing_pr 一致）
+        let base_branch = pr_service.get_pull_request(pr_id).ok().map(|pr| pr.target_branch);
+
+        // 生成 PR 摘要（三阶段分析，基于 PR 的 target 分支做 diff；拿不到则用 None 由服务推断）
+        let pr_summary = generate_pr_summary(base_branch.as_deref())?;
 
         // 使用模板生成 PR body（PR Ready + Types of changes + LLM 描述 + Jira 链接）
         let branch_type =
@@ -119,7 +124,6 @@ fn handle_existing_pr(
             info!("  Description:\n{}", pr_body);
         } else {
             info!("Updating PR #{}...", pr_id);
-            let pr_service = registry::get_pull_request_service();
             pr_service
                 .update_pull_request(pr_id, Some(&pr_title), Some(&pr_body))
                 .map_err(|e| format!("Failed to update PR: {}", e))?;

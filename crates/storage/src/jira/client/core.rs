@@ -14,6 +14,7 @@ use serde::Serialize;
 
 use domain::{JiraConfigContext, JiraError};
 use http::{Authorization, HttpClient, HttpMethod};
+use reqwest::Url;
 use toolkit::log_debug;
 
 use crate::jira::client::types::JiraResponse;
@@ -221,8 +222,8 @@ impl JiraClientImpl {
         let base_url = format!("{}/rest/api/2", service_address.trim_end_matches('/'));
         let path_url = format!("{}/{}", base_url, path.trim_start_matches('/'));
 
-        // 使用 reqwest::Url 来构建 URL，自动处理编码
-        let mut url = reqwest::Url::parse(&path_url).map_err(|e| {
+        // 使用 Url 构建 URL，自动处理编码
+        let mut url = Url::parse(&path_url).map_err(|e| {
             JiraError::ApiError(format!("Failed to parse base URL {}: {}", path_url, e))
         })?;
 

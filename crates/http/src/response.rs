@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+use reqwest::blocking::Response as ReqwestResponse;
 use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
 
@@ -29,7 +30,7 @@ pub struct Response {
 impl Response {
     /// 从 reqwest 响应创建
     pub(crate) fn from_reqwest(
-        response: reqwest::blocking::Response,
+        response: ReqwestResponse,
         method: HttpMethod,
         duration: Duration,
         max_body_size: usize,

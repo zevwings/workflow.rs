@@ -7,6 +7,7 @@ use std::fmt;
 use std::time::Duration;
 
 use reqwest::header::HeaderMap;
+use reqwest::Error as ReqwestError;
 
 use super::HttpMethod;
 
@@ -117,7 +118,7 @@ impl fmt::Display for ErrorContext {
 #[derive(Debug)]
 pub enum HttpError {
     /// 客户端创建失败
-    ClientCreation(reqwest::Error),
+    ClientCreation(ReqwestError),
 
     /// 请求构建失败
     RequestBuild {
@@ -133,7 +134,7 @@ pub enum HttpError {
 
     /// 请求发送失败
     Request {
-        source: reqwest::Error,
+        source: ReqwestError,
         context: Box<ErrorContext>,
     },
 
@@ -246,8 +247,8 @@ impl std::error::Error for HttpError {
     }
 }
 
-impl From<reqwest::Error> for HttpError {
-    fn from(e: reqwest::Error) -> Self {
+impl From<ReqwestError> for HttpError {
+    fn from(e: ReqwestError) -> Self {
         Self::ClientCreation(e)
     }
 }

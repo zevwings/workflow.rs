@@ -12,6 +12,7 @@ use std::sync::Arc;
 use serde::Serialize;
 
 use domain::{JiraAttachment, JiraError, JiraIssue, JiraTransition};
+use regex::Regex;
 
 use crate::jira::client::core::JiraClient;
 use crate::jira::client::types::JiraResponseSerializable;
@@ -224,7 +225,7 @@ impl IssueServiceImpl {
         description: &str,
     ) -> Vec<JiraAttachment> {
         let mut attachments = Vec::new();
-        let link_pattern = regex::Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
+        let link_pattern = Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
 
         for cap in link_pattern.captures_iter(description) {
             if let (Some(filename_match), Some(url_match)) = (cap.get(1), cap.get(2)) {

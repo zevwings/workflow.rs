@@ -13,7 +13,7 @@ description: 审查当前分支相对于基准分支的 Rust 代码变更，检�
 2. 按下方清单逐项检查并修复
 3. 输出审查报告
 
-> 修复问题可运行 `make fix`
+> 修复问题可运行 `make fix`。审查时对可修复项进行修复，最后输出审查报告；报告中列出仍未修复的问题与已通过的检查项。
 
 ## 检查清单
 
@@ -48,12 +48,18 @@ description: 审查当前分支相对于基准分支的 Rust 代码变更，检�
 - [ ] **同一模块内部**：使用 `super::` 引用兄弟模块
   - 如 `hooks/tool_executor.rs` 引用 `hooks/context.rs`
   - 使用 `super::context::HookContext` 而非 `crate::git::services::hooks::context::HookContext`
+  - 仍建议在文件顶部 `use super::context::HookContext`，调用处使用 `HookContext`，与「顶部导入、调用处短名」一致
 - [ ] **跨模块（crate 内部）**：使用 `crate::` 全路径
   - 单个：`use crate::rollback::create_backup`
   - 多个：`use crate::rollback::{create_backup, rollback, BackupInfo}`
 - [ ] **crate 外部**：从 crate 根导入
   - 单个：`use toolkit::create_backup`
   - 多个：`use toolkit::{create_backup, rollback, BackupInfo}`
+- [ ] **顶部导入、调用处不写模块前缀**（适用于所有依赖与当前 crate 子模块）
+  - 在文件顶部用 `use` 引入类型/函数/常量，在函数体、签名、表达式中**只写短名**，不写 `模块::X`。
+  - **反例**：`tar::Builder::new(encoder)`、`git2::Signature::now(...)`、`clap::ArgAction::SetTrue`、`crate::github::types::PullRequestInfo` 作为参数类型。
+  - **正确**：顶部 `use tar::{Archive, Builder, Header};` / `use git2::Signature;` / `use clap::ArgAction;` / `use crate::github::types::PullRequestInfo as GitHubPrInfo;`，调用处写 `Builder::new(encoder)`、`Signature::now(...)`、`ArgAction::SetTrue`、参数类型 `GitHubPrInfo`。
+  - 类型重名时用 `as` 别名（如 `use reqwest::Error as ReqwestError`）。仅测试/文档中使用的类型可在 `mod tests {}` 或示例块内单独 `use`。
 - [ ] **统一导出约束**（适用于 http / llm / prompt / registry / toolkit / domain 等对外 crate）
   - 禁止 `use [module]::sub::xx`，一律从 crate 根导入：`use [module]::{xx, yy}`
   - 禁止在使用类型/方法时写 `[module]::xx`，应先 `use [module]::xx` 再直接使用 `xx`

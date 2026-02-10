@@ -13,7 +13,6 @@ pub(crate) mod errors;
 pub(crate) mod git;
 pub(crate) mod github;
 pub(crate) mod jira;
-pub(crate) mod llm;
 pub(crate) mod path;
 pub(crate) mod pr;
 pub(crate) mod summary;
