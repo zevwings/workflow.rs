@@ -9,7 +9,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use prompt::{success, warning, Spinner};
-use toolkit::{detect_shell, get_completion_files_for_shell, shell_to_string};
+use toolkit::{detect_shell, get_completion_files_for_shell, log_debug, shell_to_string};
 
 use super::types::VerificationResult;
 use crate::registry::get_path_service;
@@ -153,7 +153,7 @@ fn verify_completions() -> Result<bool, Box<dyn std::error::Error>> {
             continue;
         }
 
-        toolkit::log_debug!("Completion script verification passed: {}", path.display());
+        log_debug!("Completion script verification passed: {}", path.display());
     }
 
     spinner_instance.stop();

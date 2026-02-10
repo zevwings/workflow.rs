@@ -10,7 +10,7 @@ use domain::{
     JIRA_CONFIG_FILE, MAIN_DIR, PROJECT_CONFIG_FILE, USER_CONFIG_FILE, WORKFLOW_CONFIG_DIR,
     WORKFLOW_CONFIG_FILE,
 };
-
+use toolkit::log_error;
 /// 路径服务实现
 ///
 /// 管理应用程序的配置文件、数据目录等路径。
@@ -54,7 +54,7 @@ impl PathServiceImpl {
             use std::fs;
 
             fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700)).map_err(|e| {
-                toolkit::log_error!("Failed to set workflow directory permissions: {}", e);
+                log_error!("Failed to set workflow directory permissions: {}", e);
                 PathError::Permission("Failed to set workflow directory permissions".to_string())
             })?;
         }

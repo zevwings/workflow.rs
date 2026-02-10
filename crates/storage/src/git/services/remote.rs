@@ -10,6 +10,7 @@ use crate::git::services::context::GitContext;
 use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
 use crate::git::services::merge::{MergeService, MergeServiceImpl};
 use domain::git::{GitError, MergeStrategy};
+use toolkit::log_debug;
 
 /// 远程服务接口
 pub trait RemoteService: Send + Sync {
@@ -195,7 +196,7 @@ impl RemoteServiceImpl {
         // 如果有远程分支，隐藏远程分支的提交
         if let Some(oid) = remote_oid {
             if let Err(e) = revwalk.hide(oid) {
-                toolkit::log_debug!("Failed to hide remote oid in revwalk: {}", e);
+                log_debug!("Failed to hide remote oid in revwalk: {}", e);
             }
         }
 

@@ -10,10 +10,10 @@ use std::{fmt::Write, sync::Arc};
 use reqwest::header::HeaderMap;
 use serde_json::Value;
 
+use crate::github::client::response::{GitHubErrorResponse, GitHubResponse};
 use domain::{GitHubContext, GitHubError};
 use http::{HttpClient, HttpError, Response};
-
-use crate::github::client::response::{GitHubErrorResponse, GitHubResponse};
+use toolkit::log_debug;
 
 pub const API_BASE: &str = "https://api.github.com";
 
@@ -230,16 +230,16 @@ impl GitHubClientImpl {
     ) -> Result<GitHubResponse, GitHubError> {
         // 记录请求日志
         if let Some(body) = body {
-            toolkit::log_debug!("GitHub API request: {} {} body={}", method, url, body);
+            log_debug!("GitHub API request: {} {} body={}", method, url, body);
         } else {
-            toolkit::log_debug!("GitHub API request: {} {}", method, url);
+            log_debug!("GitHub API request: {} {}", method, url);
         }
 
         let response =
             response.map_err(|e| GitHubError::ApiError(format!("Request failed: {}", e)))?;
 
         // 记录响应日志
-        toolkit::log_debug!(
+        log_debug!(
             "GitHub API response: {} {} status={}",
             method,
             url,
@@ -249,12 +249,12 @@ impl GitHubClientImpl {
         if response.is_success() {
             // 记录成功响应的内容（如果可以解析为 JSON）
             if let Ok(json) = response.json::<Value>() {
-                toolkit::log_debug!("GitHub API response body: {}", json);
+                log_debug!("GitHub API response body: {}", json);
             }
             Ok(GitHubResponse::new(response))
         } else {
             // 记录错误响应
-            toolkit::log_debug!(
+            log_debug!(
                 "GitHub API error response: {}",
                 response.extract_error_message()
             );

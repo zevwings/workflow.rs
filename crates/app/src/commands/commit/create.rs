@@ -2,9 +2,9 @@
 //!
 //! 智能生成 commit message 并提交代码。
 
-use prompt::{error, info, spinner, success};
-
 use crate::registry;
+use prompt::{error, info, spinner, success};
+use toolkit::{log_info, log_info_with_fields};
 
 /// Commit Create 命令
 pub struct CommitCreateCommand {
@@ -65,7 +65,7 @@ impl CommitCreateCommand {
             msg.clone()
         } else {
             // 使用 AI 生成 commit message
-            toolkit::log_info!("Analyzing changes and generating commit message...");
+            log_info!("Analyzing changes and generating commit message...");
 
             let commit_message_service = registry::get_commit_message_service();
             let analysis =
@@ -76,7 +76,7 @@ impl CommitCreateCommand {
                 })?;
 
             // 结构化输出生成的 commit message（便于日志采集与检索）
-            toolkit::log_info_with_fields!(
+            log_info_with_fields!(
                 title = % analysis.commit_message.title,
                 body = % analysis.commit_message.body,
                 footer = % analysis.commit_message.footer,

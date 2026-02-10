@@ -15,7 +15,7 @@ use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use domain::get_completion_cache_shell_dir;
 use prompt::{br, info, print, success, warning};
-use toolkit::{detect_shell, directory, shell_to_string};
+use toolkit::{detect_shell, directory, log_debug, shell_to_string};
 
 use crate::cli::Cli;
 use crate::registry::{get_completion_service, get_path_service};
@@ -80,8 +80,8 @@ impl InstallCommand {
             .parent()
             .ok_or_else(|| "Failed to get parent directory of executable".to_string())?;
 
-        toolkit::log_debug!("Current directory: {}", current_dir.display());
-        toolkit::log_debug!("Install directory: {}", install_dir.display());
+        log_debug!("Current directory: {}", current_dir.display());
+        log_debug!("Install directory: {}", install_dir.display());
 
         let bin_name = get_path_service().get_binary_name()?;
 
@@ -150,7 +150,7 @@ impl InstallCommand {
         let shell = detect_shell().map_err(|e| format!("Failed to detect shell type: {}", e))?;
         let shell_str = shell_to_string(&shell);
 
-        toolkit::log_debug!("Detected shell: {}", shell);
+        log_debug!("Detected shell: {}", shell);
 
         // 生成 completion 脚本内容
         let script_content = self.generate_completion_script(&shell)?;

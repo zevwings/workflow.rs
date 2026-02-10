@@ -4,10 +4,8 @@ use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
 use prompt::{info, select, spinner, warning};
 
 use crate::registry;
-use crate::workflows::utils::{
-    branch::branch_type_from_branch_name,
-    pull_request::{generate_pull_request_body, generate_pull_request_title},
-};
+use crate::utils::branch_type_from_branch_name;
+use crate::utils::{generate_pull_request_body, generate_pull_request_title};
 
 use super::commit::{check_needs_push, commit_changes, push_branch};
 use super::pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary};

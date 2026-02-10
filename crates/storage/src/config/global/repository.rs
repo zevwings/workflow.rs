@@ -5,7 +5,7 @@
 use std::sync::{Arc, Mutex, OnceLock};
 
 use domain::{GlobalConfig, GlobalConfigRepository, PathService, ServiceError};
-use toolkit::file;
+use toolkit::{file, log_error};
 
 /// 全局配置缓存
 static GLOBAL_CONFIG: OnceLock<Mutex<Option<GlobalConfig>>> = OnceLock::new();
@@ -53,7 +53,7 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
 
         // 缓存未命中，加载配置（get_config_path 返回配置目录，全局配置文件为 workflow.toml）
         let config_filepath = self.path_service.get_workflow_config_filepath().map_err(|e| {
-            toolkit::log_error!("Failed to get config path: {}", e);
+            log_error!("Failed to get config path: {}", e);
             ServiceError::OperationFailed("Failed to get config path".to_string())
         })?;
 
@@ -61,12 +61,12 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
             GlobalConfig::default()
         } else {
             let content = file::read_string(&config_filepath).map_err(|e| {
-                toolkit::log_error!("Failed to read config: {}", e);
+                log_error!("Failed to read config: {}", e);
                 ServiceError::OperationFailed("Failed to read config".to_string())
             })?;
 
             toml::from_str(&content).map_err(|e| {
-                toolkit::log_error!("Failed to parse config: {}", e);
+                log_error!("Failed to parse config: {}", e);
                 ServiceError::OperationFailed("Failed to parse config".to_string())
             })?
         };
@@ -88,17 +88,17 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
     /// 在 Unix 系统上会自动设置文件权限为 600 以确保安全性。
     fn save(&self, settings: &GlobalConfig) -> Result<(), ServiceError> {
         let config_filepath = self.path_service.get_workflow_config_filepath().map_err(|e| {
-            toolkit::log_error!("Failed to get config path: {}", e);
+            log_error!("Failed to get config path: {}", e);
             ServiceError::OperationFailed("Failed to get config path".to_string())
         })?;
 
         let content = toml::to_string(settings).map_err(|e| {
-            toolkit::log_error!("Failed to serialize settings: {}", e);
+            log_error!("Failed to serialize settings: {}", e);
             ServiceError::OperationFailed("Failed to serialize settings".to_string())
         })?;
 
         file::write_string(&config_filepath, &content).map_err(|e| {
-            toolkit::log_error!("Failed to write config: {}", e);
+            log_error!("Failed to write config: {}", e);
             ServiceError::OperationFailed("Failed to write config".to_string())
         })?;
 
@@ -106,7 +106,7 @@ impl GlobalConfigRepository for GlobalConfigRepositoryImpl {
         #[cfg(unix)]
         {
             file::set_permissions(&config_filepath, 0o600).map_err(|e| {
-                toolkit::log_error!("Failed to set config file permissions: {}", e);
+                log_error!("Failed to set config file permissions: {}", e);
                 ServiceError::OperationFailed("Failed to set config file permissions".to_string())
             })?;
         }

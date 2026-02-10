@@ -7,6 +7,7 @@ use domain::git::GitError;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::Duration;
+use toolkit::log_info;
 use wait_timeout::ChildExt;
 
 /// 默认超时时间（5 分钟，外部工具可能需要更长时间）
@@ -144,10 +145,10 @@ impl ToolHookExecutor {
 
                 // 处理输出
                 if !stdout.is_empty() {
-                    toolkit::log_info!("{}", stdout_str);
+                    log_info!("{}", stdout_str);
                 }
                 if !stderr.is_empty() {
-                    toolkit::log_info!("{}", stderr_str);
+                    log_info!("{}", stderr_str);
                 }
 
                 // 检查结果

@@ -6,6 +6,7 @@ use chrono::{Local, TimeZone};
 
 use super::GitContext;
 use domain::git::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
+use toolkit::log_warn;
 
 /// Stash 服务接口
 pub trait StashService: Send + Sync {
@@ -82,7 +83,7 @@ impl StashServiceImpl {
                     true
                 }
             }) {
-                toolkit::log_warn!("Failed to iterate stash entries: {}", e);
+                log_warn!("Failed to iterate stash entries: {}", e);
             }
             oid
         }?; // 释放 repo_mut 锁

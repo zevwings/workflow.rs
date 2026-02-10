@@ -4,7 +4,7 @@ use domain::JiraIssue;
 use prompt::{info, spinner, success};
 
 use crate::registry;
-use crate::workflows::utils::jira::get_jira_id_interactive;
+use crate::utils::get_jira_id_interactive;
 
 /// 输出格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

@@ -6,6 +6,7 @@ use super::context::{HookContext, HookResult};
 use domain::git::GitError;
 use std::process::{Command, Stdio};
 use std::time::Duration;
+use toolkit::log_info;
 use wait_timeout::ChildExt;
 
 /// 默认超时时间（30 秒）
@@ -226,10 +227,10 @@ impl ScriptHookExecutor {
     fn handle_output(&self, output: &std::process::Output) -> Result<(), GitError> {
         // 输出到日志
         if !output.stdout.is_empty() {
-            toolkit::log_info!("{}", String::from_utf8_lossy(&output.stdout));
+            log_info!("{}", String::from_utf8_lossy(&output.stdout));
         }
         if !output.stderr.is_empty() {
-            toolkit::log_info!("{}", String::from_utf8_lossy(&output.stderr));
+            log_info!("{}", String::from_utf8_lossy(&output.stderr));
         }
         Ok(())
     }

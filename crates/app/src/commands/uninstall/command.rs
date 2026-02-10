@@ -9,7 +9,7 @@ use std::{fs, path::PathBuf};
 use std::process::Command;
 
 use prompt::{br, info, print, success, warning, ConfirmBuilder};
-use toolkit::{detect_shell, reload_shell};
+use toolkit::{detect_shell, log_debug, reload_shell};
 
 use crate::registry::{get_completion_service, get_path_service};
 
@@ -140,9 +140,7 @@ impl UninstallCommand {
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                 #[cfg(unix)]
                 {
-                    toolkit::log_debug!(
-                        "Some files require sudo privileges, using sudo to remove..."
-                    );
+                    log_debug!("Some files require sudo privileges, using sudo to remove...");
                     match Command::new("sudo").arg("rm").arg("-f").arg(&binary_path).status() {
                         Ok(status) if status.success() => {
                             success!("Workflow binary removed successfully");
@@ -222,7 +220,7 @@ impl UninstallCommand {
                     Err(_) => {
                         // 如果文件夹非空，删除整个文件夹
                         if let Err(e2) = fs::remove_dir_all(&comp_dir) {
-                            toolkit::log_debug!(
+                            log_debug!(
                                 "Could not remove completions directory: {} ({})",
                                 comp_dir.display(),
                                 e2

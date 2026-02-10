@@ -3,6 +3,7 @@
 //! 综合阶段一分类结果与阶段二各分析结果，生成结构化的 commit 总结。
 
 use llm::{LLMConversation, SupportedLanguage};
+use toolkit::log_info;
 
 use crate::summary::{prompt, summary::SummaryAnalyzeInput};
 
@@ -38,8 +39,8 @@ impl LLMConversation for SummaryAnalyzeConversation {
             .map(|lang| lang.native_name)
             .unwrap_or("en");
 
-        toolkit::log_info!("language_name: {}", language_name);
-        toolkit::log_info!("language_code: {}", language_code);
+        log_info!("language_name: {}", language_name);
+        log_info!("language_code: {}", language_code);
 
         format!(
             r##"🌐 LANGUAGE REQUIREMENT:

@@ -3,12 +3,13 @@ use prompt::{error, info, input, spinner, success, warning};
 use toolkit::{log_debug, log_error};
 
 use crate::registry;
-use crate::workflows::utils::branch::{
-    generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
+use crate::utils::{
+    generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type, to_slug,
 };
-use crate::workflows::utils::jira::{ensure_jira_status_config, get_jira_id_interactive_optional};
-use crate::workflows::utils::pull_request::{
-    generate_pull_request_body, generate_pull_request_title,
+
+use crate::utils::{
+    ensure_jira_status_config, generate_pull_request_body, generate_pull_request_title,
+    get_jira_id_interactive_optional,
 };
 
 use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
@@ -38,7 +39,7 @@ impl PullRequestCreateCommand {
 
     /// 运行 `workflow pr create` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let branch_repo = registry::get_git_repository();
+        let git_repo = registry::get_git_repository();
         let jira_repo = registry::get_jira_repository();
 
         // 获取 JIRA ID（交互式或从参数）
@@ -99,7 +100,7 @@ impl PullRequestCreateCommand {
                         Ok(name) => name,
                         Err(e) => {
                             warning!("LLM generation failed: {}, using fallback method", e);
-                            crate::workflows::utils::branch::to_slug(description.as_str())
+                            to_slug(description.as_str())
                         }
                     }
                 };
@@ -111,20 +112,21 @@ impl PullRequestCreateCommand {
             };
 
         // 获取默认分支和当前分支
-        let default_branch = branch_repo
+        let default_branch = git_repo
             .get_default_branch()
             .map_err(|e| format!("Failed to get default branch: {}", e))?;
 
-        let current_branch = branch_repo
+        let current_branch = git_repo
             .get_current_branch()
             .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
+        git_repo.add_all().map_err(|e| format!("Failed to add all files: {}", e))?;
         // 根据当前分支和默认分支的关系，处理不同的逻辑
         // 返回: (新分支名, 目标分支)
         let (final_branch_name, target_branch) = if default_branch != current_branch {
             // 情况1: 不是默认分支，询问用户如何处理
             let ctx = BranchHandleContext {
-                branch_repo: branch_repo.as_ref(),
+                branch_repo: git_repo.as_ref(),
                 current_branch: &current_branch,
                 default_branch: &default_branch,
                 generated_branch_name: &branch_name,
@@ -146,7 +148,7 @@ impl PullRequestCreateCommand {
                 jira_info: jira_issue_opt.as_ref(),
             };
             self.create_branch_and_pr(
-                branch_repo.as_ref(),
+                git_repo.as_ref(),
                 &new_branch_name,
                 branch_type,
                 target_branch.as_deref(),

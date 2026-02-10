@@ -5,6 +5,5 @@
 pub mod cli;
 pub mod commands;
 pub mod registry;
-pub mod workflows;
-
-// Module 已移除，不再需要导出
+pub(crate) mod utils;
+pub(crate) mod workflows;

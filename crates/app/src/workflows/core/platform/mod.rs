@@ -7,7 +7,7 @@ mod config;
 mod traits;
 mod types;
 
-pub use account::{add_account_generic, remove_account_generic, switch_account_generic};
+pub use account::add_account_generic;
 pub use config::configure_platform;
 pub use traits::{GlobalConfigAccessor, PlatformAccount, PlatformConfigurator, PlatformSettings};
-pub use types::{AccountAction, AccountSetMode};
+pub use types::AccountSetMode;

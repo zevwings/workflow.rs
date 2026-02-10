@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use toolkit::log_debug;
+use toolkit::{log_debug, log_info, log_warn};
 
 use crate::git::services::context::GitContext;
 use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
@@ -204,7 +204,7 @@ impl CommitService for CommitServiceImpl {
             None,
             Some(&mut line_cb),
         ) {
-            toolkit::log_warn!("Failed to iterate diff lines: {}", e);
+            log_warn!("Failed to iterate diff lines: {}", e);
         }
 
         let files: Vec<CommitFileChange> = diff
@@ -531,7 +531,7 @@ impl CommitService for CommitServiceImpl {
                     .map_err(|e| GitError::IndexError(e.to_string()))?;
 
                 index.write().map_err(|e| GitError::IndexError(e.to_string()))?;
-                toolkit::log_info!("Files modified by hook have been re-staged");
+                log_info!("Files modified by hook have been re-staged");
             }
             HookResult::Success => {}
         }
@@ -606,7 +606,7 @@ impl CommitService for CommitServiceImpl {
             HookContext::new(repo_path, git_dir).with_commit_sha(oid.to_string());
         if let Err(e) = self.hook_service.execute_hook(git_hooks::POST_COMMIT, &post_commit_context)
         {
-            toolkit::log_warn!("post-commit hook failed (commit already succeeded): {}", e);
+            log_warn!("post-commit hook failed (commit already succeeded): {}", e);
         }
         log_debug!("commit: post-commit hook done, commit complete");
 
