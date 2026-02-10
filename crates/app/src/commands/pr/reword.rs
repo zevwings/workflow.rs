@@ -76,17 +76,12 @@ impl PullRequestRewordCommand {
             branch_type_from_branch_name(current_branch.as_str()).unwrap_or(BranchType::Feature);
         let selected_change_types = get_change_types_by_branch_type(branch_type);
 
-        // 3. 使用与 pr create 相同的模板生成 PR body
-        let short_description = summary.structured_summary.subject.trim();
-        let short_description = if short_description.is_empty() {
-            None
-        } else {
-            Some(short_description)
-        };
+        // 3. 使用与 pr create 相同的模板生成 PR body（传入完整 LLM 正文，与 pr create 一致）
+        let llm_body = summary.to_markdown();
         let jira_ticket = extract_jira_ticket_id(current_branch.as_str());
         let pr_body = generate_pull_request_body(
             &selected_change_types,
-            short_description,
+            Some(llm_body.as_str()),
             jira_ticket.as_deref(),
             None,
             None,

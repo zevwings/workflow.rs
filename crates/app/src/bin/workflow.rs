@@ -123,6 +123,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let cmd = commands::repo::RepoSetupCommand::new();
                 cmd.run()?;
             }
+            RepoCommand::Status => {
+                let cmd = commands::repo::RepoStatusCommand::new();
+                cmd.run()?;
+            }
             RepoCommand::Check => {
                 let cmd = commands::repo::RepoCheckCommand::new();
                 cmd.run()?;
