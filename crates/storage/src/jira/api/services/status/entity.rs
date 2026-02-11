@@ -1,8 +1,9 @@
 //! Status 服务实体定义
 
+use std::collections::HashMap;
+
 use domain::ProjectStatusConfig;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// 合并后的 Jira 配置
 ///

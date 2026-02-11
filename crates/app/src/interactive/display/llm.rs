@@ -1,8 +1,9 @@
 //! LLM 验证结果格式化实现
 
-use crate::interactive::display::formatter::VerificationResultFormatter;
 use domain::{LLMVerificationResult, LLMVerificationStatus};
 use prompt::{br, error, info, success, TableBuilder, Tabled};
+
+use crate::interactive::display::formatter::VerificationResultFormatter;
 
 /// LLM 配置表格行
 ///

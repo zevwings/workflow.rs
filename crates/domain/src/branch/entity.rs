@@ -1,7 +1,8 @@
 //! 分支管理实体
 
-use serde::{Deserialize, Serialize};
 use std::fmt;
+
+use serde::{Deserialize, Serialize};
 
 /// 分支类型枚举
 ///

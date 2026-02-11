@@ -6,9 +6,7 @@
 //! - 验证文件完整性
 //! - 构建校验和 URL（纯字符串操作）
 
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use std::{fs::File, io::Read, path::Path};
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;

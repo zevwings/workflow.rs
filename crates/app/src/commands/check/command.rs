@@ -2,11 +2,12 @@
 
 use prompt::{br, info, separator, success, warning};
 
-use crate::bootstrap::{get_global_config_repository, get_path_service};
-
-use crate::interactive::core::stage::{WorkflowExecutor, WorkflowStage};
-use crate::interactive::platforms::{
-    github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage,
+use crate::{
+    bootstrap::{get_global_config_repository, get_path_service},
+    interactive::{
+        core::stage::{WorkflowExecutor, WorkflowStage},
+        platforms::{github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage},
+    },
 };
 
 /// 所有需要验证的 stages

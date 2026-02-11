@@ -1,7 +1,8 @@
 //! 列出忽略分支
 
-use crate::bootstrap;
 use prompt::info;
+
+use crate::bootstrap;
 
 /// Branch Ignore List 命令
 pub struct BranchIgnoreListCommand;

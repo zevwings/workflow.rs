@@ -2,15 +2,14 @@ mod github_context;
 mod jira_context;
 mod llm_context;
 
-pub use github_context::GitHubContextImpl;
-pub use jira_context::JiraConfigContextImpl;
-pub use llm_context::LLMConfigContextImpl;
-
 use std::sync::Arc;
 
 use di::{bind, Container, InjectionError, Scope};
 use domain::{GitHubContext, GlobalConfigRepository, JiraConfigContext, PathService};
+pub use github_context::GitHubContextImpl;
+pub use jira_context::JiraConfigContextImpl;
 use llm::LLMConfigContext;
+pub use llm_context::LLMConfigContextImpl;
 
 /// 注册配置上下文服务
 ///

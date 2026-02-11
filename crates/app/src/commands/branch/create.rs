@@ -4,8 +4,7 @@ use domain::GitRepository;
 use prompt::{error, info, input, select, success};
 
 use super::utils::{generate_branch_name_from_jira, select_branch_type, to_slug};
-use crate::bootstrap;
-use crate::commands::jira::utils::get_jira_id_interactive_optional;
+use crate::{bootstrap, commands::jira::utils::get_jira_id_interactive_optional};
 
 /// 源分支选项
 #[derive(Clone)]

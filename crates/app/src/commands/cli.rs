@@ -5,25 +5,26 @@
 
 use clap::{Parser, Subcommand};
 
-// 从 commands 重新导出共享参数（供外部使用）
-pub use crate::commands::args::{DryRunArgs, ForceArgs, JiraIdArg};
-
 // 从 commands 重新导出所有命令（供 bin/workflow.rs 使用）
 pub use crate::commands::alias::AliasCommand;
-pub use crate::commands::branch::{BranchSubcommand, IgnoreSubcommand};
+// 从 commands 重新导出共享参数（供外部使用）
+pub use crate::commands::args::{DryRunArgs, ForceArgs, JiraIdArg};
 #[cfg(feature = "develop")]
 pub use crate::commands::commit::{CommitCommand, CommitSubcommand};
-pub use crate::commands::completion::CompletionCommand;
-pub use crate::commands::github::GithubCommand;
-pub use crate::commands::jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand, OutputFormat};
-pub use crate::commands::llm::LlmCommand;
-pub use crate::commands::log::LogCommand;
-pub use crate::commands::pr::PrSubcommand;
-pub use crate::commands::repo::RepoCommand;
 #[cfg(feature = "develop")]
 pub use crate::commands::rollback::RollbackCommand;
-pub use crate::commands::stash::StashSubcommand;
-pub use crate::commands::tag::TagSubcommand;
+pub use crate::commands::{
+    branch::{BranchSubcommand, IgnoreSubcommand},
+    completion::CompletionCommand,
+    github::GithubCommand,
+    jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand, OutputFormat},
+    llm::LlmCommand,
+    log::LogCommand,
+    pr::PrSubcommand,
+    repo::RepoCommand,
+    stash::StashSubcommand,
+    tag::TagSubcommand,
+};
 
 /// 顶层 CLI 定义
 #[derive(Parser)]

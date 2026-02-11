@@ -1,7 +1,8 @@
 //! 通用服务错误
 
-use crate::{GitError, GitHubError, JiraError};
 use thiserror::Error;
+
+use crate::{GitError, GitHubError, JiraError};
 
 /// 通用服务错误
 #[derive(Error, Debug)]

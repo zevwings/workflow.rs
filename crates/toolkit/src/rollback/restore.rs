@@ -2,16 +2,12 @@
 //!
 //! 提供二进制文件和补全脚本的恢复和清理功能。
 
-use std::fs;
-use std::path::PathBuf;
-
 #[cfg(unix)]
 use std::process::Command;
+use std::{fs, path::PathBuf};
 
+use super::{error::RollbackError, reload::reload_shell};
 use crate::shell::{config_file_path, detect_shell};
-
-use super::error::RollbackError;
-use super::reload::reload_shell;
 
 /// 清理备份
 ///

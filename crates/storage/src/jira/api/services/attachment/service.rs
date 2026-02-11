@@ -2,13 +2,12 @@
 //!
 //! 整合所有组件，提供完整的附件下载功能。
 
-use super::directory::DirectoryManager;
-use super::downloader::ConcurrentDownloader;
-use super::entity::UrlResolver;
-use crate::jira::api::services::IssueService;
+use std::{path::Path, sync::Arc};
+
 use domain::{AttachmentDownloadResult, JiraConfigContext, JiraError, ProgressCallback};
-use std::path::Path;
-use std::sync::Arc;
+
+use super::{directory::DirectoryManager, downloader::ConcurrentDownloader, entity::UrlResolver};
+use crate::jira::api::services::IssueService;
 
 /// 附件服务 trait
 ///

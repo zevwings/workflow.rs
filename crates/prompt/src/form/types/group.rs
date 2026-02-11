@@ -1,7 +1,6 @@
 //! Group 和 Step 相关类型定义
 
-use crate::form::field::FormField;
-use crate::form::types::FormResult;
+use crate::form::{field::FormField, types::FormResult};
 
 /// 条件函数类型
 type ConditionFn = Box<dyn Fn(&FormResult) -> bool + Send + Sync>;

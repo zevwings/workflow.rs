@@ -59,9 +59,8 @@ pub use form::{
     GroupConfig, InputFormField, MultiSelectFormField, NestedFormField, PasswordFormField,
     SelectFormField,
 };
-pub use output::terminal_state;
 pub use output::{
-    progress_bar, spinner, table, Alignment, Message, MessageRef, Progress, ProgressBar,
-    ProgressBarBuilder, Spinner, SpinnerBuilder, TableBuilder, TableStyle, Tabled,
+    progress_bar, spinner, table, terminal_state, Alignment, Message, MessageRef, Progress,
+    ProgressBar, ProgressBarBuilder, Spinner, SpinnerBuilder, TableBuilder, TableStyle, Tabled,
 };
 pub use style::theme::{get_theme, set_theme, Style, Theme};

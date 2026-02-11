@@ -16,8 +16,7 @@
 //! assert_eq!(filtered.len(), 2);
 //! ```
 
-use fuzzy_matcher::skim::SkimMatcherV2;
-use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 
 /// 模糊匹配过滤器
 ///
@@ -96,8 +95,9 @@ impl Default for FuzzyFilter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rstest::rstest;
+
+    use super::*;
 
     #[test]
     fn test_filter_empty_query() {

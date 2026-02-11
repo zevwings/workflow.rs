@@ -8,9 +8,8 @@ mod list;
 mod remove;
 
 // 重新导出 CLI 定义
-pub use cli::AliasCommand;
-
 // 重新导出命令实现
 pub use add::AliasAddCommand;
+pub use cli::AliasCommand;
 pub use list::AliasListCommand;
 pub use remove::AliasRemoveCommand;

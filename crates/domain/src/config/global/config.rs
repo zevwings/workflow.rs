@@ -1,11 +1,13 @@
 //! 全局配置类型定义
 
-use crate::config::global::github::config::GitHubSettings;
-use crate::config::global::jira::config::JiraSettings;
-use crate::config::global::llm::config::LLMSettings;
-use crate::config::global::log::config::LogSettings;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
+
+use crate::config::global::{
+    github::config::GitHubSettings, jira::config::JiraSettings, llm::config::LLMSettings,
+    log::config::LogSettings,
+};
 
 /// 全局配置
 /// 从 workflow.toml 配置文件读取配置

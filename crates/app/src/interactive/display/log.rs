@@ -1,8 +1,9 @@
 //! Log 验证结果格式化实现
 
-use crate::interactive::display::formatter::VerificationResultFormatter;
 use domain::LogVerificationResult;
 use prompt::{br, info};
+
+use crate::interactive::display::formatter::VerificationResultFormatter;
 
 impl VerificationResultFormatter for LogVerificationResult {
     fn format(&self) {

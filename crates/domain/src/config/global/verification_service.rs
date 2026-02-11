@@ -2,12 +2,11 @@
 //!
 //! 负责验证全局配置的有效性
 
+use super::{
+    github::verification::GitHubVerificationResult, jira::verification::JiraVerificationResult,
+    llm::verification::LLMVerificationResult, log::verification::LogVerificationResult,
+};
 use crate::errors::ServiceError;
-
-use super::github::verification::GitHubVerificationResult;
-use super::jira::verification::JiraVerificationResult;
-use super::llm::verification::LLMVerificationResult;
-use super::log::verification::LogVerificationResult;
 
 /// 验证服务接口
 pub trait VerificationService: Send + Sync {

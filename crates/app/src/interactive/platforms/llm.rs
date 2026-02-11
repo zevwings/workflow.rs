@@ -1,16 +1,22 @@
 //! LLM 工作流阶段 (v2)
 
-use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
-use crate::interactive::core::stage::WorkflowStage;
-use crate::interactive::display::VerificationResultFormatter;
+use std::error::Error;
+
 use domain::{GlobalConfig, LLMSettings, VerificationService};
 use llm::SupportedLanguage;
 use prompt::{
     br, confirm, info, separator, FormBuilder, FormResult, InputFormField, PasswordFormField,
     PromptError, SelectBuilder, SelectFormField,
 };
-use std::error::Error;
 use toolkit::Sensitive;
+
+use crate::interactive::{
+    core::{
+        context::{WorkflowContext, WorkflowMode},
+        stage::WorkflowStage,
+    },
+    display::VerificationResultFormatter,
+};
 
 /// LLM 工作流阶段
 pub struct LlmStage;

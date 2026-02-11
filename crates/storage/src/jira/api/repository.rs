@@ -5,11 +5,12 @@
 
 use std::sync::Arc;
 
-use crate::jira::api::services::{AttachmentService, IssueService, StatusService, UserService};
 use domain::{
     AttachmentDownloadResult, JiraAttachment, JiraError, JiraIssue, JiraRepository,
     JiraStatusConfig, JiraUser, ProgressCallback,
 };
+
+use crate::jira::api::services::{AttachmentService, IssueService, StatusService, UserService};
 
 /// Jira 仓储实现
 ///

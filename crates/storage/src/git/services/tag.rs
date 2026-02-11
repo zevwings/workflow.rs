@@ -2,11 +2,11 @@
 //!
 //! 提供 Tag 相关的业务逻辑实现。
 
+use domain::{GitError, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope};
 use git2::{Direction, PushOptions};
 use glob::Pattern;
 
 use super::GitContext;
-use domain::{GitError, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope};
 
 /// Tag 服务接口
 pub trait TagService: Send + Sync {

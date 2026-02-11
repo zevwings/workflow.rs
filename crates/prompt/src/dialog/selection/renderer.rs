@@ -2,9 +2,7 @@
 //!
 //! 提供 select 和 multiselect 共享的渲染逻辑
 
-use crate::backend::Backend;
-use crate::dialog::Result;
-use crate::style::theme::Theme;
+use crate::{backend::Backend, dialog::Result, style::theme::Theme};
 
 /// 选项渲染器 trait
 ///
@@ -219,8 +217,7 @@ pub(super) fn clear_and_display_result_with_search<B: Backend>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::MockBackend;
-    use crate::style::theme::get_theme;
+    use crate::{backend::MockBackend, style::theme::get_theme};
 
     /// 简单的测试渲染器
     struct TestOptionRenderer;

@@ -7,10 +7,14 @@
 // NOTE: 这是测试工具 API，供外部 crate 使用，在本 crate 内不直接调用
 #![allow(dead_code)]
 
-use super::Backend;
+use std::{
+    collections::VecDeque,
+    io::{Error, ErrorKind, Result},
+};
+
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use std::collections::VecDeque;
-use std::io::{Error, ErrorKind, Result};
+
+use super::Backend;
 
 /// Mock 后端
 ///

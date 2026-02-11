@@ -2,16 +2,18 @@
 //!
 //! 提供 git2::Repository 的管理和访问。
 
+use std::{
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
+
 use domain::{CodePlatform, GitError, RepoInfo};
 use git2::{
-    BranchType, CertificateCheckStatus, Cred, CredentialType, RemoteCallbacks, Repository,
-    Signature,
+    BranchType, CertificateCheckStatus, Cred, CredentialType, Error as Git2Error, Oid,
+    RemoteCallbacks, Repository, Signature,
 };
-use git2::{Error as Git2Error, Oid};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 use toolkit::log_info;
 
 /// URL 解析器模式

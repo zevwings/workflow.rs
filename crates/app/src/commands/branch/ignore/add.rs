@@ -1,7 +1,8 @@
 //! 添加分支到忽略列表
 
-use crate::bootstrap;
 use prompt::{info, success};
+
+use crate::bootstrap;
 
 /// Branch Ignore Add 命令
 pub struct BranchIgnoreAddCommand {

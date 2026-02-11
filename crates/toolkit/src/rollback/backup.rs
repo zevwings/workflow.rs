@@ -2,16 +2,14 @@
 //!
 //! 提供二进制文件和补全脚本的备份功能。
 
-use std::path::PathBuf;
-
 #[cfg(windows)]
 use std::fs;
+use std::path::PathBuf;
 #[cfg(unix)]
 use std::process::Command;
 
-use crate::util::fs::directory;
-
 use super::error::RollbackError;
+use crate::util::fs::directory;
 
 /// 创建备份目录
 ///

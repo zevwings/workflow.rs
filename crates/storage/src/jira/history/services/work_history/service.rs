@@ -7,10 +7,12 @@
 //! - 更新工作历史记录的合并时间
 //! - 删除工作历史记录条目
 
-use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use chrono::Utc;
 use domain::{DeleteHistoryResult, JiraError, PathService, WorkHistoryEntry};

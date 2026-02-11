@@ -7,17 +7,13 @@
 //! LLM 客户端通过 `LLMConfigContext` trait 获取配置，实现了依赖倒置原则。
 //! 通过 `LLMClient::new()` 方法传入配置上下文来创建客户端实例。
 
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
-use crate::LLMError;
+use http::{Authorization, HttpClient, HttpClientConfig};
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use crate::LLMConfigContext;
-use http::{Authorization, HttpClient, HttpClientConfig};
-
-use crate::response::ChatCompletionResponse;
+use crate::{response::ChatCompletionResponse, LLMConfigContext, LLMError};
 
 /// LLM 请求参数
 ///

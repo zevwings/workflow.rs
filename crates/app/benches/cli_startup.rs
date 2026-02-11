@@ -1,8 +1,11 @@
 //! CLI 启动性能基准测试
 
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use std::path::{Path, PathBuf};
-use std::process::Command;
 
 fn get_cli_binary() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -1,7 +1,6 @@
 //! 设置 Jira 配置命令
 
-use crate::interactive::core::stage::WorkflowExecutor;
-use crate::interactive::platforms::jira::jira_stage;
+use crate::interactive::{core::stage::WorkflowExecutor, platforms::jira::jira_stage};
 
 /// Jira Setup 命令
 pub struct JiraSetupCommand;

@@ -9,8 +9,7 @@
 //! 循环依赖检测使用线程局部变量，每个线程独立跟踪解析栈。
 
 // 标准库
-use std::any::TypeId;
-use std::sync::Arc;
+use std::{any::TypeId, sync::Arc};
 
 // 第三方库
 use dashmap::DashMap;
@@ -294,9 +293,13 @@ impl Default for Container {
 #[cfg(test)]
 mod tests {
     // 标准库
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
-    use std::thread;
+    use std::{
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+        thread,
+    };
 
     // 第三方库
     use pretty_assertions::assert_eq;

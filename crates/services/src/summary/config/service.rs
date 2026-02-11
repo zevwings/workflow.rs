@@ -2,8 +2,7 @@
 //!
 //! 对配置文件、环境变量、文档类文件的修改进行简要总结。
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use domain::{CommitConfigAnalysis, CommitFileChange, CommitFileClassification, ServiceError};
 use llm::{JsonParser, LLMExecutor};

@@ -2,8 +2,10 @@
 //!
 //! 提供仓库配置（ProjectConfig、UserConfig 和 RepoConfig）的持久化操作接口。
 
-use crate::config::repo::{ProjectConfig, RepoConfig, UserConfig};
-use crate::errors::ServiceError;
+use crate::{
+    config::repo::{ProjectConfig, RepoConfig, UserConfig},
+    errors::ServiceError,
+};
 
 /// 仓库配置仓储接口
 ///

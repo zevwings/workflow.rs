@@ -2,8 +2,7 @@
 //!
 //! 对业务代码、服务层等核心文件的完整 diff 进行深入分析。
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, ServiceError};
 use llm::{JsonParser, LLMExecutor};

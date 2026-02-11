@@ -1,8 +1,10 @@
 //! 服务绑定
 
 // 标准库
-use std::any::{Any, TypeId};
-use std::sync::{Arc, OnceLock};
+use std::{
+    any::{Any, TypeId},
+    sync::{Arc, OnceLock},
+};
 
 // 内部导入
 use crate::error::Result;

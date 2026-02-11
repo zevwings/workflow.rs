@@ -1,8 +1,8 @@
 //! 检查 GitHub 账号命令
 
-use crate::interactive::core::stage::WorkflowExecutor;
-use crate::interactive::platforms::github::github_stage;
 use prompt::{br, separator};
+
+use crate::interactive::{core::stage::WorkflowExecutor, platforms::github::github_stage};
 
 /// Github Check 命令
 pub struct GithubCheckCommand;

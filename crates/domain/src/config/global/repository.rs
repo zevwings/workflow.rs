@@ -2,8 +2,7 @@
 //!
 //! 负责管理全局配置（GlobalConfig）的加载、保存和持久化。
 
-use crate::config::global::config::GlobalConfig;
-use crate::errors::ServiceError;
+use crate::{config::global::config::GlobalConfig, errors::ServiceError};
 
 /// 全局配置仓储接口
 ///

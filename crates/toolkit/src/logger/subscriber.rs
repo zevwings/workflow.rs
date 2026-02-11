@@ -2,13 +2,14 @@
 //!
 //! 负责初始化 tracing subscriber，配置日志输出目标（文件、控制台或 sink）。
 
-use std::fs::OpenOptions;
-use std::io;
+use std::{fs::OpenOptions, io};
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::logger::{cleanup::cleanup_logs, config::LoggerConfig, path, LoggerError};
-use crate::terminal::SpinnerAwareMakeWriter;
+use crate::{
+    logger::{cleanup::cleanup_logs, config::LoggerConfig, path, LoggerError},
+    terminal::SpinnerAwareMakeWriter,
+};
 
 /// 宏：根据 use_json 创建并初始化 layer
 macro_rules! init_with_layer {

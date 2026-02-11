@@ -2,12 +2,14 @@
 //!
 //! 提供 Yes/No 确认对话框功能
 
-use crate::backend::{Backend, TerminalBackend};
-use crate::dialog::Result;
-use crate::dialog::{PROMPT_PREFIX, RESULT_PREFIX};
-use crate::error::PromptError;
-use crate::style::theme::{get_theme, Theme};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+use crate::{
+    backend::{Backend, TerminalBackend},
+    dialog::{Result, PROMPT_PREFIX, RESULT_PREFIX},
+    error::PromptError,
+    style::theme::{get_theme, Theme},
+};
 
 /// 确认提示构建器
 ///

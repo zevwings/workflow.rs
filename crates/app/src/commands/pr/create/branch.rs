@@ -3,13 +3,13 @@
 use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
 use prompt::{info, select, spinner, success, warning};
 
-use super::super::utils::{generate_pull_request_body, generate_pull_request_title};
-use crate::bootstrap;
-use crate::commands::branch::utils::branch_type_from_branch_name;
-
-use super::commit::{check_needs_push, commit_changes, push_branch};
-use super::pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary};
-use super::types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption};
+use super::{
+    super::utils::{generate_pull_request_body, generate_pull_request_title},
+    commit::{check_needs_push, commit_changes, push_branch},
+    pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary},
+    types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption},
+};
+use crate::{bootstrap, commands::branch::utils::branch_type_from_branch_name};
 
 /// 处理非默认分支的情况
 ///

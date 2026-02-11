@@ -2,9 +2,10 @@
 //!
 //! 定义与 GitHub REST API v3 交互的底层接口。
 
-use crate::github::entity::GitHubUser;
-use crate::github::error::GitHubError;
-use crate::pr::entity::PullRequestInfo;
+use crate::{
+    github::{entity::GitHubUser, error::GitHubError},
+    pr::entity::PullRequestInfo,
+};
 
 /// GitHub 仓储接口
 ///

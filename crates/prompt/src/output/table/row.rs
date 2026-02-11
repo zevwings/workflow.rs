@@ -1,9 +1,14 @@
 //! 表格行渲染
 
-use crate::output::table::builder::{Alignment, TableBuilder};
-use crate::output::table::strip_ansi_codes;
-use crate::style::theme::Theme;
 use unicode_width::UnicodeWidthStr;
+
+use crate::{
+    output::table::{
+        builder::{Alignment, TableBuilder},
+        strip_ansi_codes,
+    },
+    style::theme::Theme,
+};
 
 /// 渲染表格行
 pub(super) fn render_row(

@@ -1,11 +1,14 @@
 //! 日志工作流阶段 (v2)
 
-use crate::interactive::core::context::WorkflowContext;
-use crate::interactive::core::stage::WorkflowStage;
-use crate::interactive::display::VerificationResultFormatter;
+use std::error::Error;
+
 use domain::{GlobalConfig, VerificationService};
 use prompt::{br, info, separator, ConfirmFormField, FormBuilder, SelectFormField};
-use std::error::Error;
+
+use crate::interactive::{
+    core::{context::WorkflowContext, stage::WorkflowStage},
+    display::VerificationResultFormatter,
+};
 
 /// 日志工作流阶段
 pub struct LogStage;

@@ -1,8 +1,9 @@
 //! GitHub 验证结果格式化实现
 
-use crate::interactive::display::formatter::VerificationResultFormatter;
 use domain::GitHubVerificationResult;
 use prompt::{br, success, warning, TableBuilder, Tabled};
+
+use crate::interactive::display::formatter::VerificationResultFormatter;
 
 /// GitHub 账号配置表格行
 ///

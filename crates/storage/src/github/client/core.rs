@@ -7,13 +7,13 @@
 
 use std::{fmt::Write, sync::Arc};
 
-use reqwest::header::HeaderMap;
-use serde_json::Value;
-
-use crate::github::client::response::{GitHubErrorResponse, GitHubResponse};
 use domain::{GitHubContext, GitHubError};
 use http::{HttpClient, HttpError, Response};
+use reqwest::header::HeaderMap;
+use serde_json::Value;
 use toolkit::log_debug;
+
+use crate::github::client::response::{GitHubErrorResponse, GitHubResponse};
 
 pub const API_BASE: &str = "https://api.github.com";
 

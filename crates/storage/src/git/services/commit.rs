@@ -2,19 +2,20 @@
 //!
 //! 提供提交相关的业务逻辑实现。
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
+use domain::{
+    CommitChangeType, CommitFileChange, CommitInfo, FileStatusInfo, FileStatusType, GitError,
+    WorkingTreeStatus,
+};
 use git2::{
     Delta, DiffDelta, DiffFormat, DiffHunk, DiffLine, Index, IndexAddOption, StatusOptions,
 };
 use toolkit::{log_debug, log_info, log_warn};
 
-use crate::git::services::context::GitContext;
-use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
-use domain::{
-    CommitChangeType, CommitFileChange, CommitInfo, FileStatusInfo, FileStatusType, GitError,
-    WorkingTreeStatus,
+use crate::git::services::{
+    context::GitContext,
+    hooks::{git_hooks, HookContext, HookResult, HookService},
 };
 
 /// 提交服务接口

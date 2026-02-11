@@ -8,9 +8,8 @@ mod generate;
 mod remove;
 
 // 重新导出 CLI 定义
-pub use cli::CompletionCommand;
-
 // 重新导出命令实现
 pub use check::CompletionCheckCommand;
+pub use cli::CompletionCommand;
 pub use generate::CompletionGenerateCommand;
 pub use remove::CompletionRemoveCommand;

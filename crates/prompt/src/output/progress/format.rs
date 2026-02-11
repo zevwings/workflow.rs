@@ -2,9 +2,9 @@
 //!
 //! 提供进度条文本格式化的辅助函数
 
-use crate::output::progress::bar::ProgressMode;
-use crate::style::theme::Theme;
 use std::time::{Duration, Instant};
+
+use crate::{output::progress::bar::ProgressMode, style::theme::Theme};
 
 /// 进度条格式化参数
 #[derive(Debug, Clone)]

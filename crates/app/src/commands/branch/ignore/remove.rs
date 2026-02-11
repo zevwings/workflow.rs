@@ -1,7 +1,8 @@
 //! 从忽略列表移除分支
 
-use crate::bootstrap;
 use prompt::{info, success, MultiSelectBuilder};
+
+use crate::bootstrap;
 
 /// Branch Ignore Remove 命令
 pub struct BranchIgnoreRemoveCommand {

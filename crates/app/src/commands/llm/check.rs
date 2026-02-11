@@ -1,8 +1,8 @@
 //! 检查 LLM 配置命令
 
-use crate::interactive::core::stage::WorkflowExecutor;
-use crate::interactive::platforms::llm::llm_stage;
 use prompt::{br, separator};
+
+use crate::interactive::{core::stage::WorkflowExecutor, platforms::llm::llm_stage};
 
 /// Llm Check 命令
 pub struct LlmCheckCommand;

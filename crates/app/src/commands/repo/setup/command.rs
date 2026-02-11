@@ -8,8 +8,10 @@ use domain::{
     BranchConfig, BranchTemplates, CommitTemplates, ProjectConfig, PullRequestsTemplates,
     TemplateConfig, UserConfig,
 };
-use prompt::{br, confirm, info, success, warning};
-use prompt::{ConfirmFormField, FormBuilder, FormResult, GroupConfig, InputFormField};
+use prompt::{
+    br, confirm, info, success, warning, ConfirmFormField, FormBuilder, FormResult, GroupConfig,
+    InputFormField,
+};
 
 use crate::bootstrap::{get_git_repository, get_path_service, get_repo_config_repository};
 

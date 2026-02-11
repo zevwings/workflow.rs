@@ -1,7 +1,6 @@
 //! 设置日志级别命令
 
-use crate::interactive::core::stage::WorkflowExecutor;
-use crate::interactive::platforms::log::log_stage;
+use crate::interactive::{core::stage::WorkflowExecutor, platforms::log::log_stage};
 
 /// Log Setup 命令
 pub struct LogSetupCommand;

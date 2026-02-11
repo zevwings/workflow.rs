@@ -5,8 +5,7 @@
 use clap::{Command, CommandFactory};
 use prompt::{br, info, success, warning, InputBuilder, SelectBuilder};
 
-use crate::bootstrap::get_alias_service;
-use crate::commands::cli::Cli;
+use crate::{bootstrap::get_alias_service, commands::cli::Cli};
 
 /// 别名添加命令
 pub struct AliasAddCommand {

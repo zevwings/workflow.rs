@@ -2,21 +2,25 @@
 
 use std::time::{Duration, Instant};
 
-use reqwest::blocking::multipart::Form;
-use reqwest::blocking::{RequestBuilder as ReqwestRequestBuilder, Response as ReqwestResponse};
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use reqwest::{Error as ReqwestError, Method as ReqwestMethod};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use reqwest::{
+    blocking::{
+        multipart::Form, RequestBuilder as ReqwestRequestBuilder, Response as ReqwestResponse,
+    },
+    header::{HeaderMap, HeaderName, HeaderValue},
+    Error as ReqwestError, Method as ReqwestMethod,
+};
+use serde::{de::DeserializeOwned, Serialize};
 
-use super::auth::Authorization;
-use super::client::HttpClient;
-use super::error::{ErrorContext, HttpError};
-use super::headers::IntoHeaderMap;
-use super::method::HttpMethod;
-use super::multipart::MultipartRequest;
-use super::response::Response;
-use super::retry::{RetryConfig, RetryExecutor};
+use super::{
+    auth::Authorization,
+    client::HttpClient,
+    error::{ErrorContext, HttpError},
+    headers::IntoHeaderMap,
+    method::HttpMethod,
+    multipart::MultipartRequest,
+    response::Response,
+    retry::{RetryConfig, RetryExecutor},
+};
 
 /// HTTP 请求
 ///

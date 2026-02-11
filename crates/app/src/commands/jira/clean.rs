@@ -1,8 +1,8 @@
 //! 清理 Jira 附件命令
 
+use std::{fs, path::PathBuf};
+
 use prompt::{confirm, error, info, multiselect, spinner, success};
-use std::fs;
-use std::path::PathBuf;
 
 use super::utils::get_jira_id_interactive;
 use crate::bootstrap;

@@ -1,8 +1,10 @@
 // 标准库
-use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 // 项目内部
 use domain::{

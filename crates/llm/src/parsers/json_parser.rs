@@ -6,9 +6,10 @@
 //! 1. 泛型模式：直接转换为实现了 `Deserialize` 的 model
 //! 2. Map 模式：转换为 `serde_json::Map<String, Value>`（Rust 中 JSON 对象的标准表示）
 
-use crate::LLMError;
 use serde::Deserialize;
 use serde_json::{Map, Value};
+
+use crate::LLMError;
 
 /// JSON 解析模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

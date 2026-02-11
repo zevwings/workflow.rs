@@ -2,8 +2,7 @@
 
 use std::str::FromStr;
 
-use base64::engine::general_purpose;
-use base64::Engine;
+use base64::{engine::general_purpose, Engine};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION};
 
 /// HTTP 认证信息

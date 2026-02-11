@@ -1,13 +1,20 @@
 //! 进度条渲染逻辑
 
-use crate::output::progress::bar::ProgressBar;
-use crate::output::progress::format::format_progress_text;
-use crate::output::terminal_state;
-use crate::style::theme::get_theme;
+use std::{
+    io::{self, Write},
+    sync::Arc,
+    thread,
+};
+
 use crossterm::{cursor, terminal, terminal::ClearType, QueueableCommand};
-use std::io::{self, Write};
-use std::sync::Arc;
-use std::thread;
+
+use crate::{
+    output::{
+        progress::{bar::ProgressBar, format::format_progress_text},
+        terminal_state,
+    },
+    style::theme::get_theme,
+};
 
 /// 获取终端宽度
 fn get_terminal_width() -> Option<usize> {

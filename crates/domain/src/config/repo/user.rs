@@ -1,7 +1,8 @@
 //! 用户配置类型定义
 
-use crate::config::repo::branch::BranchConfig;
 use serde::{Deserialize, Serialize};
+
+use crate::config::repo::branch::BranchConfig;
 
 /// 用户配置（个人偏好）
 ///

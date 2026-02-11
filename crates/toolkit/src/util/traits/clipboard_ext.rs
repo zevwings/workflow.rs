@@ -2,13 +2,12 @@
 //!
 //! 为字符串类型提供剪贴板操作相关的扩展方法。
 
-use thiserror::Error;
-
 #[cfg(all(
     not(target_env = "musl"),
     not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))
 ))]
 use clipboard::{ClipboardContext, ClipboardProvider};
+use thiserror::Error;
 
 /// 剪贴板操作错误
 #[derive(Debug, Error)]

@@ -1,16 +1,25 @@
 //! 输入提示主逻辑
 
-use crate::backend::{Backend, TerminalBackend};
-use crate::dialog::input::builder::InputBuilder;
-use crate::dialog::input::editor::{CursorLine, InputEditor, ValidationStatus};
-use crate::dialog::Result;
-use crate::dialog::{PASSWORD_MASK, PROMPT_PREFIX, RESULT_PREFIX};
-use crate::error::PromptError;
-use crate::style::theme::{get_theme, Theme};
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use crossterm::style::Attribute;
 use std::io::Write as _;
+
+use crossterm::{
+    event::{Event, KeyCode, KeyEvent, KeyModifiers},
+    style::Attribute,
+};
 use unicode_width::UnicodeWidthStr;
+
+use crate::{
+    backend::{Backend, TerminalBackend},
+    dialog::{
+        input::{
+            builder::InputBuilder,
+            editor::{CursorLine, InputEditor, ValidationStatus},
+        },
+        Result, PASSWORD_MASK, PROMPT_PREFIX, RESULT_PREFIX,
+    },
+    error::PromptError,
+    style::theme::{get_theme, Theme},
+};
 
 fn normalize_paste_text(text: &str, multiline: bool) -> String {
     // 统一换行：\r\n / \r -> \n
@@ -978,8 +987,7 @@ pub(super) fn prompt(builder: InputBuilder) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::MockBackend;
-    use crate::dialog::input::validator::validators;
+    use crate::{backend::MockBackend, dialog::input::validator::validators};
 
     #[test]
     fn test_input_basic_input_and_enter() {

@@ -25,7 +25,18 @@ pub mod testing;
 // 避免使用 glob 导出以防止与子模块名称冲突（如 `template`）
 // Re-export alias types
 pub use alias::{AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService};
-
+// Re-export business domain types
+pub use branch::{
+    sanitize_branch_name, BranchService, BranchServiceError, BranchSyncCallbacks,
+    BranchSyncOptions, BranchSyncResult, BranchType, SourceBranchInfo, SyncStrategy,
+};
+pub use commit::CommitMessageService;
+pub use completion::{
+    get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
+    get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,
+    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
+    CompletionService, ShellCompletionStatus,
+};
 // Re-export config types
 pub use config::{
     BranchConfig,
@@ -61,18 +72,23 @@ pub use config::{
     UserConfig,
     VerificationService,
 };
-
-// Re-export business domain types
-pub use branch::{
-    sanitize_branch_name, BranchService, BranchServiceError, BranchSyncCallbacks,
-    BranchSyncOptions, BranchSyncResult, BranchType, SourceBranchInfo, SyncStrategy,
+// Re-export error types
+pub use errors::ServiceError;
+// Re-export git types
+pub use git::{
+    BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitChangeType, CommitFileChange,
+    CommitInfo, FileStatusInfo, FileStatusType, GitError, GitRepoRepository, GitRepository,
+    MergeStrategy, RemoteInfo, RepoInfo, StashApplyResult, StashEntry, StashPopResult, StashStat,
+    TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
 };
-pub use commit::CommitMessageService;
-pub use completion::{
-    get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
-    get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,
-    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
-    CompletionService, ShellCompletionStatus,
+// Re-export external service types
+pub use github::{GitHubContext, GitHubError, GitHubRepository, GitHubUser};
+pub use jira::{
+    extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
+    AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraComponent,
+    JiraConfigContext, JiraError, JiraIssue, JiraPriority, JiraRepository, JiraStatusConfig,
+    JiraTransition, JiraUser, JiraWorkHistoryRepository, ProgressCallback, ProjectStatusConfig,
+    StatusConfigResult, WorkHistoryEntry,
 };
 pub use path::{
     Dir, PathError, PathService, COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR,
@@ -84,36 +100,13 @@ pub use pr::{
     get_change_type_index_by_branch_type, get_change_types_by_branch_type, ChangeType, PrContent,
     PrStatus, PullRequestInfo, PullRequestService, PullRequestStatus, CHANGE_TYPES,
 };
-
-// Re-export template types
-pub use template::{
-    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PrTitleTemplateVars,
-    PullRequestTemplateVars,
-};
-
-// Re-export error types
-pub use errors::ServiceError;
-
-// Re-export git types
-pub use git::{
-    BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitChangeType, CommitFileChange,
-    CommitInfo, FileStatusInfo, FileStatusType, GitError, GitRepoRepository, GitRepository,
-    MergeStrategy, RemoteInfo, RepoInfo, StashApplyResult, StashEntry, StashPopResult, StashStat,
-    TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
-};
-
-// Re-export external service types
-pub use github::{GitHubContext, GitHubError, GitHubRepository, GitHubUser};
-pub use jira::{
-    extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
-    AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraComponent,
-    JiraConfigContext, JiraError, JiraIssue, JiraPriority, JiraRepository, JiraStatusConfig,
-    JiraTransition, JiraUser, JiraWorkHistoryRepository, ProgressCallback, ProjectStatusConfig,
-    StatusConfigResult, WorkHistoryEntry,
-};
-
 pub use summary::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
     CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis, DirectoryStats,
     DirectoryStatusDistribution,
+};
+// Re-export template types
+pub use template::{
+    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PrTitleTemplateVars,
+    PullRequestTemplateVars,
 };

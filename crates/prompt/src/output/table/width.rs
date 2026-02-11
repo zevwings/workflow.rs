@@ -1,8 +1,8 @@
 //! 列宽计算
 
-use crate::output::table::builder::TableBuilder;
-use crate::output::table::strip_ansi_codes;
 use unicode_width::UnicodeWidthStr;
+
+use crate::output::table::{builder::TableBuilder, strip_ansi_codes};
 
 /// 计算列宽
 pub(super) fn calculate_column_widths(builder: &TableBuilder) -> Vec<usize> {

@@ -1,7 +1,8 @@
 //! 仓库配置类型定义
 
-use crate::config::repo::{BranchConfig, MCPConfig, ProjectConfig, UserConfig};
 use serde::{Deserialize, Serialize};
+
+use crate::config::repo::{BranchConfig, MCPConfig, ProjectConfig, UserConfig};
 
 /// 仓库配置（统一接口）
 ///

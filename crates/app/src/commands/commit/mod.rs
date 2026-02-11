@@ -14,7 +14,6 @@ pub mod to_merge;
 // 重新导出 CLI 定义
 #[cfg(feature = "develop")]
 pub use cli::{CommitCommand, CommitSubcommand};
-
 // 重新导出命令实现
 #[cfg(feature = "develop")]
 pub use create::CommitCreateCommand;

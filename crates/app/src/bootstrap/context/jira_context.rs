@@ -2,8 +2,7 @@
 //!
 //! 实现 `domain::JiraConfigContext` trait，提供配置获取逻辑。
 
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use domain::{GlobalConfigRepository, JiraConfigContext, JiraError, PathService};
 

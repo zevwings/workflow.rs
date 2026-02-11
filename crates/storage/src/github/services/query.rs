@@ -7,9 +7,11 @@ use std::{fmt::Write, sync::Arc};
 use domain::GitHubError;
 use toolkit::log_debug;
 
-use crate::github::client::GitHubClient;
-use crate::github::services::ServiceContext;
-use crate::github::types::{GitHubUserInfo, PullRequestInfo};
+use crate::github::{
+    client::GitHubClient,
+    services::ServiceContext,
+    types::{GitHubUserInfo, PullRequestInfo},
+};
 
 /// Pull Request 查询服务接口
 pub trait PullRequestQueryService: Send + Sync {

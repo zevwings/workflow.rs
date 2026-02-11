@@ -1,11 +1,13 @@
 //! 终端控制（光标和原始模式）
 
-use crate::output::progress::bar::ProgressBar;
+use std::io::Write;
+
 use crossterm::{
     cursor::{Hide, Show},
     terminal, QueueableCommand,
 };
-use std::io::Write;
+
+use crate::output::progress::bar::ProgressBar;
 
 /// 隐藏光标
 pub(super) fn hide_cursor(bar: &ProgressBar) {

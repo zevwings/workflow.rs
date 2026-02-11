@@ -4,10 +4,10 @@
 
 use std::path::Path;
 
+use domain::{BlameLineInfo, GitError};
 use git2::BlameOptions;
 
 use super::GitContext;
-use domain::{BlameLineInfo, GitError};
 
 /// Blame 服务接口
 pub trait BlameService: Send + Sync {

@@ -2,12 +2,18 @@
 //!
 //! 定义 `WorkflowStage` trait 和 `WorkflowExecutor`，统一设置和验证流程。
 
-use crate::bootstrap;
-use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
-use crate::interactive::display::VerificationResultFormatter;
+use std::error::Error;
+
 use domain::{GlobalConfig, VerificationService};
 use prompt::{br, spinner_then, success, warning};
-use std::error::Error;
+
+use crate::{
+    bootstrap,
+    interactive::{
+        core::context::{WorkflowContext, WorkflowMode},
+        display::VerificationResultFormatter,
+    },
+};
 
 /// 工作流中的一个阶段（如 Log、GitHub、LLM）
 pub trait WorkflowStage {

@@ -2,10 +2,10 @@
 //!
 //! 提供 URL 解析和重试策略。
 
+use std::{collections::HashMap, sync::Arc};
+
 use domain::{JiraAttachment, JiraConfigContext, JiraIssue};
 use regex::Regex;
-use std::collections::HashMap;
-use std::sync::Arc;
 
 /// URL 解析器
 ///

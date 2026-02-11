@@ -1,7 +1,6 @@
 //! HTTP 方法枚举
 
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use reqwest::Method as ReqwestMethod;
 

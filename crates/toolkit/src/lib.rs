@@ -29,19 +29,25 @@ pub mod __tracing {
 
 // Logger 模块
 pub use logger::{LoggerConfig, LoggerError};
-
 // Paths 模块 - 导出路径相关函数
 pub use paths::{expand, PathExpandError};
-
-// Template 模块
-pub use template::{TemplateEngine, TemplateEngineType, TemplateError};
-
+// Rollback 模块 - 导出回滚相关类型和函数
+pub use rollback::{
+    backup, cleanup_backup, get_all_completion_files, get_completion_filename,
+    get_completion_files_for_shell, reload_shell, rollback, CompletionHelperError, ReloadError,
+    ReloadResult, RollbackError,
+};
 // Shell 模块
 pub use shell::{
     add_source, config_file_path, detect_shell, has_source, is_configured, reload_hint,
     remove_source, shell_from_string, shell_to_string, supported_shells, ShellError,
 };
-
+// Template 模块
+pub use template::{TemplateEngine, TemplateEngineType, TemplateError};
+// Terminal 模块 - 导出终端协调相关类型和函数
+pub use terminal::{register_spinner_handlers, SpinnerAwareLayer};
+// FS 模块 - 导出文件系统操作模块
+pub use util::fs::{archive, directory, file};
 // Util 模块 - 导出所有工具类型和函数
 pub use util::{
     build_checksum_url, calculate_sha256, parse_hash_from_content, verify_checksum,
@@ -49,15 +55,3 @@ pub use util::{
     ChecksumVerifyResult, ClipboardError, ClipboardExt, FileError, PathExt, Platform,
     PlatformError, Sensitive, SizeExt, Truncate,
 };
-// FS 模块 - 导出文件系统操作模块
-pub use util::fs::{archive, directory, file};
-
-// Rollback 模块 - 导出回滚相关类型和函数
-pub use rollback::{
-    backup, cleanup_backup, get_all_completion_files, get_completion_filename,
-    get_completion_files_for_shell, reload_shell, rollback, CompletionHelperError, ReloadError,
-    ReloadResult, RollbackError,
-};
-
-// Terminal 模块 - 导出终端协调相关类型和函数
-pub use terminal::{register_spinner_handlers, SpinnerAwareLayer};

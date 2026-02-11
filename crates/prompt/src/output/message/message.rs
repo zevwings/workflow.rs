@@ -1,9 +1,14 @@
 //! Message 结构体定义和实现
 
-use crate::error::{PromptError, Result};
-use crate::style::theme::{get_theme, Theme};
-use std::io::Write;
-use std::sync::{Mutex, OnceLock};
+use std::{
+    io::Write,
+    sync::{Mutex, OnceLock},
+};
+
+use crate::{
+    error::{PromptError, Result},
+    style::theme::{get_theme, Theme},
+};
 
 /// 消息输出器
 pub struct Message {

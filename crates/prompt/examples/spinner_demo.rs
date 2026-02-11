@@ -7,12 +7,17 @@
 //! cargo run -p prompt --example spinner_demo
 //! ```
 
+use std::{
+    io::{self, Write},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+    time::Duration,
+};
+
 use prompt::{spinner, terminal_state};
-use std::io::{self, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 
 fn main() {
     println!("Spinner 加载指示器演示");

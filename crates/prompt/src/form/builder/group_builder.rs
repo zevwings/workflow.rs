@@ -1,7 +1,9 @@
 //! Group 构建器，用于在 Group 内构建 Step
 
-use crate::form::builder::step_builder::StepBuilder;
-use crate::form::types::{FormResult, FormStep, StepType};
+use crate::form::{
+    builder::step_builder::StepBuilder,
+    types::{FormResult, FormStep, StepType},
+};
 
 /// Group 构建器
 ///

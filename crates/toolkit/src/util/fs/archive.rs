@@ -6,16 +6,17 @@
 //! - 根据扩展名自动选择解压方式
 //! - 多文件合并
 
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use flate2::read::GzDecoder;
 use tar::Archive;
 use zip::ZipArchive;
 
-use super::directory;
-use super::FileError;
+use super::{directory, FileError};
 
 // ============================================================================
 // 归档文件处理函数
@@ -352,14 +353,14 @@ pub fn merge_files(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use flate2::write::GzEncoder;
-    use flate2::Compression;
     use std::io::Write;
+
+    use flate2::{write::GzEncoder, Compression};
     use tar::{Builder, Header};
     use tempfile::TempDir;
-    use zip::write::FileOptions;
-    use zip::ZipWriter;
+    use zip::{write::FileOptions, ZipWriter};
+
+    use super::*;
 
     // ========================================================================
     // 辅助函数：创建测试归档文件

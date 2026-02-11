@@ -1,8 +1,10 @@
 //! 分割线渲染函数
 
-use crate::dialog::Result;
 use std::io::Write;
+
 use unicode_width::UnicodeWidthStr;
+
+use crate::dialog::Result;
 
 /// 打印分割线
 pub(super) fn print_separator(title: &str, suffix: &str, is_main_form: bool) -> Result<()> {

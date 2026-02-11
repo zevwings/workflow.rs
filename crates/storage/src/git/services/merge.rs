@@ -2,11 +2,10 @@
 //!
 //! 提供合并相关的业务逻辑实现。
 
-use git2::build::CheckoutBuilder;
-use git2::{AnnotatedCommit, BranchType, Oid, Repository, Signature};
+use domain::{GitError, MergeStrategy};
+use git2::{build::CheckoutBuilder, AnnotatedCommit, BranchType, Oid, Repository, Signature};
 
 use super::GitContext;
-use domain::{GitError, MergeStrategy};
 
 /// Merge 服务接口
 pub trait MergeService: Send + Sync {

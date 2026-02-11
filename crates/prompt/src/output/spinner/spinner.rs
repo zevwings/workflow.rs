@@ -2,20 +2,27 @@
 //!
 //! 提供 Spinner 结构体和所有相关方法。
 
-use crate::output::spinner::builder::SpinnerBuilder;
-use crate::output::spinner::format::format_spinner_text;
-use crate::output::terminal_state;
-use crate::style::theme::get_theme;
+use std::{
+    io::{self, Write},
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
+
 use crossterm::{
     cursor::{self, Hide, Show},
     event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
     terminal::{self, Clear, ClearType},
     QueueableCommand,
 };
-use std::io::{self, Write};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+
+use crate::{
+    output::{
+        spinner::{builder::SpinnerBuilder, format::format_spinner_text},
+        terminal_state,
+    },
+    style::theme::get_theme,
+};
 
 /// Spinner 加载指示器
 pub struct Spinner {

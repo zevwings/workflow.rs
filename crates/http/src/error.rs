@@ -2,12 +2,9 @@
 //!
 //! 提供增强的错误类型，包含完整的请求/响应上下文信息。
 
-use std::collections::HashMap;
-use std::fmt;
-use std::time::Duration;
+use std::{collections::HashMap, fmt, time::Duration};
 
-use reqwest::header::HeaderMap;
-use reqwest::Error;
+use reqwest::{header::HeaderMap, Error};
 
 use super::HttpMethod;
 

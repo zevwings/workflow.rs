@@ -2,8 +2,7 @@
 //!
 //! 当阶段一检测到批量重命名、格式化、配置更新等模式时，对样本 diff 进行分析。
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use domain::{CommitBatchAnalysis, CommitFileChange, CommitFileClassification, ServiceError};
 use llm::{JsonParser, LLMExecutor};
@@ -293,8 +292,9 @@ fn count_zero_change_files(paths: &[String], files: &[CommitFileChange]) -> usiz
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use domain::CommitChangeType;
+
+    use super::*;
 
     fn create_test_file(path: &str, additions: u32, deletions: u32) -> CommitFileChange {
         CommitFileChange {

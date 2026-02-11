@@ -1,13 +1,19 @@
 //! 表单执行器核心逻辑
 
-use crate::backend::Backend;
-use crate::dialog::Result;
-use crate::form::builder::FormBuilder;
-use crate::form::executor::field_executors::FieldExecutors;
-use crate::form::executor::separator::{print_nested_form_separator_simple, print_separator};
-use crate::form::field::{FieldType, FormField};
-use crate::form::types::{FormResult, FormStep, StepType};
-use crate::PromptError;
+use crate::{
+    backend::Backend,
+    dialog::Result,
+    form::{
+        builder::FormBuilder,
+        executor::{
+            field_executors::FieldExecutors,
+            separator::{print_nested_form_separator_simple, print_separator},
+        },
+        field::{FieldType, FormField},
+        types::{FormResult, FormStep, StepType},
+    },
+    PromptError,
+};
 
 /// 表单执行器
 pub struct FormExecutor;
@@ -315,8 +321,10 @@ impl FormExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::MockBackend;
-    use crate::form::{ConfirmFormField, InputFormField, SelectFormField};
+    use crate::{
+        backend::MockBackend,
+        form::{ConfirmFormField, InputFormField, SelectFormField},
+    };
 
     #[test]
     fn test_form_executor_new() {
@@ -718,8 +726,9 @@ mod tests {
 
     #[test]
     fn test_execute_multiselect_field() {
-        use crate::form::MultiSelectFormField;
         use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+        use crate::form::MultiSelectFormField;
 
         let events = vec![
             Event::Key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)), // Toggle first
@@ -801,8 +810,9 @@ mod tests {
 
     #[test]
     fn test_execute_complex_form() {
-        use crate::form::PasswordFormField;
         use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+        use crate::form::PasswordFormField;
 
         let events = [
             // Input: username

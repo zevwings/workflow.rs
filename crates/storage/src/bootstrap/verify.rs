@@ -3,10 +3,10 @@
 use std::sync::Arc;
 
 use di::{bind, Container, InjectionError, Scope};
+use domain::{GitHubRepository, GlobalConfigRepository, JiraRepository, VerificationService};
 use llm::LLMExecutor;
 
 use crate::config::VerificationServiceImpl;
-use domain::{GitHubRepository, GlobalConfigRepository, JiraRepository, VerificationService};
 
 /// 注册 VerificationService
 ///

@@ -4,14 +4,11 @@
 
 use std::sync::Arc;
 
-use serde_json::Value;
-
 use domain::GitHubError;
+use serde_json::Value;
 use toolkit::log_debug;
 
-use crate::github::client::GitHubClient;
-use crate::github::services::ServiceContext;
-use crate::github::types::PullRequestFile;
+use crate::github::{client::GitHubClient, services::ServiceContext, types::PullRequestFile};
 
 const MAX_FILES: usize = 50;
 const MAX_LINES: usize = 15000;

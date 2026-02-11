@@ -4,8 +4,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::client::{LLMClient, LLMRequestParameters};
-use crate::LLMError;
+use crate::{
+    client::{LLMClient, LLMRequestParameters},
+    LLMError,
+};
 
 /// Mock LLM 客户端
 ///

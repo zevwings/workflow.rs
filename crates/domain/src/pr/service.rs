@@ -2,8 +2,7 @@
 //!
 //! 提供完整的 Pull Request 生命周期管理功能，包括创建、更新、合并、关闭等操作。
 
-use crate::errors::ServiceError;
-use crate::pr::entity::PullRequestInfo;
+use crate::{errors::ServiceError, pr::entity::PullRequestInfo};
 
 /// PR 服务接口
 ///

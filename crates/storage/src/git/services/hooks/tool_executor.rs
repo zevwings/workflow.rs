@@ -2,13 +2,17 @@
 //!
 //! 负责执行 pre-commit/prek 等外部工具管理的 hooks。
 
-use super::context::{HookContext, HookResult};
+use std::{
+    path::PathBuf,
+    process::{Command, Stdio},
+    time::Duration,
+};
+
 use domain::GitError;
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::time::Duration;
 use toolkit::log_info;
 use wait_timeout::ChildExt;
+
+use super::context::{HookContext, HookResult};
 
 /// 默认超时时间（5 分钟，外部工具可能需要更长时间）
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);

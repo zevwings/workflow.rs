@@ -2,8 +2,7 @@
 //!
 //! 编排三阶段提交分析：阶段一文件分类 → 阶段二分类分析 → 阶段三全局总结。
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use domain::{
     CommitChangeType, CommitFileChange, CommitFileClassification, CommitInfo,

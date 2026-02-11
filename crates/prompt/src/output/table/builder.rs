@@ -2,10 +2,12 @@
 //!
 //! 提供表格构建和渲染功能
 
-use crate::error::{PromptError, Result};
 use std::io::Write;
 
-use crate::output::table::render::render;
+use crate::{
+    error::{PromptError, Result},
+    output::table::render::render,
+};
 
 /// 对齐方式
 #[derive(Debug, Clone, Copy)]

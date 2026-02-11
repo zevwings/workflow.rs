@@ -1,11 +1,13 @@
 //! 表格渲染主逻辑
 
-use crate::output::table::builder::TableBuilder;
-use crate::output::table::row::render_row;
-use crate::output::table::strip_ansi_codes;
-use crate::output::table::width::calculate_column_widths;
-use crate::style::theme::get_theme;
 use unicode_width::UnicodeWidthStr;
+
+use crate::{
+    output::table::{
+        builder::TableBuilder, row::render_row, strip_ansi_codes, width::calculate_column_widths,
+    },
+    style::theme::get_theme,
+};
 
 /// 渲染边框
 fn render_border(

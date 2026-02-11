@@ -2,12 +2,16 @@
 //!
 //! 负责执行 Git hooks 脚本，包括环境变量设置、标准输入处理和输出捕获。
 
-use super::context::{HookContext, HookResult};
+use std::{
+    process::{Command, Stdio},
+    time::Duration,
+};
+
 use domain::GitError;
-use std::process::{Command, Stdio};
-use std::time::Duration;
 use toolkit::log_info;
 use wait_timeout::ChildExt;
+
+use super::context::{HookContext, HookResult};
 
 /// 默认超时时间（30 秒）
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);

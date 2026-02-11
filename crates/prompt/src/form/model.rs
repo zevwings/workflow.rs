@@ -2,8 +2,10 @@
 //!
 //! 提供基于模型的表单构建和解析能力。
 
-use crate::form::{FormBuilder, FormResult};
-use crate::Result;
+use crate::{
+    form::{FormBuilder, FormResult},
+    Result,
+};
 
 /// 表单模型 Trait
 ///
@@ -80,8 +82,7 @@ impl<T: FormModel> FormModelTestExt for T {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backend::MockBackend;
-    use crate::form::InputFormField;
+    use crate::{backend::MockBackend, form::InputFormField};
 
     #[derive(Default)]
     struct TestConfig {

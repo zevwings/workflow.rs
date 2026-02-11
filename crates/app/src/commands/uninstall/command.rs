@@ -3,10 +3,9 @@
 //! 删除 Workflow CLI 的所有配置和二进制文件。
 //! 路径统一从 pathService 获取；若路径不存在则需确认后再加入操作列表。
 
-use std::{fs, path::PathBuf};
-
 #[cfg(unix)]
 use std::process::Command;
+use std::{fs, path::PathBuf};
 
 use prompt::{br, info, print, success, warning, ConfirmBuilder};
 use toolkit::{detect_shell, log_debug, reload_shell};

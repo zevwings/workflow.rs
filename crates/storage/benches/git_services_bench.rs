@@ -4,8 +4,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use git2::IndexAddOption;
-use storage::git::services::*;
-use storage::testing::*;
+use storage::{git::services::*, testing::*};
 
 /// 创建 CommitServiceImpl 的辅助函数
 fn create_commit_service(ctx: GitContext) -> CommitServiceImpl {
@@ -337,8 +336,7 @@ fn bench_tag_has_tag(c: &mut Criterion) {
 
 /// 测试仓库上下文并发访问性能
 fn bench_context_concurrent_access(c: &mut Criterion) {
-    use std::sync::Arc;
-    use std::thread;
+    use std::{sync::Arc, thread};
 
     let (_tmp, ctx) = setup_repo_with_file();
     let ctx: Arc<GitContext> = Arc::new(ctx);

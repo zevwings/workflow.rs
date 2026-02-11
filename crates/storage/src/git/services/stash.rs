@@ -3,11 +3,11 @@
 //! 提供 Git stash 相关的业务逻辑实现。
 
 use chrono::{Local, TimeZone};
+use domain::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
 use git2::{StashApplyOptions, StashFlags};
+use toolkit::log_warn;
 
 use super::GitContext;
-use domain::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
-use toolkit::log_warn;
 
 /// Stash 服务接口
 pub trait StashService: Send + Sync {

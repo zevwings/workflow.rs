@@ -1,12 +1,14 @@
 //! 表单字段和组添加方法
 
-use crate::form::builder::group_builder::GroupBuilder;
-use crate::form::field::{
-    ConfirmFormField, FieldType, FormField, InputFormField, MultiSelectFormField, NestedFormField,
-    PasswordFormField, SelectFormField,
+use crate::form::{
+    builder::group_builder::GroupBuilder,
+    field::{
+        ConfirmFormField, FieldType, FormField, InputFormField, MultiSelectFormField,
+        NestedFormField, PasswordFormField, SelectFormField,
+    },
+    types::{FormGroup, GroupConfig},
+    FormBuilder,
 };
-use crate::form::types::{FormGroup, GroupConfig};
-use crate::form::FormBuilder;
 
 impl FormBuilder {
     /// 添加确认字段

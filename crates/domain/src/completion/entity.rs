@@ -1,8 +1,10 @@
 //! Shell Completion 实体
 
-use crate::path::{COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR, MAIN_DIR};
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
+
+use crate::path::{COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR, MAIN_DIR};
 
 // ============================================================================
 // 生成结果

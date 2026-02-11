@@ -2,8 +2,7 @@
 //!
 //! 提供目录遍历、创建和路径检查的工具函数。
 
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 use walkdir::WalkDir;
 
@@ -209,8 +208,7 @@ pub fn read_dir_safe(path: &Path) -> Result<Vec<std::path::PathBuf>, FileError> 
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::path::Path;
+    use std::{fs, path::Path};
 
     use tempfile::tempdir;
 

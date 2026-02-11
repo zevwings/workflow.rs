@@ -1,14 +1,10 @@
 //! HTTP 客户端
 
-use std::sync::OnceLock;
-use std::time::Duration;
+use std::{sync::OnceLock, time::Duration};
 
 use reqwest::blocking::Client;
 
-use super::config::HttpClientConfig;
-use super::error::HttpError;
-use super::method::HttpMethod;
-use super::request::Request;
+use super::{config::HttpClientConfig, error::HttpError, method::HttpMethod, request::Request};
 
 /// HTTP 客户端
 ///
@@ -139,9 +135,7 @@ mod tests {
     use serial_test::serial;
 
     use super::*;
-    use crate::auth::Authorization;
-    use crate::testing::MockServer;
-    use crate::RetryConfig;
+    use crate::{auth::Authorization, testing::MockServer, RetryConfig};
 
     #[test]
     fn test_http_client_new() -> Result<(), HttpError> {

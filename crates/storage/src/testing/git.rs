@@ -5,17 +5,22 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-use crate::git::services::context::GitContext;
-use crate::git::services::hooks::{HookContext, HookResult, HookService};
+use std::{
+    env,
+    path::Path,
+    sync::{Arc, Mutex},
+};
+
 use domain::GitError;
 use git2::Signature;
-use std::env;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
 use tempfile::TempDir;
 
 // 重新导出性能监控工具，方便测试代码使用
 pub use crate::git::performance;
+use crate::git::services::{
+    context::GitContext,
+    hooks::{HookContext, HookResult, HookService},
+};
 
 // ============================================================
 // NoopHookService - 测试用空 Hook 服务

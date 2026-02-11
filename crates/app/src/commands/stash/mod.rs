@@ -8,10 +8,9 @@ pub mod pop;
 pub mod push;
 
 // 重新导出 CLI 定义
-pub use cli::StashSubcommand;
-
 // 重新导出命令实现
 pub use apply::StashApplyCommand;
+pub use cli::StashSubcommand;
 pub use drop::StashDropCommand;
 pub use list::StashListCommand;
 pub use pop::StashPopCommand;

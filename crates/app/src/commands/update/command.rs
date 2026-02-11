@@ -8,11 +8,11 @@ use std::path::PathBuf;
 use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
 use toolkit::{backup, cleanup_backup, rollback, Platform};
 
-use super::download::{build_download_url, download_file, extract_archive, verify_file_checksum};
-use super::types::TempDirManager;
-use super::verify::{run_installer, verify_installation};
-use super::version::{
-    compare_versions, get_current_version, get_target_version, VersionComparison,
+use super::{
+    download::{build_download_url, download_file, extract_archive, verify_file_checksum},
+    types::TempDirManager,
+    verify::{run_installer, verify_installation},
+    version::{compare_versions, get_current_version, get_target_version, VersionComparison},
 };
 use crate::bootstrap::get_path_service;
 

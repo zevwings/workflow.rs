@@ -1,9 +1,10 @@
 //! 分支工作流模块
 
-use crate::bootstrap;
 use domain::{sanitize_branch_name, BranchTemplateVars, BranchType, JiraIssue};
 use prompt::{info, select, spinner};
 use toolkit::TemplateEngine;
+
+use crate::bootstrap;
 
 pub struct GenerateBranchNameResult {
     pub branch_name: String,

@@ -21,9 +21,8 @@
 //! ./install --completions-only
 //! ```
 
-use clap::Parser;
-
 use app::commands::install::InstallCommand;
+use clap::Parser;
 
 /// Workflow CLI 安装程序
 #[derive(Parser, Debug)]

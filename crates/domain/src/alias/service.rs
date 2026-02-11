@@ -2,8 +2,10 @@
 //!
 //! 提供别名的增删查功能。
 
-use crate::alias::entity::{AliasAddResult, AliasListResult, AliasRemoveResult};
-use crate::errors::ServiceError;
+use crate::{
+    alias::entity::{AliasAddResult, AliasListResult, AliasRemoveResult},
+    errors::ServiceError,
+};
 
 /// 别名服务接口
 ///

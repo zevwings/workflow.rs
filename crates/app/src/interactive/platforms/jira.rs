@@ -1,14 +1,20 @@
 //! Jira 工作流阶段 (v2)
 
-use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
-use crate::interactive::core::stage::WorkflowStage;
-use crate::interactive::display::VerificationResultFormatter;
+use std::error::Error;
+
 use domain::{GlobalConfig, VerificationService};
 use prompt::{
     br, confirm, info, separator, FormBuilder, InputFormField, PasswordFormField, PromptError,
 };
-use std::error::Error;
 use toolkit::Sensitive;
+
+use crate::interactive::{
+    core::{
+        context::{WorkflowContext, WorkflowMode},
+        stage::WorkflowStage,
+    },
+    display::VerificationResultFormatter,
+};
 
 /// Jira 工作流阶段
 pub struct JiraStage;

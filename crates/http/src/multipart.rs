@@ -1,13 +1,13 @@
 //! Multipart 请求
 
-use std::path::Path;
-use std::time::Duration;
+use std::{path::Path, time::Duration};
 
-use reqwest::blocking::multipart::{Form, Part};
-use reqwest::header::HeaderMap;
+use reqwest::{
+    blocking::multipart::{Form, Part},
+    header::HeaderMap,
+};
 
-use super::auth::Authorization;
-use super::error::HttpError;
+use super::{auth::Authorization, error::HttpError};
 
 /// Multipart 请求构建器
 ///

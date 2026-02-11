@@ -2,18 +2,23 @@ use domain::{get_change_types_by_branch_type, BranchType, GitRepository, JiraIss
 use prompt::{error, info, input, spinner, success, warning};
 use toolkit::{log_debug, log_error};
 
-use crate::bootstrap;
-use crate::commands::branch::utils::{
-    generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type, to_slug,
-};
-
 use super::super::utils::{generate_pull_request_body, generate_pull_request_title};
-use crate::commands::jira::utils::{ensure_jira_status_config, get_jira_id_interactive_optional};
-
-use crate::commands::pr::create::branch::{handle_default_branch, handle_non_default_branch};
-use crate::commands::pr::create::commit::commit_changes;
-use crate::commands::pr::create::pr::{create_pull_request, format_pr_title, generate_pr_summary};
-use crate::commands::pr::create::types::BranchHandleContext;
+use crate::{
+    bootstrap,
+    commands::{
+        branch::utils::{
+            generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
+            to_slug,
+        },
+        jira::utils::{ensure_jira_status_config, get_jira_id_interactive_optional},
+        pr::create::{
+            branch::{handle_default_branch, handle_non_default_branch},
+            commit::commit_changes,
+            pr::{create_pull_request, format_pr_title, generate_pr_summary},
+            types::BranchHandleContext,
+        },
+    },
+};
 
 /// 创建分支并创建 PR 时的 JIRA/描述上下文
 struct CreatePullRequrestContext<'a> {

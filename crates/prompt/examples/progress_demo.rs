@@ -7,10 +7,13 @@
 //! cargo run -p prompt --example progress_demo
 //! ```
 
+use std::{
+    io::{self, Write},
+    thread,
+    time::Duration,
+};
+
 use prompt::{progress_bar, terminal_state};
-use std::io::{self, Write};
-use std::thread;
-use std::time::Duration;
 
 fn main() {
     println!("进度条功能演示");

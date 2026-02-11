@@ -2,10 +2,16 @@
 //!
 //! 提供文本输入功能，支持密码模式、验证器、占位符等
 
-use crate::backend::Backend;
-use crate::dialog::input::prompt::{prompt, prompt_with_backend};
-use crate::dialog::input::validator::Validator;
-use crate::dialog::Result;
+use crate::{
+    backend::Backend,
+    dialog::{
+        input::{
+            prompt::{prompt, prompt_with_backend},
+            validator::Validator,
+        },
+        Result,
+    },
+};
 
 /// 输入提示构建器
 pub struct InputBuilder {

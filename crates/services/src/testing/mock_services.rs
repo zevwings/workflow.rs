@@ -412,8 +412,9 @@ impl Default for MockPullRequestService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use domain::BranchService;
+
+    use super::*;
 
     #[test]
     fn mock_branch_service_returns_default() {

@@ -9,11 +9,12 @@
 //!
 //! 注意：此示例需要交互式终端，不能在非 TTY 环境下运行。
 
+use std::sync::Arc;
+
 use prompt::{
     form, is_user_cancelled, validators, ConfirmFormField, InputFormField, Message,
     MultiSelectFormField, PasswordFormField, PromptError, SelectFormField,
 };
-use std::sync::Arc;
 
 fn main() {
     println!("表单功能演示");

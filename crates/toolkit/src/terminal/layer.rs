@@ -5,9 +5,7 @@
 use std::io::{self, Write};
 
 use tracing::{Event, Subscriber};
-use tracing_subscriber::fmt::MakeWriter;
-use tracing_subscriber::layer::Context;
-use tracing_subscriber::Layer;
+use tracing_subscriber::{fmt::MakeWriter, layer::Context, Layer};
 
 use super::coordinator::{resume_spinner, suspend_spinner};
 

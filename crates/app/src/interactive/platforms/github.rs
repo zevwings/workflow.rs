@@ -1,18 +1,24 @@
 //! GitHub 工作流阶段 (v2)
 
-use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
-use crate::interactive::core::platform::{
-    add_account_generic, configure_platform, AccountSetMode, GlobalConfigAccessor, PlatformAccount,
-    PlatformConfigurator, PlatformSettings,
-};
-use crate::interactive::core::stage::WorkflowStage;
-use crate::interactive::display::VerificationResultFormatter;
+use std::error::Error;
+
 use domain::{GitHubAccount, GitHubSettings, GlobalConfig, VerificationService};
 use prompt::{
     br, info, success, warning, FormBuilder, FormResult, InputFormField, PasswordFormField,
     PromptError, SelectBuilder,
 };
-use std::error::Error;
+
+use crate::interactive::{
+    core::{
+        context::{WorkflowContext, WorkflowMode},
+        platform::{
+            add_account_generic, configure_platform, AccountSetMode, GlobalConfigAccessor,
+            PlatformAccount, PlatformConfigurator, PlatformSettings,
+        },
+        stage::WorkflowStage,
+    },
+    display::VerificationResultFormatter,
+};
 
 /// GitHub 工作流阶段
 pub struct GitHubStage;

@@ -2,14 +2,11 @@
 //!
 //! 提供安装二进制文件和 shell completion 的功能。
 
-use std::env;
-use std::path::PathBuf;
-
-#[cfg(unix)]
-use std::process::Command;
-
 #[cfg(windows)]
 use std::fs;
+#[cfg(unix)]
+use std::process::Command;
+use std::{env, path::PathBuf};
 
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
@@ -17,8 +14,10 @@ use domain::get_completion_cache_shell_dir;
 use prompt::{br, info, print, success, warning};
 use toolkit::{detect_shell, directory, log_debug, shell_to_string};
 
-use crate::bootstrap::{get_completion_service, get_path_service};
-use crate::commands::cli::Cli;
+use crate::{
+    bootstrap::{get_completion_service, get_path_service},
+    commands::cli::Cli,
+};
 
 /// 安装命令
 pub struct InstallCommand {

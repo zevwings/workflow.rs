@@ -11,13 +11,11 @@ use domain::{
 };
 use llm::{LLMConfigContext, LLMExecutor};
 
-use crate::alias::AliasServiceImpl;
-use crate::branch::BranchServiceImpl;
-use crate::commit::CommitMessageServiceImpl;
-use crate::completion::CompletionServiceImpl;
-use crate::path::PathServiceImpl;
-use crate::pull_request::PullRequestServiceImpl;
-use crate::summary::CommitSummaryServiceImpl;
+use crate::{
+    alias::AliasServiceImpl, branch::BranchServiceImpl, commit::CommitMessageServiceImpl,
+    completion::CompletionServiceImpl, path::PathServiceImpl, pull_request::PullRequestServiceImpl,
+    summary::CommitSummaryServiceImpl,
+};
 
 /// 构建 Services 模块
 ///

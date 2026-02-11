@@ -2,17 +2,18 @@
 //!
 //! 提供文件下载和解压功能。
 
-use std::fs::{self, File};
-use std::io::{Read, Write};
-use std::path::Path;
+use std::{
+    fs::{self, File},
+    io::{Read, Write},
+    path::Path,
+};
 
+use http::HttpClient;
 use prompt::{info, success, warning, Progress, Spinner};
 use toolkit::{
     archive, build_checksum_url, calculate_sha256, log_debug, parse_hash_from_content,
     verify_checksum, SizeExt,
 };
-
-use http::HttpClient;
 
 use super::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
 

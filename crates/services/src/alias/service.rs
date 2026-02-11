@@ -2,8 +2,7 @@
 //!
 //! 实现 `AliasService` trait，负责别名的管理。
 
-use std::collections::HashSet;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use domain::{
     AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService,
@@ -216,10 +215,11 @@ impl AliasServiceImpl {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::sync::Mutex;
 
     use domain::GlobalConfig;
+
+    use super::*;
 
     struct MockGlobalConfigRepository {
         config: Mutex<GlobalConfig>,

@@ -1,8 +1,8 @@
 //! 输入字段配置
 
-use crate::dialog::Validator;
-use crate::form::field::types::Condition;
 use std::sync::Arc;
+
+use crate::{dialog::Validator, form::field::types::Condition};
 
 /// 输入字段配置
 pub struct InputFormField {

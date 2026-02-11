@@ -3,10 +3,19 @@
 //! 统一管理 spinner 和 progress bar 的终端渲染状态，
 //! 提供暂停和恢复接口，确保与日志输出不冲突。
 
-use crossterm::{cursor, terminal::Clear, terminal::ClearType, QueueableCommand};
-use std::io::{self, Write};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::{
+    io::{self, Write},
+    sync::{
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+        Mutex, OnceLock,
+    },
+};
+
+use crossterm::{
+    cursor,
+    terminal::{Clear, ClearType},
+    QueueableCommand,
+};
 
 /// 渲染器信息
 struct RendererInfo {

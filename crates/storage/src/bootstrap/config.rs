@@ -3,9 +3,9 @@
 use std::sync::Arc;
 
 use di::{bind, Container, InjectionError, Scope};
+use domain::{GlobalConfigRepository, PathService, RepoConfigRepository};
 
 use crate::config::{GlobalConfigRepositoryImpl, RepoConfigRepositoryImpl};
-use domain::{GlobalConfigRepository, PathService, RepoConfigRepository};
 
 /// 注册 Config 相关服务
 ///

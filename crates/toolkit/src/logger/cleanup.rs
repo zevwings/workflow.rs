@@ -8,9 +8,11 @@
 //! - **数量限制**：最多保留 100 个日志文件
 //! - **触发时机**：每次 `logger::init()` 时自动执行
 
-use std::fs;
-use std::path::Path;
-use std::time::{Duration, SystemTime};
+use std::{
+    fs,
+    path::Path,
+    time::{Duration, SystemTime},
+};
 
 /// 日志文件最大保留天数
 const MAX_LOG_AGE_DAYS: u64 = 7;
@@ -71,10 +73,12 @@ pub(crate) fn cleanup_logs(logs_dir: impl AsRef<Path>) {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{self, File};
-    use std::io::Write;
-    use std::path::PathBuf;
-    use std::time::{Duration, SystemTime};
+    use std::{
+        fs::{self, File},
+        io::Write,
+        path::PathBuf,
+        time::{Duration, SystemTime},
+    };
 
     use filetime::FileTime;
     use rstest::rstest;

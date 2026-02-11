@@ -4,9 +4,9 @@
 
 use domain::GitRepository;
 use prompt::{error, info, spinner, success};
+use toolkit::{log_info, log_info_with_fields};
 
 use crate::bootstrap;
-use toolkit::{log_info, log_info_with_fields};
 
 /// Commit Create 命令
 pub struct CommitCreateCommand {

@@ -1,7 +1,8 @@
 //! 项目配置类型定义
 
-use crate::config::repo::template::TemplateConfig;
 use serde::{Deserialize, Serialize};
+
+use crate::config::repo::template::TemplateConfig;
 
 /// 项目配置（团队标准）
 ///

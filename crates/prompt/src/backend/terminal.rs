@@ -2,15 +2,19 @@
 //!
 //! 委托给 crossterm 进行实际的终端操作。
 
-use super::Backend;
-use crossterm::cursor;
-use crossterm::event::{
-    DisableBracketedPaste, EnableBracketedPaste, Event, KeyboardEnhancementFlags,
-    PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
-};
-use crossterm::execute;
-use crossterm::terminal::{self, ClearType};
 use std::io::{Result, Stdout, Write};
+
+use crossterm::{
+    cursor,
+    event::{
+        DisableBracketedPaste, EnableBracketedPaste, Event, KeyboardEnhancementFlags,
+        PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+    },
+    execute,
+    terminal::{self, ClearType},
+};
+
+use super::Backend;
 
 /// 真实终端后端
 ///

@@ -2,17 +2,18 @@
 //!
 //! 这里只负责解析顶层命令，将实际逻辑委托给 `commands` 模块。
 
-use clap::Parser;
-
-use app::bootstrap::{get_alias_service, get_logger_manager};
-use app::cli::{
-    AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
-    IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
-    StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
-};
 #[cfg(feature = "develop")]
 use app::cli::{CommitSubcommand, RollbackCommand};
-use app::commands;
+use app::{
+    bootstrap::{get_alias_service, get_logger_manager},
+    cli::{
+        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
+        IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
+        StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
+    },
+    commands,
+};
+use clap::Parser;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化 shaku 模块（通过 Lazy 自动初始化）

@@ -5,10 +5,9 @@
 //! - 读取状态配置
 //! - 写入状态配置
 
-use std::{fs, path::Path, sync::Arc};
-
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+use std::{fs, path::Path, sync::Arc};
 
 use domain::{
     extract_jira_project, validate_jira_ticket_format, JiraError, JiraStatusConfig, PathService,
@@ -16,9 +15,8 @@ use domain::{
 };
 use toolkit::{file, log_debug};
 
-use crate::jira::JiraClient;
-
 use super::entity::JiraConfig;
+use crate::jira::JiraClient;
 
 /// 状态服务接口
 pub trait StatusService: Send + Sync {

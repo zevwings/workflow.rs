@@ -10,11 +10,10 @@
 
 use std::sync::Arc;
 
-use serde::Serialize;
-
 use domain::{JiraConfigContext, JiraError};
 use http::{Authorization, HttpClient, HttpMethod};
 use reqwest::Url;
+use serde::Serialize;
 use toolkit::log_debug;
 
 use crate::jira::client::types::JiraResponse;

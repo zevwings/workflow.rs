@@ -9,13 +9,13 @@ mod mock;
 mod terminal;
 
 // NOTE: 测试代码需要此导出，#[allow] 防止 clippy --fix 误删
+use std::io::Result;
+
+use crossterm::event::Event;
 #[allow(unused_imports)]
 #[cfg(any(test, feature = "testing"))]
 pub use mock::MockBackend;
 pub use terminal::TerminalBackend;
-
-use crossterm::event::Event;
-use std::io::Result;
 
 /// 终端后端抽象 trait
 ///

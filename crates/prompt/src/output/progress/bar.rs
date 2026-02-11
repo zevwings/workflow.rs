@@ -3,15 +3,22 @@
 //! 用于显示有明确进度的操作（如下载文件、处理多个项目等）。
 //! 支持已知总数和未知总数两种模式，以及专门的下载模式。
 
-use crate::output::progress::builder::ProgressBarBuilder;
-use crate::output::progress::render::start_render_thread;
-use crate::output::progress::terminal::{
-    disable_raw_mode, enable_raw_mode, hide_cursor, show_cursor,
+use std::{
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
 };
-use crate::output::terminal_state;
-use crate::style::theme::get_theme;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+
+use crate::{
+    output::{
+        progress::{
+            builder::ProgressBarBuilder,
+            render::start_render_thread,
+            terminal::{disable_raw_mode, enable_raw_mode, hide_cursor, show_cursor},
+        },
+        terminal_state,
+    },
+    style::theme::get_theme,
+};
 
 /// 进度条模式
 #[derive(Clone, Copy, Debug)]

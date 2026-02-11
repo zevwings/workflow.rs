@@ -1,7 +1,8 @@
 //! MCP 配置类型定义
 
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 
 /// MCP 服务器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,8 +37,9 @@ impl MCPConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
+
+    use super::*;
 
     #[test]
     fn test_mcp_config_is_empty() {

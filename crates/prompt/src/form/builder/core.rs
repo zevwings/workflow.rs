@@ -2,9 +2,7 @@
 
 #[cfg(any(test, feature = "testing"))]
 use crate::backend::Backend;
-use crate::form::field::FormField;
-use crate::form::types::FormGroup;
-use crate::form::FormExecutor;
+use crate::form::{field::FormField, types::FormGroup, FormExecutor};
 
 /// 表单构建器（链式 API）
 pub struct FormBuilder {

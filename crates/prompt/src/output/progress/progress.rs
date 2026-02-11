@@ -2,8 +2,7 @@
 //!
 //! 提供进度条显示功能。
 
-use crate::output::progress::bar::ProgressBar;
-use crate::output::progress::builder::ProgressBarBuilder;
+use crate::output::progress::{bar::ProgressBar, builder::ProgressBarBuilder};
 
 /// 进度条结构体
 ///

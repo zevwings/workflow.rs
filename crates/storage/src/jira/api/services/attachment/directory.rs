@@ -2,8 +2,9 @@
 //!
 //! 提供附件下载目录的创建、清理等功能。
 
-use domain::JiraError;
 use std::path::{Path, PathBuf};
+
+use domain::JiraError;
 
 /// 目录管理器
 pub struct DirectoryManager;
@@ -65,9 +66,11 @@ impl DirectoryManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
+
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_prepare_download_directory() {

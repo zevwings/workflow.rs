@@ -5,11 +5,9 @@
 //! 使用 `shellexpand` 处理 `~` 展开和 Unix 风格的环境变量（`$VAR`、`${VAR}`），
 //! 同时保留自定义逻辑处理 Windows 风格的 `%VAR%` 环境变量。
 
-use std::env;
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 
 // //! 路径操作错误类型
-
 use thiserror::Error;
 
 /// 路径操作错误
@@ -96,8 +94,9 @@ fn expand_windows_env_vars(path_str: &str) -> Result<String, PathExpandError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::env;
+
+    use super::*;
 
     #[test]
     fn test_expand_tilde() {

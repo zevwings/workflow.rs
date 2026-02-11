@@ -1,8 +1,8 @@
 //! 表单字段类型定义
 
-use crate::dialog::Validator;
-use crate::form::FormResult;
 use std::sync::Arc;
+
+use crate::{dialog::Validator, form::FormResult};
 
 /// 字段类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

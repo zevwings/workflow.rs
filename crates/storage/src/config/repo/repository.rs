@@ -4,12 +4,11 @@
 
 use std::sync::Arc;
 
-use toml::{map::Map, Value};
-
 use domain::{
     BranchTemplates, CommitTemplates, MCPConfig, PathService, ProjectConfig, PullRequestsTemplates,
     RepoConfig, RepoConfigRepository, ServiceError, TemplateConfig, UserConfig,
 };
+use toml::{map::Map, Value};
 use toolkit::{file, log_warn};
 
 /// 仓库配置仓储实现

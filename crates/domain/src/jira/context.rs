@@ -2,8 +2,9 @@
 //!
 //! 定义 Jira 配置上下文的 trait，用于封装配置获取逻辑。
 
-use crate::JiraError;
 use std::path::PathBuf;
+
+use crate::JiraError;
 
 /// Jira 配置上下文接口
 ///

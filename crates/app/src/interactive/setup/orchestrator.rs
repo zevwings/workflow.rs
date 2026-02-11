@@ -2,12 +2,14 @@
 //!
 //! 使用阶段架构编排完整的设置工作流。
 
+use std::error::Error;
+
+use prompt::{br, info, is_user_cancelled, separator, success, warning};
+
 use crate::interactive::{
     github_stage, jira_stage, llm_stage, log_stage, WorkflowContext, WorkflowExecutor,
     WorkflowMode, WorkflowStage,
 };
-use prompt::{br, info, is_user_cancelled, separator, success, warning};
-use std::error::Error;
 
 /// 运行完整的设置工作流
 pub fn run_setup_workflow() -> Result<(), Box<dyn Error>> {

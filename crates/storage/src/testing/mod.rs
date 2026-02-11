@@ -47,14 +47,12 @@ pub mod github_fixtures;
 pub mod jira_fixtures;
 
 // 重新导出 Git 测试常用函数与类型
+// 重新导出性能监控工具（与原 git::testing::performance 等价）
+pub use git::performance;
 pub use git::{
     noop_hook_service, setup_repo, setup_repo_with_branches, setup_repo_with_changes,
     setup_repo_with_commits, setup_repo_with_config, setup_repo_with_file, setup_repo_with_files,
     setup_repo_with_large_file, with_isolated_git_env, NoopHookService, TestRepoConfig,
 };
-
-// 重新导出性能监控工具（与原 git::testing::performance 等价）
-pub use git::performance;
-
 pub use github_fixtures::GitHubFixtures;
 pub use jira_fixtures::JiraFixtures;

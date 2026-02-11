@@ -5,13 +5,16 @@ use std::sync::Arc;
 use di::{bind, Container, InjectionError, Scope};
 use domain::{GitRepoRepository, GitRepository, RepoInfo};
 
-use crate::git::services::{
-    BlameService, BlameServiceImpl, BranchService, BranchServiceImpl, CommitService,
-    CommitServiceImpl, DiffService, DiffServiceImpl, DiscoveredContext, GitContext,
-    GitContextHolder, HookService, HookServiceImpl, MergeService, MergeServiceImpl, RemoteService,
-    RemoteServiceImpl, StashService, StashServiceImpl, TagService, TagServiceImpl,
+use crate::git::{
+    services::{
+        BlameService, BlameServiceImpl, BranchService, BranchServiceImpl, CommitService,
+        CommitServiceImpl, DiffService, DiffServiceImpl, DiscoveredContext, GitContext,
+        GitContextHolder, HookService, HookServiceImpl, MergeService, MergeServiceImpl,
+        RemoteService, RemoteServiceImpl, StashService, StashServiceImpl, TagService,
+        TagServiceImpl,
+    },
+    GitRepositoryImpl, GitRepositoryServices,
 };
-use crate::git::{GitRepositoryImpl, GitRepositoryServices};
 
 /// 将 GitRepository 包装为 GitRepoRepository，供仅需 get_repo_info 的依赖使用
 struct GitRepoRepositoryWrapper(Arc<dyn GitRepository>);

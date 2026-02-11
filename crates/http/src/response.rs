@@ -1,14 +1,14 @@
 //! HTTP 响应封装
 
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
-use reqwest::blocking::Response as ReqwestResponse;
-use reqwest::header::HeaderMap;
+use reqwest::{blocking::Response as ReqwestResponse, header::HeaderMap};
 use serde::de::DeserializeOwned;
 
-use super::error::{ErrorContext, HttpError};
-use super::method::HttpMethod;
+use super::{
+    error::{ErrorContext, HttpError},
+    method::HttpMethod,
+};
 
 /// HTTP 响应
 #[derive(Debug)]

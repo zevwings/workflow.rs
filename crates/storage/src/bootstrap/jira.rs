@@ -3,13 +3,13 @@
 use std::sync::Arc;
 
 use di::{bind, Container, InjectionError, Scope};
+use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathService};
 
 use crate::jira::{
     AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, JiraClient,
     JiraClientImpl, JiraRepositoryImpl, JiraWorkHistoryRepositoryImpl, StatusService,
     StatusServiceImpl, UserService, UserServiceImpl, WorkHistoryService, WorkHistoryServiceImpl,
 };
-use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathService};
 
 /// 注册 Jira 相关服务
 ///

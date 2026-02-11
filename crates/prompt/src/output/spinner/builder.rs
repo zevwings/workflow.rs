@@ -2,8 +2,9 @@
 //!
 //! 使用构建器模式创建和配置 Spinner。
 
-use crate::output::spinner::spinner::Spinner;
 use std::time::Duration;
+
+use crate::output::spinner::spinner::Spinner;
 
 /// Spinner 构建器
 pub struct SpinnerBuilder {

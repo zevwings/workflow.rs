@@ -4,13 +4,15 @@
 
 use std::sync::Arc;
 
-use git2::{BranchType, FetchOptions, PushOptions, Repository};
-
-use crate::git::services::context::GitContext;
-use crate::git::services::hooks::{git_hooks, HookContext, HookResult, HookService};
-use crate::git::services::merge::{MergeService, MergeServiceImpl};
 use domain::{GitError, MergeStrategy};
+use git2::{BranchType, FetchOptions, PushOptions, Repository};
 use toolkit::log_debug;
+
+use crate::git::services::{
+    context::GitContext,
+    hooks::{git_hooks, HookContext, HookResult, HookService},
+    merge::{MergeService, MergeServiceImpl},
+};
 
 /// 远程服务接口
 pub trait RemoteService: Send + Sync {

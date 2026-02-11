@@ -2,16 +2,16 @@
 //!
 //! 提供文件读取和写入的工具函数。
 
-use std::fs;
-use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
-use std::path::Path;
-
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+use std::{
+    fs,
+    fs::File,
+    io::{BufRead, BufReader, Read},
+    path::Path,
+};
 
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::util::fs::FileError;
 
@@ -301,11 +301,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::io::Read;
-
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
+    use std::{fs, io::Read};
 
     use rstest::{fixture, rstest};
     use serde::{Deserialize, Serialize};

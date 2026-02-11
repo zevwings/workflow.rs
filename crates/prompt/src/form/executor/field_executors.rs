@@ -1,9 +1,8 @@
 //! 字段执行器
 
-use crate::backend::Backend;
-use crate::dialog::Result;
-use crate::form::field::FormField;
 use std::sync::Arc;
+
+use crate::{backend::Backend, dialog::Result, form::field::FormField};
 
 /// 字段执行器
 pub(super) struct FieldExecutors;
@@ -261,11 +260,14 @@ impl crate::dialog::Validator for ArcValidatorAdapter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::backend::MockBackend;
-    use crate::dialog::{ValidationResult, Validator};
-    use crate::form::field::FieldType;
     use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+    use super::*;
+    use crate::{
+        backend::MockBackend,
+        dialog::{ValidationResult, Validator},
+        form::field::FieldType,
+    };
 
     /// 创建测试用的 FormField
     fn create_test_field(field_type: FieldType, key: &str, prompt: &str) -> FormField {

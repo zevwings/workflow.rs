@@ -8,12 +8,11 @@ pub mod error;
 pub mod history;
 
 pub use api::{
-    extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format, JiraAttachment,
-    JiraComment, JiraComponent, JiraIssue, JiraPriority, JiraStatusConfig, JiraTransition,
-    JiraUser, ProjectStatusConfig, StatusConfigResult,
+    extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
+    AttachmentDownloadResult, JiraAttachment, JiraComment, JiraComponent, JiraIssue, JiraPriority,
+    JiraRepository, JiraStatusConfig, JiraTransition, JiraUser, ProgressCallback,
+    ProjectStatusConfig, StatusConfigResult,
 };
-pub use error::JiraError;
-
-pub use api::{AttachmentDownloadResult, JiraRepository, ProgressCallback};
 pub use context::JiraConfigContext;
+pub use error::JiraError;
 pub use history::{DeleteHistoryResult, JiraWorkHistoryRepository, WorkHistoryEntry};

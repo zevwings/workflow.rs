@@ -1,14 +1,22 @@
 //! 选择提示模块
 
-use crate::backend::{Backend, TerminalBackend};
-use crate::dialog::selection::filter::FuzzyFilter;
-use crate::dialog::selection::renderer::{
-    clear_and_display_result_with_search, OptionListRenderer, OptionRenderer, RenderOptionsParams,
-};
-use crate::dialog::{Result, PROMPT_PREFIX, SELECTED_PREFIX, UNSELECTED_PREFIX};
-use crate::error::PromptError;
-use crate::style::theme::get_theme;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+
+use crate::{
+    backend::{Backend, TerminalBackend},
+    dialog::{
+        selection::{
+            filter::FuzzyFilter,
+            renderer::{
+                clear_and_display_result_with_search, OptionListRenderer, OptionRenderer,
+                RenderOptionsParams,
+            },
+        },
+        Result, PROMPT_PREFIX, SELECTED_PREFIX, UNSELECTED_PREFIX,
+    },
+    error::PromptError,
+    style::theme::get_theme,
+};
 
 /// Select 选项渲染器
 struct SelectOptionRenderer;
@@ -403,9 +411,10 @@ macro_rules! select {
 
 #[cfg(test)]
 mod tests {
+    use crossterm::event::{Event, KeyEvent, KeyModifiers};
+
     use super::*;
     use crate::backend::MockBackend;
-    use crossterm::event::{Event, KeyEvent, KeyModifiers};
 
     #[test]
     fn test_select_builder_new() {

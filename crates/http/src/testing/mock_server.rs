@@ -2,9 +2,10 @@
 //!
 //! 提供统一的 Mock HTTP 服务器管理接口，简化测试中的 Mock 服务器配置。
 
+use std::collections::HashMap;
+
 use mockito::{Matcher, Mock, ServerGuard};
 use serde_json::Value;
-use std::collections::HashMap;
 
 /// 简单的 Mock HTTP 服务器
 ///

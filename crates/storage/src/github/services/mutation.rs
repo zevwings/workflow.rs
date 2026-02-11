@@ -7,11 +7,13 @@ use std::sync::Arc;
 use domain::GitHubError;
 use toolkit::log_debug;
 
-use crate::github::client::GitHubClient;
-use crate::github::services::{PullRequestQueryService, ServiceContext};
-use crate::github::types::{
-    CreatePullRequestRequest, CreatePullRequestResponse, MergePullRequestRequest, RepositoryInfo,
-    UpdatePullRequestRequest,
+use crate::github::{
+    client::GitHubClient,
+    services::{PullRequestQueryService, ServiceContext},
+    types::{
+        CreatePullRequestRequest, CreatePullRequestResponse, MergePullRequestRequest,
+        RepositoryInfo, UpdatePullRequestRequest,
+    },
 };
 
 /// Pull Request 变更服务接口

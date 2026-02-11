@@ -2,10 +2,10 @@
 //!
 //! 提供 Shell Completion 的生成、检查和移除功能。
 
-use crate::completion::entity::{
-    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
+use crate::{
+    completion::entity::{CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult},
+    errors::ServiceError,
 };
-use crate::errors::ServiceError;
 
 /// Shell Completion 服务接口
 ///

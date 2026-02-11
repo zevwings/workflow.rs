@@ -2,15 +2,17 @@
 //!
 //! 提供附件下载的核心功能，包括并发下载、URL 重试等。
 
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+    sync::{mpsc, Arc},
+    thread,
+};
+
 use domain::{JiraAttachment, JiraConfigContext, JiraError};
 use http::Authorization;
 use reqwest::header::HeaderMap;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::sync::mpsc;
-use std::sync::Arc;
-use std::thread;
 
 /// 进度回调函数类型
 pub type ProgressCallback = Box<dyn Fn(&str) + Send + Sync>;

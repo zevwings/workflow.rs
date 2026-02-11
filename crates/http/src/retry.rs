@@ -1,7 +1,9 @@
 //! HTTP 重试配置和逻辑
 
-use std::thread;
-use std::time::{Duration, Instant};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 use rand::Rng;
 
@@ -248,8 +250,7 @@ impl<'a> RetryExecutor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ErrorContext;
-    use crate::HttpMethod;
+    use crate::{error::ErrorContext, HttpMethod};
 
     #[test]
     fn test_retry_config_default() {

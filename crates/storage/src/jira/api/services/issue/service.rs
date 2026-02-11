@@ -9,13 +9,11 @@
 
 use std::sync::Arc;
 
-use serde::Serialize;
-
 use domain::{JiraAttachment, JiraError, JiraIssue, JiraTransition};
 use regex::Regex;
+use serde::Serialize;
 
-use crate::jira::client::core::JiraClient;
-use crate::jira::client::types::JiraResponseSerializable;
+use crate::jira::client::{core::JiraClient, types::JiraResponseSerializable};
 
 // 文件私有请求类型
 

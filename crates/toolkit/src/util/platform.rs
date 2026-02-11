@@ -2,9 +2,7 @@
 //!
 //! 提供平台检测相关的工具函数，用于识别当前运行的操作系统和架构。
 
-use std::env;
-use std::path::PathBuf;
-use std::process::Command;
+use std::{env, path::PathBuf, process::Command};
 
 use thiserror::Error;
 

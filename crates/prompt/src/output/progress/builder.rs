@@ -2,8 +2,9 @@
 //!
 //! 使用构建器模式创建和配置进度条。
 
-use crate::output::progress::bar::{ProgressBar, ProgressMode};
 use std::time::Duration;
+
+use crate::output::progress::bar::{ProgressBar, ProgressMode};
 
 /// 进度条构建器
 ///

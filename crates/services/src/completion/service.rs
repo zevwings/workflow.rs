@@ -3,9 +3,7 @@
 //! 实现 `CompletionService` trait，负责 Completion 脚本的保存、配置和管理。
 
 // 标准库
-use std::fs;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{fs, path::PathBuf, sync::Arc};
 
 // 项目内部
 use domain::{
@@ -303,18 +301,15 @@ impl CompletionService for CompletionServiceImpl {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::env;
-    use std::ffi::OsString;
-    use std::fs;
-    use std::path::PathBuf;
-    use std::sync::Mutex;
+    use std::{env, ffi::OsString, fs, path::PathBuf, sync::Mutex};
 
-    use crate::path::PathServiceImpl;
     use domain::{get_completion_shell_dir, get_completion_shell_path};
     use once_cell::sync::Lazy;
     use tempfile::tempdir;
     use toolkit::{config_file_path, shell_from_string};
+
+    use super::*;
+    use crate::path::PathServiceImpl;
 
     static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 

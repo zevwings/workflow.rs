@@ -61,8 +61,7 @@
 //! - 使用 `downcast_ref` 安全地恢复原始类型
 //! - 通过类型约束和测试确保正确性
 
-use std::result::Result;
-use std::sync::Arc;
+use std::{result::Result, sync::Arc};
 
 mod binding;
 mod container;

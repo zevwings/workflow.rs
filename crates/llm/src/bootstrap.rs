@@ -2,10 +2,11 @@
 
 use std::sync::Arc;
 
+use di::{bind, Container, InjectionError, Scope};
+
 use crate::{
     client::LLMClientImpl, executor::LLMExecutorImpl, LLMClient, LLMConfigContext, LLMExecutor,
 };
-use di::{bind, Container, InjectionError, Scope};
 
 /// 注册 LLM 相关服务
 ///

@@ -17,7 +17,6 @@ pub(crate) use batch::BatchAnalyzeService;
 pub(crate) use classify::FileClassifyService;
 pub(crate) use config::ConfigAnalyzeService;
 pub(crate) use logic::LogicAnalyzeService;
+pub(crate) use service::CommitSummaryServiceImpl;
 pub(crate) use summary::{SummaryAnalyzeInput, SummaryAnalyzeService};
 pub(crate) use test_analyze::TestAnalyzeService;
-
-pub(crate) use service::CommitSummaryServiceImpl;

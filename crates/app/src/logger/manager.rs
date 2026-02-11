@@ -4,8 +4,7 @@ use domain::GlobalConfigRepository;
 use prompt::terminal_state;
 use toolkit::{log_info, logger, register_spinner_handlers, LoggerConfig};
 
-use crate::bootstrap::get_path_service;
-use crate::commands::cli::Command;
+use crate::{bootstrap::get_path_service, commands::cli::Command};
 
 pub trait LoggerManager: Send + Sync {
     fn setup(&self, command: &Command) -> Result<(), Box<dyn std::error::Error>>;

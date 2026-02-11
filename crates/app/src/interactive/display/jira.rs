@@ -1,8 +1,9 @@
 //! Jira 验证结果格式化实现
 
-use crate::interactive::display::formatter::VerificationResultFormatter;
 use domain::{JiraVerificationResult, JiraVerificationStatus};
 use prompt::{br, success, warning, TableBuilder, Tabled};
+
+use crate::interactive::display::formatter::VerificationResultFormatter;
 
 /// Jira 配置表格行
 ///

@@ -2,11 +2,13 @@
 //!
 //! 提供安装验证功能。路径从 pathService 获取，单文件验证。
 
-use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
-use std::process::{Command, Stdio};
+use std::{
+    fs,
+    path::Path,
+    process::{Command, Stdio},
+};
 
 use prompt::{success, warning, Spinner};
 use toolkit::{detect_shell, get_completion_files_for_shell, log_debug, shell_to_string};

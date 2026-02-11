@@ -7,11 +7,13 @@ use std::sync::Arc;
 
 use domain::{GitHubError, GitHubRepository, GitHubUser, PullRequestInfo, PullRequestStatus};
 
-use crate::github::services::{
-    PullRequestDiffService, PullRequestMutationService, PullRequestQueryService,
-    PullRequestReviewService,
+use crate::github::{
+    services::{
+        PullRequestDiffService, PullRequestMutationService, PullRequestQueryService,
+        PullRequestReviewService,
+    },
+    types::PullRequestInfo as GitHubPrInfo,
 };
-use crate::github::types::PullRequestInfo as GitHubPrInfo;
 
 /// GitHub 仓储实现
 ///

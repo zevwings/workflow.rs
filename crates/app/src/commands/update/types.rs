@@ -1,8 +1,6 @@
 //! 更新命令类型定义
 
-use std::env;
-use std::fs;
-use std::path::PathBuf;
+use std::{env, fs, path::PathBuf};
 
 use toolkit::directory;
 
