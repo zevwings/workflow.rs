@@ -40,14 +40,16 @@ impl RepoStatusCommand {
     fn check_git_status(&self) -> Result<(), Box<dyn std::error::Error>> {
         let git_repo = get_git_repository();
 
-        let remote_available = git_repo.is_remote_available()?;
-        info!("remote_available: {:?}", remote_available);
+        let remote_available = spinner!("Checking remote availability...")
+            .with(|| git_repo.is_remote_available())
+            .map_err(|e| format!("Failed to check remote availability: {}", e))?;
+
         if remote_available.contains(&RemoteDirection::Push) {
-            info!("Remote branch can be pushed");
+            success!("Remote branch can be pushed");
         }
 
         if remote_available.contains(&RemoteDirection::Fetch) {
-            info!("Remote branch can be fetched");
+            success!("Remote branch can be fetched");
         }
 
         let repo_info = git_repo.get_repo_info();
