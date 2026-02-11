@@ -4,7 +4,7 @@
 
 use clap::Parser;
 
-use app::bootstrap::get_logger_manager;
+use app::bootstrap::{get_alias_service, get_logger_manager};
 use app::cli::{
     AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
     IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
@@ -14,12 +14,43 @@ use app::cli::{
 use app::cli::{CommitSubcommand, RollbackCommand};
 use app::commands;
 
+/// 尝试展开别名
+///
+/// 使用 AliasService 的 expand_args 方法展开别名。
+/// 支持嵌套别名和循环引用检测。
+///
+/// # 返回
+/// 展开后的参数列表。如果展开失败或第一个参数不是别名，返回原参数列表。
+fn expand_alias_if_needed() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let args: Vec<String> = std::env::args().collect();
+
+    // 尝试通过 AliasService 展开别名
+    let alias_service = get_alias_service();
+    match alias_service.expand_args(args.clone()) {
+        Ok(expanded) => Ok(expanded),
+        Err(e) => {
+            // 检查是否是循环引用或深度超限等严重错误
+            let error_msg = e.to_string();
+            if error_msg.contains("Circular") || error_msg.contains("depth exceeded") {
+                // 显示有意义的错误信息
+                eprintln!("Error expanding alias: {}", error_msg);
+                std::process::exit(1);
+            }
+            // 其他错误（如配置未初始化）静默忽略，返回原参数
+            Ok(args)
+        }
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化 shaku 模块（通过 Lazy 自动初始化）
     // 访问模块会触发初始化
     // 模块已通过 Lazy 自动初始化，无需手动调用
 
-    let cli = Cli::parse();
+    // 尝试展开别名
+    let args = expand_alias_if_needed()?;
+
+    let cli = Cli::parse_from(args);
 
     let logger_manager = get_logger_manager();
     logger_manager.setup(&cli.command)?;
