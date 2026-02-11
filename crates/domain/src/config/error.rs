@@ -1,7 +1,8 @@
 //! 配置服务错误类型
 
-use crate::path::PathError;
 use thiserror::Error;
+
+use crate::path::PathError;
 
 /// 配置服务错误
 #[derive(Error, Debug)]

@@ -1,7 +1,8 @@
 //! 提交总结服务错误类型
 
-use crate::git::GitError;
 use thiserror::Error;
+
+use crate::git::GitError;
 
 /// 提交总结分析错误
 #[derive(Error, Debug)]

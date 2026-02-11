@@ -1,8 +1,9 @@
 //! Shell Completion 服务错误类型
 
-use crate::path::PathError;
 use thiserror::Error;
 use toolkit::ShellError;
+
+use crate::path::PathError;
 
 /// Shell Completion 错误
 #[derive(Error, Debug)]

@@ -1,8 +1,9 @@
 //! Pull Request 服务错误类型
 
+use thiserror::Error;
+
 use crate::git::GitError;
 use crate::github::GitHubError;
-use thiserror::Error;
 
 /// Pull Request 服务错误
 #[derive(Error, Debug)]

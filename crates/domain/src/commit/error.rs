@@ -1,7 +1,8 @@
 //! Commit 消息服务错误类型
 
-use crate::git::GitError;
 use thiserror::Error;
+
+use crate::git::GitError;
 
 /// Commit 消息生成错误
 #[derive(Error, Debug)]
