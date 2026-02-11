@@ -9,7 +9,6 @@ pub(crate) mod branch;
 pub(crate) mod commit;
 pub(crate) mod completion;
 pub(crate) mod config;
-pub(crate) mod errors;
 pub(crate) mod git;
 pub(crate) mod github;
 pub(crate) mod jira;
@@ -24,24 +23,27 @@ pub mod testing;
 // Re-export public types
 // 避免使用 glob 导出以防止与子模块名称冲突（如 `template`）
 // Re-export alias types
-pub use alias::{AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService};
+pub use alias::{
+    AliasAddResult, AliasError, AliasInfo, AliasListResult, AliasRemoveResult, AliasService,
+};
 // Re-export business domain types
 pub use branch::{
     sanitize_branch_name, BranchService, BranchServiceError, BranchSyncCallbacks,
     BranchSyncOptions, BranchSyncResult, BranchType, SourceBranchInfo, SyncStrategy,
 };
-pub use commit::CommitMessageService;
+pub use commit::{CommitMessageError, CommitMessageService};
 pub use completion::{
     get_all_completion_filenames, get_completion_cache_shell_dir, get_completion_filename,
     get_completion_shell_dir, get_completion_shell_path, get_completion_source_shell_path,
-    get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
-    CompletionService, ShellCompletionStatus,
+    get_shell_source_path, CompletionCheckResult, CompletionError, CompletionGenerateResult,
+    CompletionRemoveResult, CompletionService, ShellCompletionStatus,
 };
 // Re-export config types
 pub use config::{
     BranchConfig,
     BranchTemplates,
     CommitTemplates,
+    ConfigError,
     GitHubAccount,
     // Verification types
     GitHubAccountInfo,
@@ -72,8 +74,6 @@ pub use config::{
     UserConfig,
     VerificationService,
 };
-// Re-export error types
-pub use errors::ServiceError;
 // Re-export git types
 pub use git::{
     BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitChangeType, CommitFileChange,
@@ -99,12 +99,13 @@ pub use path::{
 pub use pr::{
     get_all_change_types, get_change_type_by_index, get_change_type_by_name,
     get_change_type_index_by_branch_type, get_change_types_by_branch_type, ChangeType, PrContent,
-    PrStatus, PullRequestInfo, PullRequestService, PullRequestStatus, CHANGE_TYPES,
+    PrStatus, PullRequestError, PullRequestInfo, PullRequestService, PullRequestStatus,
+    CHANGE_TYPES,
 };
 pub use summary::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
-    CommitSummaryAnalysis, CommitSummaryService, CommitTestAnalysis, DirectoryStats,
-    DirectoryStatusDistribution,
+    CommitSummaryAnalysis, CommitSummaryError, CommitSummaryService, CommitTestAnalysis,
+    DirectoryStats, DirectoryStatusDistribution,
 };
 // Re-export template types
 pub use template::{

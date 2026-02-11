@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use domain::{
-    BranchTemplates, CommitTemplates, MCPConfig, PathService, ProjectConfig, PullRequestsTemplates,
-    RepoConfig, RepoConfigRepository, ServiceError, TemplateConfig, UserConfig,
+    BranchTemplates, CommitTemplates, ConfigError, MCPConfig, PathService, ProjectConfig,
+    PullRequestsTemplates, RepoConfig, RepoConfigRepository, TemplateConfig, UserConfig,
 };
 use toml::{map::Map, Value};
 use toolkit::{file, log_warn};
@@ -60,9 +60,9 @@ impl RepoConfigRepositoryImpl {
 }
 
 impl RepoConfigRepository for RepoConfigRepositoryImpl {
-    fn load_project_config(&self) -> Result<ProjectConfig, ServiceError> {
+    fn load_project_config(&self) -> Result<ProjectConfig, ConfigError> {
         let config_path = self.path_service.get_project_config_filepath().map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to get project config path: {}", e))
+            ConfigError::OperationFailed(format!("Failed to get project config path: {}", e))
         })?;
 
         if !config_path.exists() {
@@ -70,7 +70,7 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         }
 
         let value: Value = file::read_toml(&config_path).map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to read project config: {}", e))
+            ConfigError::OperationFailed(format!("Failed to read project config: {}", e))
         })?;
 
         let mut config = ProjectConfig::default();
@@ -85,28 +85,25 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         // 解析 template
         if let Some(template_section) = value.get("template") {
             let template_str = toml::to_string(template_section).map_err(|e| {
-                ServiceError::OperationFailed(format!(
-                    "Failed to serialize template section: {}",
-                    e
-                ))
+                ConfigError::OperationFailed(format!("Failed to serialize template section: {}", e))
             })?;
             config.template = toml::from_str(&template_str).map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to parse template config: {}", e))
+                ConfigError::OperationFailed(format!("Failed to parse template config: {}", e))
             })?;
         }
 
         Ok(config)
     }
 
-    fn save_project_config(&self, config: &ProjectConfig) -> Result<(), ServiceError> {
+    fn save_project_config(&self, config: &ProjectConfig) -> Result<(), ConfigError> {
         let config_path = self.path_service.get_project_config_filepath().map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to get project config path: {}", e))
+            ConfigError::OperationFailed(format!("Failed to get project config path: {}", e))
         })?;
 
         // 读取现有配置（如果存在）
         let mut existing_value: Value = if config_path.exists() {
             file::read_toml(&config_path).map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to read existing config: {}", e))
+                ConfigError::OperationFailed(format!("Failed to read existing config: {}", e))
             })?
         } else {
             Value::Table(Map::new())
@@ -125,10 +122,10 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
             self.clean_template_defaults(&mut template_to_save);
 
             let template_str = toml::to_string(&template_to_save).map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to serialize template config: {}", e))
+                ConfigError::OperationFailed(format!("Failed to serialize template config: {}", e))
             })?;
             let mut template_value: Value = toml::from_str(&template_str).map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to parse template config: {}", e))
+                ConfigError::OperationFailed(format!("Failed to parse template config: {}", e))
             })?;
 
             // 检查并删除空的 branch、commit 和 pull_requests 节
@@ -173,15 +170,15 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
 
         // 写入文件
         file::write_toml(&config_path, &existing_value).map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to write project config: {}", e))
+            ConfigError::OperationFailed(format!("Failed to write project config: {}", e))
         })?;
 
         Ok(())
     }
 
-    fn load_user_config(&self) -> Result<UserConfig, ServiceError> {
+    fn load_user_config(&self) -> Result<UserConfig, ConfigError> {
         let config_path = self.path_service.get_user_config_filepath().map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to get user config path: {}", e))
+            ConfigError::OperationFailed(format!("Failed to get user config path: {}", e))
         })?;
 
         // 如果文件不存在，返回默认配置
@@ -191,22 +188,22 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
 
         // 直接解析整个文件为 UserConfig
         let config: UserConfig = file::read_toml(&config_path).map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to read user config: {}", e))
+            ConfigError::OperationFailed(format!("Failed to read user config: {}", e))
         })?;
 
         Ok(config)
     }
 
-    fn save_user_config(&self, config: &UserConfig) -> Result<(), ServiceError> {
+    fn save_user_config(&self, config: &UserConfig) -> Result<(), ConfigError> {
         let config_path = self.path_service.get_user_config_filepath().map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to get user config path: {}", e))
+            ConfigError::OperationFailed(format!("Failed to get user config path: {}", e))
         })?;
 
         // 如果配置为空，删除文件（如果存在）并返回
         if config.is_empty() {
             if config_path.exists() {
                 std::fs::remove_file(&config_path).map_err(|e| {
-                    ServiceError::OperationFailed(format!(
+                    ConfigError::OperationFailed(format!(
                         "Failed to remove empty user config file: {}",
                         e
                     ))
@@ -217,20 +214,19 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
 
         // 直接序列化 UserConfig 并写入文件
         file::write_toml(&config_path, config).map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to write user config: {}", e))
+            ConfigError::OperationFailed(format!("Failed to write user config: {}", e))
         })?;
 
         Ok(())
     }
 
-    fn load(&self) -> Result<RepoConfig, ServiceError> {
+    fn load(&self) -> Result<RepoConfig, ConfigError> {
         let project = self.load_project_config()?;
         let user = self.load_user_config()?;
 
         // 加载 MCP 配置
-        let mcp_config_path = self.path_service.get_mcp_config_filepath().map_err(|e| {
-            ServiceError::OperationFailed(format!("Failed to get MCP config path: {}", e))
-        })?;
+        let mcp_config_path =
+            self.path_service.get_mcp_config_filepath().map_err(ConfigError::from)?;
         let mcp = if mcp_config_path.exists() {
             match file::read_json::<MCPConfig>(&mcp_config_path) {
                 Ok(config) => config,
@@ -247,17 +243,16 @@ impl RepoConfigRepository for RepoConfigRepositoryImpl {
         Ok(RepoConfig { project, user, mcp })
     }
 
-    fn save(&self, config: &RepoConfig) -> Result<(), ServiceError> {
+    fn save(&self, config: &RepoConfig) -> Result<(), ConfigError> {
         self.save_project_config(&config.project)?;
         self.save_user_config(&config.user)?;
 
         // 保存 MCP 配置（只有当有配置时才保存）
         if !config.mcp.mcp_servers.is_empty() {
-            let mcp_config_path = self.path_service.get_mcp_config_filepath().map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to get MCP config path: {}", e))
-            })?;
+            let mcp_config_path =
+                self.path_service.get_mcp_config_filepath().map_err(ConfigError::from)?;
             file::write_json_secure(&mcp_config_path, &config.mcp).map_err(|e| {
-                ServiceError::OperationFailed(format!("Failed to save MCP config: {}", e))
+                ConfigError::OperationFailed(format!("Failed to save MCP config: {}", e))
             })?;
         }
 

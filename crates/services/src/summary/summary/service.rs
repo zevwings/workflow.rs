@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use domain::{CommitSummaryAnalysis, ServiceError};
+use domain::{CommitSummaryAnalysis, CommitSummaryError};
 use llm::{JsonParser, LLMExecutor};
 
 use super::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
@@ -22,14 +22,17 @@ impl SummaryAnalyzeService {
         &self,
         input: SummaryAnalyzeInput,
         language_code: &str,
-    ) -> Result<CommitSummaryAnalysis, ServiceError> {
+    ) -> Result<CommitSummaryAnalysis, CommitSummaryError> {
         let conversation = SummaryAnalyzeConversation::new(input);
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "summary_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!("Failed to parse summary analysis results: {}", e))
+            CommitSummaryError::ParseFailed(format!(
+                "Failed to parse summary analysis results: {}",
+                e
+            ))
         })
     }
 }

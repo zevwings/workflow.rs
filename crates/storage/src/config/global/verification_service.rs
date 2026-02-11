@@ -20,10 +20,10 @@
 use std::sync::Arc;
 
 use domain::{
-    GitHubAccountInfo, GitHubRepository, GitHubVerificationResult, GitHubVerificationSummary,
-    GlobalConfigRepository, JiraConfigInfo, JiraRepository, JiraVerificationResult,
-    JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult, LLMVerificationStatus,
-    LogConfigInfo, LogVerificationResult, ServiceError, VerificationService,
+    ConfigError, GitHubAccountInfo, GitHubRepository, GitHubVerificationResult,
+    GitHubVerificationSummary, GlobalConfigRepository, JiraConfigInfo, JiraRepository,
+    JiraVerificationResult, JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult,
+    LLMVerificationStatus, LogConfigInfo, LogVerificationResult, VerificationService,
 };
 use llm::{LLMConversation, LLMExecutor, SupportedLanguage};
 use toolkit::Sensitive;
@@ -89,8 +89,11 @@ impl VerificationServiceImpl {
 
 impl VerificationService for VerificationServiceImpl {
     /// 验证 Jira 配置
-    fn verify_jira_config(&self) -> Result<JiraVerificationResult, ServiceError> {
-        let user_info = self.jira_repository.get_user_info()?;
+    fn verify_jira_config(&self) -> Result<JiraVerificationResult, ConfigError> {
+        let user_info = self
+            .jira_repository
+            .get_user_info()
+            .map_err(|e| ConfigError::OperationFailed(e.to_string()))?;
         let display_name = user_info.display_name;
         let account_id = user_info.account_id;
 
@@ -114,7 +117,7 @@ impl VerificationService for VerificationServiceImpl {
     }
 
     /// 验证 GitHub 配置
-    fn verify_github_config(&self) -> Result<GitHubVerificationResult, ServiceError> {
+    fn verify_github_config(&self) -> Result<GitHubVerificationResult, ConfigError> {
         let global_config = self.config_repository.load()?;
         let github_settings = &global_config.github;
 
@@ -191,7 +194,7 @@ impl VerificationService for VerificationServiceImpl {
     }
 
     /// 验证 LLM 配置
-    fn verify_llm_config(&self) -> Result<LLMVerificationResult, ServiceError> {
+    fn verify_llm_config(&self) -> Result<LLMVerificationResult, ConfigError> {
         let global_config = self.config_repository.load()?;
         let llm_settings = &global_config.llm;
 
@@ -234,7 +237,7 @@ impl VerificationService for VerificationServiceImpl {
         let response = self
             .llm_executor
             .execute(&conversation, &language, "Verify LLM config")
-            .map_err(|e| ServiceError::OperationFailed(e.to_string()))?;
+            .map_err(|e| ConfigError::OperationFailed(e.to_string()))?;
 
         Ok(LLMVerificationResult {
             configured: true,
@@ -246,7 +249,7 @@ impl VerificationService for VerificationServiceImpl {
     }
 
     /// 验证日志配置
-    fn verify_log_config(&self) -> Result<LogVerificationResult, ServiceError> {
+    fn verify_log_config(&self) -> Result<LogVerificationResult, ConfigError> {
         let global_config = self.config_repository.load()?;
         let log_settings = &global_config.log;
 

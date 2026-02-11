@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{CommitFileClassification, CommitTestAnalysis, ServiceError};
+use domain::{CommitFileClassification, CommitSummaryError, CommitTestAnalysis};
 use llm::{JsonParser, LLMExecutor};
 
 use super::TestAnalyzeConversation;
@@ -23,7 +23,7 @@ impl TestAnalyzeService {
         stage1: &CommitFileClassification,
         file_diffs: &HashMap<String, String>,
         language_code: &str,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, CommitSummaryError> {
         let test_paths = &stage1.categories.by_nature.tests;
         if test_paths.is_empty() {
             return Ok("{}".to_string());
@@ -40,10 +40,11 @@ impl TestAnalyzeService {
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "test_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         let result: CommitTestAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!("Failed to parse test analysis results: {}", e))
+            CommitSummaryError::ParseFailed(format!("Failed to parse test analysis results: {}", e))
         })?;
-        serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
+        serde_json::to_string(&result)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }
 }

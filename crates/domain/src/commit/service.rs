@@ -1,6 +1,7 @@
 //! Commit 服务接口定义
 
-use crate::{CommitSummaryAnalysis, ServiceError};
+use crate::commit::error::CommitMessageError;
+use crate::CommitSummaryAnalysis;
 
 /// Commit Message 生成服务
 ///
@@ -33,7 +34,7 @@ pub trait CommitMessageService: Send + Sync {
     /// let analysis = service.generate_for_staged()?;
     /// println!("Title: {}", analysis.commit_message.title);
     /// ```
-    fn generate_for_staged(&self) -> Result<CommitSummaryAnalysis, ServiceError>;
+    fn generate_for_staged(&self) -> Result<CommitSummaryAnalysis, CommitMessageError>;
 
     /// 为指定提交生成 commit message
     ///
@@ -60,5 +61,8 @@ pub trait CommitMessageService: Send + Sync {
     /// let analysis = service.generate_for_commit("HEAD")?;
     /// println!("Summary: {}", analysis.structured_summary.main_purpose);
     /// ```
-    fn generate_for_commit(&self, commit_ref: &str) -> Result<CommitSummaryAnalysis, ServiceError>;
+    fn generate_for_commit(
+        &self,
+        commit_ref: &str,
+    ) -> Result<CommitSummaryAnalysis, CommitMessageError>;
 }

@@ -5,8 +5,8 @@
 use std::{collections::HashSet, sync::Arc};
 
 use domain::{
-    AliasAddResult, AliasInfo, AliasListResult, AliasRemoveResult, AliasService,
-    GlobalConfigRepository, ServiceError,
+    AliasAddResult, AliasError, AliasInfo, AliasListResult, AliasRemoveResult, AliasService,
+    GlobalConfigRepository,
 };
 
 /// 别名服务实现
@@ -23,8 +23,8 @@ impl AliasServiceImpl {
 }
 
 impl AliasService for AliasServiceImpl {
-    fn list(&self) -> Result<AliasListResult, ServiceError> {
-        let config = self.config_repo.load()?;
+    fn list(&self) -> Result<AliasListResult, AliasError> {
+        let config = self.config_repo.load().map_err(|e| AliasError::Config(e.to_string()))?;
 
         let aliases: Vec<AliasInfo> = config
             .aliases
@@ -37,35 +37,35 @@ impl AliasService for AliasServiceImpl {
         Ok(AliasListResult { aliases, count })
     }
 
-    fn add(&self, name: &str, command: &str, force: bool) -> Result<AliasAddResult, ServiceError> {
+    fn add(&self, name: &str, command: &str, force: bool) -> Result<AliasAddResult, AliasError> {
         // 验证别名名称
         if name.is_empty() {
-            return Err(ServiceError::InvalidInput(
+            return Err(AliasError::InvalidInput(
                 "Alias name cannot be empty".to_string(),
             ));
         }
 
         // 验证命令
         if command.is_empty() {
-            return Err(ServiceError::InvalidInput(
+            return Err(AliasError::InvalidInput(
                 "Command cannot be empty".to_string(),
             ));
         }
 
         // 检查别名名称是否包含空格
         if name.contains(' ') {
-            return Err(ServiceError::InvalidInput(
+            return Err(AliasError::InvalidInput(
                 "Alias name cannot contain spaces".to_string(),
             ));
         }
 
         // 加载当前配置
-        let mut config = self.config_repo.load()?;
+        let mut config = self.config_repo.load().map_err(|e| AliasError::Config(e.to_string()))?;
 
         // 检查是否已存在
         let overwritten = config.aliases.contains_key(name);
         if overwritten && !force {
-            return Err(ServiceError::InvalidInput(format!(
+            return Err(AliasError::InvalidInput(format!(
                 "Alias '{}' already exists, use --force to overwrite",
                 name
             )));
@@ -75,7 +75,7 @@ impl AliasService for AliasServiceImpl {
         config.aliases.insert(name.to_string(), command.to_string());
 
         // 保存配置
-        self.config_repo.save(&config)?;
+        self.config_repo.save(&config).map_err(|e| AliasError::Config(e.to_string()))?;
 
         Ok(AliasAddResult {
             name: name.to_string(),
@@ -84,24 +84,25 @@ impl AliasService for AliasServiceImpl {
         })
     }
 
-    fn remove(&self, name: &str) -> Result<AliasRemoveResult, ServiceError> {
+    fn remove(&self, name: &str) -> Result<AliasRemoveResult, AliasError> {
         // 验证别名名称
         if name.is_empty() {
-            return Err(ServiceError::InvalidInput(
+            return Err(AliasError::InvalidInput(
                 "Alias name cannot be empty".to_string(),
             ));
         }
 
         // 加载当前配置
-        let mut config = self.config_repo.load()?;
+        let mut config = self.config_repo.load().map_err(|e| AliasError::Config(e.to_string()))?;
 
         // 检查别名是否存在
-        let command = config.aliases.remove(name).ok_or_else(|| {
-            ServiceError::InvalidInput(format!("Alias '{}' does not exist", name))
-        })?;
+        let command = config
+            .aliases
+            .remove(name)
+            .ok_or_else(|| AliasError::InvalidInput(format!("Alias '{}' does not exist", name)))?;
 
         // 保存配置
-        self.config_repo.save(&config)?;
+        self.config_repo.save(&config).map_err(|e| AliasError::Config(e.to_string()))?;
 
         Ok(AliasRemoveResult {
             name: name.to_string(),
@@ -109,17 +110,17 @@ impl AliasService for AliasServiceImpl {
         })
     }
 
-    fn get(&self, name: &str) -> Result<Option<String>, ServiceError> {
-        let config = self.config_repo.load()?;
+    fn get(&self, name: &str) -> Result<Option<String>, AliasError> {
+        let config = self.config_repo.load().map_err(|e| AliasError::Config(e.to_string()))?;
         Ok(config.aliases.get(name).cloned())
     }
 
-    fn expand(&self, name: &str) -> Result<String, ServiceError> {
+    fn expand(&self, name: &str) -> Result<String, AliasError> {
         let mut visited = HashSet::new();
         self.expand_recursive(name, &mut visited, 0)
     }
 
-    fn expand_args(&self, args: Vec<String>) -> Result<Vec<String>, ServiceError> {
+    fn expand_args(&self, args: Vec<String>) -> Result<Vec<String>, AliasError> {
         // 如果参数少于 2 个（只有程序名），直接返回
         if args.len() < 2 {
             return Ok(args);
@@ -164,20 +165,17 @@ impl AliasServiceImpl {
         name: &str,
         visited: &mut HashSet<String>,
         depth: usize,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, AliasError> {
         const MAX_DEPTH: usize = 10;
 
         // 检查深度限制
         if depth > MAX_DEPTH {
-            return Err(ServiceError::InvalidInput(format!(
-                "Alias expansion depth exceeded maximum ({})",
-                MAX_DEPTH
-            )));
+            return Err(AliasError::MaxDepthExceeded);
         }
 
         // 检查循环引用
         if visited.contains(name) {
-            return Err(ServiceError::InvalidInput(format!(
+            return Err(AliasError::CircularReference(format!(
                 "Circular alias reference detected: {}",
                 name
             )));
@@ -186,7 +184,7 @@ impl AliasServiceImpl {
         // 获取别名对应的命令
         let command = self
             .get(name)?
-            .ok_or_else(|| ServiceError::InvalidInput(format!("Alias '{}' not found", name)))?;
+            .ok_or_else(|| AliasError::InvalidInput(format!("Alias '{}' not found", name)))?;
 
         // 标记为已访问
         visited.insert(name.to_string());
@@ -195,7 +193,7 @@ impl AliasServiceImpl {
         let parts: Vec<&str> = command.split_whitespace().collect();
         if let Some(first_part) = parts.first() {
             // 加载所有别名以检查第一部分是否是别名
-            let config = self.config_repo.load()?;
+            let config = self.config_repo.load().map_err(|e| AliasError::Config(e.to_string()))?;
             if config.aliases.contains_key(*first_part) {
                 // 递归展开嵌套别名
                 let expanded = self.expand_recursive(first_part, visited, depth + 1)?;
@@ -217,7 +215,7 @@ impl AliasServiceImpl {
 mod tests {
     use std::sync::Mutex;
 
-    use domain::GlobalConfig;
+    use domain::{ConfigError, GlobalConfig};
 
     use super::*;
 
@@ -234,18 +232,16 @@ mod tests {
     }
 
     impl GlobalConfigRepository for MockGlobalConfigRepository {
-        fn load(&self) -> Result<GlobalConfig, ServiceError> {
-            self.config
-                .lock()
-                .map(|cfg| cfg.clone())
-                .map_err(|_| ServiceError::Other("Failed to lock config repository".to_string()))
+        fn load(&self) -> Result<GlobalConfig, ConfigError> {
+            self.config.lock().map(|cfg| cfg.clone()).map_err(|_| {
+                ConfigError::LockFailed("Failed to lock config repository".to_string())
+            })
         }
 
-        fn save(&self, settings: &GlobalConfig) -> Result<(), ServiceError> {
-            let mut config = self
-                .config
-                .lock()
-                .map_err(|_| ServiceError::Other("Failed to lock config repository".to_string()))?;
+        fn save(&self, settings: &GlobalConfig) -> Result<(), ConfigError> {
+            let mut config = self.config.lock().map_err(|_| {
+                ConfigError::LockFailed("Failed to lock config repository".to_string())
+            })?;
             *config = settings.clone();
             Ok(())
         }
@@ -272,24 +268,22 @@ mod tests {
     }
 
     impl GlobalConfigRepository for FailingGlobalConfigRepository {
-        fn load(&self) -> Result<GlobalConfig, ServiceError> {
+        fn load(&self) -> Result<GlobalConfig, ConfigError> {
             if self.fail_load {
-                return Err(ServiceError::Other("load failed".to_string()));
+                return Err(ConfigError::OperationFailed("load failed".to_string()));
             }
-            self.config
-                .lock()
-                .map(|cfg| cfg.clone())
-                .map_err(|_| ServiceError::Other("Failed to lock config repository".to_string()))
+            self.config.lock().map(|cfg| cfg.clone()).map_err(|_| {
+                ConfigError::LockFailed("Failed to lock config repository".to_string())
+            })
         }
 
-        fn save(&self, settings: &GlobalConfig) -> Result<(), ServiceError> {
+        fn save(&self, settings: &GlobalConfig) -> Result<(), ConfigError> {
             if self.fail_save {
-                return Err(ServiceError::Other("save failed".to_string()));
+                return Err(ConfigError::OperationFailed("save failed".to_string()));
             }
-            let mut config = self
-                .config
-                .lock()
-                .map_err(|_| ServiceError::Other("Failed to lock config repository".to_string()))?;
+            let mut config = self.config.lock().map_err(|_| {
+                ConfigError::LockFailed("Failed to lock config repository".to_string())
+            })?;
             *config = settings.clone();
             Ok(())
         }
@@ -334,21 +328,21 @@ mod tests {
     fn add_rejects_empty_name() {
         let service = build_service(GlobalConfig::default());
         let err = service.add("", "status", false).unwrap_err();
-        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(matches!(err, AliasError::InvalidInput(_)));
     }
 
     #[test]
     fn add_rejects_empty_command() {
         let service = build_service(GlobalConfig::default());
         let err = service.add("st", "", false).unwrap_err();
-        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(matches!(err, AliasError::InvalidInput(_)));
     }
 
     #[test]
     fn add_rejects_name_with_spaces() {
         let service = build_service(GlobalConfig::default());
         let err = service.add("git st", "status", false).unwrap_err();
-        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(matches!(err, AliasError::InvalidInput(_)));
     }
 
     #[test]
@@ -356,7 +350,7 @@ mod tests {
         let service = build_service(GlobalConfig::default());
         service.add("st", "status", false).unwrap();
         let err = service.add("st", "status -sb", false).unwrap_err();
-        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(matches!(err, AliasError::InvalidInput(_)));
     }
 
     #[test]
@@ -386,14 +380,14 @@ mod tests {
     fn remove_rejects_empty_name() {
         let service = build_service(GlobalConfig::default());
         let err = service.remove("").unwrap_err();
-        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(matches!(err, AliasError::InvalidInput(_)));
     }
 
     #[test]
     fn remove_rejects_missing_alias() {
         let service = build_service(GlobalConfig::default());
         let err = service.remove("missing").unwrap_err();
-        assert!(matches!(err, ServiceError::InvalidInput(_)));
+        assert!(matches!(err, AliasError::InvalidInput(_)));
     }
 
     #[test]
@@ -422,7 +416,7 @@ mod tests {
         ));
         let service = build_service_with_repo(repo);
         let err = service.list().unwrap_err();
-        assert!(matches!(err, ServiceError::Other(_)));
+        assert!(matches!(err, AliasError::Config(_)));
     }
 
     #[test]
@@ -434,6 +428,6 @@ mod tests {
         ));
         let service = build_service_with_repo(repo);
         let err = service.add("st", "status", false).unwrap_err();
-        assert!(matches!(err, ServiceError::Other(_)));
+        assert!(matches!(err, AliasError::Config(_)));
     }
 }

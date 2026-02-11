@@ -2,10 +2,12 @@
 //!
 //! 包含应用程序的所有配置类型，这些是领域模型的一部分。
 
+pub mod error;
 pub mod global;
 pub mod repo;
 
 // Re-export public types
+pub use error::ConfigError;
 pub use global::{
     GitHubAccount,
     // Verification types

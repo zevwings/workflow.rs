@@ -6,8 +6,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use domain::{
     CommitChangeType, CommitFileChange, CommitFileClassification, CommitInfo,
-    CommitSummaryAnalysis, CommitSummaryService, DirectoryStats, DirectoryStatusDistribution,
-    GitRepository, ServiceError,
+    CommitSummaryAnalysis, CommitSummaryError, CommitSummaryService, DirectoryStats,
+    DirectoryStatusDistribution, GitRepository,
 };
 use llm::{LLMConfigContext, LLMExecutor};
 
@@ -80,19 +80,15 @@ impl CommitSummaryServiceImpl {
     /// 准备阶段：从 Git 仓库收集分析所需的全部数据
     ///
     /// 包括分支推断、文件变更列表、diff 解析和统计计算。
-    fn prepare(&self, base_branch: Option<&str>) -> Result<AnalysisContext, ServiceError> {
+    fn prepare(&self, base_branch: Option<&str>) -> Result<AnalysisContext, CommitSummaryError> {
         // 1. 确定当前分支和基准分支
-        let current_branch = self
-            .git_repo
-            .get_current_branch()
-            .map_err(|e| ServiceError::Other(format!("Failed to get current branch: {}", e)))?;
+        let current_branch = self.git_repo.get_current_branch()?;
 
         let mut base_branch = match base_branch {
             Some(b) => b.to_string(),
             None => self
                 .git_repo
-                .infer_target_branch(&current_branch)
-                .map_err(|e| ServiceError::Other(format!("Failed to infer target branch: {}", e)))?
+                .infer_target_branch(&current_branch)?
                 .unwrap_or_else(|| "master".to_string()),
         };
 
@@ -103,50 +99,27 @@ impl CommitSummaryServiceImpl {
         }
 
         // 2. 获取变更文件列表（仅已提交：merge_base..current）
-        let mut files = self
-            .git_repo
-            .get_merge_changed_files(&current_branch, &base_branch)
-            .map_err(|e| ServiceError::Other(format!("Failed to get changed files: {}", e)))?;
+        let mut files = self.git_repo.get_merge_changed_files(&current_branch, &base_branch)?;
 
         let (full_diff, commit_shas) = if files.is_empty() {
             // 无已提交变更时，尝试使用暂存区变更进行分析
-            let staged_files = self
-                .git_repo
-                .get_staged_files()
-                .map_err(|e| ServiceError::Other(format!("Failed to get staged files: {}", e)))?;
+            let staged_files = self.git_repo.get_staged_files()?;
             if !staged_files.is_empty() {
                 files = staged_files;
-                let diff = self
-                    .git_repo
-                    .get_staged_diff()
-                    .map_err(|e| ServiceError::Other(format!("Failed to get staged diff: {}", e)))?
-                    .unwrap_or_default();
+                let diff = self.git_repo.get_staged_diff()?.unwrap_or_default();
                 (diff, Vec::new())
             } else {
-                return Err(ServiceError::Other(
-                    "No changed files to analyze: no commits ahead of base branch and no staged \
-                     changes. Please commit your changes or stage them (git add)."
-                        .to_string(),
-                ));
+                return Err(CommitSummaryError::NoChangesToAnalyze);
             }
         } else {
-            let diff = self
-                .git_repo
-                .get_merge_diff(&current_branch, &base_branch)
-                .map_err(|e| ServiceError::Other(format!("Failed to get merge diff: {}", e)))?
-                .unwrap_or_default();
-            let shas = self
-                .git_repo
-                .commits_to_merge(&current_branch, &base_branch)
-                .map_err(|e| ServiceError::Other(format!("Failed to get commit history: {}", e)))?;
+            let diff =
+                self.git_repo.get_merge_diff(&current_branch, &base_branch)?.unwrap_or_default();
+            let shas = self.git_repo.commits_to_merge(&current_branch, &base_branch)?;
             (diff, shas)
         };
 
         // 3. 获取 HEAD commit 元数据（阶段一分类需要 commit_id / author / timestamp）
-        let commit_info = self
-            .git_repo
-            .get_commit_info("HEAD")
-            .map_err(|e| ServiceError::Other(format!("Failed to get commit info: {}", e)))?;
+        let commit_info = self.git_repo.get_commit_info("HEAD")?;
 
         let commit_count = commit_shas.len() as u32;
         const MAX_HISTORY: usize = 50;
@@ -197,7 +170,10 @@ impl CommitSummaryServiceImpl {
     /// 阶段一：文件分类
     ///
     /// 调用 LLM 对变更文件进行智能分类，产出 `CommitFileClassification`。
-    fn run_stage1(&self, ctx: &AnalysisContext) -> Result<CommitFileClassification, ServiceError> {
+    fn run_stage1(
+        &self,
+        ctx: &AnalysisContext,
+    ) -> Result<CommitFileClassification, CommitSummaryError> {
         let classify_service = FileClassifyService::new(self.llm_executor.clone());
         classify_service.classify(
             &ctx.commit_info.sha,
@@ -218,7 +194,7 @@ impl CommitSummaryServiceImpl {
         &self,
         ctx: &AnalysisContext,
         stage1: &CommitFileClassification,
-    ) -> Result<Stage2Results, ServiceError> {
+    ) -> Result<Stage2Results, CommitSummaryError> {
         // 使用 rayon::join 并行执行四个子服务
         // 采用嵌套 join 结构：((batch, logic), (config, test))
         let ((batch_result, logic_result), (config_result, test_result)) = rayon::join(
@@ -293,7 +269,7 @@ impl CommitSummaryService for CommitSummaryServiceImpl {
     fn run_analysis(
         &self,
         base_branch: Option<&str>,
-    ) -> Result<CommitSummaryAnalysis, ServiceError> {
+    ) -> Result<CommitSummaryAnalysis, CommitSummaryError> {
         // 准备阶段：收集 Git 数据和统计信息
         let ctx = self.prepare(base_branch)?;
 
@@ -304,9 +280,8 @@ impl CommitSummaryService for CommitSummaryServiceImpl {
         let stage2 = self.run_stage2(&ctx, &stage1)?;
 
         // 阶段三：全局总结
-        let stage1_json = serde_json::to_string(&stage1).map_err(|e| {
-            ServiceError::Other(format!("Failed to serialize stage 1 results: {}", e))
-        })?;
+        let stage1_json = serde_json::to_string(&stage1)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))?;
 
         // 格式化提交历史摘要
         let commit_history_summary = if ctx.commit_history.is_empty() {

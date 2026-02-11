@@ -31,7 +31,4 @@ pub enum JiraError {
 
     #[error("配置错误: {0}")]
     ConfigError(String),
-
-    #[error("其他错误: {0}")]
-    Other(String),
 }

@@ -5,7 +5,8 @@
 use std::sync::Arc;
 
 use domain::{
-    CommitChangeType, CommitFileChange, CommitFileClassification, DirectoryStats, ServiceError,
+    CommitChangeType, CommitFileChange, CommitFileClassification, CommitSummaryError,
+    DirectoryStats,
 };
 use llm::{JsonParser, LLMExecutor};
 
@@ -30,15 +31,15 @@ impl FileClassifyService {
         files: &[CommitFileChange],
         directory_stats: &[DirectoryStats],
         language_code: &str,
-    ) -> Result<CommitFileClassification, ServiceError> {
+    ) -> Result<CommitFileClassification, CommitSummaryError> {
         let input_json = build_input_json(commit_id, author, timestamp, files, directory_stats);
         let conversation = FileClassifyConversation::new(input_json);
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "file_classify")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!(
+            CommitSummaryError::ParseFailed(format!(
                 "Failed to parse file classification results: {}",
                 e
             ))

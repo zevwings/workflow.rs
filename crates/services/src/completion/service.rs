@@ -9,8 +9,8 @@ use std::{fs, path::PathBuf, sync::Arc};
 use domain::{
     get_all_completion_filenames, get_completion_filename, get_completion_shell_dir,
     get_completion_shell_path, get_completion_source_shell_path, get_shell_source_path,
-    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult, CompletionService,
-    PathService, ServiceError, ShellCompletionStatus,
+    CompletionCheckResult, CompletionError, CompletionGenerateResult, CompletionRemoveResult,
+    CompletionService, PathError, PathService, ShellCompletionStatus,
 };
 use toolkit::{
     add_source, config_file_path, detect_shell, directory, file, has_source, reload_hint,
@@ -30,11 +30,8 @@ impl CompletionServiceImpl {
 
     /// 创建 workflow completion 配置文件（用于 zsh/bash）
     /// 使用本地路径（~/.workflow/.completions），不随 iCloud 同步。
-    fn create_completion_config_file(&self, shell_str: &str) -> Result<PathBuf, ServiceError> {
-        let config_file = self
-            .path_service
-            .get_completion_config_filepath()
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
+    fn create_completion_config_file(&self, shell_str: &str) -> Result<PathBuf, CompletionError> {
+        let config_file = self.path_service.get_completion_config_filepath()?;
 
         let completions_path = get_completion_shell_dir();
         let config_content = match shell_str.to_lowercase().as_str() {
@@ -66,27 +63,26 @@ impl CompletionServiceImpl {
         let config_content = config_content.as_str();
 
         file::write_string(&config_file, config_content).map_err(|e| {
-            ServiceError::Other(format!(
+            CompletionError::Path(PathError::Expansion(format!(
                 "Failed to write completion config file: {}: {}",
                 config_file.display(),
                 e
-            ))
+            )))
         })?;
 
         Ok(config_file)
     }
 
     /// 配置 shell 配置文件
-    fn configure_shell(&self, shell_str: &str) -> Result<bool, ServiceError> {
+    fn configure_shell(&self, shell_str: &str) -> Result<bool, CompletionError> {
         let shell = shell_from_string(shell_str)
-            .map_err(|e| ServiceError::InvalidInput(format!("Invalid shell type: {}", e)))?;
+            .map_err(|e| CompletionError::InvalidInput(format!("Invalid shell type: {}", e)))?;
 
         match shell_str.to_lowercase().as_str() {
             "zsh" | "bash" => {
                 // 添加 source 语句到 shell 配置文件
                 let source_path = get_completion_source_shell_path();
-                let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))
-                    .map_err(|e| ServiceError::Other(e.to_string()))?;
+                let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))?;
 
                 Ok(added)
             }
@@ -95,8 +91,7 @@ impl CompletionServiceImpl {
                 let filename = get_completion_filename(shell_str);
                 let source_path = get_completion_shell_path(&filename);
 
-                let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))
-                    .map_err(|e| ServiceError::Other(e.to_string()))?;
+                let added = add_source(&shell, &source_path, Some("Workflow CLI completions"))?;
 
                 Ok(added)
             }
@@ -105,7 +100,7 @@ impl CompletionServiceImpl {
     }
 
     /// 移除单个 shell 的配置
-    fn remove_shell_config(&self, shell_str: &str) -> Result<bool, ServiceError> {
+    fn remove_shell_config(&self, shell_str: &str) -> Result<bool, CompletionError> {
         let shell = match shell_from_string(shell_str) {
             Ok(s) => s,
             Err(_) => return Ok(false),
@@ -113,8 +108,7 @@ impl CompletionServiceImpl {
 
         let source_path = get_shell_source_path(shell_str);
 
-        let removed =
-            remove_source(&shell, &source_path).map_err(|e| ServiceError::Other(e.to_string()))?;
+        let removed = remove_source(&shell, &source_path)?;
 
         Ok(removed)
     }
@@ -126,34 +120,37 @@ impl CompletionService for CompletionServiceImpl {
         shell: &str,
         script_content: &[u8],
         output_dir: Option<&str>,
-    ) -> Result<CompletionGenerateResult, ServiceError> {
+    ) -> Result<CompletionGenerateResult, CompletionError> {
         // 1. 解析 shell 类型
         let shell_enum = shell_from_string(shell)
-            .map_err(|e| ServiceError::InvalidInput(format!("Invalid shell type: {}", e)))?;
+            .map_err(|e| CompletionError::InvalidInput(format!("Invalid shell type: {}", e)))?;
         let shell_str = shell_to_string(&shell_enum);
 
         // 2. 确定输出目录
         let output_path = match output_dir {
             Some(dir) => PathBuf::from(dir),
-            None => self
-                .path_service
-                .get_completion_dir()
-                .map_err(|e| ServiceError::Other(e.to_string()))?,
+            None => self.path_service.get_completion_dir()?,
         };
 
         // 3. 确保输出目录存在
-        directory::ensure_exists(&output_path).map_err(|e| ServiceError::Other(e.to_string()))?;
+        directory::ensure_exists(&output_path).map_err(|e| {
+            CompletionError::Path(PathError::Expansion(format!(
+                "Failed to ensure output directory exists: {}: {}",
+                output_path.display(),
+                e
+            )))
+        })?;
 
         // 4. 写入脚本文件
         let filename = get_completion_filename(shell_str);
         let script_path = output_path.join(&filename);
 
         file::write_bytes(&script_path, script_content).map_err(|e| {
-            ServiceError::Other(format!(
+            CompletionError::Path(PathError::Expansion(format!(
                 "Failed to write completion script: {}: {}",
                 script_path.display(),
                 e
-            ))
+            )))
         })?;
 
         // 5. 创建配置文件（仅 zsh/bash）
@@ -177,7 +174,7 @@ impl CompletionService for CompletionServiceImpl {
         })
     }
 
-    fn check_status(&self) -> Result<CompletionCheckResult, ServiceError> {
+    fn check_status(&self) -> Result<CompletionCheckResult, CompletionError> {
         // 获取当前 shell
         let current_shell = detect_shell().ok();
         let current_shell_str = current_shell.as_ref().map(|s| shell_to_string(s).to_string());
@@ -225,7 +222,7 @@ impl CompletionService for CompletionServiceImpl {
         })
     }
 
-    fn remove(&self, remove_all: bool) -> Result<CompletionRemoveResult, ServiceError> {
+    fn remove(&self, remove_all: bool) -> Result<CompletionRemoveResult, CompletionError> {
         let mut removed_configs = Vec::new();
         let mut removed_files = Vec::new();
         let mut failures = Vec::new();
@@ -243,7 +240,7 @@ impl CompletionService for CompletionServiceImpl {
             }
         } else {
             // 只移除当前 shell 的配置
-            let shell = detect_shell().map_err(|e| ServiceError::Other(e.to_string()))?;
+            let shell = detect_shell()?;
             let shell_str = shell_to_string(&shell);
 
             match self.remove_shell_config(shell_str) {
@@ -358,7 +355,7 @@ mod tests {
             let path_service = Arc::new(PathServiceImpl::new());
             let service = CompletionServiceImpl::new(path_service);
             let err = service.save_and_configure("invalid-shell", b"", None).unwrap_err();
-            assert!(matches!(err, ServiceError::InvalidInput(_)));
+            assert!(matches!(err, CompletionError::InvalidInput(_)));
         });
     }
 

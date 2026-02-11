@@ -1,6 +1,7 @@
 //! 路径操作错误类型
 
 use thiserror::Error;
+use toolkit::FileError;
 
 /// 路径操作错误
 #[derive(Debug, Error)]
@@ -28,8 +29,13 @@ pub enum PathError {
     /// 权限错误
     #[error("Permission error: {0}")]
     Permission(String),
+}
 
-    /// 通用错误
-    #[error("{0}")]
-    Other(String),
+impl From<FileError> for PathError {
+    fn from(e: FileError) -> Self {
+        match e {
+            FileError::Io(io) => PathError::Io(io),
+            _ => PathError::Expansion(e.to_string()),
+        }
+    }
 }

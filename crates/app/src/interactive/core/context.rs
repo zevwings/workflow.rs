@@ -4,7 +4,7 @@
 
 use std::error::Error;
 
-use domain::{GlobalConfig, ServiceError};
+use domain::{ConfigError, GlobalConfig};
 use prompt::{br, success};
 
 use crate::bootstrap::{get_global_config_repository, get_path_service};
@@ -29,7 +29,7 @@ impl WorkflowContext {
     pub fn load(mode: WorkflowMode) -> Result<Self, Box<dyn Error>> {
         let config_service = get_global_config_repository();
         let settings =
-            config_service.load().map_err(|e: ServiceError| Box::new(e) as Box<dyn Error>)?;
+            config_service.load().map_err(|e: ConfigError| Box::new(e) as Box<dyn Error>)?;
 
         Ok(Self { settings, mode })
     }

@@ -20,6 +20,6 @@ pub enum GitHubError {
     #[error("速率限制: {0}")]
     RateLimitExceeded(String),
 
-    #[error("其他错误: {0}")]
-    Other(String),
+    #[error("配置错误: {0}")]
+    ConfigError(String),
 }

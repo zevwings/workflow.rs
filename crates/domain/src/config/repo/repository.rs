@@ -2,10 +2,8 @@
 //!
 //! 提供仓库配置（ProjectConfig、UserConfig 和 RepoConfig）的持久化操作接口。
 
-use crate::{
-    config::repo::{ProjectConfig, RepoConfig, UserConfig},
-    errors::ServiceError,
-};
+use crate::config::error::ConfigError;
+use crate::config::repo::{ProjectConfig, RepoConfig, UserConfig};
 
 /// 仓库配置仓储接口
 ///
@@ -21,7 +19,7 @@ pub trait RepoConfigRepository: Send + Sync {
     /// # 返回
     ///
     /// 返回 `ProjectConfig`，如果文件不存在则返回默认值。
-    fn load_project_config(&self) -> Result<ProjectConfig, ServiceError>;
+    fn load_project_config(&self) -> Result<ProjectConfig, ConfigError>;
 
     /// 保存项目配置
     ///
@@ -30,7 +28,7 @@ pub trait RepoConfigRepository: Send + Sync {
     /// # 参数
     ///
     /// * `config` - 项目配置
-    fn save_project_config(&self, config: &ProjectConfig) -> Result<(), ServiceError>;
+    fn save_project_config(&self, config: &ProjectConfig) -> Result<(), ConfigError>;
 
     /// 加载用户配置
     ///
@@ -39,7 +37,7 @@ pub trait RepoConfigRepository: Send + Sync {
     /// # 返回
     ///
     /// 返回 `UserConfig`，如果文件不存在则返回默认值。
-    fn load_user_config(&self) -> Result<UserConfig, ServiceError>;
+    fn load_user_config(&self) -> Result<UserConfig, ConfigError>;
 
     /// 保存用户配置
     ///
@@ -49,17 +47,17 @@ pub trait RepoConfigRepository: Send + Sync {
     /// # 参数
     ///
     /// * `config` - 用户配置
-    fn save_user_config(&self, config: &UserConfig) -> Result<(), ServiceError>;
+    fn save_user_config(&self, config: &UserConfig) -> Result<(), ConfigError>;
 
     /// 加载仓库配置
     ///
     /// 从当前工作目录加载项目配置，从用户配置目录加载用户配置，
     /// 以及从 `.cursor/mcp.json` 加载 MCP 配置。
-    fn load(&self) -> Result<RepoConfig, ServiceError>;
+    fn load(&self) -> Result<RepoConfig, ConfigError>;
 
     /// 保存仓库配置
     ///
     /// 保存项目配置到 `.workflow/config.toml`，保存用户配置到 `~/.workflow/config/repository.toml`，
     /// 保存 MCP 配置到 `.cursor/mcp.json`。
-    fn save(&self, config: &RepoConfig) -> Result<(), ServiceError>;
+    fn save(&self, config: &RepoConfig) -> Result<(), ConfigError>;
 }

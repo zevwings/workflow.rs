@@ -17,6 +17,6 @@ pub enum LLMError {
     #[error("速率限制: {0}")]
     RateLimitExceeded(String),
 
-    #[error("其他错误: {0}")]
-    Other(String),
+    #[error("空响应: {0}")]
+    EmptyResponse(String),
 }

@@ -4,7 +4,9 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{CommitConfigAnalysis, CommitFileChange, CommitFileClassification, ServiceError};
+use domain::{
+    CommitConfigAnalysis, CommitFileChange, CommitFileClassification, CommitSummaryError,
+};
 use llm::{JsonParser, LLMExecutor};
 
 use super::ConfigAnalyzeConversation;
@@ -28,7 +30,7 @@ impl ConfigAnalyzeService {
         file_diffs: &HashMap<String, String>,
         files: &[CommitFileChange],
         language_code: &str,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, CommitSummaryError> {
         let config_paths: Vec<&String> = stage1.categories.by_nature.configuration.iter().collect();
         let doc_paths: Vec<&String> = stage1.categories.by_nature.documentation.iter().collect();
 
@@ -78,13 +80,14 @@ impl ConfigAnalyzeService {
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "config_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         let result: CommitConfigAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!(
+            CommitSummaryError::ParseFailed(format!(
                 "Failed to parse configuration analysis results: {}",
                 e
             ))
         })?;
-        serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
+        serde_json::to_string(&result)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }
 }

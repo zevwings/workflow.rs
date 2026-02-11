@@ -688,6 +688,7 @@ dependencies = [
  "serde_with",
  "thiserror 1.0.69",
  "toml",
+ "toolkit",
 ]
 
 [[package]]

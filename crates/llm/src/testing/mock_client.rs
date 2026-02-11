@@ -56,7 +56,7 @@ impl LLMClient for MockLLMClient {
 
         let responses = self.responses.lock().unwrap();
         if responses.is_empty() {
-            return Err(LLMError::Other(
+            return Err(LLMError::EmptyResponse(
                 "No response configured for mock. Use add_response() to set expected responses."
                     .to_string(),
             ));
@@ -109,7 +109,7 @@ mod tests {
         let params = LLMRequestParameters::default();
 
         let err = client.call(&params).unwrap_err();
-        assert!(matches!(err, LLMError::Other(_)));
+        assert!(matches!(err, LLMError::EmptyResponse(_)));
         assert_eq!(client.call_count(), 1);
     }
 
@@ -123,6 +123,6 @@ mod tests {
         client.reset();
         assert_eq!(client.call_count(), 0);
         let err = client.call(&LLMRequestParameters::default()).unwrap_err();
-        assert!(matches!(err, LLMError::Other(_)));
+        assert!(matches!(err, LLMError::EmptyResponse(_)));
     }
 }

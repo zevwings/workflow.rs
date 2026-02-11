@@ -23,12 +23,12 @@ impl GitHubContextImpl {
         let config = self
             .config
             .load()
-            .map_err(|e| GitHubError::Other(format!("Failed to load config: {}", e)))?;
+            .map_err(|e| GitHubError::ConfigError(format!("Failed to load config: {}", e)))?;
         config
             .github
             .get_current_account()
             .cloned()
-            .ok_or_else(|| GitHubError::Other("No GitHub account configured".to_string()))
+            .ok_or_else(|| GitHubError::ConfigError("No GitHub account configured".to_string()))
     }
 }
 

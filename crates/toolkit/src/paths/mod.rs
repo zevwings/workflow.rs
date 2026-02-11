@@ -13,15 +13,7 @@
 //! let path = expand("~/config").unwrap();
 //! ```
 
-mod constants;
-mod error;
 mod expand;
-
-// 重新导出常量
-// pub use constants::*;
-
-// 重新导出错误类型
-// pub use error::PathError;
 
 // ==================== 路径工具方法 ====================
 

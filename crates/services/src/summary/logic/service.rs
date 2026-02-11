@@ -4,7 +4,7 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, ServiceError};
+use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, CommitSummaryError};
 use llm::{JsonParser, LLMExecutor};
 
 use super::LogicAnalyzeConversation;
@@ -28,7 +28,7 @@ impl LogicAnalyzeService {
         file_diffs: &HashMap<String, String>,
         files: &[CommitFileChange],
         language_code: &str,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, CommitSummaryError> {
         let focus_group = &stage1.analysis_strategy.focus_group;
         if focus_group.is_empty() {
             return Ok("{}".to_string());
@@ -70,11 +70,15 @@ File type: {}
         let response = self
             .llm_executor
             .execute(&conversation, language_code, "logic_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         let result: CommitLogicAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!("Failed to parse logic analysis results: {}", e))
+            CommitSummaryError::ParseFailed(format!(
+                "Failed to parse logic analysis results: {}",
+                e
+            ))
         })?;
-        serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
+        serde_json::to_string(&result)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }
 }
 
