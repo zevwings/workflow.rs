@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 description = "领域层（DDD Domain Layer），包含实体、值对象、仓储接口、领域服务接口和领域异常"
 
+[features]
+default = []
+testing = []
+
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true

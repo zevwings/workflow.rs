@@ -12,9 +12,9 @@ use std::time::Duration;
 #[cfg(feature = "testing")]
 use storage::git::services::*;
 #[cfg(feature = "testing")]
-use storage::git::testing::performance::{measure, PerformanceCollector, PerformanceTimer};
+use storage::testing::performance::{measure, PerformanceCollector, PerformanceTimer};
 #[cfg(feature = "testing")]
-use storage::git::testing::*;
+use storage::testing::*;
 
 /// 创建 CommitServiceImpl 的辅助函数
 #[cfg(feature = "testing")]

@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 description = "服务层（Application Service Layer），组合 storage，实现业务用例"
 
+[features]
+default = []
+testing = []
+
 [dependencies]
 domain.workspace = true
 toolkit.workspace = true

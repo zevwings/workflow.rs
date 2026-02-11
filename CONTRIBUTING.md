@@ -307,7 +307,7 @@ Extract retry logic into a separate module for better maintainability.
 - **正文**：详细说明变更原因和方式，每行不超过 72 个字符
 - **页脚**：引用相关 issue（如 `Closes #123`）
 
-**注意**：提交消息格式可在项目级配置中设置，详见 `workflow repo setup` 与 [架构设计](./docs/architecture.md)。
+**注意**：提交消息格式可在项目级配置中设置，详见 `workflow repo setup` 与 [架构设计](./docs/guidelines/architecture.md)。
 
 ---
 
@@ -526,7 +526,7 @@ Related to #456
 
 ### 模块组织
 
-遵循 Cargo workspace 多 crate 架构（详见 [架构设计](./docs/architecture.md)）：
+遵循 Cargo workspace 多 crate 架构（详见 [架构设计](./docs/guidelines/architecture.md)）：
 - **app**：CLI 入口（`bin/workflow.rs`、`bin/install.rs`）、`cli/` 参数与子命令、`commands/` 命令实现、`workflows/` 工作流编排
 - **domain**：领域模型与仓储接口
 - **storage**：存储与 Git 等实现
@@ -541,12 +541,12 @@ Related to #456
 
 ### 开发与测试
 
-- [开发规范](./docs/development.md) - 代码风格、错误处理、命名、模块组织、文档规范、提交规范、检查流程
-- [测试规范](./docs/testing.md) - 测试组织、编写规范、命令参考、测试工具
+- [开发规范](./docs/guidelines/development.md) - 代码风格、错误处理、命名、模块组织、文档规范、提交规范、检查流程
+- [测试规范](./docs/guidelines/testing.md) - 测试组织、编写规范、命令参考、测试工具
 
 ### 架构与迁移
 
-- [架构设计](./docs/architecture.md) - 项目整体架构（workspace 与 crate 结构、模块职责、数据流向）
+- [架构设计](./docs/guidelines/architecture.md) - 项目整体架构（workspace 与 crate 结构、模块职责、数据流向）
 - [迁移文档](./docs/migration/README.md) - 版本迁移与配置说明
 
 ### 文档索引

@@ -13,6 +13,9 @@
 
 pub mod git;
 
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
+
 pub(crate) mod bootstrap;
 pub(crate) mod config;
 pub(crate) mod github;

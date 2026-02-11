@@ -18,6 +18,9 @@ pub(crate) mod pr;
 pub(crate) mod summary;
 pub(crate) mod template;
 
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
+
 // Re-export public types
 // 避免使用 glob 导出以防止与子模块名称冲突（如 `template`）
 // Re-export alias types

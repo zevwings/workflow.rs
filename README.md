@@ -480,7 +480,7 @@ workflow jira transition <PROJ-123>            # 过渡 Jira 状态
 workflow jira assign <PROJ-123>                # 分配 ticket 给当前用户
 ```
 
-> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [架构设计文档](./docs/architecture.md)。
+> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [架构设计文档](./docs/guidelines/architecture.md)。
 
 ## 🚀 发布
 
@@ -572,7 +572,7 @@ make lint
 
 ### 开发规范
 
-详细的开发规范请参考 [开发规范](./docs/development.md)，包括：
+详细的开发规范请参考 [开发规范](./docs/guidelines/development.md)，包括：
 - 代码风格规范（格式化、Clippy、命名约定）
 - 错误处理规范
 - 文档规范
@@ -584,9 +584,9 @@ make lint
 完整的文档索引请查看 [docs/README.md](./docs/README.md)。
 
 主要参考文档：
-- [架构设计](./docs/architecture.md) - 项目整体架构设计
-- [开发规范](./docs/development.md) - 代码风格、错误处理、命名、模块组织、文档规范、提交规范、检查流程
-- [测试规范](./docs/testing.md) - 测试组织、编写、命令参考
+- [架构设计](./docs/guidelines/architecture.md) - 项目整体架构设计
+- [开发规范](./docs/guidelines/development.md) - 代码风格、错误处理、命名、模块组织、文档规范、提交规范、检查流程
+- [测试规范](./docs/guidelines/testing.md) - 测试组织、编写、命令参考
 - [迁移文档](./docs/migration/README.md) - 版本迁移指南
 
 **API 文档**：运行 `cargo doc --open` 查看完整的 API 文档。
@@ -608,12 +608,12 @@ v2 采用 Cargo workspace 多 crate 结构：
 
 数据流向：**用户输入 → app (Cli) → commands/\* → domain / storage / services → 执行操作**
 
-更完整的层次与模块说明见 [架构设计](./docs/architecture.md)。
+更完整的层次与模块说明见 [架构设计](./docs/guidelines/architecture.md)。
 
 ## 📝 贡献
 
 请参考以下文档了解更多信息：
 - [docs/README.md](./docs/README.md) - 完整文档索引
-- [架构设计](./docs/architecture.md) - 了解架构设计和核心模块详情
+- [架构设计](./docs/guidelines/architecture.md) - 了解架构设计和核心模块详情
 
 ---

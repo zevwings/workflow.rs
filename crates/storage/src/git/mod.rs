@@ -32,10 +32,7 @@ pub mod services;
 
 mod repository;
 
-// 导出 testing 和 performance 模块供测试和基准测试使用
-#[cfg(any(test, feature = "testing"))]
-pub mod testing;
-
+// 导出 performance 模块供测试和基准测试使用（testing 已迁移至 storage::testing）
 #[cfg(any(test, feature = "testing"))]
 pub mod performance;
 

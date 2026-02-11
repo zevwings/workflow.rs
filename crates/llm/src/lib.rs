@@ -21,3 +21,6 @@ pub use error::LLMError;
 pub use executor::LLMExecutor;
 pub use language::SupportedLanguage;
 pub use parsers::{JsonParseMode, JsonParser, TextParser};
+
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;

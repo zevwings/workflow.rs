@@ -8,14 +8,14 @@
 
 ## 📚 参考文档
 
-### [架构设计](./architecture.md)
+### [架构设计](./guidelines/architecture.md)
 
 项目整体架构设计文档，包含：
 - Workspace 与 Crate 结构（app、domain、storage、services、toolkit、prompt、registry）
 - 模块职责与数据流向
 - 数据存储说明
 
-### [开发规范](./development.md)
+### [开发规范](./guidelines/development.md)
 
 开发规范和最佳实践，包含：
 - 代码风格规范（格式化、Clippy、命名约定）
@@ -26,7 +26,7 @@
 - 提交规范（Conventional Commits）
 - 检查流程（pre-commit、review）
 
-### [测试规范](./testing.md)
+### [测试规范](./guidelines/testing.md)
 
 测试规范和最佳实践，包含：
 - 测试类型（单元测试、集成测试）
@@ -49,25 +49,25 @@
 ## 📖 快速导航
 
 ### 整体架构
-- 想了解整体架构？ → [架构设计](./architecture.md)
+- 想了解整体架构？ → [架构设计](./guidelines/architecture.md)
 
 ### 版本迁移
 - 需要升级版本？ → [迁移文档索引](./migration/README.md)
 - 从 1.5.6 升级到 1.5.7？ → [1.5.6 → 1.5.7 迁移指南](./migration/1.5.6-to-1.5.7.md)
 
 ### 开发规范
-- 想了解代码风格？ → [开发规范 - 代码风格](./development.md#-代码风格规范)
-- 想了解错误处理？ → [开发规范 - 错误处理](./development.md#-错误处理规范)
-- 想了解命名规范？ → [开发规范 - 命名规范](./development.md#-命名规范)
-- 想了解模块组织？ → [开发规范 - 模块组织](./development.md#-模块组织规范)
-- 想了解提交规范？ → [开发规范 - 提交规范](./development.md#-提交规范)
-- 想了解检查流程？ → [开发规范 - 检查流程](./development.md#-检查流程)
+- 想了解代码风格？ → [开发规范 - 代码风格](./guidelines/development.md#-代码风格规范)
+- 想了解错误处理？ → [开发规范 - 错误处理](./guidelines/development.md#-错误处理规范)
+- 想了解命名规范？ → [开发规范 - 命名规范](./guidelines/development.md#-命名规范)
+- 想了解模块组织？ → [开发规范 - 模块组织](./guidelines/development.md#-模块组织规范)
+- 想了解提交规范？ → [开发规范 - 提交规范](./guidelines/development.md#-提交规范)
+- 想了解检查流程？ → [开发规范 - 检查流程](./guidelines/development.md#-检查流程)
 
 ### 测试规范
-- 想了解测试组织？ → [测试规范 - 测试组织结构](./testing.md#-测试组织结构)
-- 想了解测试编写？ → [测试规范 - 测试编写规范](./testing.md#-测试编写规范)
-- 想了解测试命令？ → [测试规范 - 测试命令参考](./testing.md#-测试命令参考)
-- 想了解测试工具？ → [测试规范 - 测试工具](./testing.md#-测试工具)
+- 想了解测试组织？ → [测试规范 - 测试组织结构](./guidelines/testing.md#-测试组织结构)
+- 想了解测试编写？ → [测试规范 - 测试编写规范](./guidelines/testing.md#-测试编写规范)
+- 想了解测试命令？ → [测试规范 - 测试命令参考](./guidelines/testing.md#-测试命令参考)
+- 想了解测试工具？ → [测试规范 - 测试工具](./guidelines/testing.md#-测试工具)
 
 ### API 文档
 
@@ -85,9 +85,9 @@ cargo doc --open
 
 以下文档是项目的参考文档，需要长期维护：
 
-- **`architecture.md`** - 架构设计文档
-- **`development.md`** - 开发规范文档
-- **`testing.md`** - 测试规范文档
+- **`guidelines/architecture.md`** - 架构设计文档
+- **`guidelines/development.md`** - 开发规范文档
+- **`guidelines/testing.md`** - 测试规范文档
 - **`migration/`** - 迁移文档目录
 
 ### 临时文档（不做参考）
@@ -106,4 +106,4 @@ cargo doc --open
 
 ---
 
-**最后更新**: 2025-01-27
+**最后更新**: 2025-02-11

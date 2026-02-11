@@ -34,9 +34,9 @@ Cursor IDE 会自动加载本目录下的所有 `.mdc` 文件。这些文件使�
 
 ## 📚 相关文档
 
-- [架构设计](../../docs/architecture.md) - 项目整体架构设计
-- [开发规范](../../docs/development.md) - 开发规范和最佳实践
-- [测试规范](../../docs/testing.md) - 测试组织、编写、命令参考
+- [架构设计](../../docs/guidelines/architecture.md) - 项目整体架构设计
+- [开发规范](../../docs/guidelines/development.md) - 开发规范和最佳实践
+- [测试规范](../../docs/guidelines/testing.md) - 测试组织、编写、命令参考
 
 ---
 

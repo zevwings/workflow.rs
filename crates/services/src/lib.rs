@@ -15,4 +15,7 @@ pub(crate) mod path;
 pub(crate) mod pull_request;
 pub(crate) mod summary;
 
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
+
 pub use bootstrap::register_services;
