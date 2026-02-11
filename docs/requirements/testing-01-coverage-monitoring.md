@@ -879,9 +879,9 @@ fn debug_only() { }
 ## 🔗 相关资源
 
 ### 内部文档
-- [测试架构改进主文档](../requirements/06-test-architecture-improvement.md)
-- [测试架构实施计划](../requirements/06-test-architecture-improvement-implementation-plan.md)
-- [测试最佳实践](./testing.md)
+- [测试架构改进主文档](./06-test-architecture-improvement.md)
+- [测试架构实施计划](./06-test-architecture-improvement-implementation-plan.md)
+- [测试最佳实践](../guidelines/testing.md)
 
 ### 外部资源
 - [cargo-tarpaulin 文档](https://github.com/xd009642/tarpaulin)

@@ -175,6 +175,41 @@ After identifying patterns, create `changes_by_domain` entries that:
 
 ## Output Format
 
+### ⚠️ CRITICAL: JSON Format Requirements
+
+**Your response MUST be valid, parseable JSON. Common mistakes to AVOID:**
+
+❌ **Missing opening quotes for string values:**
+```json
+"purpose": 将项目文档统一至 `docs/guidelines`"  // WRONG - missing opening quote
+```
+✅ **Correct - all string values enclosed in double quotes:**
+```json
+"purpose": "将项目文档统一至 `docs/guidelines`"  // CORRECT
+```
+
+❌ **Trailing commas (not allowed in strict JSON):**
+```json
+{
+  "items": ["item1", "item2",],  // WRONG - trailing comma
+  "count": 2,                     // WRONG - trailing comma before }
+}
+```
+✅ **Correct - no trailing commas:**
+```json
+{
+  "items": ["item1", "item2"],
+  "count": 2
+}
+```
+
+**Key rules:**
+- ALL string values MUST have both opening `"` and closing `"` quotes
+- This applies especially to non-English text (Chinese, Japanese, etc.)
+- NO trailing commas after last array element or last object property
+- Backticks `` ` `` inside strings are allowed and do NOT need escaping
+- Only output the JSON object - no markdown code blocks, no explanatory text
+
 Please output strictly in the following JSON format:
 
 ```json

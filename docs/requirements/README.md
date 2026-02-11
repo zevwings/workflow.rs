@@ -70,14 +70,62 @@
 
 #### 2. [test-architecture-improvement.md](./test-architecture-improvement.md)
 - **状态**: 🔄 进行中
-- **实现度**: 0%
+- **实现度**: 40% (测试工具已完成，监控和文档待实施)
 - **分类**: 测试架构改进
 - **内容**:
   - 测试覆盖率监控系统 (cargo-tarpaulin)
   - 测试数据管理架构 (工厂模式 + Mock服务器)
   - 系统化性能测试 (Criterion基准测试)
   - CI/CD流水线集成
+- **已完成**:
+  - ✅ 所有 crate 的 testing 模块（TestDataFactory, MockServer, MockServices 等）
+  - ✅ 测试工具完整实现和文档
+- **待实施**:
+  - 📝 测试覆盖率监控系统 → [实施指南](./testing-01-coverage-monitoring.md)
+  - 📝 系统化性能测试 → [实施指南](./testing-02-performance-testing.md)
+  - 📝 CI/CD 集成 → [实施指南](./testing-03-cicd-integration.md)
+  - 📝 测试文档编写 → [实施指南](./testing-04-documentation.md)
 - **优先级**: 高优先级（测试质量提升）
+
+#### 测试架构改进 - 实施指南
+
+以下是测试架构改进的详细实施指南文档：
+
+##### 2.1 [测试覆盖率监控系统](./testing-01-coverage-monitoring.md)
+- **优先级**: 🔴 P0 (高)
+- **预计时间**: 2-3 天
+- **内容**:
+  - 配置 cargo-tarpaulin 覆盖率工具
+  - 创建覆盖率检查和趋势分析脚本
+  - 更新 Makefile 覆盖率命令
+  - 设置覆盖率目标阈值（整体 ≥75%, 目标 80%）
+
+##### 2.2 [系统化性能测试](./testing-02-performance-testing.md)
+- **优先级**: 🟡 P1 (中高)
+- **预计时间**: 2-3 天
+- **内容**:
+  - 创建 benches/ 目录和基准测试
+  - CLI 性能测试、核心操作测试、网络操作测试
+  - 性能回归检测机制
+  - 更新 Makefile 性能测试命令
+
+##### 2.3 [CI/CD 集成](./testing-03-cicd-integration.md)
+- **优先级**: 🔴 P0 (高)
+- **预计时间**: 1-2 天
+- **内容**:
+  - GitHub Actions 覆盖率和性能测试作业
+  - Codecov 集成和覆盖率徽章
+  - 预提交钩子 (pre-commit hook)
+  - Makefile hooks 管理命令
+
+##### 2.4 [测试文档编写](./testing-04-documentation.md)
+- **优先级**: 🔴 P0 (高)
+- **预计时间**: 1 天
+- **内容**:
+  - 创建 docs/testing/ 测试文档目录
+  - 测试快速入门、最佳实践、FAQ、故障排查
+  - 各 crate 的 TESTING.md 文档
+  - 更新主 README 测试章节
 
 #### 3. [integration.md](./integration.md)
 - **状态**: ⏳ 待实施
@@ -108,9 +156,9 @@
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
-| 🔄 进行中 | 1 个 | 测试架构改进 |
-| ⏳ 待实施 | 3 个 | 集成扩展、i18n 支持、单次提交 commit message 生成 |
-| **总计** | **5 个** | - |
+| 🔄 进行中 | 1 个 | 测试架构改进（包含 4 个实施指南） |
+| ⏳ 待实施 | 2 个 | 集成扩展、i18n 支持 |
+| **总计** | **4 个主文档** | + 4 个测试实施指南 |
 
 ---
 
@@ -147,6 +195,10 @@
 
 - **JIRA 相关** → [jira.md](./jira.md) 🚧 部分完成
 - **测试架构改进** → [test-architecture-improvement.md](./test-architecture-improvement.md) 🔄 进行中
+  - [测试覆盖率监控](./testing-01-coverage-monitoring.md) 📝 实施指南
+  - [系统化性能测试](./testing-02-performance-testing.md) 📝 实施指南
+  - [CI/CD 集成](./testing-03-cicd-integration.md) 📝 实施指南
+  - [测试文档编写](./testing-04-documentation.md) 📝 实施指南
 - **集成与扩展** → [integration.md](./integration.md) ⏳ 待实施
 - **国际化支持** → [i18n.md](./i18n.md) ⏳ 待实施
 ---
