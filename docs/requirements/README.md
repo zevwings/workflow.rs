@@ -25,6 +25,7 @@
 | [jira.md](./jira.md) | 🚧 部分完成 | ~40% | 高 |
 | [integration.md](./integration.md) | ⏳ 待实施 | 0% | 中 |
 | [i18n.md](./i18n.md) | ⏳ 待实施 | 0% | 高 |
+| [ssh.md](./ssh.md) | ⏳ 待实施 | 0% | 中 |
 
 ### 文档详情
 
@@ -37,6 +38,9 @@
 
 #### [i18n.md](./i18n.md)
 - **内容**：rust-i18n 框架、CLI/错误/日志国际化、LLM Prompt 语言支持、中英文双语
+
+#### [ssh.md](./ssh.md)
+- **内容**：SSH 密钥管理工具，`ssh status` / `add` / `remove` 子命令
 
 ---
 
