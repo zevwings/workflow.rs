@@ -11,13 +11,13 @@ mod service;
 mod logic;
 #[allow(clippy::module_inception)]
 mod summary;
-mod tests;
+mod test_analyze;
 
 pub(crate) use batch::BatchAnalyzeService;
 pub(crate) use classify::FileClassifyService;
 pub(crate) use config::ConfigAnalyzeService;
 pub(crate) use logic::LogicAnalyzeService;
 pub(crate) use summary::{SummaryAnalyzeInput, SummaryAnalyzeService};
-pub(crate) use tests::TestAnalyzeService;
+pub(crate) use test_analyze::TestAnalyzeService;
 
 pub(crate) use service::CommitSummaryServiceImpl;
