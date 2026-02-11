@@ -1,23 +1,17 @@
 # 测试覆盖率 Workflow
-# 独立于 CI 合并门禁，失败不影响 PR 合并
+# 周期性在 main 分支运行（每周一 00:00 UTC）
 # 用于生成覆盖率报告、上传 Codecov、检查覆盖率阈值
+# 当前已禁用 schedule，仅支持 workflow_dispatch 手动触发
 
 name: Coverage
 
 on:
-  pull_request:
-    branches:
-      - master
-      - main
-  push:
-    branches:
-      - master
-      - main
+  # schedule:
+  #   - cron: '0 0 * * 1'
   workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -30,6 +24,8 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main  # 定时任务始终检查 main 分支
 
       - name: 🐍 Setup Python 3.13
         uses: actions/setup-python@v5
