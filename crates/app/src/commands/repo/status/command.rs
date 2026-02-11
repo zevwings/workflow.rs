@@ -2,7 +2,7 @@
 //!
 //! 查看当前仓库状态。
 
-use domain::WorkingTreeStatus;
+use domain::{RemoteDirection, WorkingTreeStatus};
 use prompt::{br, error, info, spinner, success, warning};
 
 use crate::bootstrap::get_git_repository;
@@ -39,6 +39,16 @@ impl RepoStatusCommand {
     /// 检查 Git 仓库状态
     fn check_git_status(&self) -> Result<(), Box<dyn std::error::Error>> {
         let git_repo = get_git_repository();
+
+        let remote_available = git_repo.is_remote_available()?;
+        info!("remote_available: {:?}", remote_available);
+        if remote_available.contains(&RemoteDirection::Push) {
+            info!("Remote branch can be pushed");
+        }
+
+        if remote_available.contains(&RemoteDirection::Fetch) {
+            info!("Remote branch can be fetched");
+        }
 
         let repo_info = git_repo.get_repo_info();
         if !repo_info.is_valid {

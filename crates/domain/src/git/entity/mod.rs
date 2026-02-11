@@ -14,7 +14,7 @@ pub use blame::BlameLineInfo;
 pub use branch::{BranchFilter, BranchInfo};
 pub use commit::{CommitChangeType, CommitFileChange, CommitInfo};
 pub use merge::MergeStrategy;
-pub use remote::RemoteInfo;
+pub use remote::{RemoteDirection, RemoteInfo};
 pub use repo::{CodePlatform, RepoInfo};
 pub use stash::{StashApplyResult, StashEntry, StashPopResult, StashStat};
 pub use status::{FileStatusInfo, FileStatusType, WorkingTreeStatus};

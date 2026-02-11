@@ -78,8 +78,9 @@ pub use errors::ServiceError;
 pub use git::{
     BlameLineInfo, BranchFilter, BranchInfo, CodePlatform, CommitChangeType, CommitFileChange,
     CommitInfo, FileStatusInfo, FileStatusType, GitError, GitRepoRepository, GitRepository,
-    MergeStrategy, RemoteInfo, RepoInfo, StashApplyResult, StashEntry, StashPopResult, StashStat,
-    TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+    MergeStrategy, RemoteDirection, RemoteInfo, RepoInfo, StashApplyResult, StashEntry,
+    StashPopResult, StashStat, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
+    WorkingTreeStatus,
 };
 // Re-export external service types
 pub use github::{GitHubContext, GitHubError, GitHubRepository, GitHubUser};

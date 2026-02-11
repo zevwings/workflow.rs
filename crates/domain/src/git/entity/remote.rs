@@ -10,3 +10,9 @@ pub struct RemoteInfo {
     /// 推送 URL（如果不同）
     pub push_url: Option<String>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RemoteDirection {
+    Push,
+    Fetch,
+}

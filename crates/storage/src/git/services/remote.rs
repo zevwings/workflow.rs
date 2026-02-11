@@ -4,8 +4,8 @@
 
 use std::sync::Arc;
 
-use domain::{GitError, MergeStrategy};
-use git2::{BranchType, FetchOptions, PushOptions, Repository};
+use domain::{GitError, MergeStrategy, RemoteDirection};
+use git2::{BranchType, Direction, FetchOptions, PushOptions, Repository};
 use toolkit::log_debug;
 
 use crate::git::services::{
@@ -24,6 +24,9 @@ pub trait RemoteService: Send + Sync {
 
     /// 检查提交是否在远程分支中
     fn is_commit_in_remote_branch(&self, branch: &str, commit_sha: &str) -> Result<bool, GitError>;
+
+    /// 检查远程分支是可以推送/拉取
+    fn is_remote_available(&self) -> Result<Vec<RemoteDirection>, GitError>;
 }
 
 /// 远程服务实现
@@ -159,6 +162,32 @@ impl RemoteService for RemoteServiceImpl {
         Ok(repo
             .graph_descendant_of(remote_commit.id(), target_commit.id())
             .unwrap_or(false))
+    }
+
+    fn is_remote_available(&self) -> Result<Vec<RemoteDirection>, GitError> {
+        let repo = self.ctx.repository();
+        let mut remote =
+            repo.find_remote("origin").map_err(|e| GitError::RemoteError(e.to_string()))?;
+
+        let mut available_directions: Vec<RemoteDirection> = Vec::new();
+
+        // 测试 push 方向；RemoteConnection drop 时自动断开
+        if let Ok(_conn) = remote
+            .connect_auth(Direction::Push, Some(GitContext::create_callbacks()), None)
+            .map_err(|e| GitError::RemoteError(e.to_string()))
+        {
+            available_directions.push(RemoteDirection::Push);
+        }
+
+        // 测试 fetch（pull）方向；RemoteConnection drop 时自动断开
+        if let Ok(_conn) = remote
+            .connect_auth(Direction::Fetch, Some(GitContext::create_callbacks()), None)
+            .map_err(|e| GitError::RemoteError(e.to_string()))
+        {
+            available_directions.push(RemoteDirection::Fetch);
+        }
+
+        Ok(available_directions)
     }
 }
 

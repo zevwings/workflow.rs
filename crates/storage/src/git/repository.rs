@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use domain::{
     BlameLineInfo, BranchInfo, CommitFileChange, CommitInfo, GitError, GitRepository,
-    MergeStrategy, RepoInfo, StashApplyResult, StashEntry, StashPopResult, TagCreateInfo,
-    TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
+    MergeStrategy, RemoteDirection, RepoInfo, StashApplyResult, StashEntry, StashPopResult,
+    TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
 };
 
 use crate::git::services::{
@@ -209,6 +209,10 @@ impl GitRepository for GitRepositoryImpl {
 
     fn is_commit_in_remote_branch(&self, branch: &str, commit_sha: &str) -> Result<bool, GitError> {
         self.services.remote.is_commit_in_remote_branch(branch, commit_sha)
+    }
+
+    fn is_remote_available(&self) -> Result<Vec<RemoteDirection>, GitError> {
+        self.services.remote.is_remote_available()
     }
 
     // ========== Stash 操作 ==========

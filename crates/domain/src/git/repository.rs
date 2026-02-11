@@ -3,9 +3,9 @@
 //! 提供 Git 仓库的完整操作接口定义。
 
 use crate::{
-    BlameLineInfo, CommitFileChange, CommitInfo, GitError, MergeStrategy, RepoInfo,
-    StashApplyResult, StashEntry, StashPopResult, TagCreateInfo, TagCreateScope, TagDeleteInfo,
-    TagDeleteScope, WorkingTreeStatus,
+    BlameLineInfo, CommitFileChange, CommitInfo, GitError, MergeStrategy, RemoteDirection,
+    RepoInfo, StashApplyResult, StashEntry, StashPopResult, TagCreateInfo, TagCreateScope,
+    TagDeleteInfo, TagDeleteScope, WorkingTreeStatus,
 };
 
 /// 仅提供仓库信息的仓储接口（兼容 GitHub 等依赖）
@@ -301,6 +301,8 @@ pub trait GitRepository: Send + Sync {
     /// 检查 commit 是否在远程分支中
     fn is_commit_in_remote_branch(&self, branch: &str, commit_sha: &str) -> Result<bool, GitError>;
 
+    /// 检查远程分支是可以推送/拉取
+    fn is_remote_available(&self) -> Result<Vec<RemoteDirection>, GitError>;
     // ========== Stash 操作 ==========
 
     /// 创建 stash
