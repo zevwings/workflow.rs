@@ -1,0 +1,50 @@
+# 测试覆盖率配置
+# 文档: https://github.com/xd009642/tarpaulin
+
+[coverage]
+# 整体覆盖率目标
+target = 80.0
+
+# 最低覆盖率要求（低于此值构建失败）
+minimum = 75.0
+
+# 分模块覆盖率目标
+[coverage.modules]
+# 核心领域层 - 高覆盖率要求
+domain = 85.0
+
+# 存储层 - 高覆盖率要求
+storage = 85.0
+
+# 服务层 - 中等覆盖率要求
+services = 80.0
+
+# HTTP 层 - 中等覆盖率要求
+http = 75.0
+
+# LLM 层 - 较低覆盖率要求（依赖外部服务）
+llm = 70.0
+
+# CLI 层 - 较低覆盖率要求（UI 层）
+app = 70.0
+
+# 排除规则
+[coverage.exclude]
+# 排除测试代码本身
+patterns = [
+    "tests/",
+    "benches/",
+    "**/testing/**",
+    "**/mock/**",
+]
+
+# 排除特定文件
+files = [
+    "src/bin/",
+    "src/main.rs",
+]
+
+# 排除生成代码
+generated = [
+    "target/",
+]

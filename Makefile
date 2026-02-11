@@ -2,7 +2,7 @@
 # 包含所有功能模块（按依赖顺序）
 
 # 声明所有伪目标（统一管理）
-.PHONY: help dev release clean install update uninstall test test-all lint fix setup bloat check-rustfmt check-clippy coverage coverage-open coverage-ci coverage-trend check-docs-links audit outdated check-cargo-audit check-cargo-outdated check-tarpaulin install-hooks bench bench-cli bench-core bench-network bench-report bench-open bench-compare bench-regression bench-ci check-criterion
+.PHONY: help dev release clean install update uninstall test test-all lint fix setup bloat check-rustfmt check-clippy coverage coverage-detailed coverage-check coverage-open coverage-ci coverage-trend coverage-clean check-docs-links audit outdated check-cargo-audit check-cargo-outdated check-tarpaulin install-hooks bench bench-cli bench-core bench-network bench-report bench-open bench-compare bench-regression bench-ci check-criterion
 
 # 设置默认目标
 .DEFAULT_GOAL := help

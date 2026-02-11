@@ -253,7 +253,7 @@ coverage-trend: check-tarpaulin
 	@mkdir -p coverage/history
 	cargo tarpaulin --skip-clean --out Json --output-dir coverage
 	@cp coverage/tarpaulin-report.json coverage/history/$(shell date +%Y%m%d_%H%M%S).json
-	@python3 scripts/analyze_coverage_trend.py coverage/history/
+	@python3 scripts/dev/py/testing/coverage/trends.py coverage/history/
 ```
 
 #### 1.3 新增覆盖率检查脚本
@@ -1511,9 +1511,14 @@ cat docs/testing/README.md
 ```
 新增文件：
 ├── coverage.toml                           # 覆盖率配置
+├── scripts/dev/py/testing/
+│   ├── coverage/
+│   │   ├── check.py                       # 覆盖率检查脚本
+│   │   └── trends.py                      # 覆盖率趋势分析
+│   └── metrics/
+│       ├── collect.py                     # 测试指标收集
+│       └── trends.py                      # 测试运行趋势分析
 ├── scripts/
-│   ├── check_coverage.py                  # 覆盖率检查脚本
-│   ├── analyze_coverage_trend.py          # 覆盖率趋势分析
 │   ├── check_performance_regression.py    # 性能回归检测
 │   ├── compare_benchmarks.py              # 性能对比
 │   └── git-hooks/pre-commit               # 预提交钩子

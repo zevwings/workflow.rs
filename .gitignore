@@ -104,3 +104,8 @@ docs/analysis/**
 !docs/analysis/.gitkeep
 docs/report/**
 !docs/report/.gitkeep
+
+# 测试覆盖率输出
+/coverage/
+*.profraw
+*.profdata

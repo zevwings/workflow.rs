@@ -25,32 +25,26 @@ use crate::{
 pub struct TestEntityFactory;
 
 impl TestEntityFactory {
-    /// 创建分支信息构建器
     pub fn branch_info() -> BranchInfoBuilder {
         BranchInfoBuilder::default()
     }
 
-    /// 创建提交信息构建器
     pub fn commit_info() -> CommitInfoBuilder {
         CommitInfoBuilder::default()
     }
 
-    /// 创建 Pull Request 信息构建器
     pub fn pull_request_info() -> PullRequestInfoBuilder {
         PullRequestInfoBuilder::default()
     }
 
-    /// 创建 Stash 条目构建器
     pub fn stash_entry() -> StashEntryBuilder {
         StashEntryBuilder::default()
     }
 
-    /// 创建远程信息构建器
     pub fn remote_info() -> RemoteInfoBuilder {
         RemoteInfoBuilder::default()
     }
 
-    /// 创建仓库信息构建器
     pub fn repo_info() -> RepoInfoBuilder {
         RepoInfoBuilder::default()
     }
@@ -73,7 +67,6 @@ pub struct BranchInfoBuilder {
 }
 
 impl BranchInfoBuilder {
-    /// 设置分支名称（同时作为 display_name 默认值）
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         let name = name.into();
         if self.display_name.is_none() {
@@ -83,43 +76,36 @@ impl BranchInfoBuilder {
         self
     }
 
-    /// 设置显示名称
     pub fn with_display_name(mut self, display_name: impl Into<String>) -> Self {
         self.display_name = Some(display_name.into());
         self
     }
 
-    /// 标记为当前分支
     pub fn as_current(mut self) -> Self {
         self.is_current = true;
         self
     }
 
-    /// 标记为远程分支
     pub fn as_remote(mut self) -> Self {
         self.is_remote = true;
         self
     }
 
-    /// 设置上游分支
     pub fn with_upstream(mut self, upstream: impl Into<String>) -> Self {
         self.upstream = Some(upstream.into());
         self
     }
 
-    /// 设置最新提交 SHA
     pub fn with_commit_sha(mut self, sha: impl Into<String>) -> Self {
         self.commit_sha = Some(sha.into());
         self
     }
 
-    /// 设置最新提交消息
     pub fn with_commit_message(mut self, message: impl Into<String>) -> Self {
         self.commit_message = Some(message.into());
         self
     }
 
-    /// 构建 BranchInfo
     pub fn build(self) -> BranchInfo {
         let name = self.name.unwrap_or_else(|| "test-branch".to_string());
         let display_name = self.display_name.unwrap_or_else(|| name.clone());
@@ -155,13 +141,11 @@ pub struct CommitInfoBuilder {
 }
 
 impl CommitInfoBuilder {
-    /// 设置提交 SHA
     pub fn with_sha(mut self, sha: impl Into<String>) -> Self {
         self.sha = Some(sha.into());
         self
     }
 
-    /// 设置完整提交消息（summary 默认为第一行）
     pub fn with_message(mut self, message: impl Into<String>) -> Self {
         let message = message.into();
         if self.summary.is_none() {
@@ -171,55 +155,46 @@ impl CommitInfoBuilder {
         self
     }
 
-    /// 设置提交摘要
     pub fn with_summary(mut self, summary: impl Into<String>) -> Self {
         self.summary = Some(summary.into());
         self
     }
 
-    /// 设置作者名称
     pub fn with_author_name(mut self, name: impl Into<String>) -> Self {
         self.author_name = Some(name.into());
         self
     }
 
-    /// 设置作者邮箱
     pub fn with_author_email(mut self, email: impl Into<String>) -> Self {
         self.author_email = Some(email.into());
         self
     }
 
-    /// 设置作者时间（Unix 时间戳）
     pub fn with_author_time(mut self, time: i64) -> Self {
         self.author_time = Some(time);
         self
     }
 
-    /// 设置提交者名称
     pub fn with_committer_name(mut self, name: impl Into<String>) -> Self {
         self.committer_name = Some(name.into());
         self
     }
 
-    /// 设置提交者邮箱
     pub fn with_committer_email(mut self, email: impl Into<String>) -> Self {
         self.committer_email = Some(email.into());
         self
     }
 
-    /// 设置提交者时间（Unix 时间戳）
     pub fn with_committer_time(mut self, time: i64) -> Self {
         self.committer_time = Some(time);
         self
     }
 
-    /// 设置父提交 SHA 列表
     pub fn with_parents(mut self, parents: Vec<String>) -> Self {
         self.parents = Some(parents);
         self
     }
 
-    /// 构建 CommitInfo
     pub fn build(self) -> CommitInfo {
         let message = self.message.unwrap_or_else(|| "test commit message".to_string());
         let summary =
@@ -257,43 +232,36 @@ pub struct PullRequestInfoBuilder {
 }
 
 impl PullRequestInfoBuilder {
-    /// 设置 PR ID
     pub fn with_id(mut self, id: impl Into<String>) -> Self {
         self.id = Some(id.into());
         self
     }
 
-    /// 设置标题
     pub fn with_title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
     }
 
-    /// 设置正文
     pub fn with_body(mut self, body: impl Into<String>) -> Self {
         self.body = Some(body.into());
         self
     }
 
-    /// 设置状态
     pub fn with_status(mut self, status: PullRequestStatus) -> Self {
         self.status = Some(status);
         self
     }
 
-    /// 设置源分支
     pub fn with_source_branch(mut self, branch: impl Into<String>) -> Self {
         self.source_branch = Some(branch.into());
         self
     }
 
-    /// 设置目标分支
     pub fn with_target_branch(mut self, branch: impl Into<String>) -> Self {
         self.target_branch = Some(branch.into());
         self
     }
 
-    /// 构建 PullRequestInfo
     pub fn build(self) -> PullRequestInfo {
         PullRequestInfo {
             id: self.id.unwrap_or_else(|| "1".to_string()),
@@ -325,37 +293,31 @@ pub struct StashEntryBuilder {
 }
 
 impl StashEntryBuilder {
-    /// 设置 stash 索引
     pub fn with_index(mut self, index: usize) -> Self {
         self.index = Some(index);
         self
     }
 
-    /// 设置创建时的分支
     pub fn with_branch(mut self, branch: impl Into<String>) -> Self {
         self.branch = Some(branch.into());
         self
     }
 
-    /// 设置 stash 消息
     pub fn with_message(mut self, message: impl Into<String>) -> Self {
         self.message = Some(message.into());
         self
     }
 
-    /// 设置 commit hash
     pub fn with_commit_hash(mut self, hash: impl Into<String>) -> Self {
         self.commit_hash = Some(hash.into());
         self
     }
 
-    /// 设置创建时间
     pub fn with_timestamp(mut self, timestamp: chrono::DateTime<chrono::Local>) -> Self {
         self.timestamp = Some(timestamp);
         self
     }
 
-    /// 构建 StashEntry
     pub fn build(self) -> StashEntry {
         StashEntry {
             index: self.index.unwrap_or(0),
@@ -380,25 +342,21 @@ pub struct RemoteInfoBuilder {
 }
 
 impl RemoteInfoBuilder {
-    /// 设置远程名称
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
     }
 
-    /// 设置远程 URL
     pub fn with_url(mut self, url: impl Into<String>) -> Self {
         self.url = Some(url.into());
         self
     }
 
-    /// 设置推送 URL
     pub fn with_push_url(mut self, push_url: impl Into<String>) -> Self {
         self.push_url = Some(push_url.into());
         self
     }
 
-    /// 构建 RemoteInfo
     pub fn build(self) -> RemoteInfo {
         RemoteInfo {
             name: self.name.unwrap_or_else(|| "origin".to_string()),
@@ -424,43 +382,36 @@ pub struct RepoInfoBuilder {
 }
 
 impl RepoInfoBuilder {
-    /// 设置为有效仓库
     pub fn valid(mut self, valid: bool) -> Self {
         self.is_valid = Some(valid);
         self
     }
 
-    /// 设置仓库类型
     pub fn with_kind(mut self, kind: CodePlatform) -> Self {
         self.kind = Some(kind);
         self
     }
 
-    /// 设置 origin 远程 URL
     pub fn with_origin_url(mut self, url: impl Into<String>) -> Self {
         self.origin_url = Some(url.into());
         self
     }
 
-    /// 设置 .git 目录路径
     pub fn with_directory(mut self, dir: impl Into<String>) -> Self {
         self.directory = Some(dir.into());
         self
     }
 
-    /// 设置仓库名称（owner/repo）
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
     }
 
-    /// 设置仓库所有者
     pub fn with_owner(mut self, owner: impl Into<String>) -> Self {
         self.owner = Some(owner.into());
         self
     }
 
-    /// 构建 RepoInfo
     pub fn build(self) -> RepoInfo {
         RepoInfo {
             is_valid: self.is_valid.unwrap_or(true),

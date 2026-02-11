@@ -6,8 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-# 添加父目录到路径
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# 添加父目录到路径（metrics/ 在 testing/ 下，需到 py/ 才能找到 utils）
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from utils.logger import log_info, log_success, log_break
 
 
