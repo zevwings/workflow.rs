@@ -22,40 +22,16 @@ pub struct TestDataFactory;
 
 impl TestDataFactory {
     /// 创建 GitHub PR 构建器
-    ///
-    /// # 示例
-    ///
-    /// ```ignore
-    /// let pr = TestDataFactory::github_pr()
-    ///     .with_title("My PR")
-    ///     .build();
-    /// ```
     pub fn github_pr() -> GitHubPRBuilder {
         GitHubPRBuilder::default()
     }
 
     /// 创建 Jira Issue 构建器
-    ///
-    /// # 示例
-    ///
-    /// ```ignore
-    /// let issue = TestDataFactory::jira_issue()
-    ///     .with_summary("Bug fix")
-    ///     .build();
-    /// ```
     pub fn jira_issue() -> JiraIssueBuilder {
         JiraIssueBuilder::default()
     }
 
     /// 创建配置构建器
-    ///
-    /// # 示例
-    ///
-    /// ```ignore
-    /// let config = TestDataFactory::config()
-    ///     .with_github_token("token123")
-    ///     .build();
-    /// ```
     pub fn config() -> ConfigBuilder {
         ConfigBuilder::default()
     }
@@ -77,55 +53,46 @@ pub struct GitHubPRBuilder {
 }
 
 impl GitHubPRBuilder {
-    /// 设置 PR 标题
     pub fn with_title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
     }
 
-    /// 设置 PR 描述
     pub fn with_body(mut self, body: impl Into<String>) -> Self {
         self.body = Some(body.into());
         self
     }
 
-    /// 设置源分支
     pub fn with_head(mut self, head: impl Into<String>) -> Self {
         self.head = Some(head.into());
         self
     }
 
-    /// 设置目标分支
     pub fn with_base(mut self, base: impl Into<String>) -> Self {
         self.base = Some(base.into());
         self
     }
 
-    /// 设置 PR 状态
     pub fn with_state(mut self, state: impl Into<String>) -> Self {
         self.state = Some(state.into());
         self
     }
 
-    /// 设置 PR 编号
     pub fn with_number(mut self, number: u64) -> Self {
         self.number = Some(number);
         self
     }
 
-    /// 设置用户登录名
     pub fn with_user_login(mut self, login: impl Into<String>) -> Self {
         self.user_login = Some(login.into());
         self
     }
 
-    /// 设置用户 ID
     pub fn with_user_id(mut self, id: u64) -> Self {
         self.user_id = Some(id);
         self
     }
 
-    /// 构建 JSON 数据
     pub fn build(self) -> Value {
         json!({
             "title": self.title.unwrap_or_else(|| "Test PR".to_string()),
@@ -158,43 +125,36 @@ pub struct JiraIssueBuilder {
 }
 
 impl JiraIssueBuilder {
-    /// 设置 Issue Key
     pub fn with_key(mut self, key: impl Into<String>) -> Self {
         self.key = Some(key.into());
         self
     }
 
-    /// 设置 Issue 标题
     pub fn with_summary(mut self, summary: impl Into<String>) -> Self {
         self.summary = Some(summary.into());
         self
     }
 
-    /// 设置 Issue 描述
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
-    /// 设置 Issue 类型
     pub fn with_issue_type(mut self, issue_type: impl Into<String>) -> Self {
         self.issue_type = Some(issue_type.into());
         self
     }
 
-    /// 设置项目 Key
     pub fn with_project(mut self, project: impl Into<String>) -> Self {
         self.project = Some(project.into());
         self
     }
 
-    /// 设置 Issue 状态
     pub fn with_status(mut self, status: impl Into<String>) -> Self {
         self.status = Some(status.into());
         self
     }
 
-    /// 构建 JSON 数据
     pub fn build(self) -> Value {
         json!({
             "key": self.key.unwrap_or_else(|| "TEST-1".to_string()),
@@ -228,37 +188,31 @@ pub struct ConfigBuilder {
 }
 
 impl ConfigBuilder {
-    /// 设置 GitHub Token
     pub fn with_github_token(mut self, token: impl Into<String>) -> Self {
         self.github_token = Some(token.into());
         self
     }
 
-    /// 设置 GitHub URL
     pub fn with_github_url(mut self, url: impl Into<String>) -> Self {
         self.github_url = Some(url.into());
         self
     }
 
-    /// 设置 Jira URL
     pub fn with_jira_url(mut self, url: impl Into<String>) -> Self {
         self.jira_url = Some(url.into());
         self
     }
 
-    /// 设置 Jira Email
     pub fn with_jira_email(mut self, email: impl Into<String>) -> Self {
         self.jira_email = Some(email.into());
         self
     }
 
-    /// 设置 Jira Token
     pub fn with_jira_token(mut self, token: impl Into<String>) -> Self {
         self.jira_token = Some(token.into());
         self
     }
 
-    /// 构建 JSON 数据
     pub fn build(self) -> Value {
         json!({
             "github": {

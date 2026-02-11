@@ -93,12 +93,23 @@ impl JsonParser {
             JsonParseMode::ExtractFromMarkdown => Self::extract_json(json_str),
         };
 
-        serde_json::from_str(&json_str).map_err(|e| {
-            LLMError::ApiError(format!(
-                "Failed to parse LLM response as JSON. Raw response: {} - {}",
-                json_str, e
-            ))
-        })
+        // 首先尝试直接解析
+        match serde_json::from_str(&json_str) {
+            Ok(value) => Ok(value),
+            Err(original_error) => {
+                // 如果解析失败，尝试修复常见的 JSON 错误
+                let fixed_json = Self::try_fix_json(&json_str);
+
+                // 尝试解析修复后的 JSON
+                serde_json::from_str(&fixed_json).map_err(|_| {
+                    // 如果修复后仍然失败，返回原始错误
+                    LLMError::ApiError(format!(
+                        "Failed to parse LLM response as JSON. Raw response: {} - {}",
+                        json_str, original_error
+                    ))
+                })
+            }
+        }
     }
 
     /// 从响应中提取并解析 JSON 为指定的模型类型
@@ -178,6 +189,129 @@ impl JsonParser {
     /// let map = JsonParser::to_map(response)?;
     /// let branch_name = map.get("branch_name").and_then(|v| v.as_str());
     /// ```
+    /// 尝试修复 LLM 响应中常见的 JSON 格式错误
+    ///
+    /// 修复的常见问题：
+    /// 1. 缺失的开头引号：`"key": value"` -> `"key": "value"`
+    /// 2. 尾部逗号：`[1, 2,]` -> `[1, 2]`、`{"a": 1,}` -> `{"a": 1}`
+    ///
+    /// # 参数
+    ///
+    /// * `json_str` - 可能格式错误的 JSON 字符串
+    ///
+    /// # 返回
+    ///
+    /// 修复后的 JSON 字符串
+    fn try_fix_json(json_str: &str) -> String {
+        let mut fixed = json_str.to_string();
+
+        // 修复 1: 缺失的开头引号
+        // 匹配模式: "key": <非引号字符开头的内容>"
+        // 例如: "purpose": 将项目文档统一至..." -> "purpose": "将项目文档统一至..."
+        fixed = Self::fix_missing_opening_quotes(&fixed);
+
+        // 修复 2: 移除尾部逗号
+        // 例如: [1, 2,] -> [1, 2]  或  {"a": 1,} -> {"a": 1}
+        fixed = Self::remove_trailing_commas(&fixed);
+
+        fixed
+    }
+
+    /// 修复缺失的开头引号
+    ///
+    /// 查找形如 `"key": value"` 的模式，并将其修复为 `"key": "value"`
+    fn fix_missing_opening_quotes(json_str: &str) -> String {
+        let mut result = String::with_capacity(json_str.len());
+        let chars = json_str.chars().peekable();
+        let mut in_string = false;
+        let mut after_colon = false;
+        let mut pending_quote = false;
+
+        for ch in chars {
+            match ch {
+                '"' => {
+                    in_string = !in_string;
+                    after_colon = false;
+                    pending_quote = false;
+                    result.push(ch);
+                }
+                ':' if !in_string => {
+                    after_colon = true;
+                    result.push(ch);
+                }
+                // 如果在冒号后遇到空白，跳过
+                ' ' | '\t' | '\n' | '\r' if after_colon && !in_string => {
+                    result.push(ch);
+                }
+                // 如果在冒号后遇到非引号、非空白、非特殊字符的内容，说明缺少开头引号
+                _ if after_colon && !in_string && !pending_quote => {
+                    // 检查是否是 JSON 特殊字符（数字、布尔值、null、数组、对象）
+                    if ch.is_ascii_digit()
+                        || ch == '-'
+                        || ch == '{'
+                        || ch == '['
+                        || ch == 't'
+                        || ch == 'f'
+                        || ch == 'n'
+                    {
+                        // 这些是合法的 JSON 值开始字符，不需要添加引号
+                        result.push(ch);
+                        after_colon = false;
+                    } else {
+                        // 不是特殊字符，说明这是一个字符串值但缺少开头引号
+                        result.push('"');
+                        result.push(ch);
+                        pending_quote = true;
+                        after_colon = false;
+                    }
+                }
+                _ => {
+                    result.push(ch);
+                    if pending_quote && ch == '"' {
+                        pending_quote = false;
+                    }
+                }
+            }
+        }
+
+        result
+    }
+
+    /// 移除尾部逗号
+    ///
+    /// 移除数组和对象中的尾部逗号，例如：
+    /// - `[1, 2,]` -> `[1, 2]`
+    /// - `{"a": 1,}` -> `{"a": 1}`
+    fn remove_trailing_commas(json_str: &str) -> String {
+        let mut result = String::with_capacity(json_str.len());
+        let chars: Vec<char> = json_str.chars().collect();
+        let mut i = 0;
+
+        while i < chars.len() {
+            let ch = chars[i];
+
+            if ch == ',' {
+                // 查找逗号后的第一个非空白字符
+                let mut j = i + 1;
+                while j < chars.len() && matches!(chars[j], ' ' | '\t' | '\n' | '\r') {
+                    j += 1;
+                }
+
+                // 如果逗号后是 ] 或 }，说明这是尾部逗号，跳过它
+                if j < chars.len() && matches!(chars[j], ']' | '}') {
+                    // 跳过逗号，但保留空白
+                    i += 1;
+                    continue;
+                }
+            }
+
+            result.push(ch);
+            i += 1;
+        }
+
+        result
+    }
+
     /// 递归移除 JSON 对象中值为 null 的字段
     ///
     /// LLM 响应中可能包含 `"field": null` 的情况，但目标结构体的字段类型是 `String`
@@ -210,5 +344,98 @@ impl JsonParser {
                 value
             ))),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fix_missing_opening_quote() {
+        // 测试缺失开头引号的情况
+        let broken_json = r#"{"purpose": 将项目文档统一至 `docs/guidelines`"}"#;
+        let fixed = JsonParser::fix_missing_opening_quotes(broken_json);
+        assert_eq!(
+            fixed,
+            r#"{"purpose": "将项目文档统一至 `docs/guidelines`"}"#
+        );
+    }
+
+    #[test]
+    fn test_fix_missing_opening_quote_with_english() {
+        let broken_json = r#"{"name": John Doe"}"#;
+        let fixed = JsonParser::fix_missing_opening_quotes(broken_json);
+        assert_eq!(fixed, r#"{"name": "John Doe"}"#);
+    }
+
+    #[test]
+    fn test_dont_break_valid_json_values() {
+        // 测试不应修改合法的 JSON 值
+        let valid_json = r#"{"count": 42, "active": true, "data": null, "items": [1, 2]}"#;
+        let fixed = JsonParser::fix_missing_opening_quotes(valid_json);
+        assert_eq!(fixed, valid_json);
+    }
+
+    #[test]
+    fn test_remove_trailing_commas_in_array() {
+        let broken_json = r#"{"items": [1, 2, 3,]}"#;
+        let fixed = JsonParser::remove_trailing_commas(broken_json);
+        assert_eq!(fixed, r#"{"items": [1, 2, 3]}"#);
+    }
+
+    #[test]
+    fn test_remove_trailing_commas_in_object() {
+        let broken_json = r#"{"name": "test", "count": 5,}"#;
+        let fixed = JsonParser::remove_trailing_commas(broken_json);
+        assert_eq!(fixed, r#"{"name": "test", "count": 5}"#);
+    }
+
+    #[test]
+    fn test_remove_trailing_commas_with_whitespace() {
+        let broken_json = "{\n  \"items\": [1, 2,  ],\n  \"count\": 5,\n}";
+        let fixed = JsonParser::remove_trailing_commas(broken_json);
+        assert_eq!(fixed, "{\n  \"items\": [1, 2  ],\n  \"count\": 5\n}");
+    }
+
+    #[test]
+    fn test_try_fix_json_combined() {
+        // 测试同时修复缺失引号和尾部逗号
+        let broken_json = r#"{"purpose": 测试内容", "items": [1, 2,]}"#;
+        let fixed = JsonParser::try_fix_json(broken_json);
+        assert_eq!(fixed, r#"{"purpose": "测试内容", "items": [1, 2]}"#);
+    }
+
+    #[test]
+    fn test_parse_with_auto_fix() {
+        // 测试完整的解析流程，包括自动修复
+        let broken_json = r#"{"title": 测试", "count": 42, "tags": ["a", "b",]}"#;
+        let result = JsonParser::parse(broken_json, JsonParseMode::Raw);
+
+        assert!(result.is_ok(), "Should successfully parse and fix JSON");
+        let value = result.unwrap();
+        assert_eq!(value["title"], "测试");
+        assert_eq!(value["count"], 42);
+        assert_eq!(value["tags"][0], "a");
+        assert_eq!(value["tags"][1], "b");
+    }
+
+    #[test]
+    fn test_real_world_case_from_error() {
+        // 测试实际错误案例中的问题
+        let broken_json = r#"{
+  "domain": "文档指南迁移与补充",
+  "purpose": 将项目文档统一至 `docs/guidelines`，并提供覆盖率监控与测试最佳实践指南",
+  "files": ["docs/guidelines/architecture.md"]
+}"#;
+
+        let result = JsonParser::parse(broken_json, JsonParseMode::Raw);
+        assert!(
+            result.is_ok(),
+            "Should successfully parse and fix real-world case"
+        );
+        let value = result.unwrap();
+        assert_eq!(value["domain"], "文档指南迁移与补充");
+        assert!(value["purpose"].as_str().unwrap().contains("docs/guidelines"));
     }
 }

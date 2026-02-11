@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 description = "LLM 客户端与对话抽象，提供配置驱动的 API 调用与 Conversation 能力"
 
+[features]
+default = []
+testing = []
+
 [dependencies]
 http.workspace = true
 di.workspace = true

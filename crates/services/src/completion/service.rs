@@ -350,7 +350,8 @@ mod tests {
     }
 
     fn with_test_home<F: FnOnce(&tempfile::TempDir)>(f: F) {
-        let _lock = ENV_LOCK.lock().expect("lock env");
+        // 使用 into_inner 恢复中毒的锁，避免前序测试 panic 后影响后续测试
+        let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let temp = tempdir().expect("tempdir");
         let _guard = EnvGuard::new(&temp.path().to_path_buf());
         f(&temp);
@@ -545,9 +546,24 @@ mod tests {
             service.save_and_configure("zsh", b"zsh content", None).unwrap();
             service.save_and_configure("fish", b"fish content", None).unwrap();
 
-            let result = service.remove(false).unwrap();
-            // 应该只移除当前 shell（如果当前 shell 是 zsh 或 fish）
-            assert!(!result.failures.is_empty() || result.removed_configs.len() <= 1);
+            match service.remove(false) {
+                Ok(result) => {
+                    // 当前 shell 是 zsh 或 fish 时：应只移除当前 shell 的配置
+                    assert!(
+                        result.removed_configs.len() <= 1,
+                        "应最多移除 1 个配置，实际移除 {} 个",
+                        result.removed_configs.len()
+                    );
+                }
+                Err(e) => {
+                    // 当前 shell 是 sh 等不支持的类型时：应返回错误（如 CI/tarpaulin 环境）
+                    assert!(
+                        e.to_string().contains("不支持的 Shell 类型"),
+                        "应返回不支持 shell 的错误，实际: {}",
+                        e
+                    );
+                }
+            }
         });
     }
 

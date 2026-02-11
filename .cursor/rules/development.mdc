@@ -12,7 +12,7 @@ type: always
 - **命令封装层** (`commands/`): CLI 命令封装，处理用户交互
 - **核心业务逻辑层** (`lib/`): 所有业务逻辑实现
 
-详细架构参考：`docs/architecture.md`
+详细架构参考：`docs/guidelines/architecture.md`
 
 ## 核心原则
 
@@ -20,7 +20,7 @@ type: always
 
 **黑名单关键词**：包含"分析"、"总结"、"检查"、"讨论"、"审查"等词的请求，只能提供聊天文本响应，禁止生成/修改代码。
 
-**详细规范**：所有开发规范请参考 `docs/development.md`
+**详细规范**：所有开发规范请参考 `docs/guidelines/development.md`
 
 ## 快速参考
 

@@ -5,7 +5,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use git2::IndexAddOption;
 use storage::git::services::*;
-use storage::git::testing::*;
+use storage::testing::*;
 
 /// 创建 CommitServiceImpl 的辅助函数
 fn create_commit_service(ctx: GitContext) -> CommitServiceImpl {

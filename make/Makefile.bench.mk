@@ -1,17 +1,16 @@
 # make/Makefile.bench.mk
-# 性能测试模块
+# 性能测试模块（轻量 CLI：CLI 启动 + Storage）
 
 # Help 信息
 define HELP_BENCH
 	@echo "性能测试相关："
-	@echo "  make bench             - 运行所有基准测试"
-	@echo "  make bench-cli         - CLI性能测试"
-	@echo "  make bench-core        - 核心操作测试"
-	@echo "  make bench-network     - 网络操作测试"
+	@echo "  make bench             - 运行所有基准测试（CLI + Storage）"
+	@echo "  make bench-cli         - CLI 启动性能测试"
+	@echo "  make bench-storage     - Storage/Git 操作性能测试"
 	@echo "  make bench-report      - 生成性能报告"
 	@echo "  make bench-compare     - 性能对比"
 	@echo "  make bench-regression  - 性能回归检测"
-	@echo "  make bench-ci          - CI性能监控"
+	@echo "  make bench-open        - 打开性能报告"
 	@echo ""
 endef
 
@@ -31,37 +30,32 @@ check-criterion:
 # 基准测试运行
 # ============================================
 
-# 运行所有基准测试
+# 运行所有基准测试（CLI + Storage）
 bench: check-criterion
 	@echo "运行所有基准测试..."
-	cargo bench
+	cargo build --release -p app
+	cargo bench -p app --bench cli_startup
+	cargo bench -p storage
 	@echo ""
 	@echo "✓ 基准测试完成"
 	@echo "性能报告位置: target/criterion/"
 
-# CLI性能测试
+# CLI 启动性能测试
 bench-cli: check-criterion
 	@echo "运行 CLI 性能基准测试..."
-	cargo bench --bench cli_performance
+	cargo build --release -p app
+	cargo bench -p app --bench cli_startup
 	@echo ""
 	@echo "✓ CLI 性能测试完成"
-	@echo "性能报告位置: target/criterion/cli_performance/"
+	@echo "性能报告位置: target/criterion/cli_startup/"
 
-# 核心操作测试
-bench-core: check-criterion
-	@echo "运行核心操作基准测试..."
-	cargo bench --bench core_operations
+# Storage/Git 操作性能测试
+bench-storage: check-criterion
+	@echo "运行 Storage 性能基准测试..."
+	cargo bench -p storage
 	@echo ""
-	@echo "✓ 核心操作测试完成"
-	@echo "性能报告位置: target/criterion/core_operations/"
-
-# 网络操作测试
-bench-network: check-criterion
-	@echo "运行网络操作基准测试..."
-	cargo bench --bench network_operations
-	@echo ""
-	@echo "✓ 网络操作测试完成"
-	@echo "性能报告位置: target/criterion/network_operations/"
+	@echo "✓ Storage 性能测试完成"
+	@echo "性能报告位置: target/criterion/"
 
 # ============================================
 # 性能报告和对比
@@ -77,20 +71,17 @@ bench-report: check-criterion
 	@echo "性能报告已生成到 target/criterion/ 目录"
 	@echo ""
 	@echo "查看报告："
-	@echo "  - CLI 性能: target/criterion/cli_performance/index.html"
-	@echo "  - 核心操作: target/criterion/core_operations/index.html"
-	@echo "  - 网络操作: target/criterion/network_operations/index.html"
+	@echo "  - CLI 启动: target/criterion/cli_startup/"
+	@echo "  - Storage: target/criterion/"
 	@echo ""
 	@echo "使用 'make bench-open' 打开报告"
 
 # 打开性能报告
 bench-open:
-	@if [ -f "target/criterion/cli_performance/index.html" ]; then \
-		open target/criterion/cli_performance/index.html; \
-	elif [ -f "target/criterion/core_operations/index.html" ]; then \
-		open target/criterion/core_operations/index.html; \
-	elif [ -f "target/criterion/network_operations/index.html" ]; then \
-		open target/criterion/network_operations/index.html; \
+	@if [ -d "target/criterion/cli_startup" ]; then \
+		find target/criterion/cli_startup -name "index.html" -path "*/report/*" | head -1 | xargs -I {} open {} 2>/dev/null || open target/criterion/; \
+	elif [ -d "target/criterion" ]; then \
+		find target/criterion -name "index.html" -path "*/report/*" | head -1 | xargs -I {} open {} 2>/dev/null || open target/criterion/; \
 	else \
 		echo "错误: 性能报告不存在，请先运行 'make bench'"; \
 		exit 1; \
@@ -124,19 +115,3 @@ bench-regression: check-criterion
 	@echo ""
 	@echo "提示: 性能回归检测基于 Criterion 的统计分析"
 	@echo "     如果检测到回归，请检查最近的代码变更"
-
-# ============================================
-# CI 环境性能监控
-# ============================================
-
-# CI性能监控（适合 CI/CD 环境，输出简洁格式）
-bench-ci: check-criterion
-	@echo "运行 CI 性能监控..."
-	@echo ""
-	@echo "运行所有基准测试（CI 模式）..."
-	cargo bench --bench cli_performance --bench core_operations --bench network_operations
-	@echo ""
-	@echo "✓ CI 性能监控完成"
-	@echo ""
-	@echo "提示: CI 环境中，性能报告会保存在 target/criterion/ 目录"
-	@echo "     可以将其作为 Artifact 上传以供后续分析"

@@ -99,6 +99,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "clap_complete",
+ "criterion",
  "di",
  "domain",
  "git2",

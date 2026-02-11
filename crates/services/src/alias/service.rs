@@ -2,6 +2,7 @@
 //!
 //! 实现 `AliasService` trait，负责别名的管理。
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use domain::{
@@ -112,6 +113,104 @@ impl AliasService for AliasServiceImpl {
     fn get(&self, name: &str) -> Result<Option<String>, ServiceError> {
         let config = self.config_repo.load()?;
         Ok(config.aliases.get(name).cloned())
+    }
+
+    fn expand(&self, name: &str) -> Result<String, ServiceError> {
+        let mut visited = HashSet::new();
+        self.expand_recursive(name, &mut visited, 0)
+    }
+
+    fn expand_args(&self, args: Vec<String>) -> Result<Vec<String>, ServiceError> {
+        // 如果参数少于 2 个（只有程序名），直接返回
+        if args.len() < 2 {
+            return Ok(args);
+        }
+
+        // 获取第一个参数（子命令）
+        let subcommand = &args[1];
+
+        // 检查是否是别名
+        if self.get(subcommand)?.is_some() {
+            // 展开别名
+            let expanded = self.expand(subcommand)?;
+
+            // 将展开后的命令分割为参数
+            let expanded_parts: Vec<String> =
+                expanded.split_whitespace().map(|s| s.to_string()).collect();
+
+            // 构建新的参数列表：program_name + expanded_parts + remaining_args
+            let mut result = vec![args[0].clone()];
+            result.extend(expanded_parts);
+            if args.len() > 2 {
+                result.extend_from_slice(&args[2..]);
+            }
+
+            Ok(result)
+        } else {
+            // 不是别名，直接返回原参数
+            Ok(args)
+        }
+    }
+}
+
+impl AliasServiceImpl {
+    /// 递归展开别名（内部方法）
+    ///
+    /// # 参数
+    /// - `name`: 要展开的别名名称
+    /// - `visited`: 已访问的别名集合（用于检测循环）
+    /// - `depth`: 当前展开深度
+    fn expand_recursive(
+        &self,
+        name: &str,
+        visited: &mut HashSet<String>,
+        depth: usize,
+    ) -> Result<String, ServiceError> {
+        const MAX_DEPTH: usize = 10;
+
+        // 检查深度限制
+        if depth > MAX_DEPTH {
+            return Err(ServiceError::InvalidInput(format!(
+                "Alias expansion depth exceeded maximum ({})",
+                MAX_DEPTH
+            )));
+        }
+
+        // 检查循环引用
+        if visited.contains(name) {
+            return Err(ServiceError::InvalidInput(format!(
+                "Circular alias reference detected: {}",
+                name
+            )));
+        }
+
+        // 获取别名对应的命令
+        let command = self
+            .get(name)?
+            .ok_or_else(|| ServiceError::InvalidInput(format!("Alias '{}' not found", name)))?;
+
+        // 标记为已访问
+        visited.insert(name.to_string());
+
+        // 检查命令的第一个部分是否也是别名（嵌套别名）
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        if let Some(first_part) = parts.first() {
+            // 加载所有别名以检查第一部分是否是别名
+            let config = self.config_repo.load()?;
+            if config.aliases.contains_key(*first_part) {
+                // 递归展开嵌套别名
+                let expanded = self.expand_recursive(first_part, visited, depth + 1)?;
+                // 将展开后的命令与剩余部分组合
+                let mut result_parts: Vec<&str> = expanded.split_whitespace().collect();
+                result_parts.extend_from_slice(&parts[1..]);
+                return Ok(result_parts.join(" "));
+            }
+        }
+
+        // 从已访问集合中移除（允许在不同分支中重用）
+        visited.remove(name);
+
+        Ok(command)
     }
 }
 

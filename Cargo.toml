@@ -94,3 +94,31 @@ prompt = { path = "crates/prompt" }
 di = { path = "crates/di" }
 http = { path = "crates/http" }
 llm = { path = "crates/llm" }
+
+[workspace.metadata.tarpaulin]
+# 覆盖率目标
+target-coverage = 80.0
+
+# 排除文件
+exclude-files = [
+    "src/bin/*",
+    "tests/*",
+    "benches/*",
+    "*/testing/*",
+    "*/mock/*",
+]
+
+# 输出格式
+output = ["Html", "Lcov", "Json"]
+
+# 输出目录
+out = "coverage/"
+
+# 运行类型
+run-types = ["Tests", "Doctests"]
+
+# 超时设置（秒）
+timeout = 300
+
+# 详细输出
+verbose = true

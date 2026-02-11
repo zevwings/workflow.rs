@@ -13,7 +13,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "testing")]
-use storage::git::{services::*, testing::*};
+use storage::git::services::*;
+use storage::testing::*;
 
 /// 创建 CommitServiceImpl 的辅助函数
 #[cfg(feature = "testing")]

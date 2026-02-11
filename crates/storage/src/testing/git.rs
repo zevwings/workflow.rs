@@ -1,12 +1,12 @@
-//! 测试辅助模块
+//! Git 测试辅助
 //!
-//! 提供 Git 服务测试的通用辅助函数和性能监控工具。
+//! 提供 Git 服务测试的通用辅助函数；性能监控工具通过 `performance` 子模块重新导出。
 
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-use super::services::context::GitContext;
-use super::services::hooks::{HookContext, HookResult, HookService};
+use crate::git::services::context::GitContext;
+use crate::git::services::hooks::{HookContext, HookResult, HookService};
 use domain::GitError;
 use git2::Signature;
 use std::env;
@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex};
 use tempfile::TempDir;
 
 // 重新导出性能监控工具，方便测试代码使用
-pub use super::performance;
+pub use crate::git::performance;
 
 // ============================================================
 // NoopHookService - 测试用空 Hook 服务
