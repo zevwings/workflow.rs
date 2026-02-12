@@ -11,6 +11,7 @@ pub(crate) mod bootstrap;
 pub(crate) mod branch;
 pub(crate) mod commit;
 pub(crate) mod completion;
+pub(crate) mod config;
 pub(crate) mod path;
 pub(crate) mod pull_request;
 pub(crate) mod summary;

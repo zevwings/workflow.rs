@@ -7,14 +7,15 @@ use std::sync::Arc;
 use di::{bind, Container, InjectionError, Scope};
 use domain::{
     AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
-    GitHubRepository, GitRepository, GlobalConfigRepository, PathService, PullRequestService,
+    GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository, PathService,
+    PullRequestService, VerificationService,
 };
 use llm::{LLMConfigContext, LLMExecutor};
 
 use crate::{
     alias::AliasServiceImpl, branch::BranchServiceImpl, commit::CommitMessageServiceImpl,
-    completion::CompletionServiceImpl, path::PathServiceImpl, pull_request::PullRequestServiceImpl,
-    summary::CommitSummaryServiceImpl,
+    completion::CompletionServiceImpl, config::VerificationServiceImpl, path::PathServiceImpl,
+    pull_request::PullRequestServiceImpl, summary::CommitSummaryServiceImpl,
 };
 
 /// 构建 Services 模块
@@ -91,6 +92,20 @@ pub fn register_services() -> Result<(), InjectionError> {
 
     bind!(dyn PathService, |_c: &Container| {
         Ok(Arc::new(PathServiceImpl::new()))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    bind!(dyn VerificationService, |c: &Container| {
+        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let config_repository = c.get::<dyn GlobalConfigRepository>()?;
+        let jira_repository = c.get::<dyn JiraRepository>()?;
+        let github_repository = c.get::<dyn GitHubRepository>()?;
+        Ok(Arc::new(VerificationServiceImpl::new(
+            llm_executor,
+            config_repository,
+            jira_repository,
+            github_repository,
+        )))
     })
     .in_scope(Scope::Singleton)?;
 

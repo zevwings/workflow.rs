@@ -8,7 +8,6 @@ mod config;
 mod git;
 mod github;
 mod jira;
-mod verify;
 
 /// 注册所有 storage 服务
 pub fn register_storage() -> Result<(), InjectionError> {
@@ -17,7 +16,6 @@ pub fn register_storage() -> Result<(), InjectionError> {
     git::register_git()?;
     jira::register_jira()?;
     github::register_github()?;
-    verify::register_verify()?;
 
     Ok(())
 }
