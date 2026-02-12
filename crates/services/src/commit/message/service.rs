@@ -9,6 +9,7 @@ use domain::{
     CommitSummaryAnalysis, GitRepository,
 };
 use llm::{JsonParser, LLMConfigContext, LLMExecutor};
+use toolkit::log_error;
 
 use crate::commit::message::conversation::CommitMessageConversation;
 
@@ -108,15 +109,19 @@ impl CommitMessageServiceImpl {
             CommitMessageConversation::new(file_summary, diff_content, input.stats.clone());
 
         // 3. 单次 LLM 调用
-        let response = self
-            .llm_executor
-            .execute(&conversation, &language_code, "commit_message_generate")
-            .map_err(|e| CommitMessageError::LLMError(e.to_string()))?;
+        let response =
+            self.llm_executor
+                .execute(&conversation, &language_code, "commit_message_generate");
 
-        // 4. 解析结果
-        JsonParser::to_model(&response).map_err(|e| {
-            CommitMessageError::ParseFailed(format!("Failed to parse commit message: {}", e))
-        })
+        match response {
+            Ok(response) => JsonParser::to_model(&response).map_err(|e| {
+                CommitMessageError::ParseFailed(format!("Failed to parse commit message: {}", e))
+            }),
+            Err(e) => {
+                log_error!("Failed to generate commit message: {}", e.to_string());
+                Err(CommitMessageError::LLMError("Failed to generate commit message".to_string()))
+            }
+        }
     }
 }
 

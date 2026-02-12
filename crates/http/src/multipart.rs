@@ -88,7 +88,7 @@ impl MultipartRequest {
             match part.mime_str(mt) {
                 Ok(p) => part = p,
                 Err(e) => {
-                    tracing::warn!(mime_type = mt, error = %e, "Invalid MIME type, ignoring");
+                    warn!(mime_type = mt, error = %e, "Invalid MIME type, ignoring");
                     return self;
                 }
             }

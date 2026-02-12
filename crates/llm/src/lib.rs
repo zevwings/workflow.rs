@@ -3,6 +3,8 @@
 //! 提供统一配置驱动的 LLM 客户端、Conversation 抽象与解析器。
 //! 通过 `LLMConfigContext` trait 实现依赖倒置，客户端独立于具体配置实现。
 
+#[macro_use]
+pub(crate) mod logger;
 pub(crate) mod bootstrap;
 pub(crate) mod client;
 pub(crate) mod context;

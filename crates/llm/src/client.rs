@@ -164,7 +164,7 @@ impl LLMClientImpl {
             ))
         })?;
 
-        tracing::debug!(target: "llm", "LLM response: {:?}", completion);
+        debug!("LLM response: {:?}", completion);
 
         // 提取内容
         let first = completion.choices.first();
@@ -225,23 +225,22 @@ impl LLMClient for LLMClientImpl {
         /// DEBUG 时单条 payload 最多打印的字符数，避免超大 diff 刷屏导致终端卡顿
         const MAX_PAYLOAD_LOG_LEN: usize = 800;
         let payload_str = payload.to_string();
-        tracing::debug!(target: "llm", "LLM url: {}", url);
+        debug!("LLM url: {}", url);
         if payload_str.len() <= MAX_PAYLOAD_LOG_LEN {
-            tracing::debug!(target: "llm", "LLM payload: {}", payload_str);
+            debug!("LLM payload: {}", payload_str);
         } else {
             let trunc_at = payload_str
                 .char_indices()
                 .nth(MAX_PAYLOAD_LOG_LEN)
                 .map(|(i, _)| i)
                 .unwrap_or(payload_str.len());
-            tracing::debug!(
-                target: "llm",
+            debug!(
                 "LLM payload (truncated, {} chars total): {}...",
                 payload_str.len(),
                 &payload_str[..trunc_at]
             );
         }
-        tracing::debug!(target: "llm", "LLM provider: {}", provider);
+        debug!("LLM provider: {}", provider);
 
         // 发送请求
         let response = client.post(&url).auth(auth).body(&payload).send().map_err(|e| {

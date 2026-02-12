@@ -75,7 +75,7 @@ impl<'a> Request<'a> {
                 self.headers = Some(map);
             }
             Err(e) => {
-                tracing::warn!(error = %e, "Failed to convert headers, ignoring");
+                warn!(error = %e, "Failed to convert headers, ignoring");
             }
         }
         self
@@ -141,7 +141,7 @@ impl<'a> Request<'a> {
         // Multipart 请求不支持重试（Form 不可 Clone）
         if self.multipart.is_some() {
             if self.retry.is_some() {
-                tracing::warn!("Retry is not supported for multipart requests, ignoring");
+                warn!("Retry is not supported for multipart requests, ignoring");
             }
             return self.execute_once();
         }

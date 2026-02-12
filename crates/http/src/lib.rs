@@ -25,6 +25,8 @@
 //!     .send()?;
 //! ```
 
+#[macro_use]
+mod logger;
 mod auth;
 mod client;
 mod config;

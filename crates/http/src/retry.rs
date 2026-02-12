@@ -196,7 +196,7 @@ impl<'a> RetryExecutor<'a> {
                     let retry_count = attempt;
 
                     if retry_count > 0 {
-                        tracing::debug!(
+                        debug!(
                             retry_count = retry_count,
                             total_duration_ms = total_duration.as_millis(),
                             "Request succeeded after retry"
@@ -222,7 +222,7 @@ impl<'a> RetryExecutor<'a> {
                     }
 
                     let delay = self.config.delay_for_attempt(attempt);
-                    tracing::debug!(
+                    debug!(
                         attempt = attempt + 1,
                         max_retries = self.config.max_retries,
                         delay_ms = delay.as_millis(),
