@@ -24,7 +24,11 @@ impl LLMConversation for TestAnalyzeConversation {
         self.user_prompt.clone()
     }
 
-    fn get_execution_params(&self) -> (Option<u32>, f32) {
-        (None, 0.3)
+    fn get_max_tokens(&self) -> Option<u32> {
+        None
+    }
+
+    fn get_temperature(&self) -> f32 {
+        0.3
     }
 }

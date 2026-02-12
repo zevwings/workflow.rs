@@ -89,7 +89,11 @@ Return JSON format:
         parts.join("\n")
     }
 
-    fn get_execution_params(&self) -> (Option<u32>, f32) {
-        (None, 0.8) // max_tokens 由 LLM 自动决定
+    fn get_max_tokens(&self) -> Option<u32> {
+        None
+    }
+
+    fn get_temperature(&self) -> f32 {
+        0.8
     }
 }

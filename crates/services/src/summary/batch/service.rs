@@ -5,7 +5,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use domain::{CommitBatchAnalysis, CommitFileChange, CommitFileClassification, CommitSummaryError};
-use llm::{JsonParser, LLMExecutor};
+use llm::{IntoLLMRequestParameters, JsonParser, LLMClient};
 
 use crate::summary::batch::BatchAnalyzeConversation;
 
@@ -13,12 +13,12 @@ use crate::summary::batch::BatchAnalyzeConversation;
 
 /// 阶段二 2.1：批量操作分析服务
 pub(crate) struct BatchAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl BatchAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对批量操作文件执行分析
@@ -86,8 +86,8 @@ Selection strategy: {}
 
         let conversation = BatchAnalyzeConversation::new(user_prompt);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "batch_analyze")
+            .llm_client
+            .call(&conversation.to_params(language_code))
             .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         let result: CommitBatchAnalysis = JsonParser::to_model(&response).map_err(|e| {
             CommitSummaryError::ParseFailed(format!(

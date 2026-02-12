@@ -5,6 +5,9 @@ use thiserror::Error;
 /// LLM 服务错误
 #[derive(Error, Debug, Clone)]
 pub enum LLMError {
+    #[error("创建 LLM 客户端失败: {0}")]
+    ClientCreationFailed(String),
+
     #[error("LLM API 调用失败: {0}")]
     ApiError(String),
 

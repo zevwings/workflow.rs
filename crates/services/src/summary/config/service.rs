@@ -7,18 +7,18 @@ use std::{collections::HashMap, sync::Arc};
 use domain::{
     CommitConfigAnalysis, CommitFileChange, CommitFileClassification, CommitSummaryError,
 };
-use llm::{JsonParser, LLMExecutor};
+use llm::{IntoLLMRequestParameters, JsonParser, LLMClient};
 
 use crate::summary::config::ConfigAnalyzeConversation;
 
 /// 阶段二 2.3：配置/文档分析服务
 pub(crate) struct ConfigAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl ConfigAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对配置和文档文件执行分析
@@ -78,8 +78,8 @@ impl ConfigAnalyzeService {
         );
         let conversation = ConfigAnalyzeConversation::new(user_prompt);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "config_analyze")
+            .llm_client
+            .call(&conversation.to_params(language_code))
             .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         let result: CommitConfigAnalysis = JsonParser::to_model(&response).map_err(|e| {
             CommitSummaryError::ParseFailed(format!(

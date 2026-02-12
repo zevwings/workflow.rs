@@ -1,7 +1,42 @@
-//! LLM 客户端共享类型和工具
+//! LLM 类型定义
 
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+
+use crate::IntoLLMRequestParameters;
+
+/// LLM 请求参数
+///
+/// 包含调用 LLM API 所需的所有参数。
+/// 注意：模型名称从配置上下文自动获取，不在此结构体中。
+#[derive(Debug, Clone, Serialize)]
+pub struct LLMRequestParameters {
+    /// 系统提示词
+    pub system_prompt: String,
+    /// 用户提示词
+    pub user_prompt: String,
+    /// 最大 token 数（None 表示不限制，使用模型默认最大值）
+    pub max_tokens: Option<u32>,
+    /// 温度参数（控制输出的随机性）
+    pub temperature: f32,
+}
+
+impl Default for LLMRequestParameters {
+    fn default() -> Self {
+        Self {
+            system_prompt: String::with_capacity(512),
+            user_prompt: String::with_capacity(512),
+            max_tokens: None,
+            temperature: 0.5,
+        }
+    }
+}
+
+impl IntoLLMRequestParameters for LLMRequestParameters {
+    fn to_params(&self, _language_code: &str) -> LLMRequestParameters {
+        self.clone()
+    }
+}
 
 // ==================== OpenAI 响应数据模型 ====================
 

@@ -5,18 +5,18 @@
 use std::{collections::HashMap, sync::Arc};
 
 use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, CommitSummaryError};
-use llm::{JsonParser, LLMExecutor};
+use llm::{IntoLLMRequestParameters, JsonParser, LLMClient};
 
 use crate::summary::logic::LogicAnalyzeConversation;
 
 /// 阶段二 2.2：核心逻辑分析服务
 pub(crate) struct LogicAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl LogicAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对核心逻辑文件执行深入分析
@@ -68,8 +68,8 @@ File type: {}
 
         let conversation = LogicAnalyzeConversation::new(user_prompt);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "logic_analyze")
+            .llm_client
+            .call(&conversation.to_params(language_code))
             .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         let result: CommitLogicAnalysis = JsonParser::to_model(&response).map_err(|e| {
             CommitSummaryError::ParseFailed(format!(

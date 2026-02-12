@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::{CommitSummaryAnalysis, CommitSummaryError};
-use llm::{JsonParser, LLMExecutor};
+use llm::{IntoLLMRequestParameters, JsonParser, LLMClient};
 
 use crate::summary::summary::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
 
@@ -9,12 +9,12 @@ use crate::summary::summary::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
 
 /// 阶段三：全局总结服务
 pub(crate) struct SummaryAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl SummaryAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 综合各阶段结果生成全局总结
@@ -25,8 +25,8 @@ impl SummaryAnalyzeService {
     ) -> Result<CommitSummaryAnalysis, CommitSummaryError> {
         let conversation = SummaryAnalyzeConversation::new(input);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "summary_analyze")
+            .llm_client
+            .call(&conversation.to_params(language_code))
             .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
         JsonParser::to_model(&response).map_err(|e| {
             CommitSummaryError::ParseFailed(format!(

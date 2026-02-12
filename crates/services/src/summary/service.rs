@@ -9,7 +9,7 @@ use domain::{
     CommitSummaryAnalysis, CommitSummaryError, CommitSummaryService, DirectoryStats,
     DirectoryStatusDistribution, GitRepository,
 };
-use llm::{LLMConfigContext, LLMExecutor};
+use llm::{LLMClient, LLMConfigContext};
 
 use crate::summary::{
     BatchAnalyzeService, ConfigAnalyzeService, FileClassifyService, LogicAnalyzeService,
@@ -60,19 +60,19 @@ struct AnalysisContext {
 /// 提交总结服务实现
 pub(crate) struct CommitSummaryServiceImpl {
     git_repo: Arc<dyn GitRepository>,
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
     llm_context: Arc<dyn LLMConfigContext>,
 }
 
 impl CommitSummaryServiceImpl {
     pub fn new(
         git_repo: Arc<dyn GitRepository>,
-        llm_executor: Arc<dyn LLMExecutor>,
+        llm_client: Arc<dyn LLMClient>,
         llm_context: Arc<dyn LLMConfigContext>,
     ) -> Self {
         Self {
             git_repo,
-            llm_executor,
+            llm_client,
             llm_context,
         }
     }
@@ -174,7 +174,7 @@ impl CommitSummaryServiceImpl {
         &self,
         ctx: &AnalysisContext,
     ) -> Result<CommitFileClassification, CommitSummaryError> {
-        let classify_service = FileClassifyService::new(self.llm_executor.clone());
+        let classify_service = FileClassifyService::new(self.llm_client.clone());
         classify_service.classify(
             &ctx.commit_info.sha,
             &ctx.commit_info.author_email,
@@ -202,7 +202,7 @@ impl CommitSummaryServiceImpl {
                 rayon::join(
                     // 2.1 批量操作分析
                     || {
-                        BatchAnalyzeService::new(self.llm_executor.clone()).analyze(
+                        BatchAnalyzeService::new(self.llm_client.clone()).analyze(
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
@@ -211,7 +211,7 @@ impl CommitSummaryServiceImpl {
                     },
                     // 2.2 核心逻辑分析
                     || {
-                        LogicAnalyzeService::new(self.llm_executor.clone()).analyze(
+                        LogicAnalyzeService::new(self.llm_client.clone()).analyze(
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
@@ -224,7 +224,7 @@ impl CommitSummaryServiceImpl {
                 rayon::join(
                     // 2.3 配置/文档分析
                     || {
-                        ConfigAnalyzeService::new(self.llm_executor.clone()).analyze(
+                        ConfigAnalyzeService::new(self.llm_client.clone()).analyze(
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
@@ -233,7 +233,7 @@ impl CommitSummaryServiceImpl {
                     },
                     // 2.4 测试文件分析
                     || {
-                        TestAnalyzeService::new(self.llm_executor.clone()).analyze(
+                        TestAnalyzeService::new(self.llm_client.clone()).analyze(
                             stage1,
                             &ctx.file_diffs,
                             &ctx.language_code,
@@ -318,7 +318,7 @@ impl CommitSummaryService for CommitSummaryServiceImpl {
             commit_count: ctx.commit_count,
         };
 
-        SummaryAnalyzeService::new(self.llm_executor.clone()).summarize(input, &ctx.language_code)
+        SummaryAnalyzeService::new(self.llm_client.clone()).summarize(input, &ctx.language_code)
     }
 }
 

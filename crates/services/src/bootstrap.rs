@@ -10,7 +10,7 @@ use domain::{
     GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository, PathService,
     PullRequestService, VerificationService,
 };
-use llm::{LLMConfigContext, LLMExecutor};
+use llm::{LLMClient, LLMConfigContext};
 
 use crate::{
     alias::AliasServiceImpl, branch::BranchServiceImpl, commit::CommitMessageServiceImpl,
@@ -37,9 +37,9 @@ pub fn register_services() -> Result<(), InjectionError> {
     .in_scope(Scope::Singleton)?;
 
     bind!(dyn BranchService, |c: &Container| {
-        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let llm_client = c.get::<dyn LLMClient>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
-        Ok(Arc::new(BranchServiceImpl::new(llm_executor, llm_context)))
+        Ok(Arc::new(BranchServiceImpl::new(llm_client, llm_context)))
     })
     .in_scope(Scope::Singleton)?;
 
@@ -60,11 +60,11 @@ pub fn register_services() -> Result<(), InjectionError> {
     // CommitSummaryService - 依赖 GitRepository、LLMExecutor、LLMConfigContext
     bind!(dyn CommitSummaryService, |c: &Container| {
         let git_repo = c.get::<dyn GitRepository>()?;
-        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let llm_client = c.get::<dyn LLMClient>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(CommitSummaryServiceImpl::new(
             git_repo,
-            llm_executor,
+            llm_client,
             llm_context,
         )))
     })
@@ -73,11 +73,11 @@ pub fn register_services() -> Result<(), InjectionError> {
     // CommitMessageService - 依赖 GitRepository、LLMExecutor、LLMConfigContext
     bind!(dyn CommitMessageService, |c: &Container| {
         let git_repo = c.get::<dyn GitRepository>()?;
-        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let llm_client = c.get::<dyn LLMClient>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(CommitMessageServiceImpl::new(
             git_repo,
-            llm_executor,
+            llm_client,
             llm_context,
         )))
     })
@@ -96,12 +96,12 @@ pub fn register_services() -> Result<(), InjectionError> {
     .in_scope(Scope::Singleton)?;
 
     bind!(dyn VerificationService, |c: &Container| {
-        let llm_executor = c.get::<dyn LLMExecutor>()?;
+        let llm_client = c.get::<dyn LLMClient>()?;
         let config_repository = c.get::<dyn GlobalConfigRepository>()?;
         let jira_repository = c.get::<dyn JiraRepository>()?;
         let github_repository = c.get::<dyn GitHubRepository>()?;
         Ok(Arc::new(VerificationServiceImpl::new(
-            llm_executor,
+            llm_client,
             config_repository,
             jira_repository,
             github_repository,

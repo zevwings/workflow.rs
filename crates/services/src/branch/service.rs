@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use domain::{sanitize_branch_name, BranchService, BranchServiceError};
-use llm::{JsonParser, LLMConfigContext, LLMExecutor};
+use llm::{IntoLLMRequestParameters, JsonParser, LLMClient, LLMConfigContext};
 
 use crate::branch::conversation::BranchNameConversation;
 
@@ -9,14 +9,14 @@ use crate::branch::conversation::BranchNameConversation;
 ///
 /// 使用 LLM 生成语义化的分支名称。
 pub(crate) struct BranchServiceImpl {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
     llm_context: Arc<dyn LLMConfigContext>,
 }
 
 impl BranchServiceImpl {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>, llm_context: Arc<dyn LLMConfigContext>) -> Self {
+    pub fn new(llm_client: Arc<dyn LLMClient>, llm_context: Arc<dyn LLMConfigContext>) -> Self {
         Self {
-            llm_executor,
+            llm_client,
             llm_context,
         }
     }
@@ -32,12 +32,8 @@ impl BranchService for BranchServiceImpl {
 
         // 执行 LLM 调用
         let response = self
-            .llm_executor
-            .execute(
-                &conversation,
-                &self.llm_context.get_language(),
-                "Generate branch name",
-            )
+            .llm_client
+            .call(&conversation.to_params(&self.llm_context.get_language()))
             .map_err(|e| BranchServiceError::LLMError(e.to_string()))?;
 
         // 转换为 map 对象

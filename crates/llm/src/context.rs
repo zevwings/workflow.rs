@@ -3,6 +3,81 @@
 //! 定义 LLM 配置的抽象接口，实现依赖倒置原则。
 //! LLM 模块定义此接口，由其他模块（如 infra）实现。
 
+use http::Authorization;
+use serde_with::skip_serializing_none;
+
+use crate::LLMError;
+
+// ==================== LLM 配置数据模型 ====================
+
+/// LLM 配置
+#[skip_serializing_none]
+#[derive(Debug, Clone)]
+pub struct LLMConfig {
+    pub provider: String,
+    pub url: String,
+    pub auth: Authorization,
+    pub model: String,
+    pub language: String,
+}
+
+/// 可转换为 LLM 请求参数的 trait
+///
+/// 用于快速将任意类型转换为 `LLMRequestParameters`。
+/// 对 `LLMConversation` 有默认实现，也可为其他类型单独实现。
+pub trait IntoLLMConfig {
+    fn to_config(&self) -> Result<LLMConfig, LLMError>;
+}
+
+impl<T: ?Sized + LLMConfigContext> IntoLLMConfig for T {
+    fn to_config(&self) -> Result<LLMConfig, LLMError> {
+        let provider = self.get_provider();
+
+        let url = match provider.as_str() {
+            "openai" => Ok("https://api.openai.com/v1/chat/completions".to_string()),
+            "deepseek" => Ok("https://api.deepseek.com/chat/completions".to_string()),
+            "proxy" => {
+                let base_url = self.get_current_provider_url();
+                if base_url.is_empty() {
+                    return Err(LLMError::ApiError("URL is empty in settings".to_string()));
+                }
+                Ok(format!(
+                    "{}/chat/completions",
+                    base_url.trim_end_matches('/')
+                ))
+            }
+            _ => Err(LLMError::ApiError(format!(
+                "Unsupported LLM provider: {}",
+                provider
+            ))),
+        }?;
+
+        let llm_key = self.get_current_provider_key();
+        if llm_key.is_empty() {
+            return Err(LLMError::ApiError(
+                "LLM key is empty in settings".to_string(),
+            ));
+        }
+        let auth = Authorization::bearer(llm_key);
+
+        let model = self.get_current_provider_model();
+        if model.is_empty() {
+            return Err(LLMError::ApiError(format!(
+                "Model is required for {} provider",
+                provider
+            )));
+        }
+
+        Ok(LLMConfig {
+            provider,
+            url,
+            auth,
+            model,
+            language: self.get_language(),
+        })
+    }
+}
+
 /// LLM 配置提供者 trait
 ///
 /// 提供 LLM 相关的配置信息，包括 provider、URL、API key、model 和语言设置。

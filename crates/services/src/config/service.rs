@@ -25,7 +25,7 @@ use domain::{
     JiraVerificationResult, JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult,
     LLMVerificationStatus, LogConfigInfo, LogVerificationResult, VerificationService,
 };
-use llm::{LLMConversation, LLMExecutor, SupportedLanguage};
+use llm::{IntoLLMRequestParameters, LLMClient, LLMConversation, SupportedLanguage};
 use toolkit::Sensitive;
 
 /// 验证对话
@@ -58,14 +58,18 @@ impl LLMConversation for VerifyConversation {
         greeting.to_string()
     }
 
-    fn get_execution_params(&self) -> (Option<u32>, f32) {
-        (None, 0.5) // max_tokens 由 LLM 自动决定
+    fn get_max_tokens(&self) -> Option<u32> {
+        None
+    }
+
+    fn get_temperature(&self) -> f32 {
+        0.5
     }
 }
 
 /// 验证服务实现
 pub(crate) struct VerificationServiceImpl {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
     config_repository: Arc<dyn GlobalConfigRepository>,
     jira_repository: Arc<dyn JiraRepository>,
     github_repository: Arc<dyn GitHubRepository>,
@@ -73,13 +77,13 @@ pub(crate) struct VerificationServiceImpl {
 
 impl VerificationServiceImpl {
     pub fn new(
-        llm_executor: Arc<dyn LLMExecutor>,
+        llm_client: Arc<dyn LLMClient>,
         config_repository: Arc<dyn GlobalConfigRepository>,
         jira_repository: Arc<dyn JiraRepository>,
         github_repository: Arc<dyn GitHubRepository>,
     ) -> Self {
         Self {
-            llm_executor,
+            llm_client,
             config_repository,
             jira_repository,
             github_repository,
@@ -235,8 +239,8 @@ impl VerificationService for VerificationServiceImpl {
 
         let conversation = VerifyConversation::new();
         let response = self
-            .llm_executor
-            .execute(&conversation, &language, "Verify LLM config")
+            .llm_client
+            .call(&conversation.to_params(&language))
             .map_err(|e| ConfigError::OperationFailed(e.to_string()))?;
 
         Ok(LLMVerificationResult {

@@ -22,7 +22,5 @@
 //! ```
 
 pub mod fixtures;
-pub mod mock_client;
 
 pub use fixtures::LLMFixtures;
-pub use mock_client::MockLLMClient;

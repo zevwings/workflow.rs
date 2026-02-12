@@ -5,12 +5,12 @@
 #[doc(hidden)]
 #[allow(unused_imports)] // warn 供 llm_warn! 宏展开时使用
 pub(crate) mod __tracing {
-    pub use tracing::{debug, warn};
+    pub use tracing::{debug, error, warn};
 }
 
 /// 内部调试日志，自动带 `target: "llm"`，可通过 `RUST_LOG=llm=debug` 启用。
 #[macro_export]
-macro_rules! debug {
+macro_rules! log_debug {
     ($($arg:tt)*) => {
         $crate::logger::__tracing::debug!(target: "llm", $($arg)*);
     };
@@ -18,8 +18,15 @@ macro_rules! debug {
 
 /// 内部警告日志，自动带 `target: "llm"`。
 #[macro_export]
-macro_rules! llm_warn {
+macro_rules! log_warn {
     ($($arg:tt)*) => {
         $crate::logger::__tracing::warn!(target: "llm", $($arg)*);
+    };
+}
+
+#[macro_export]
+macro_rules! log_error {
+    ($($arg:tt)*) => {
+        $crate::logger::__tracing::error!(target: "llm", $($arg)*);
     };
 }

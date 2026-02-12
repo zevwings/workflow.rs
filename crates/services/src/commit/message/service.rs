@@ -8,8 +8,7 @@ use domain::{
     CommitChangeType, CommitFileChange, CommitMessageError, CommitMessageService,
     CommitSummaryAnalysis, GitRepository,
 };
-use llm::{JsonParser, LLMConfigContext, LLMExecutor};
-use toolkit::log_error;
+use llm::{IntoLLMRequestParameters, JsonParser, LLMClient, LLMConfigContext};
 
 use crate::commit::message::conversation::CommitMessageConversation;
 
@@ -38,7 +37,7 @@ const MAX_DIFF_LINES: usize = 2000;
 /// Commit Message 生成服务实现
 pub(crate) struct CommitMessageServiceImpl {
     git_repo: Arc<dyn GitRepository>,
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
     llm_context: Arc<dyn LLMConfigContext>,
 }
 
@@ -46,12 +45,12 @@ impl CommitMessageServiceImpl {
     /// 创建新的服务实例
     pub fn new(
         git_repo: Arc<dyn GitRepository>,
-        llm_executor: Arc<dyn LLMExecutor>,
+        llm_client: Arc<dyn LLMClient>,
         llm_context: Arc<dyn LLMConfigContext>,
     ) -> Self {
         Self {
             git_repo,
-            llm_executor,
+            llm_client,
             llm_context,
         }
     }
@@ -109,21 +108,14 @@ impl CommitMessageServiceImpl {
             CommitMessageConversation::new(file_summary, diff_content, input.stats.clone());
 
         // 3. 单次 LLM 调用
-        let response =
-            self.llm_executor
-                .execute(&conversation, &language_code, "commit_message_generate");
+        let response = self
+            .llm_client
+            .call(&conversation.to_params(&language_code))
+            .map_err(|e| CommitMessageError::LLMError(e.to_string()))?;
 
-        match response {
-            Ok(response) => JsonParser::to_model(&response).map_err(|e| {
-                CommitMessageError::ParseFailed(format!("Failed to parse commit message: {}", e))
-            }),
-            Err(e) => {
-                log_error!("Failed to generate commit message: {}", e.to_string());
-                Err(CommitMessageError::LLMError(
-                    "Failed to generate commit message".to_string(),
-                ))
-            }
-        }
+        JsonParser::to_model(&response).map_err(|e| {
+            CommitMessageError::ParseFailed(format!("Failed to parse commit message: {}", e))
+        })
     }
 }
 
