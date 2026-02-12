@@ -115,7 +115,7 @@ impl fmt::Display for ErrorContext {
 #[derive(Debug)]
 pub enum HttpError {
     /// 客户端创建失败
-    ClientCreation(Error),
+    ClientCreation(String),
 
     /// 请求构建失败
     RequestBuild {
@@ -153,8 +153,14 @@ pub enum HttpError {
         last_error: Box<HttpError>,
     },
 
-    /// 其他错误
-    Other(String),
+    /// 无效的 Header 名称
+    InvalidHeaderName(String),
+
+    /// 无效的 Header 值
+    InvalidHeaderValue(String),
+
+    /// 文件读取失败
+    FileReadFailed(String),
 }
 
 impl HttpError {
@@ -228,7 +234,9 @@ impl fmt::Display for HttpError {
                     attempts, last_error
                 )
             }
-            Self::Other(msg) => write!(f, "{}", msg),
+            Self::InvalidHeaderName(name) => write!(f, "Invalid header name: {}", name),
+            Self::InvalidHeaderValue(value) => write!(f, "Invalid header value: {}", value),
+            Self::FileReadFailed(e) => write!(f, "Failed to read file: {}", e),
         }
     }
 }
@@ -236,7 +244,7 @@ impl fmt::Display for HttpError {
 impl std::error::Error for HttpError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::ClientCreation(e) => Some(e),
+            Self::ClientCreation(_) => None,
             Self::Request { source, .. } => Some(source),
             Self::RetryExhausted { last_error, .. } => Some(last_error.as_ref()),
             _ => None,
@@ -246,7 +254,7 @@ impl std::error::Error for HttpError {
 
 impl From<Error> for HttpError {
     fn from(e: Error) -> Self {
-        Self::ClientCreation(e)
+        Self::ClientCreation(e.to_string())
     }
 }
 

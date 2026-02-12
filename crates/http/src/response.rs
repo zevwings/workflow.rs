@@ -113,29 +113,38 @@ impl Response {
 
     /// 解析为 JSON
     pub fn json<T: DeserializeOwned>(&self) -> Result<T, HttpError> {
-        serde_json::from_slice(&self.body).map_err(|e| HttpError::ResponseParse {
-            message: format!("Failed to parse JSON: {}", e),
-            context: self.error_context_boxed(),
+        serde_json::from_slice(&self.body).map_err(|e| {
+            error!("Failed to parse JSON: {}", e);
+            HttpError::ResponseParse {
+                message: "Failed to parse response as JSON".to_string(),
+                context: self.error_context_boxed(),
+            }
         })
     }
 
     /// 解析为文本（借用）
     pub fn text(&self) -> Result<&str, HttpError> {
-        std::str::from_utf8(&self.body).map_err(|e| HttpError::ResponseParse {
-            message: format!("Failed to parse text: {}", e),
-            context: self.error_context_boxed(),
+        std::str::from_utf8(&self.body).map_err(|e| {
+            error!("Failed to parse text: {}", e);
+            HttpError::ResponseParse {
+                message: "Failed to parse response as text".to_string(),
+                context: self.error_context_boxed(),
+            }
         })
     }
 
     /// 解析为文本（消费 self，避免克隆）
     pub fn into_text(self) -> Result<String, HttpError> {
-        String::from_utf8(self.body).map_err(|e| HttpError::ResponseParse {
-            message: format!("Failed to parse text: {}", e.utf8_error()),
-            context: ErrorContext::new(&self.url, self.method)
-                .with_response_status(self.status)
-                .with_response_headers(&self.headers)
-                .with_duration(self.duration)
-                .into_box(),
+        String::from_utf8(self.body).map_err(|e| {
+            error!("Failed to parse text: {}", e);
+            HttpError::ResponseParse {
+                message: "Failed to parse response as text".to_string(),
+                context: ErrorContext::new(&self.url, self.method)
+                    .with_response_status(self.status)
+                    .with_response_headers(&self.headers)
+                    .with_duration(self.duration)
+                    .into_box(),
+            }
         })
     }
 

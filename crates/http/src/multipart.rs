@@ -60,7 +60,8 @@ impl MultipartRequest {
     ) -> Result<Self, HttpError> {
         let path = path.as_ref();
         let part = Part::file(path).map_err(|e| {
-            HttpError::Other(format!("Failed to read file '{}': {}", path.display(), e))
+            error!(error = %e, "Failed to read file '{}': {}", path.display(), e);
+            HttpError::FileReadFailed(path.display().to_string())
         })?;
 
         if let Some(form) = self.form.take() {
@@ -88,7 +89,7 @@ impl MultipartRequest {
             match part.mime_str(mt) {
                 Ok(p) => part = p,
                 Err(e) => {
-                    warn!(mime_type = mt, error = %e, "Invalid MIME type, ignoring");
+                    error!(mime_type = mt, error = %e, "Invalid MIME type, ignoring");
                     return self;
                 }
             }
@@ -137,7 +138,7 @@ mod tests {
     #[test]
     fn test_multipart_text() {
         let request = MultipartRequest::new().text("field1", "value1").text("field2", "value2");
-        assert!(request.form.is_some());
+        assert!(request.into_form().is_some());
     }
 
     #[test]
@@ -148,7 +149,7 @@ mod tests {
             Some("test.bin"),
             Some("application/octet-stream"),
         );
-        assert!(request.form.is_some());
+        assert!(request.into_form().is_some());
     }
 
     #[test]

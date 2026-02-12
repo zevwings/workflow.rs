@@ -1,6 +1,8 @@
 //! HTTP 客户端
 
-use std::{sync::OnceLock, time::Duration};
+use std::time::Duration;
+
+use once_cell::sync::OnceCell;
 
 use reqwest::blocking::Client;
 
@@ -32,11 +34,14 @@ pub struct HttpClient {
 impl HttpClient {
     /// 获取全局 HttpClient 单例
     pub fn global() -> Result<&'static Self, HttpError> {
-        static CLIENT: OnceLock<Result<HttpClient, String>> = OnceLock::new();
-        match CLIENT.get_or_init(|| Self::new().map_err(|e| e.to_string())) {
-            Ok(client) => Ok(client),
-            Err(e) => Err(HttpError::Other(e.clone())),
-        }
+        static CLIENT: OnceCell<HttpClient> = OnceCell::new();
+
+        CLIENT.get_or_try_init(|| {
+            Self::new().map_err(|e| {
+                error!("Failed to create HTTP client: {}", e);
+                HttpError::ClientCreation("Failed to create HTTP client".to_string())
+            })
+        })
     }
 
     /// 使用默认配置创建客户端
@@ -55,7 +60,10 @@ impl HttpClient {
             builder = builder.danger_accept_invalid_certs(true);
         }
 
-        let client = builder.build().map_err(HttpError::ClientCreation)?;
+        let client = builder.build().map_err(|e| {
+            error!("Failed to create HTTP client: {}", e);
+            HttpError::ClientCreation("Failed to build HTTP client".to_string())
+        })?;
 
         Ok(Self {
             client,

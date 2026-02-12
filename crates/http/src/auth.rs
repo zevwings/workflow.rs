@@ -5,6 +5,8 @@ use std::str::FromStr;
 use base64::{engine::general_purpose, Engine};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION};
 
+use crate::HttpError;
+
 /// HTTP 认证信息
 ///
 /// 支持多种认证方式：
@@ -59,24 +61,36 @@ impl Authorization {
     }
 
     /// 将认证信息应用到 HTTP Headers
-    pub fn apply_to_headers(
-        &self,
-        headers: &mut HeaderMap,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn apply_to_headers(&self, headers: &mut HeaderMap) -> Result<(), HttpError> {
         match self {
             Self::Basic { username, password } => {
                 let credentials = format!("{}:{}", username, password);
                 let encoded = general_purpose::STANDARD.encode(credentials.as_bytes());
                 let value = format!("Basic {}", encoded);
-                headers.insert(AUTHORIZATION, HeaderValue::from_str(&value)?);
+                let header_value = HeaderValue::from_str(&value).map_err(|e| {
+                    error!("Invalid header value: {}", e);
+                    HttpError::InvalidHeaderValue(e.to_string())
+                })?;
+                headers.insert(AUTHORIZATION, header_value);
             }
             Self::Bearer { token } => {
                 let value = format!("Bearer {}", token);
-                headers.insert(AUTHORIZATION, HeaderValue::from_str(&value)?);
+                let header_value = HeaderValue::from_str(&value).map_err(|e| {
+                    error!("Invalid header value: {}", e);
+                    HttpError::InvalidHeaderValue(e.to_string())
+                })?;
+                headers.insert(AUTHORIZATION, header_value);
             }
             Self::Custom { header, value } => {
-                let header_name = HeaderName::from_str(header)?;
-                headers.insert(header_name, HeaderValue::from_str(value)?);
+                let header_name = HeaderName::from_str(header).map_err(|e| {
+                    error!("Invalid header name: {}", e);
+                    HttpError::InvalidHeaderName(e.to_string())
+                })?;
+                let header_value = HeaderValue::from_str(value).map_err(|e| {
+                    error!("Invalid header value: {}", e);
+                    HttpError::InvalidHeaderValue(e.to_string())
+                })?;
+                headers.insert(header_name, header_value);
             }
         }
         Ok(())

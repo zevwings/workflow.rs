@@ -4,24 +4,32 @@ use std::collections::HashMap;
 
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
+use crate::HttpError;
+
 /// 可转换为 HeaderMap 的类型
 pub trait IntoHeaderMap {
     /// 转换为 HeaderMap
-    fn into_header_map(self) -> Result<HeaderMap, Box<dyn std::error::Error + Send + Sync>>;
+    fn into_header_map(self) -> Result<HeaderMap, HttpError>;
 }
 
 impl IntoHeaderMap for HeaderMap {
-    fn into_header_map(self) -> Result<HeaderMap, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_header_map(self) -> Result<HeaderMap, HttpError> {
         Ok(self)
     }
 }
 
 impl IntoHeaderMap for HashMap<String, String> {
-    fn into_header_map(self) -> Result<HeaderMap, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_header_map(self) -> Result<HeaderMap, HttpError> {
         let mut headers = HeaderMap::new();
         for (key, value) in self {
-            let name = HeaderName::try_from(key)?;
-            let value = HeaderValue::from_str(&value)?;
+            let name = HeaderName::try_from(key).map_err(|e| {
+                error!("Invalid header name: {}", e);
+                HttpError::InvalidHeaderName(e.to_string())
+            })?;
+            let value = HeaderValue::from_str(&value).map_err(|e| {
+                error!("Invalid header value: {}", e);
+                HttpError::InvalidHeaderValue(e.to_string())
+            })?;
             headers.insert(name, value);
         }
         Ok(headers)
@@ -29,11 +37,17 @@ impl IntoHeaderMap for HashMap<String, String> {
 }
 
 impl IntoHeaderMap for Vec<(String, String)> {
-    fn into_header_map(self) -> Result<HeaderMap, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_header_map(self) -> Result<HeaderMap, HttpError> {
         let mut headers = HeaderMap::new();
         for (key, value) in self {
-            let name = HeaderName::try_from(key)?;
-            let value = HeaderValue::from_str(&value)?;
+            let name = HeaderName::try_from(key).map_err(|e| {
+                error!("Invalid header name: {}", e);
+                HttpError::InvalidHeaderName(e.to_string())
+            })?;
+            let value = HeaderValue::from_str(&value).map_err(|e| {
+                error!("Invalid header value: {}", e);
+                HttpError::InvalidHeaderValue(e.to_string())
+            })?;
             headers.insert(name, value);
         }
         Ok(headers)
@@ -41,11 +55,17 @@ impl IntoHeaderMap for Vec<(String, String)> {
 }
 
 impl<const N: usize> IntoHeaderMap for [(&str, &str); N] {
-    fn into_header_map(self) -> Result<HeaderMap, Box<dyn std::error::Error + Send + Sync>> {
+    fn into_header_map(self) -> Result<HeaderMap, HttpError> {
         let mut headers = HeaderMap::new();
         for (key, value) in self {
-            let name = HeaderName::try_from(key)?;
-            let value = HeaderValue::from_str(value)?;
+            let name = HeaderName::try_from(key).map_err(|e| {
+                error!("Invalid header name: {}", e);
+                HttpError::InvalidHeaderName(e.to_string())
+            })?;
+            let value = HeaderValue::from_str(value).map_err(|e| {
+                error!("Invalid header value: {}", e);
+                HttpError::InvalidHeaderValue(e.to_string())
+            })?;
             headers.insert(name, value);
         }
         Ok(headers)

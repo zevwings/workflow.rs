@@ -10,6 +10,7 @@ default = []
 testing = ["dep:mockito", "dep:tempfile"]
 
 [dependencies]
+once_cell.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 reqwest.workspace = true

@@ -119,7 +119,9 @@ impl CommitMessageServiceImpl {
             }),
             Err(e) => {
                 log_error!("Failed to generate commit message: {}", e.to_string());
-                Err(CommitMessageError::LLMError("Failed to generate commit message".to_string()))
+                Err(CommitMessageError::LLMError(
+                    "Failed to generate commit message".to_string(),
+                ))
             }
         }
     }
