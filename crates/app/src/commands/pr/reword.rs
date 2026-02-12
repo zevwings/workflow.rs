@@ -8,7 +8,7 @@ use domain::{
 };
 use prompt::{confirm, info, spinner, success, warning};
 
-use super::utils::generate_pull_request_body;
+use crate::commands::pr::utils::generate_pull_request_body;
 use crate::{
     bootstrap::{get_commit_summary_service, get_git_repository, get_pull_request_service},
     commands::branch::utils::branch_type_from_branch_name,

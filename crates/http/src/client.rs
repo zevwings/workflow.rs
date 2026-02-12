@@ -4,7 +4,7 @@ use std::{sync::OnceLock, time::Duration};
 
 use reqwest::blocking::Client;
 
-use super::{config::HttpClientConfig, error::HttpError, method::HttpMethod, request::Request};
+use crate::{config::HttpClientConfig, error::HttpError, method::HttpMethod, request::Request};
 
 /// HTTP 客户端
 ///

@@ -7,8 +7,8 @@ use prompt::{info, success, Spinner};
 use toolkit::log_debug;
 
 // Re-export VersionComparison from types for convenience
-pub use super::types::VersionComparison;
-use super::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
+pub use crate::commands::update::types::VersionComparison;
+use crate::commands::update::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
 
 /// 获取当前安装的版本号
 ///

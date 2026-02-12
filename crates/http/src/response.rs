@@ -5,7 +5,7 @@ use std::{collections::HashMap, time::Duration};
 use reqwest::{blocking::Response as ReqwestResponse, header::HeaderMap};
 use serde::de::DeserializeOwned;
 
-use super::{
+use crate::{
     error::{ErrorContext, HttpError},
     method::HttpMethod,
 };

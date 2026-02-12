@@ -4,7 +4,7 @@
 
 use clap::Subcommand;
 
-use super::super::args::{DryRunArgs, ForceArgs, JiraIdArg};
+use crate::commands::args::{DryRunArgs, ForceArgs, JiraIdArg};
 
 /// 分支管理子命令
 ///

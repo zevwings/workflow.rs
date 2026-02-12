@@ -3,7 +3,7 @@ use std::sync::Arc;
 use domain::{sanitize_branch_name, BranchService, BranchServiceError};
 use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
-use super::conversation::BranchNameConversation;
+use crate::branch::conversation::BranchNameConversation;
 
 /// 分支服务实现
 ///

@@ -4,7 +4,7 @@
 
 use clap::{Args, Subcommand};
 
-use super::super::args::DryRunArgs;
+use crate::commands::args::DryRunArgs;
 
 /// Commit 管理命令
 ///

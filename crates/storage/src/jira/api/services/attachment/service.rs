@@ -6,7 +6,9 @@ use std::{path::Path, sync::Arc};
 
 use domain::{AttachmentDownloadResult, JiraConfigContext, JiraError, ProgressCallback};
 
-use super::{directory::DirectoryManager, downloader::ConcurrentDownloader, entity::UrlResolver};
+use crate::jira::api::services::attachment::{
+    directory::DirectoryManager, downloader::ConcurrentDownloader, entity::UrlResolver,
+};
 use crate::jira::api::services::IssueService;
 
 /// 附件服务 trait

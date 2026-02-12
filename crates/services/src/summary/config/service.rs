@@ -9,7 +9,7 @@ use domain::{
 };
 use llm::{JsonParser, LLMExecutor};
 
-use super::ConfigAnalyzeConversation;
+use crate::summary::config::ConfigAnalyzeConversation;
 
 /// 阶段二 2.3：配置/文档分析服务
 pub(crate) struct ConfigAnalyzeService {

@@ -4,7 +4,7 @@
 
 use llm::LLMConversation;
 
-use super::service::FileStatistics;
+use crate::commit::message::service::FileStatistics;
 
 /// Commit Message 对话构建器
 pub(super) struct CommitMessageConversation {

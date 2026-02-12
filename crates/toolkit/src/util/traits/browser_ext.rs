@@ -239,7 +239,7 @@ impl BrowserExt for String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Browser, BrowserError, BrowserExt};
+    use crate::util::traits::{Browser, BrowserError, BrowserExt};
 
     // ============================================================================
     // Browser 枚举测试

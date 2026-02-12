@@ -7,7 +7,7 @@ use std::path::Path;
 use domain::{BlameLineInfo, GitError};
 use git2::BlameOptions;
 
-use super::GitContext;
+use crate::git::services::GitContext;
 
 /// Blame 服务接口
 pub trait BlameService: Send + Sync {

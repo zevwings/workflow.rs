@@ -14,7 +14,7 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 
-use super::Backend;
+use crate::backend::Backend;
 
 /// 真实终端后端
 ///

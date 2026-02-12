@@ -8,13 +8,13 @@ use std::path::PathBuf;
 use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
 use toolkit::{backup, cleanup_backup, rollback, Platform};
 
-use super::{
+use crate::bootstrap::get_path_service;
+use crate::commands::update::{
     download::{build_download_url, download_file, extract_archive, verify_file_checksum},
     types::TempDirManager,
     verify::{run_installer, verify_installation},
     version::{compare_versions, get_current_version, get_target_version, VersionComparison},
 };
-use crate::bootstrap::get_path_service;
 
 /// 更新命令
 pub struct UpdateCommand {

@@ -13,8 +13,8 @@ use std::{
 use prompt::{success, warning, Spinner};
 use toolkit::{detect_shell, get_completion_files_for_shell, log_debug, shell_to_string};
 
-use super::types::VerificationResult;
 use crate::bootstrap::get_path_service;
+use crate::commands::update::types::VerificationResult;
 
 /// 补全脚本对应的命令名（与 pathService 的 binary 一致，单命令）
 const COMMAND_NAME: &str = "workflow";

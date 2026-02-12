@@ -7,7 +7,7 @@ use reqwest::{
     header::HeaderMap,
 };
 
-use super::{auth::Authorization, error::HttpError};
+use crate::{auth::Authorization, error::HttpError};
 
 /// Multipart 请求构建器
 ///

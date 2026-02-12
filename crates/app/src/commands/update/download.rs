@@ -15,7 +15,7 @@ use toolkit::{
     verify_checksum, SizeExt,
 };
 
-use super::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
+use crate::commands::update::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
 
 /// 构建下载 URL
 ///

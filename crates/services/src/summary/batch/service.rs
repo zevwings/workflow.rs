@@ -7,7 +7,7 @@ use std::{collections::HashMap, sync::Arc};
 use domain::{CommitBatchAnalysis, CommitFileChange, CommitFileClassification, CommitSummaryError};
 use llm::{JsonParser, LLMExecutor};
 
-use super::BatchAnalyzeConversation;
+use crate::summary::batch::BatchAnalyzeConversation;
 
 // ── Service ───────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@
 
 use std::{fs, path::PathBuf, process::Command};
 
-use super::{error::RollbackError, reload::reload_shell};
+use crate::rollback::{error::RollbackError, reload::reload_shell};
 use crate::shell::{config_file_path, detect_shell};
 
 /// 清理备份

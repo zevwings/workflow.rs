@@ -3,12 +3,12 @@
 use domain::GlobalConfig;
 use prompt::{br, info, separator, SelectBuilder};
 
-use super::{
+use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
+use crate::interactive::core::platform::{
     account::{remove_account_generic, switch_account_generic, switch_to_account},
     traits::{GlobalConfigAccessor, PlatformAccount, PlatformConfigurator, PlatformSettings},
     types::{AccountAction, AccountSetMode},
 };
-use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
 
 /// 配置平台账户的主入口
 pub fn configure_platform<S, A, F, U>(

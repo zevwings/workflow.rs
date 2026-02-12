@@ -2,8 +2,8 @@
 
 use prompt::{spinner, success};
 
-use super::utils::get_jira_id_interactive;
 use crate::bootstrap;
+use crate::commands::jira::utils::get_jira_id_interactive;
 
 /// Jira Comment 命令
 pub struct JiraCommentCommand {

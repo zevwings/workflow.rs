@@ -10,7 +10,7 @@ use domain::{
 };
 use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
-use super::conversation::CommitMessageConversation;
+use crate::commit::message::conversation::CommitMessageConversation;
 
 /// 分析输入数据
 struct AnalysisInput {

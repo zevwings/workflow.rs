@@ -1,10 +1,10 @@
 use domain::GitError;
 
-use super::{
+use crate::git::services::context::GitContext;
+use crate::git::services::hooks::{
     pre_commit_hooks, HookContext, HookDiscoverer, HookResult, HookTool, HookToolDetector,
     ScriptHookExecutor, ToolHookExecutor,
 };
-use crate::git::services::context::GitContext;
 
 /// Hook 服务接口
 ///

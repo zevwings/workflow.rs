@@ -6,7 +6,7 @@ use domain::{GitError, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteSc
 use git2::{Direction, PushOptions};
 use glob::Pattern;
 
-use super::GitContext;
+use crate::git::services::GitContext;
 
 /// Tag 服务接口
 pub trait TagService: Send + Sync {

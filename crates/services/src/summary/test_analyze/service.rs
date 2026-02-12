@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use domain::{CommitFileClassification, CommitSummaryError, CommitTestAnalysis};
 use llm::{JsonParser, LLMExecutor};
 
-use super::TestAnalyzeConversation;
+use crate::summary::test_analyze::TestAnalyzeConversation;
 
 /// 阶段二 2.4：测试文件分析服务
 pub(crate) struct TestAnalyzeService {

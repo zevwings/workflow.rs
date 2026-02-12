@@ -15,7 +15,7 @@ use domain::{
 };
 use toolkit::{file, log_debug};
 
-use super::entity::JiraConfig;
+use crate::jira::api::services::status::entity::JiraConfig;
 use crate::jira::JiraClient;
 
 /// 状态服务接口

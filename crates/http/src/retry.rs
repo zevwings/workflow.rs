@@ -7,7 +7,7 @@ use std::{
 
 use rand::Rng;
 
-use super::error::HttpError;
+use crate::error::HttpError;
 
 /// 重试结果
 ///

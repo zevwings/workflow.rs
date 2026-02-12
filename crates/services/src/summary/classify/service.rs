@@ -10,7 +10,7 @@ use domain::{
 };
 use llm::{JsonParser, LLMExecutor};
 
-use super::FileClassifyConversation;
+use crate::summary::classify::FileClassifyConversation;
 
 /// 阶段一：文件分类服务
 pub(crate) struct FileClassifyService {

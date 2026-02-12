@@ -3,8 +3,8 @@
 use domain::extract_jira_project;
 use prompt::{spinner, success};
 
-use super::utils::get_jira_id_interactive;
 use crate::bootstrap;
+use crate::commands::jira::utils::get_jira_id_interactive;
 
 /// Jira Setup 命令
 pub struct JiraAssignCommand {

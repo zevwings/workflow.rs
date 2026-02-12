@@ -16,7 +16,7 @@ use flate2::read::GzDecoder;
 use tar::Archive;
 use zip::ZipArchive;
 
-use super::{directory, FileError};
+use crate::util::fs::{directory, FileError};
 
 // ============================================================================
 // 归档文件处理函数

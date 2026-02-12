@@ -6,7 +6,7 @@ use std::{collections::HashMap, fmt, time::Duration};
 
 use reqwest::{header::HeaderMap, Error};
 
-use super::HttpMethod;
+use crate::HttpMethod;
 
 /// 错误上下文
 ///

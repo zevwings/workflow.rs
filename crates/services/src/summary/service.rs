@@ -11,7 +11,7 @@ use domain::{
 };
 use llm::{LLMConfigContext, LLMExecutor};
 
-use super::{
+use crate::summary::{
     BatchAnalyzeService, ConfigAnalyzeService, FileClassifyService, LogicAnalyzeService,
     SummaryAnalyzeInput, SummaryAnalyzeService, TestAnalyzeService,
 };

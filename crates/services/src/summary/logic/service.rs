@@ -7,7 +7,7 @@ use std::{collections::HashMap, sync::Arc};
 use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, CommitSummaryError};
 use llm::{JsonParser, LLMExecutor};
 
-use super::LogicAnalyzeConversation;
+use crate::summary::logic::LogicAnalyzeConversation;
 
 /// 阶段二 2.2：核心逻辑分析服务
 pub(crate) struct LogicAnalyzeService {

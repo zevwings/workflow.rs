@@ -3,11 +3,11 @@
 use domain::GlobalConfig;
 use prompt::{br, confirm, info, success, warning, SelectBuilder};
 
-use super::{
+use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
+use crate::interactive::core::platform::{
     traits::{GlobalConfigAccessor, PlatformAccount, PlatformConfigurator, PlatformSettings},
     types::AccountSetMode,
 };
-use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
 
 /// 添加账户的通用逻辑
 pub fn add_account_generic<S, A, F>(

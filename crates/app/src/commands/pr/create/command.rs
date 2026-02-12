@@ -2,7 +2,7 @@ use domain::{get_change_types_by_branch_type, BranchType, GitRepository, JiraIss
 use prompt::{error, info, input, spinner, success, warning};
 use toolkit::{log_debug, log_error};
 
-use super::super::utils::{generate_pull_request_body, generate_pull_request_title};
+use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
 use crate::{
     bootstrap,
     commands::{

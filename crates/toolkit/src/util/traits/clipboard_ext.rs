@@ -92,7 +92,7 @@ impl ClipboardExt for String {
 
 #[cfg(test)]
 mod tests {
-    use super::ClipboardExt;
+    use crate::util::traits::ClipboardExt;
 
     // ============================================================================
     // 不支持剪贴板的平台测试（musl 或 Linux ARM64）

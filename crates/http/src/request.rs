@@ -11,7 +11,7 @@ use reqwest::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use super::{
+use crate::{
     auth::Authorization,
     client::HttpClient,
     error::{ErrorContext, HttpError},

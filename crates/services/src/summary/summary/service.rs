@@ -3,7 +3,7 @@ use std::sync::Arc;
 use domain::{CommitSummaryAnalysis, CommitSummaryError};
 use llm::{JsonParser, LLMExecutor};
 
-use super::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
+use crate::summary::summary::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
 
 // ── Service ───────────────────────────────────────────────────
 

@@ -46,7 +46,7 @@ impl SizeExt for u64 {
 mod tests {
     use rstest::rstest;
 
-    use super::SizeExt;
+    use crate::util::traits::SizeExt;
 
     // 基础格式化测试 - 覆盖所有单位
     #[rstest]

@@ -3,8 +3,8 @@
 use domain::JiraIssue;
 use prompt::{info, spinner, success};
 
-use super::{utils::get_jira_id_interactive, OutputFormat};
 use crate::bootstrap;
+use crate::commands::jira::{utils::get_jira_id_interactive, OutputFormat};
 
 /// Jira Info 命令
 pub struct JiraInfoCommand {

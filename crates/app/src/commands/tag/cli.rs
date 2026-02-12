@@ -4,7 +4,7 @@
 
 use clap::Subcommand;
 
-use super::super::args::{DryRunArgs, ForceArgs};
+use crate::commands::args::{DryRunArgs, ForceArgs};
 
 /// Tag 管理子命令
 ///

@@ -78,7 +78,7 @@ impl Truncate for String {
 
 #[cfg(test)]
 mod tests {
-    use super::Truncate;
+    use crate::util::traits::Truncate;
 
     #[test]
     fn test_truncate_short_text() {

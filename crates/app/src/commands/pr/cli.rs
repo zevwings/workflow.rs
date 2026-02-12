@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::super::args::{DryRunArgs, ForceArgs, JiraIdArg};
+use crate::commands::args::{DryRunArgs, ForceArgs, JiraIdArg};
 
 /// Pull Request 管理子命令
 #[derive(Subcommand)]

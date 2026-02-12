@@ -12,7 +12,7 @@ use domain::GitError;
 use toolkit::log_info;
 use wait_timeout::ChildExt;
 
-use super::context::{HookContext, HookResult};
+use crate::git::services::hooks::context::{HookContext, HookResult};
 
 /// 默认超时时间（5 分钟，外部工具可能需要更长时间）
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
