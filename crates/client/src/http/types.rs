@@ -2,8 +2,9 @@
 //!
 //! 纯数据结构，使用标准库类型，不依赖 reqwest。
 
-use std::collections::HashMap;
+use std::fmt::Display;
 use std::time::Duration;
+use std::{collections::HashMap, fmt::Formatter};
 
 use crate::{ErrorContext, HttpError};
 
@@ -30,7 +31,30 @@ pub struct HttpRequest {
     pub timeout: Option<Duration>,
 }
 
+impl Display for HttpRequest {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "HttpRequest {{ method: {}, url: {}, headers: {:?}, query: {:?}, body: {:?}, auth: {:?}, timeout: {:?} }}", self.method, self.url, self.headers, self.query, self.body, self.auth, self.timeout)
+    }
+}
+
 impl HttpRequest {
+    pub fn new(
+        method: HttpMethod,
+        url: impl Into<String>,
+        body: Option<serde_json::Value>,
+        query: Option<serde_json::Value>,
+    ) -> Self {
+        Self {
+            method,
+            url: url.into(),
+            headers: HashMap::new(),
+            query,
+            body,
+            auth: None,
+            timeout: None,
+        }
+    }
+
     /// 创建 GET 请求
     pub fn get(url: impl Into<String>) -> Self {
         Self {
@@ -219,5 +243,11 @@ impl HttpResponse {
             message: "No error message found".to_string(),
             context: ErrorContext::new(&self.url, self.method).into_box(),
         })
+    }
+}
+
+impl Display for HttpResponse {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "HttpResponse {{ status: {}, headers: {:?}, body: {:?}, url: {}, method: {}, duration: {:?} }}", self.status, self.headers, self.body, self.url, self.method, self.duration)
     }
 }

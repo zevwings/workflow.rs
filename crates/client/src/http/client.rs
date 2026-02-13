@@ -73,37 +73,81 @@ pub trait HttpClient: Send + Sync + 'static {
 /// let mp = MultipartRequest::new().text("name", "value").file("file", path);
 /// let response = holder.post("/upload").multipart(mp).send()?;
 /// ```
-pub struct HttpClientHolder(Arc<dyn HttpClient>);
+pub struct HttpClientHolder {
+    inner: Arc<dyn HttpClient>,
+}
 
 impl HttpClientHolder {
     /// 从 `Arc<dyn HttpClient>` 创建
     pub fn new(inner: Arc<dyn HttpClient>) -> Self {
-        Self(inner)
+        Self { inner }
     }
 
     /// GET 请求
     pub fn get(&self, url: &str) -> RequestBuilder<'_> {
-        RequestBuilder::new(self.0.as_ref(), HttpMethod::GET, self.0.resolve_url(url))
+        RequestBuilder::new(
+            self.inner.as_ref(),
+            HttpMethod::GET,
+            self.inner.resolve_url(url),
+        )
     }
 
     /// POST 请求
     pub fn post(&self, url: &str) -> RequestBuilder<'_> {
-        RequestBuilder::new(self.0.as_ref(), HttpMethod::POST, self.0.resolve_url(url))
+        RequestBuilder::new(
+            self.inner.as_ref(),
+            HttpMethod::POST,
+            self.inner.resolve_url(url),
+        )
     }
 
     /// PUT 请求
     pub fn put(&self, url: &str) -> RequestBuilder<'_> {
-        RequestBuilder::new(self.0.as_ref(), HttpMethod::PUT, self.0.resolve_url(url))
+        RequestBuilder::new(
+            self.inner.as_ref(),
+            HttpMethod::PUT,
+            self.inner.resolve_url(url),
+        )
     }
 
     /// DELETE 请求
     pub fn delete(&self, url: &str) -> RequestBuilder<'_> {
-        RequestBuilder::new(self.0.as_ref(), HttpMethod::DELETE, self.0.resolve_url(url))
+        RequestBuilder::new(
+            self.inner.as_ref(),
+            HttpMethod::DELETE,
+            self.inner.resolve_url(url),
+        )
     }
 
     /// PATCH 请求
     pub fn patch(&self, url: &str) -> RequestBuilder<'_> {
-        RequestBuilder::new(self.0.as_ref(), HttpMethod::PATCH, self.0.resolve_url(url))
+        RequestBuilder::new(
+            self.inner.as_ref(),
+            HttpMethod::PATCH,
+            self.inner.resolve_url(url),
+        )
+    }
+
+    /// 直接执行 HTTP 请求
+    ///
+    /// 提供给需要直接构建 `HttpRequest` 的场景使用，避免重复的 match 代码。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,ignore
+    /// let req = HttpRequest {
+    ///     method: HttpMethod::POST,
+    ///     url: "https://api.example.com/users".to_string(),
+    ///     headers: headers,
+    ///     body: Some(json_body),
+    ///     query: None,
+    ///     auth: None,
+    ///     timeout: None,
+    /// };
+    /// let response = holder.execute(req)?;
+    /// ```
+    pub fn execute(&self, req: HttpRequest) -> Result<HttpResponse, HttpError> {
+        self.inner.execute(req)
     }
 }
 

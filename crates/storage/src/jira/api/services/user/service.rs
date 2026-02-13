@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use domain::{JiraError, JiraUser};
 
-use crate::jira::client::{core::JiraClient, types::JiraResponseSerializable};
+use client::JiraClient;
 
 pub trait UserService: Send + Sync {
     fn me(&self) -> Result<JiraUser, JiraError>;

@@ -3,13 +3,14 @@
 use std::sync::Arc;
 
 use di::{bind, Container, InjectionError, Scope};
-use domain::{JiraConfigContext, JiraRepository, JiraWorkHistoryRepository, PathService};
+use domain::{JiraRepository, JiraWorkHistoryRepository, PathService};
 
 use crate::jira::{
-    AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, JiraClient,
-    JiraClientImpl, JiraRepositoryImpl, JiraWorkHistoryRepositoryImpl, StatusService,
-    StatusServiceImpl, UserService, UserServiceImpl, WorkHistoryService, WorkHistoryServiceImpl,
+    AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, JiraRepositoryImpl,
+    JiraWorkHistoryRepositoryImpl, StatusService, StatusServiceImpl, UserService, UserServiceImpl,
+    WorkHistoryService, WorkHistoryServiceImpl,
 };
+use client::{JiraClient, JiraConfigContext};
 
 /// 注册 Jira 相关服务
 ///
@@ -17,13 +18,6 @@ use crate::jira::{
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
 pub(super) fn register_jira() -> Result<(), InjectionError> {
-    // Jira Client
-    bind!(dyn JiraClient, |c: &Container| {
-        let context = c.get::<dyn JiraConfigContext>()?;
-        Ok(Arc::new(JiraClientImpl::new(context)))
-    })
-    .in_scope(Scope::Singleton)?;
-
     // Issue Service
     bind!(dyn IssueService, |c: &Container| {
         let jira_client = c.get::<dyn JiraClient>()?;

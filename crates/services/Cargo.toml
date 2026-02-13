@@ -13,7 +13,6 @@ testing = []
 client.workspace = true
 domain.workspace = true
 toolkit.workspace = true
-#llm.workspace = true
 di.workspace = true
 serde_json.workspace = true
 toml.workspace = true

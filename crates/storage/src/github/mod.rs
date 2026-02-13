@@ -13,13 +13,13 @@
 //! - `services/` - 内部服务层，包含具体业务逻辑
 //! - `repository.rs` - Repository 实现，作为薄委托层
 
-mod client;
+// mod client;
 mod repository;
 mod services;
 mod types;
 
 // 仅在本 crate 内（registry）使用
-pub(crate) use client::{GitHubClient, GitHubClientImpl};
+// pub(crate) use client::{GitHubClient, GitHubClientImpl};
 pub(crate) use repository::GitHubRepositoryImpl;
 pub(crate) use services::{
     PullRequestDiffService, PullRequestDiffServiceImpl, PullRequestMutationService,

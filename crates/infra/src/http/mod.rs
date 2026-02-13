@@ -32,7 +32,9 @@ mod client;
 mod error;
 mod multipart;
 mod response;
+mod rest;
 mod retry;
 
 pub use client::ReqwestHttpClient;
+pub use rest::RestRequestBuilder;
 pub use retry::{execute_with_retry, RetryConfig};

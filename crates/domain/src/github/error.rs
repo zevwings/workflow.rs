@@ -19,7 +19,11 @@ pub enum GitHubError {
 
     #[error("速率限制: {0}")]
     RateLimitExceeded(String),
+}
 
-    #[error("配置错误: {0}")]
-    ConfigError(String),
+/// 从 GitHubClientError 转换为 GitHubError
+impl From<client::GitHubClientError> for GitHubError {
+    fn from(err: client::GitHubClientError) -> Self {
+        GitHubError::ApiError(err.to_string())
+    }
 }

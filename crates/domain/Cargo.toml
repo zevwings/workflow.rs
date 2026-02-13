@@ -10,6 +10,7 @@ default = []
 testing = []
 
 [dependencies]
+client.workspace = true
 serde.workspace = true
 toolkit.workspace = true
 serde_json.workspace = true

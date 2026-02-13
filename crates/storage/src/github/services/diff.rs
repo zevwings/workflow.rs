@@ -8,7 +8,8 @@ use domain::GitHubError;
 use serde_json::Value;
 use toolkit::log_debug;
 
-use crate::github::{client::GitHubClient, services::ServiceContext, types::PullRequestFile};
+use crate::github::{services::ServiceContext, types::PullRequestFile};
+use client::GitHubClient;
 
 const MAX_FILES: usize = 50;
 const MAX_LINES: usize = 15000;

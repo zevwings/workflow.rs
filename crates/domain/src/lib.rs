@@ -83,13 +83,13 @@ pub use git::{
     WorkingTreeStatus,
 };
 // Re-export external service types
-pub use github::{GitHubContext, GitHubError, GitHubRepository, GitHubUser};
+pub use github::{GitHubError, GitHubRepository, GitHubUser};
 pub use jira::{
     extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
     AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraComponent,
-    JiraConfigContext, JiraError, JiraIssue, JiraPriority, JiraRepository, JiraStatusConfig,
-    JiraTransition, JiraUser, JiraWorkHistoryRepository, ProgressCallback, ProjectStatusConfig,
-    StatusConfigResult, WorkHistoryEntry,
+    JiraError, JiraIssue, JiraPriority, JiraRepository, JiraStatusConfig, JiraTransition, JiraUser,
+    JiraWorkHistoryRepository, ProgressCallback, ProjectStatusConfig, StatusConfigResult,
+    WorkHistoryEntry,
 };
 pub use path::{
     Dir, PathError, PathService, COMPLETIONS_DIR, COMPLETIONS_FILE, COMPLETION_CACHE_DIR,

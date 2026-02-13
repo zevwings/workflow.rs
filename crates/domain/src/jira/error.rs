@@ -8,9 +8,6 @@ pub enum JiraError {
     #[error("Jira API 调用失败: {0}")]
     ApiError(String),
 
-    #[error("认证失败")]
-    AuthenticationFailed,
-
     #[error("Issue 不存在: {0}")]
     IssueNotFound(String),
 
@@ -31,4 +28,11 @@ pub enum JiraError {
 
     #[error("配置错误: {0}")]
     ConfigError(String),
+}
+
+/// 从 JiraClientError 转换为 JiraError
+impl From<client::JiraClientError> for JiraError {
+    fn from(err: client::JiraClientError) -> Self {
+        JiraError::ApiError(err.to_string())
+    }
 }

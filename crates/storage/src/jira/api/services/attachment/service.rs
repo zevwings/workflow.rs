@@ -4,7 +4,8 @@
 
 use std::{path::Path, sync::Arc};
 
-use domain::{AttachmentDownloadResult, JiraConfigContext, JiraError, ProgressCallback};
+use client::JiraConfigContext;
+use domain::{AttachmentDownloadResult, JiraError, ProgressCallback};
 
 use crate::jira::api::services::attachment::{
     directory::DirectoryManager, downloader::ConcurrentDownloader, entity::UrlResolver,

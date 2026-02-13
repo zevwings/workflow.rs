@@ -4,9 +4,9 @@ mod llm_context;
 
 use std::sync::Arc;
 
-use client::LLMConfigContext;
+use client::{GitHubConfigContext, JiraConfigContext, LLMConfigContext};
 use di::{bind, Container, InjectionError, Scope};
-use domain::{GitHubContext, GlobalConfigRepository, JiraConfigContext, PathService};
+use domain::{GlobalConfigRepository, PathService};
 
 pub use github_context::GitHubContextImpl;
 pub use jira_context::JiraConfigContextImpl;
@@ -26,7 +26,7 @@ pub fn register_context() -> Result<(), InjectionError> {
     })
     .in_scope(Scope::Singleton)?;
 
-    // Jira Config Context
+    // Jira Config Context - Domain层
     bind!(dyn JiraConfigContext, |c: &Container| {
         let global_config = c.get::<dyn GlobalConfigRepository>()?;
         let path_service = c.get::<dyn PathService>()?;
@@ -37,8 +37,8 @@ pub fn register_context() -> Result<(), InjectionError> {
     })
     .in_scope(Scope::Singleton)?;
 
-    // GitHub Config Context
-    bind!(dyn GitHubContext, |c: &Container| {
+    // GitHub Config Context - Domain层
+    bind!(dyn GitHubConfigContext, |c: &Container| {
         let global_config = c.get::<dyn GlobalConfigRepository>()?;
         Ok(Arc::new(GitHubContextImpl::new(global_config)))
     })

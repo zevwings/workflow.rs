@@ -10,14 +10,21 @@
 //! - GitHub: `GitHubClient` trait
 //! - Jira: `JiraClient` trait
 
+mod github;
 mod http;
+mod jira;
 mod llm;
 
+pub use github::{
+    GitHubClient, GitHubClientError, GitHubConfigContext, GitHubErrorResource, GitHubErrorResponse,
+    GitHubRequest, GitHubResponse,
+};
 pub use http::{
     Authorization, ErrorContext, HttpClient, HttpClientConfig, HttpClientExt, HttpClientHolder,
     HttpError, HttpMethod, HttpRequest, HttpResponse, MultipartPart, MultipartRequest,
     RequestBuilder,
 };
+pub use jira::{JiraClient, JiraClientError, JiraConfigContext, JiraRequest, JiraResponse};
 pub use llm::{
     ChatCompletionChoice, ChatCompletionResponse, ChatMessage, IntoLLMConfig,
     IntoLLMRequestParameters, LLMClient, LLMConfigContext, LLMConversation, LLMError,

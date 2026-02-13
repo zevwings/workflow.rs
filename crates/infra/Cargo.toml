@@ -9,7 +9,7 @@ description = "基础设施层，提供跨领域的基础设施能力"
 client.workspace = true
 toolkit.workspace = true
 di.workspace = true
-reqwest = { workspace = true, default-features = false, features = ["json", "blocking", "multipart", "rustls-tls"] }
+reqwest = { workspace = true, default-features = false, features = ["json", "blocking", "multipart", "rustls", "query"] }
 serde.workspace = true
 serde_json.workspace = true
 base64.workspace = true

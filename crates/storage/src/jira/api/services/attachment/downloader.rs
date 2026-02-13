@@ -10,9 +10,9 @@ use std::{
     thread,
 };
 
-use domain::{JiraAttachment, JiraConfigContext, JiraError};
-use http::Authorization;
-use reqwest::header::HeaderMap;
+use client::{Authorization, JiraConfigContext};
+use domain::{JiraAttachment, JiraError};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 
 /// 进度回调函数类型
 pub type ProgressCallback = Box<dyn Fn(&str) + Send + Sync>;
@@ -101,8 +101,22 @@ impl FileDownloader {
         if !is_cloudfront {
             let (email, api_token) = self.config_context.get_auth()?;
             let auth = Authorization::basic(email, api_token);
-            auth.apply_to_headers(&mut headers)
-                .map_err(|e| JiraError::ApiError(format!("Failed to apply auth headers: {}", e)))?;
+
+            // 手动将 Authorization 转换为 header
+            if let Authorization::Basic { username, password } = auth {
+                let credentials = format!("{}:{}", username, password);
+                let encoded = base64::Engine::encode(
+                    &base64::engine::general_purpose::STANDARD,
+                    credentials.as_bytes(),
+                );
+                let auth_value = format!("Basic {}", encoded);
+                headers.insert(
+                    AUTHORIZATION,
+                    HeaderValue::from_str(&auth_value).map_err(|e| {
+                        JiraError::ApiError(format!("Failed to create auth header: {}", e))
+                    })?,
+                );
+            }
         }
 
         let request = client.get(url).headers(headers.clone());
@@ -124,9 +138,22 @@ impl FileDownloader {
             }
 
             let auth = Authorization::basic(email, api_token);
-            auth.apply_to_headers(&mut retry_headers).map_err(|e| {
-                JiraError::ApiError(format!("Failed to apply retry auth headers: {}", e))
-            })?;
+
+            // 手动将 Authorization 转换为 header
+            if let Authorization::Basic { username, password } = auth {
+                let credentials = format!("{}:{}", username, password);
+                let encoded = base64::Engine::encode(
+                    &base64::engine::general_purpose::STANDARD,
+                    credentials.as_bytes(),
+                );
+                let auth_value = format!("Basic {}", encoded);
+                retry_headers.insert(
+                    AUTHORIZATION,
+                    HeaderValue::from_str(&auth_value).map_err(|e| {
+                        JiraError::ApiError(format!("Failed to create retry auth header: {}", e))
+                    })?,
+                );
+            }
 
             let retry_request = client.get(url).headers(retry_headers);
 

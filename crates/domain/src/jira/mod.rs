@@ -3,7 +3,6 @@
 //! 包含 Jira 相关的实体、仓储接口和错误类型
 
 pub mod api;
-pub mod context;
 pub mod error;
 pub mod history;
 
@@ -13,6 +12,6 @@ pub use api::{
     JiraRepository, JiraStatusConfig, JiraTransition, JiraUser, ProgressCallback,
     ProjectStatusConfig, StatusConfigResult,
 };
-pub use context::JiraConfigContext;
+
 pub use error::JiraError;
 pub use history::{DeleteHistoryResult, JiraWorkHistoryRepository, WorkHistoryEntry};

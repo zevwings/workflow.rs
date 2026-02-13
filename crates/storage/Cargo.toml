@@ -11,8 +11,7 @@ testing = ["dep:tempfile"]
 
 [dependencies]
 domain.workspace = true
-http.workspace = true
-#llm.workspace = true
+client.workspace = true
 toolkit.workspace = true
 di.workspace = true
 

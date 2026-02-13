@@ -110,7 +110,7 @@ impl LLMClient for LLMClientImpl {
 
         // 发送请求
         let response =
-            self.holder.post(&llm_config.url).auth(llm_config.auth).body(&payload)?.send()?;
+            self.holder.post(&llm_config.url).auth(llm_config.auth).body(payload).send()?;
 
         // 检查 HTTP 状态码
         if !response.is_success() {
