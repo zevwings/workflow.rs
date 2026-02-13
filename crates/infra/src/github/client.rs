@@ -145,18 +145,6 @@ impl GitHubClient for GitHubClientImpl {
             .execute()
             .map_err(|e| GitHubClientError::ApiError(format!("Request failed: {}", e)))?;
 
-        // if response.is_success() {
-        //     // 记录成功响应的内容（如果可以解析为 JSON）
-        //     if let Ok(json) = response.json::<Value>() {
-        //         log_debug!("GitHub API response body: {}", json);
-        //     }
-        //     Ok(GitHubResponse::new(response))
-        // } else {
-        //     // 记录错误响应
-        //     let error_message = response.get_error_message().map_err(|e| e.to_string()).unwrap_or_default();
-        //     log_debug!("GitHub API error response: {}", error_message);
-        //     Err(self.convert_to_github_error(response))
-        // }
         if response.is_success() {
             // 记录成功响应的内容（如果可以解析为 JSON）
             if let Ok(json) = response.json::<Value>() {
@@ -171,7 +159,5 @@ impl GitHubClient for GitHubClientImpl {
             );
             Err(self.convert_to_github_error(response))
         }
-
-        // Ok(GitHubResponse::new(response))
     }
 }

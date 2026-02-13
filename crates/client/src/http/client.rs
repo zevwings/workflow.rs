@@ -6,8 +6,8 @@
 
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use super::{HttpError, HttpMethod, HttpRequest, HttpResponse};
-use super::{MultipartRequest, RequestBuilder};
+use crate::http::{HttpError, HttpMethod, HttpRequest, HttpResponse};
+use crate::http::{MultipartRequest, RequestBuilder};
 
 /// HTTP 客户端 trait
 ///
@@ -27,7 +27,7 @@ pub trait HttpClient: Send + Sync + 'static {
         multipart: MultipartRequest,
         query: Option<serde_json::Value>,
         headers: HashMap<String, String>,
-        auth: Option<super::Authorization>,
+        auth: Option<crate::http::Authorization>,
         timeout: Option<Duration>,
     ) -> Result<HttpResponse, HttpError>;
 

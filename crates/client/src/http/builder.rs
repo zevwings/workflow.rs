@@ -5,8 +5,10 @@
 
 use std::{collections::HashMap, time::Duration};
 
-use super::{Authorization, ErrorContext, HttpClient, HttpError, HttpMethod, MultipartRequest};
-use super::{HttpRequest, HttpResponse};
+use crate::http::{
+    Authorization, ErrorContext, HttpClient, HttpError, HttpMethod, MultipartRequest,
+};
+use crate::http::{HttpRequest, HttpResponse};
 
 /// HTTP 请求 Builder
 ///

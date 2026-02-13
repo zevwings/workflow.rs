@@ -6,9 +6,7 @@ use std::fmt::Display;
 use std::time::Duration;
 use std::{collections::HashMap, fmt::Formatter};
 
-use crate::{ErrorContext, HttpError};
-
-use super::{Authorization, HttpMethod};
+use crate::http::{Authorization, ErrorContext, HttpError, HttpMethod};
 
 /// HTTP 请求（纯数据）
 ///

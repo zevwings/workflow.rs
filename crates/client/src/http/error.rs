@@ -5,7 +5,7 @@
 
 use std::{collections::HashMap, error::Error, fmt, sync::Arc, time::Duration};
 
-use super::{method::ParseMethodError, HttpMethod};
+use crate::http::{method::ParseMethodError, HttpMethod};
 
 /// 错误上下文
 ///
@@ -313,7 +313,7 @@ mod tests {
 
     #[test]
     fn test_parse_method_error_converts_to_http_error() {
-        use super::super::HttpMethod;
+        use crate::http::HttpMethod;
 
         let err: HttpError = "INVALID".parse::<HttpMethod>().unwrap_err().into();
         assert!(matches!(err, HttpError::InvalidMethod(_)));

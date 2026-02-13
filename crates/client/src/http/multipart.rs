@@ -4,7 +4,7 @@
 
 use std::{collections::HashMap, path::PathBuf, time::Duration};
 
-use super::{Authorization, ErrorContext, HttpError, HttpMethod};
+use crate::http::{Authorization, ErrorContext, HttpError, HttpMethod};
 
 /// Multipart 表单部分
 #[derive(Debug, Clone)]
