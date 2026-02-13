@@ -21,7 +21,7 @@ pub fn get_jira_id_interactive(
         Ok(id)
     } else {
         // 交互式输入
-        let id = input!("请输入您的 JIRA 工单 ID（例如: PROJ-123）:")
+        let id = input!("Please enter your JIRA ticket ID (e.g.: PROJ-123):")
             .validator(|input: &str| {
                 validate_jira_ticket_format(input)
                     .map_err(|e| format!("无效的 JIRA ID 格式: {}", e))
@@ -53,7 +53,9 @@ pub fn get_jira_id_interactive_optional(
         Ok(Some(id))
     } else {
         // 交互式输入
-        let id = input!("请输入您的 JIRA 工单 ID（可选，按 Enter 跳过）:").prompt().ok();
+        let id = input!("Please enter your JIRA ticket ID (optional, press Enter to skip):")
+            .prompt()
+            .ok();
 
         if let Some(id) = id {
             let trimmed = id.trim();

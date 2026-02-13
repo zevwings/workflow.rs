@@ -4,8 +4,6 @@
 
 use client::LLMConversation;
 
-use crate::summary::prompt;
-
 /// 提交文件分类对话
 pub(crate) struct FileClassifyConversation {
     input_json: String,
@@ -21,7 +19,7 @@ impl FileClassifyConversation {
 
 impl LLMConversation for FileClassifyConversation {
     fn get_system_prompt(&self) -> String {
-        prompt::classify_files().to_string()
+        include_str!("prompt.md").to_string()
     }
 
     fn get_user_prompt(&self) -> String {

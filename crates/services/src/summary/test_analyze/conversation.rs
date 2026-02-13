@@ -1,7 +1,5 @@
 use client::LLMConversation;
 
-use crate::summary::prompt;
-
 /// 测试文件分析对话
 pub(crate) struct TestAnalyzeConversation {
     user_prompt: String,
@@ -17,7 +15,7 @@ impl TestAnalyzeConversation {
 
 impl LLMConversation for TestAnalyzeConversation {
     fn get_system_prompt(&self) -> String {
-        prompt::analyze_tests().to_string()
+        include_str!("prompt.md").to_string()
     }
 
     fn get_user_prompt(&self) -> String {
