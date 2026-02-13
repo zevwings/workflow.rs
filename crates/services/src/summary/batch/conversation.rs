@@ -30,7 +30,7 @@ impl LLMConversation for BatchAnalyzeConversation {
 
     fn get_max_tokens(&self) -> Option<u32> {
         // Batch analysis for mass operations
-        Some(6000)
+        None
     }
 
     fn get_temperature(&self) -> f32 {

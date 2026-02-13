@@ -27,8 +27,7 @@ impl LLMConversation for ConfigAnalyzeConversation {
     }
 
     fn get_max_tokens(&self) -> Option<u32> {
-        // Config/doc analysis processes fewer files
-        Some(6000)
+        None
     }
 
     fn get_temperature(&self) -> f32 {

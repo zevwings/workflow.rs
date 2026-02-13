@@ -27,10 +27,7 @@ impl LLMConversation for FileClassifyConversation {
     }
 
     fn get_max_tokens(&self) -> Option<u32> {
-        // Set a very high token limit for file classification to handle massive commits.
-        // With the optimized prompt instructing representative sampling for by_status,
-        // this should be more than enough even for 500+ file commits.
-        Some(32000)
+        None
     }
 
     fn get_temperature(&self) -> f32 {

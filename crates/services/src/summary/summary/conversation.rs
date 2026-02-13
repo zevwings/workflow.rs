@@ -102,7 +102,7 @@ The RESPOND LANGUAGE MUST use the {}({})
 
     fn get_max_tokens(&self) -> Option<u32> {
         // Stage 3 aggregates all previous stage results, needs a high token limit
-        Some(16000)
+        None
     }
 
     fn get_temperature(&self) -> f32 {
