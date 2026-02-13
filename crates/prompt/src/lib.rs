@@ -20,7 +20,7 @@
 //!
 //! fn main() -> Result<()> {
 //!     // 输入提示（使用宏）
-//!     let name = input!("请输入您的姓名")
+//!     let name = input!("Please enter your name")
 //!         .default("John Doe")
 //!         .prompt()?;
 //!

@@ -73,6 +73,15 @@ impl GitRepository for GitRepositoryImpl {
         self.services.diff.get_merge_changed_files(branch, target_branch)
     }
 
+    fn is_formatting_only_change(
+        &self,
+        base_ref: &str,
+        target_ref: &str,
+        file_path: &str,
+    ) -> Result<bool, GitError> {
+        self.services.diff.is_formatting_only_change(base_ref, target_ref, file_path)
+    }
+
     // ========== Branch 操作 ==========
 
     fn create_branch(&self, name: &str) -> Result<(), GitError> {

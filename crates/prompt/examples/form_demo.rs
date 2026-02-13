@@ -63,7 +63,7 @@ fn demo_simple_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         .with_title("用户注册")
         .add_input(InputFormField {
             key: "username".to_string(),
-            prompt: "请输入用户名".to_string(),
+            prompt: "Please enter your username".to_string(),
             default_value: String::new(),
             validator: Some(Arc::new(validators::min_length(3))),
             condition: None,
@@ -71,12 +71,12 @@ fn demo_simple_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         })
         .add_input(InputFormField {
             key: "email".to_string(),
-            prompt: "请输入邮箱".to_string(),
+            prompt: "Please enter your email".to_string(),
             default_value: String::new(),
             validator: Some(Arc::new(
                 validators::regex(
                     r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-                    Some("请输入有效的邮箱地址"),
+                    Some("Please enter a valid email address"),
                 )
                 .expect("Invalid regex"),
             )),
@@ -85,7 +85,7 @@ fn demo_simple_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         })
         .add_password(PasswordFormField {
             key: "password".to_string(),
-            prompt: "请输入密码".to_string(),
+            prompt: "Please enter your password".to_string(),
             default_value: String::new(),
             validator: Some(Arc::new(validators::min_length(8))),
             condition: None,
@@ -142,10 +142,10 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
     let _ = msg.separator_with_text('-', 50, "Demo 2: Conditional Form");
 
     let result = form()
-        .with_title("项目配置")
+        .with_title("Project Configuration")
         .add_input(InputFormField {
             key: "project_name".to_string(),
-            prompt: "请输入项目名称".to_string(),
+            prompt: "Please enter your project name".to_string(),
             default_value: "my-project".to_string(),
             validator: Some(Arc::new(validators::required())),
             condition: None,
@@ -153,7 +153,7 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         })
         .add_select(SelectFormField {
             key: "project_type".to_string(),
-            prompt: "请选择项目类型".to_string(),
+            prompt: "Please select your project type".to_string(),
             options: vec![
                 "Library".to_string(),
                 "Binary".to_string(),
@@ -165,7 +165,7 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         })
         .add_confirm(ConfirmFormField {
             key: "use_git".to_string(),
-            prompt: "是否初始化 Git 仓库？".to_string(),
+            prompt: "Do you want to initialize a Git repository?".to_string(),
             default_value: true,
             condition: None,
             result_title: Some("Git".to_string()),
@@ -173,7 +173,7 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         // 只有选择初始化 Git 时才显示此选项
         .add_input(InputFormField {
             key: "git_remote".to_string(),
-            prompt: "请输入 Git 远程仓库地址（可选）".to_string(),
+            prompt: "Please enter your Git remote repository address (optional)".to_string(),
             default_value: String::new(),
             validator: None,
             condition: Some(Box::new(|result| result.get_bool("use_git"))),
@@ -181,7 +181,7 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
         })
         .add_confirm(ConfirmFormField {
             key: "add_ci".to_string(),
-            prompt: "是否添加 CI 配置？".to_string(),
+            prompt: "Do you want to add CI configuration?".to_string(),
             default_value: false,
             condition: None,
             result_title: Some("CI".to_string()),

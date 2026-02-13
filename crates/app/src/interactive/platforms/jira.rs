@@ -33,21 +33,21 @@ impl JiraStage {
         let builder = FormBuilder::new()
             .with_title("Jira 配置")
             .add_input(
-                InputFormField::new("service_address", "请输入您的 Jira 服务地址")
+                InputFormField::new("service_address", "Please enter your Jira service address")
                     .default(current_service)
-                    .result_title("您的 Jira 服务地址")
+                    .result_title("Your Jira service address")
                     .required(),
             )
             .add_input(
-                InputFormField::new("email", "请输入您的 Jira 邮箱")
+                InputFormField::new("email", "Please enter your Jira email")
                     .default(current_email)
-                    .result_title("您的 Jira 邮箱")
+                    .result_title("Your Jira email")
                     .required(),
             )
             .add_password(
-                PasswordFormField::new("api_token", "请输入您的 Jira API 令牌")
+                PasswordFormField::new("api_token", "Please enter your Jira API token")
                     .default(current_token)
-                    .result_title("您的 Jira API 令牌")
+                    .result_title("Your Jira API token")
                     .required(),
             );
 

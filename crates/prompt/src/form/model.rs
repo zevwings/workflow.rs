@@ -26,7 +26,7 @@ use crate::{
 ///     fn build_form(&self) -> FormBuilder {
 ///         FormBuilder::new()
 ///             .add_input(
-///                 InputFormField::new("username", "请输入用户名")
+///                 InputFormField::new("username", "Please enter your username")
 ///                     .default(self.username.clone())
 ///             )
 ///     }

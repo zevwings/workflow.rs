@@ -63,12 +63,27 @@ Based on the above classification, divide files into:
 
 Please output strictly in the following JSON format, without any additional explanatory text:
 
+**CRITICAL: Token Limit Strategy for Large Commits**:
+
+For commits with **>200 files**:
+- `by_status`: Include only 5-10 representative samples per category (not exhaustive lists)
+- `by_nature`: Include only the **most important** files for each category (max 30 files per category)
+  - Prioritize: core business logic, critical configs, main test files
+  - Exclude: trivial changes, generated files, minor utilities
+- `by_scale`: Include only files with large/medium changes (skip small changes)
+- `analysis_strategy`: Focus on truly critical files only (max 40 files total across all groups)
+  - `batch_group`: Only if clear batch pattern exists
+  - `focus_group`: Only the most architecturally significant files
+  - `skip_group`: Can list more liberally to indicate what's being skipped
+
+The goal is to **identify patterns and prioritize** rather than exhaustively catalog every file
+
 ```json
 {
   "categories": {
     "by_status": {
-      "added": ["file path list"],
-      "deleted": ["file path list"],
+      "added": ["file path list - max 10 representative files for large commits"],
+      "deleted": ["file path list - max 10 representative files for large commits"],
       "renamed": [
         {
           "old": "old path",
@@ -76,7 +91,7 @@ Please output strictly in the following JSON format, without any additional expl
           "changes": 0
         }
       ],
-      "modified": ["file path list"]
+      "modified": ["file path list - max 10 representative files for large commits"]
     },
     "by_nature": {
       "business_logic": ["file list"],

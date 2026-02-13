@@ -27,7 +27,8 @@ impl LLMConversation for LogicAnalyzeConversation {
     }
 
     fn get_max_tokens(&self) -> Option<u32> {
-        None
+        // Logic analysis uses sampling but may process many files
+        Some(8000)
     }
 
     fn get_temperature(&self) -> f32 {

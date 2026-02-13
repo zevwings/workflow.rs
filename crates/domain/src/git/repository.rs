@@ -91,6 +91,30 @@ pub trait GitRepository: Send + Sync {
         target_branch: &str,
     ) -> Result<Vec<CommitFileChange>, GitError>;
 
+    /// 检测文件是否为纯格式化变更
+    ///
+    /// 对比正常 diff 和忽略空白的 diff。如果正常 diff 有变更但忽略空白后无变更，
+    /// 则认为是纯格式化变更（仅包含空格、缩进、换行符等调整）。
+    ///
+    /// # 参数
+    /// - `base_ref`: 基准引用（分支名或 commit SHA）
+    /// - `target_ref`: 目标引用
+    /// - `file_path`: 要检测的文件路径
+    ///
+    /// # 返回
+    /// - `Ok(true)`: 纯格式化变更
+    /// - `Ok(false)`: 包含实质性变更
+    ///
+    /// # 使用场景
+    /// - Summary 服务在采样时排除格式化文件
+    /// - 识别批量格式化提交
+    fn is_formatting_only_change(
+        &self,
+        base_ref: &str,
+        target_ref: &str,
+        file_path: &str,
+    ) -> Result<bool, GitError>;
+
     // ========== Branch 操作 ==========
 
     /// 创建新分支

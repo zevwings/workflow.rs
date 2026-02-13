@@ -23,7 +23,8 @@ impl LLMConversation for TestAnalyzeConversation {
     }
 
     fn get_max_tokens(&self) -> Option<u32> {
-        None
+        // Test analysis processes test files only
+        Some(6000)
     }
 
     fn get_temperature(&self) -> f32 {

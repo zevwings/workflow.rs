@@ -55,6 +55,8 @@ struct AnalysisContext {
     commit_count: u32,
     /// 目录聚合统计
     directory_stats: Vec<DirectoryStats>,
+    /// 纯格式化变更的文件列表
+    formatting_only_files: Vec<String>,
 }
 
 /// 提交总结服务实现
@@ -150,6 +152,10 @@ impl CommitSummaryServiceImpl {
         // 6.5. 聚合目录统计
         let directory_stats = aggregate_by_directory(&files);
 
+        // 6.6. 检测纯格式化文件
+        let formatting_only_files =
+            detect_formatting_files(&self.git_repo, &base_branch, &current_branch, &files)?;
+
         // 7. 语言代码
         let language_code = self.llm_context.get_language();
 
@@ -165,6 +171,7 @@ impl CommitSummaryServiceImpl {
             commit_history,
             commit_count,
             directory_stats,
+            formatting_only_files,
         })
     }
 }
@@ -177,12 +184,24 @@ impl CommitSummaryServiceImpl {
         &self,
         ctx: &AnalysisContext,
     ) -> Result<CommitFileClassification, CommitSummaryError> {
+        // Pre-filter files for extremely large commits to reduce token usage
+        use crate::summary::prefilter_files_for_large_commits;
+        let filtered_files = prefilter_files_for_large_commits(ctx.files.clone());
+
+        if filtered_files.len() < ctx.files.len() {
+            eprintln!(
+                "Pre-filtered {} files down to {} for stage 1 classification",
+                ctx.files.len(),
+                filtered_files.len()
+            );
+        }
+
         let classify_service = FileClassifyService::new(self.llm_client.clone());
         classify_service.classify(
             &ctx.commit_info.sha,
             &ctx.commit_info.author_email,
             ctx.commit_info.author_time,
-            &ctx.files,
+            &filtered_files,
             &ctx.directory_stats,
         )
     }
@@ -202,7 +221,7 @@ impl CommitSummaryServiceImpl {
         let ((batch_result, logic_result), (config_result, test_result)) = rayon::join(
             || {
                 rayon::join(
-                    // 2.1 批量操作分析
+                    // 2.1 批量操作分析（不需要格式化检测）
                     || {
                         BatchAnalyzeService::new(self.llm_client.clone()).analyze(
                             stage1,
@@ -210,30 +229,36 @@ impl CommitSummaryServiceImpl {
                             &ctx.files,
                         )
                     },
-                    // 2.2 核心逻辑分析
+                    // 2.2 核心逻辑分析（排除格式化文件）
                     || {
                         LogicAnalyzeService::new(self.llm_client.clone()).analyze(
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
+                            &ctx.formatting_only_files,
                         )
                     },
                 )
             },
             || {
                 rayon::join(
-                    // 2.3 配置/文档分析
+                    // 2.3 配置/文档分析（排除格式化文件）
                     || {
                         ConfigAnalyzeService::new(self.llm_client.clone()).analyze(
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
+                            &ctx.formatting_only_files,
                         )
                     },
-                    // 2.4 测试文件分析
+                    // 2.4 测试文件分析（排除格式化文件）
                     || {
-                        TestAnalyzeService::new(self.llm_client.clone())
-                            .analyze(stage1, &ctx.file_diffs)
+                        TestAnalyzeService::new(self.llm_client.clone()).analyze(
+                            stage1,
+                            &ctx.file_diffs,
+                            &ctx.files,
+                            &ctx.formatting_only_files,
+                        )
                     },
                 )
             },
@@ -479,4 +504,39 @@ impl DirectoryStatsBuilder {
             },
         }
     }
+}
+
+// ========== 格式化检测 ==========
+
+/// 检测纯格式化文件列表
+///
+/// 遍历所有变更文件，调用 GitRepository 检测哪些是纯格式化变更。
+fn detect_formatting_files(
+    git_repo: &Arc<dyn GitRepository>,
+    base_branch: &str,
+    target_branch: &str,
+    files: &[CommitFileChange],
+) -> Result<Vec<String>, CommitSummaryError> {
+    let mut formatting_files = Vec::new();
+
+    for file in files {
+        // 只检测修改的文件（新增/删除文件不可能是纯格式化）
+        if !matches!(file.change_type, CommitChangeType::Modified) {
+            continue;
+        }
+
+        match git_repo.is_formatting_only_change(base_branch, target_branch, &file.path) {
+            Ok(true) => formatting_files.push(file.path.clone()),
+            Ok(false) => {} // 有实质性变更，跳过
+            Err(e) => {
+                // 记录错误但不中断流程
+                eprintln!(
+                    "Warning: Failed to check formatting for {}: {}",
+                    file.path, e
+                );
+            }
+        }
+    }
+
+    Ok(formatting_files)
 }
