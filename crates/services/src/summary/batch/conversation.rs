@@ -2,7 +2,7 @@
 //!
 //! 当阶段一检测到批量重命名、格式化、配置更新等模式时，对样本 diff 进行分析。
 
-use llm::LLMConversation;
+use client::LLMConversation;
 
 use crate::summary::prompt;
 
@@ -22,15 +22,19 @@ impl BatchAnalyzeConversation {
 }
 
 impl LLMConversation for BatchAnalyzeConversation {
-    fn get_system_prompt(&self, _language_code: &str) -> String {
+    fn get_system_prompt(&self) -> String {
         prompt::analyze_batch().to_string()
     }
 
-    fn get_user_prompt(&self, _language_code: &str) -> String {
+    fn get_user_prompt(&self) -> String {
         self.user_prompt.clone()
     }
 
-    fn get_execution_params(&self) -> (Option<u32>, f32) {
-        (None, 0.3)
+    fn get_max_tokens(&self) -> Option<u32> {
+        None
+    }
+
+    fn get_temperature(&self) -> f32 {
+        0.3
     }
 }

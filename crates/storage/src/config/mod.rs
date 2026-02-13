@@ -6,5 +6,5 @@
 mod global;
 mod repo;
 
-pub(crate) use global::{GlobalConfigRepositoryImpl, VerificationServiceImpl};
+pub(crate) use global::GlobalConfigRepositoryImpl;
 pub(crate) use repo::RepoConfigRepositoryImpl;

@@ -2,7 +2,7 @@
 //!
 //! 根据 commit 元数据和文件变更列表，调用 LLM 进行智能分类。
 
-use llm::LLMConversation;
+use client::LLMConversation;
 
 use crate::summary::prompt;
 
@@ -20,15 +20,19 @@ impl FileClassifyConversation {
 }
 
 impl LLMConversation for FileClassifyConversation {
-    fn get_system_prompt(&self, _language_code: &str) -> String {
+    fn get_system_prompt(&self) -> String {
         prompt::classify_files().to_string()
     }
 
-    fn get_user_prompt(&self, _language_code: &str) -> String {
+    fn get_user_prompt(&self) -> String {
         format!("## File Change Information\n\n{}", self.input_json)
     }
 
-    fn get_execution_params(&self) -> (Option<u32>, f32) {
-        (None, 0.3)
+    fn get_max_tokens(&self) -> Option<u32> {
+        None
+    }
+
+    fn get_temperature(&self) -> f32 {
+        0.3
     }
 }

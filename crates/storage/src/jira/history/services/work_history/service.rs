@@ -120,7 +120,7 @@ impl WorkHistoryServiceImpl {
         let history_dir = self
             .path_service
             .get_jira_work_history_dir()
-            .map_err(|e| JiraError::ApiError(format!("Failed to get history dir: {}", e)))?;
+            .map_err(|e| JiraError::IoError(format!("Failed to get history dir: {}", e)))?;
         let repo_id = Self::normalize_repo_to_filename(repo_url);
         Ok(history_dir.join(format!("{}.json", repo_id)))
     }
@@ -132,19 +132,19 @@ impl WorkHistoryServiceImpl {
         }
 
         let content = file::read_string(path)
-            .map_err(|e| JiraError::ApiError(format!("Failed to read work history file: {}", e)))?;
+            .map_err(|e| JiraError::IoError(format!("Failed to read work history file: {}", e)))?;
 
         serde_json::from_str(&content)
-            .map_err(|e| JiraError::ApiError(format!("Failed to parse work history JSON: {}", e)))
+            .map_err(|e| JiraError::IoError(format!("Failed to parse work history JSON: {}", e)))
     }
 
     /// 写入工作历史文件
     fn write_history_map(&self, path: &Path, map: &WorkHistoryMap) -> Result<(), JiraError> {
         let content = serde_json::to_string_pretty(map)
-            .map_err(|e| JiraError::ApiError(format!("Failed to serialize work history: {}", e)))?;
+            .map_err(|e| JiraError::IoError(format!("Failed to serialize work history: {}", e)))?;
 
         file::write_string(path, &content)
-            .map_err(|e| JiraError::ApiError(format!("Failed to write work history file: {}", e)))
+            .map_err(|e| JiraError::IoError(format!("Failed to write work history file: {}", e)))
     }
 }
 
@@ -276,7 +276,7 @@ impl WorkHistoryService for WorkHistoryServiceImpl {
 
             if history_map.is_empty() {
                 fs::remove_file(&repo_file).map_err(|e| {
-                    JiraError::ApiError(format!("Failed to remove empty work-history file: {}", e))
+                    JiraError::IoError(format!("Failed to remove empty work-history file: {}", e))
                 })?;
                 messages.push("Removed empty work-history file".to_string());
             } else {
@@ -301,7 +301,7 @@ impl WorkHistoryService for WorkHistoryServiceImpl {
         let history_dir = self
             .path_service
             .get_jira_work_history_dir()
-            .map_err(|e| JiraError::ApiError(format!("Failed to get history dir: {}", e)))?;
+            .map_err(|e| JiraError::IoError(format!("Failed to get history dir: {}", e)))?;
         let mut results = Vec::new();
 
         if !history_dir.exists() {
@@ -309,12 +309,12 @@ impl WorkHistoryService for WorkHistoryServiceImpl {
         }
 
         let entries = fs::read_dir(&history_dir).map_err(|e| {
-            JiraError::ApiError(format!("Failed to read work-history directory: {}", e))
+            JiraError::IoError(format!("Failed to read work-history directory: {}", e))
         })?;
 
         for entry in entries {
             let entry = entry.map_err(|e| {
-                JiraError::ApiError(format!("Failed to read directory entry: {}", e))
+                JiraError::IoError(format!("Failed to read directory entry: {}", e))
             })?;
             let path = entry.path();
 

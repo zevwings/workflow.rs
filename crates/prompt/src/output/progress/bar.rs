@@ -129,7 +129,7 @@ impl ProgressBar {
         terminal_state::unregister_renderer();
 
         // 清除当前行
-        super::render::clear_line();
+        crate::output::progress::render::clear_line();
 
         // 恢复光标
         show_cursor(self);

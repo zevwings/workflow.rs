@@ -1,24 +1,20 @@
 use std::sync::Arc;
 
+use client::{IntoLLMRequestParameters, LLMClient};
 use domain::{sanitize_branch_name, BranchService, BranchServiceError};
-use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
-use super::conversation::BranchNameConversation;
+use crate::branch::conversation::BranchNameConversation;
 
 /// 分支服务实现
 ///
 /// 使用 LLM 生成语义化的分支名称。
 pub(crate) struct BranchServiceImpl {
-    llm_executor: Arc<dyn LLMExecutor>,
-    llm_context: Arc<dyn LLMConfigContext>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl BranchServiceImpl {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>, llm_context: Arc<dyn LLMConfigContext>) -> Self {
-        Self {
-            llm_executor,
-            llm_context,
-        }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 }
 
@@ -32,17 +28,11 @@ impl BranchService for BranchServiceImpl {
 
         // 执行 LLM 调用
         let response = self
-            .llm_executor
-            .execute(
-                &conversation,
-                &self.llm_context.get_language(),
-                "Generate branch name",
-            )
+            .llm_client
+            .call(&conversation.to_params())
             .map_err(|e| BranchServiceError::LLMError(e.to_string()))?;
 
-        // 转换为 map 对象
-        let map = JsonParser::to_map(response)
-            .map_err(|e| BranchServiceError::JsonParseFailed(format!("JSON parse error: {}", e)))?;
+        let map = response.to_map().map_err(|e| BranchServiceError::LLMError(e.to_string()))?;
 
         // 提取分支名字段
         let branch_name = map.get("branch_name").and_then(|v| v.as_str()).ok_or_else(|| {

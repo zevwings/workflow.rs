@@ -8,10 +8,10 @@ use domain::GitHubError;
 use toolkit::log_debug;
 
 use crate::github::{
-    client::GitHubClient,
     services::ServiceContext,
     types::{GitHubUserInfo, PullRequestInfo},
 };
+use client::GitHubClient;
 
 /// Pull Request 查询服务接口
 pub trait PullRequestQueryService: Send + Sync {

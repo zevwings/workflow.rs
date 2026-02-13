@@ -4,8 +4,8 @@ use std::{fs, path::PathBuf};
 
 use prompt::{confirm, error, info, multiselect, spinner, success};
 
-use super::utils::get_jira_id_interactive;
 use crate::bootstrap;
+use crate::commands::jira::utils::get_jira_id_interactive;
 
 /// Jira Clean 命令
 pub struct JiraCleanCommand {

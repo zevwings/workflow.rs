@@ -2,10 +2,10 @@
 //!
 //! 提供 Shell Completion 的生成、检查和移除功能。
 
-use crate::{
-    completion::entity::{CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult},
-    errors::ServiceError,
+use crate::completion::entity::{
+    CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
 };
+use crate::completion::error::CompletionError;
 
 /// Shell Completion 服务接口
 ///
@@ -28,7 +28,7 @@ pub trait CompletionService: Send + Sync {
         shell: &str,
         script_content: &[u8],
         output_dir: Option<&str>,
-    ) -> Result<CompletionGenerateResult, ServiceError>;
+    ) -> Result<CompletionGenerateResult, CompletionError>;
 
     /// 检查 completion 配置状态
     ///
@@ -38,7 +38,7 @@ pub trait CompletionService: Send + Sync {
     ///
     /// # 返回
     /// 检查结果，包含各个 shell 的状态信息
-    fn check_status(&self) -> Result<CompletionCheckResult, ServiceError>;
+    fn check_status(&self) -> Result<CompletionCheckResult, CompletionError>;
 
     /// 移除 completion 配置
     ///
@@ -47,5 +47,5 @@ pub trait CompletionService: Send + Sync {
     ///
     /// # 返回
     /// 移除结果，包含移除的配置和文件列表
-    fn remove(&self, remove_all: bool) -> Result<CompletionRemoveResult, ServiceError>;
+    fn remove(&self, remove_all: bool) -> Result<CompletionRemoveResult, CompletionError>;
 }

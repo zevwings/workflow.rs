@@ -2,14 +2,15 @@
 
 use std::sync::Arc;
 
+use client::GitHubClient;
 use di::{bind, Container, InjectionError, Scope};
-use domain::{GitHubContext, GitHubRepository, GitRepoRepository};
+use domain::{GitHubRepository, GitRepoRepository};
 
 use crate::github::{
-    GitHubClient, GitHubClientImpl, GitHubRepositoryImpl, PullRequestDiffService,
-    PullRequestDiffServiceImpl, PullRequestMutationService, PullRequestMutationServiceImpl,
-    PullRequestQueryService, PullRequestQueryServiceImpl, PullRequestReviewService,
-    PullRequestReviewServiceImpl, ServiceContext, ServiceContextImpl,
+    GitHubRepositoryImpl, PullRequestDiffService, PullRequestDiffServiceImpl,
+    PullRequestMutationService, PullRequestMutationServiceImpl, PullRequestQueryService,
+    PullRequestQueryServiceImpl, PullRequestReviewService, PullRequestReviewServiceImpl,
+    ServiceContext, ServiceContextImpl,
 };
 
 /// 注册 GitHub 相关服务
@@ -26,12 +27,12 @@ use crate::github::{
 ///
 /// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），而非运行时错误。
 pub(super) fn register_github() -> Result<(), InjectionError> {
-    // 注册 GitHub Client (依赖外部的 GitHubContext)
-    bind!(dyn GitHubClient, |c: &Container| {
-        let context = c.get::<dyn GitHubContext>()?;
-        Ok(Arc::new(GitHubClientImpl::new(context)))
-    })
-    .in_scope(Scope::Singleton)?;
+    // // 注册 GitHub Client (依赖外部的 GitHubContext)
+    // bind!(dyn GitHubClient, |c: &Container| {
+    //     let context = c.get::<dyn GitHubContext>()?;
+    //     Ok(Arc::new(GitHubClientImpl::new(context)))
+    // })
+    // .in_scope(Scope::Singleton)?;
 
     // Service Context
     bind!(dyn ServiceContext, |c: &Container| {

@@ -15,7 +15,8 @@
 //! - 分阶段可以提供更精准的上下文给 LLM，提升分析质量
 //! - 便于并行处理和缓存中间结果
 
-use crate::{CommitSummaryAnalysis, ServiceError};
+use crate::summary::error::CommitSummaryError;
+use crate::CommitSummaryAnalysis;
 
 /// 提交总结服务接口
 ///
@@ -71,8 +72,10 @@ pub trait CommitSummaryService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::Git`] - Git 操作失败（无法获取 diff、分支不存在等）
-    /// * [`ServiceError::Other`] - LLM API 调用失败、解析失败、网络错误等
+    /// * [`CommitSummaryError::Git`] - Git 操作失败（无法获取 diff、分支不存在等）
+    /// * [`CommitSummaryError::LLMError`] - LLM API 调用失败
+    /// * [`CommitSummaryError::ParseFailed`] - 解析失败
+    /// * [`CommitSummaryError::NoChangesToAnalyze`] - 无变更可分析
     ///
     /// # 分析流程
     ///
@@ -104,5 +107,5 @@ pub trait CommitSummaryService: Send + Sync {
     fn run_analysis(
         &self,
         base_branch: Option<&str>,
-    ) -> Result<CommitSummaryAnalysis, ServiceError>;
+    ) -> Result<CommitSummaryAnalysis, CommitSummaryError>;
 }

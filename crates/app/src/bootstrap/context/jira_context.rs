@@ -1,10 +1,12 @@
 //! Jira 配置上下文实现
 //!
-//! 实现 `domain::JiraConfigContext` trait，提供配置获取逻辑。
+//! 实现 `domain::JiraConfigContext` 和 `client::jira::context::JiraConfigContext` traits，
+//! 提供配置获取逻辑。
 
 use std::{path::PathBuf, sync::Arc};
 
-use domain::{GlobalConfigRepository, JiraConfigContext, JiraError, PathService};
+use client::{JiraClientError, JiraConfigContext};
+use domain::{GlobalConfigRepository, PathService};
 
 /// Jira 配置上下文实现
 ///
@@ -26,6 +28,7 @@ impl JiraConfigContextImpl {
     }
 }
 
+// 实现 domain 层的 JiraConfigContext
 impl JiraConfigContext for JiraConfigContextImpl {
     fn get_jira_email(&self) -> String {
         self.config.load().map(|c| c.jira.email.clone()).unwrap_or_default()
@@ -39,9 +42,9 @@ impl JiraConfigContext for JiraConfigContextImpl {
         self.config.load().map(|c| c.jira.service_address.clone()).unwrap_or_default()
     }
 
-    fn get_download_dir(&self) -> Result<PathBuf, JiraError> {
+    fn get_download_dir(&self) -> Result<PathBuf, JiraClientError> {
         self.path_service
             .get_download_dir()
-            .map_err(|e| JiraError::ConfigError(format!("Failed to get download dir: {}", e)))
+            .map_err(|e| JiraClientError::ConfigError(format!("Failed to get download dir: {}", e)))
     }
 }

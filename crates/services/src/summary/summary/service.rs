@@ -1,35 +1,41 @@
 use std::sync::Arc;
 
-use domain::{CommitSummaryAnalysis, ServiceError};
-use llm::{JsonParser, LLMExecutor};
+use client::{IntoLLMRequestParameters, LLMClient, SupportedLanguage};
+use domain::{CommitSummaryAnalysis, CommitSummaryError};
 
-use super::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
+use crate::summary::summary::{SummaryAnalyzeConversation, SummaryAnalyzeInput};
 
 // ── Service ───────────────────────────────────────────────────
 
 /// 阶段三：全局总结服务
 pub(crate) struct SummaryAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
+    language: SupportedLanguage,
 }
 
 impl SummaryAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>, language: SupportedLanguage) -> Self {
+        Self {
+            llm_client,
+            language,
+        }
     }
 
     /// 综合各阶段结果生成全局总结
     pub fn summarize(
         &self,
         input: SummaryAnalyzeInput,
-        language_code: &str,
-    ) -> Result<CommitSummaryAnalysis, ServiceError> {
-        let conversation = SummaryAnalyzeConversation::new(input);
+    ) -> Result<CommitSummaryAnalysis, CommitSummaryError> {
+        let conversation = SummaryAnalyzeConversation::new(input, self.language.clone());
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "summary_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
-        JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!("Failed to parse summary analysis results: {}", e))
+            .llm_client
+            .call(&conversation.to_params())
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
+        response.to_model::<CommitSummaryAnalysis>().map_err(|e| {
+            CommitSummaryError::ParseFailed(format!(
+                "Failed to parse summary analysis results: {}",
+                e
+            ))
         })
     }
 }

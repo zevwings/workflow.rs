@@ -4,13 +4,13 @@
 
 use std::sync::Arc;
 
+use client::{IntoLLMRequestParameters, LLMClient};
 use domain::{
-    CommitChangeType, CommitFileChange, CommitMessageService, CommitSummaryAnalysis, GitRepository,
-    ServiceError,
+    CommitChangeType, CommitFileChange, CommitMessageError, CommitMessageService,
+    CommitSummaryAnalysis, GitRepository,
 };
-use llm::{JsonParser, LLMConfigContext, LLMExecutor};
 
-use super::conversation::CommitMessageConversation;
+use crate::commit::message::conversation::CommitMessageConversation;
 
 /// 分析输入数据
 struct AnalysisInput {
@@ -37,44 +37,31 @@ const MAX_DIFF_LINES: usize = 2000;
 /// Commit Message 生成服务实现
 pub(crate) struct CommitMessageServiceImpl {
     git_repo: Arc<dyn GitRepository>,
-    llm_executor: Arc<dyn LLMExecutor>,
-    llm_context: Arc<dyn LLMConfigContext>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl CommitMessageServiceImpl {
     /// 创建新的服务实例
-    pub fn new(
-        git_repo: Arc<dyn GitRepository>,
-        llm_executor: Arc<dyn LLMExecutor>,
-        llm_context: Arc<dyn LLMConfigContext>,
-    ) -> Self {
+    pub fn new(git_repo: Arc<dyn GitRepository>, llm_client: Arc<dyn LLMClient>) -> Self {
         Self {
             git_repo,
-            llm_executor,
-            llm_context,
+            llm_client,
         }
     }
 
     /// 准备 staged 变更的分析上下文
-    fn prepare_staged(&self) -> Result<AnalysisInput, ServiceError> {
+    fn prepare_staged(&self) -> Result<AnalysisInput, CommitMessageError> {
         // 1. 获取 staged 文件列表
-        let files = self
-            .git_repo
-            .get_staged_files()
-            .map_err(|e| ServiceError::Other(format!("Failed to get staged files: {}", e)))?;
+        let files = self.git_repo.get_staged_files()?;
 
         if files.is_empty() {
-            return Err(ServiceError::Other(
+            return Err(CommitMessageError::EmptyChanges(
                 "No staged changes to commit".to_string(),
             ));
         }
 
         // 2. 获取 staged diff
-        let diff = self
-            .git_repo
-            .get_staged_diff()
-            .map_err(|e| ServiceError::Other(format!("Failed to get staged diff: {}", e)))?
-            .unwrap_or_default();
+        let diff = self.git_repo.get_staged_diff()?.unwrap_or_default();
 
         // 3. 统计信息
         let stats = calculate_statistics(&files);
@@ -83,26 +70,19 @@ impl CommitMessageServiceImpl {
     }
 
     /// 准备指定提交的分析上下文
-    fn prepare_commit(&self, commit_ref: &str) -> Result<AnalysisInput, ServiceError> {
+    fn prepare_commit(&self, commit_ref: &str) -> Result<AnalysisInput, CommitMessageError> {
         // 1. 获取提交的变更文件
-        let files = self
-            .git_repo
-            .get_commit_changed_files(commit_ref)
-            .map_err(|e| ServiceError::Other(format!("Failed to get changed files: {}", e)))?;
+        let files = self.git_repo.get_commit_changed_files(commit_ref)?;
 
         if files.is_empty() {
-            return Err(ServiceError::Other(format!(
+            return Err(CommitMessageError::EmptyChanges(format!(
                 "No changes found in commit {}",
                 commit_ref
             )));
         }
 
         // 2. 获取提交的 diff
-        let diff = self
-            .git_repo
-            .get_commit_diff(commit_ref)
-            .map_err(|e| ServiceError::Other(format!("Failed to get commit diff: {}", e)))?
-            .unwrap_or_default();
+        let diff = self.git_repo.get_commit_diff(commit_ref)?.unwrap_or_default();
 
         // 3. 统计信息
         let stats = calculate_statistics(&files);
@@ -111,35 +91,37 @@ impl CommitMessageServiceImpl {
     }
 
     /// 生成 commit message（核心逻辑）
-    fn generate(&self, input: AnalysisInput) -> Result<CommitSummaryAnalysis, ServiceError> {
+    fn generate(&self, input: AnalysisInput) -> Result<CommitSummaryAnalysis, CommitMessageError> {
         // 1. 格式化输入数据
         let file_summary = format_file_summary(&input.files);
         let diff_content = smart_truncate_diff(&input.diff, &input.files, MAX_DIFF_LINES);
 
         // 2. 构建 LLM 对话
-        let language_code = self.llm_context.get_language();
         let conversation =
             CommitMessageConversation::new(file_summary, diff_content, input.stats.clone());
 
         // 3. 单次 LLM 调用
         let response = self
-            .llm_executor
-            .execute(&conversation, &language_code, "commit_message_generate")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
+            .llm_client
+            .call(&conversation.to_params())
+            .map_err(|e| CommitMessageError::LLMError(e.to_string()))?;
 
-        // 4. 解析结果
-        JsonParser::to_model(&response)
-            .map_err(|e| ServiceError::Other(format!("Failed to parse commit message: {}", e)))
+        response.to_model::<CommitSummaryAnalysis>().map_err(|e| {
+            CommitMessageError::ParseFailed(format!("Failed to parse commit message: {}", e))
+        })
     }
 }
 
 impl CommitMessageService for CommitMessageServiceImpl {
-    fn generate_for_staged(&self) -> Result<CommitSummaryAnalysis, ServiceError> {
+    fn generate_for_staged(&self) -> Result<CommitSummaryAnalysis, CommitMessageError> {
         let input = self.prepare_staged()?;
         self.generate(input)
     }
 
-    fn generate_for_commit(&self, commit_ref: &str) -> Result<CommitSummaryAnalysis, ServiceError> {
+    fn generate_for_commit(
+        &self,
+        commit_ref: &str,
+    ) -> Result<CommitSummaryAnalysis, CommitMessageError> {
         let input = self.prepare_commit(commit_ref)?;
         self.generate(input)
     }

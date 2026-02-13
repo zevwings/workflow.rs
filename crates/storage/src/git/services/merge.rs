@@ -5,7 +5,7 @@
 use domain::{GitError, MergeStrategy};
 use git2::{build::CheckoutBuilder, AnnotatedCommit, BranchType, Oid, Repository, Signature};
 
-use super::GitContext;
+use crate::git::services::GitContext;
 
 /// Merge 服务接口
 pub trait MergeService: Send + Sync {

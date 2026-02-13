@@ -5,6 +5,10 @@ use thiserror::Error;
 /// 依赖注入错误
 #[derive(Error, Debug)]
 pub enum InjectionError {
+    /// 客户端创建错误
+    #[error("Create instance failed: {0}")]
+    CreateInstanceFailed(String),
+
     /// 服务未绑定
     #[error("Service not bound: {0}")]
     NotBound(String),

@@ -4,21 +4,21 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{CommitBatchAnalysis, CommitFileChange, CommitFileClassification, ServiceError};
-use llm::{JsonParser, LLMExecutor};
+use client::{IntoLLMRequestParameters, LLMClient};
+use domain::{CommitBatchAnalysis, CommitFileChange, CommitFileClassification, CommitSummaryError};
 
-use super::BatchAnalyzeConversation;
+use crate::summary::batch::BatchAnalyzeConversation;
 
 // ── Service ───────────────────────────────────────────────────
 
 /// 阶段二 2.1：批量操作分析服务
 pub(crate) struct BatchAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl BatchAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对批量操作文件执行分析
@@ -29,8 +29,7 @@ impl BatchAnalyzeService {
         stage1: &CommitFileClassification,
         file_diffs: &HashMap<String, String>,
         files: &[CommitFileChange],
-        language_code: &str,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, CommitSummaryError> {
         let batch_group = &stage1.analysis_strategy.batch_group;
         if batch_group.is_empty() {
             return Ok("{}".to_string());
@@ -86,13 +85,18 @@ Selection strategy: {}
 
         let conversation = BatchAnalyzeConversation::new(user_prompt);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "batch_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitBatchAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!("Failed to parse batch analysis results: {}", e))
-        })?;
-        serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
+            .llm_client
+            .call(&conversation.to_params())
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
+        let result: CommitBatchAnalysis =
+            response.to_model::<CommitBatchAnalysis>().map_err(|e| {
+                CommitSummaryError::ParseFailed(format!(
+                    "Failed to parse batch analysis results: {}",
+                    e
+                ))
+            })?;
+        serde_json::to_string(&result)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }
 }
 

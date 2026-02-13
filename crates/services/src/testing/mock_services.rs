@@ -6,8 +6,9 @@
 use std::sync::{Arc, Mutex};
 
 use domain::{
-    BranchService, BranchServiceError, CommitMessageService, CommitSummaryAnalysis, PrStatus,
-    PullRequestInfo, PullRequestService, PullRequestStatus, ServiceError,
+    BranchService, BranchServiceError, CommitMessageError, CommitMessageService,
+    CommitSummaryAnalysis, PrStatus, PullRequestError, PullRequestInfo, PullRequestService,
+    PullRequestStatus,
 };
 
 // ==================== MockBranchService ====================
@@ -92,7 +93,7 @@ fn default_analysis() -> CommitSummaryAnalysis {
 pub struct MockCommitMessageService {
     /// 预定义的成功返回值队列：generate_for_staged 与 generate_for_commit 共用
     responses: Arc<Mutex<Vec<CommitSummaryAnalysis>>>,
-    /// 预定义的错误消息队列，按顺序返回 ServiceError::Other(msg)
+    /// 预定义的错误消息队列，按顺序返回 CommitMessageError::LLMError(msg)
     errors: Arc<Mutex<Vec<String>>>,
 }
 
@@ -110,7 +111,7 @@ impl MockCommitMessageService {
         self.responses.lock().unwrap().push(analysis);
     }
 
-    /// 添加一次失败返回值（返回 ServiceError::Other(msg)）
+    /// 添加一次失败返回值（返回 CommitMessageError::LLMError(msg)）
     pub fn add_error(&self, msg: impl Into<String>) {
         self.errors.lock().unwrap().push(msg.into());
     }
@@ -121,12 +122,12 @@ impl MockCommitMessageService {
         self.errors.lock().unwrap().clear();
     }
 
-    fn next_result(&self) -> Result<CommitSummaryAnalysis, ServiceError> {
+    fn next_result(&self) -> Result<CommitSummaryAnalysis, CommitMessageError> {
         let mut errors = self.errors.lock().unwrap();
         if let Some(msg) = errors.first() {
             let msg = msg.clone();
             errors.remove(0);
-            return Err(ServiceError::Other(msg));
+            return Err(CommitMessageError::LLMError(msg));
         }
         drop(errors);
 
@@ -142,14 +143,14 @@ impl MockCommitMessageService {
 }
 
 impl CommitMessageService for MockCommitMessageService {
-    fn generate_for_staged(&self) -> Result<CommitSummaryAnalysis, ServiceError> {
+    fn generate_for_staged(&self) -> Result<CommitSummaryAnalysis, CommitMessageError> {
         self.next_result()
     }
 
     fn generate_for_commit(
         &self,
         _commit_ref: &str,
-    ) -> Result<CommitSummaryAnalysis, ServiceError> {
+    ) -> Result<CommitSummaryAnalysis, CommitMessageError> {
         self.next_result()
     }
 }
@@ -226,14 +227,14 @@ impl MockPullRequestService {
         *self.fail_next_write.lock().unwrap() = fail;
     }
 
-    fn get_pr(&self, pr_id: &str) -> Result<MockPrRecord, ServiceError> {
+    fn get_pr(&self, pr_id: &str) -> Result<MockPrRecord, PullRequestError> {
         self.prs
             .lock()
             .unwrap()
             .iter()
             .find(|p| p.id == pr_id)
             .cloned()
-            .ok_or_else(|| ServiceError::NotFound(format!("PR not found: {}", pr_id)))
+            .ok_or_else(|| PullRequestError::NotFound(format!("PR not found: {}", pr_id)))
     }
 }
 
@@ -244,10 +245,10 @@ impl PullRequestService for MockPullRequestService {
         title: Option<&str>,
         description: Option<&str>,
         target_branch: Option<&str>,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, PullRequestError> {
         if *self.fail_next_write.lock().unwrap() {
             *self.fail_next_write.lock().unwrap() = false;
-            return Err(ServiceError::Other("mock write failure".to_string()));
+            return Err(PullRequestError::Other("mock write failure".to_string()));
         }
         let id = format!("pr-{}", self.prs.lock().unwrap().len() + 1);
         let title = title.unwrap_or("Untitled").to_string();
@@ -258,10 +259,10 @@ impl PullRequestService for MockPullRequestService {
         Ok(id)
     }
 
-    fn merge_pull_request(&self, pr_id: &str, _force: bool) -> Result<(), ServiceError> {
+    fn merge_pull_request(&self, pr_id: &str, _force: bool) -> Result<(), PullRequestError> {
         if *self.fail_next_write.lock().unwrap() {
             *self.fail_next_write.lock().unwrap() = false;
-            return Err(ServiceError::Other("mock write failure".to_string()));
+            return Err(PullRequestError::Other("mock write failure".to_string()));
         }
         let mut prs = self.prs.lock().unwrap();
         if let Some(p) = prs.iter_mut().find(|p| p.id == pr_id) {
@@ -269,17 +270,20 @@ impl PullRequestService for MockPullRequestService {
             p.merged = true;
             Ok(())
         } else {
-            Err(ServiceError::NotFound(format!("PR not found: {}", pr_id)))
+            Err(PullRequestError::NotFound(format!(
+                "PR not found: {}",
+                pr_id
+            )))
         }
     }
 
-    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, ServiceError> {
+    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, PullRequestError> {
         let pr_id = match pr_id_or_branch {
             Some(id) => id.to_string(),
             None => {
                 let current = "current-branch".to_string();
                 self.branch_to_pr.lock().unwrap().get(&current).cloned().ok_or_else(|| {
-                    ServiceError::NotFound(format!("No PR for branch {}", current))
+                    PullRequestError::NotFound(format!("No PR for branch {}", current))
                 })?
             }
         };
@@ -292,17 +296,20 @@ impl PullRequestService for MockPullRequestService {
         })
     }
 
-    fn close_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
+    fn close_pull_request(&self, pr_id: &str) -> Result<(), PullRequestError> {
         if *self.fail_next_write.lock().unwrap() {
             *self.fail_next_write.lock().unwrap() = false;
-            return Err(ServiceError::Other("mock write failure".to_string()));
+            return Err(PullRequestError::Other("mock write failure".to_string()));
         }
         let mut prs = self.prs.lock().unwrap();
         if let Some(p) = prs.iter_mut().find(|p| p.id == pr_id) {
             p.state = "closed".to_string();
             Ok(())
         } else {
-            Err(ServiceError::NotFound(format!("PR not found: {}", pr_id)))
+            Err(PullRequestError::NotFound(format!(
+                "PR not found: {}",
+                pr_id
+            )))
         }
     }
 
@@ -310,7 +317,7 @@ impl PullRequestService for MockPullRequestService {
         &self,
         state: Option<&str>,
         limit: Option<usize>,
-    ) -> Result<Vec<PrStatus>, ServiceError> {
+    ) -> Result<Vec<PrStatus>, PullRequestError> {
         let prs = self.prs.lock().unwrap();
         let mut list: Vec<PrStatus> = prs
             .iter()
@@ -333,10 +340,10 @@ impl PullRequestService for MockPullRequestService {
         pr_id: &str,
         title: Option<&str>,
         body: Option<&str>,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<(), PullRequestError> {
         if *self.fail_next_write.lock().unwrap() {
             *self.fail_next_write.lock().unwrap() = false;
-            return Err(ServiceError::Other("mock write failure".to_string()));
+            return Err(PullRequestError::Other("mock write failure".to_string()));
         }
         let mut prs = self.prs.lock().unwrap();
         if let Some(p) = prs.iter_mut().find(|p| p.id == pr_id) {
@@ -348,39 +355,42 @@ impl PullRequestService for MockPullRequestService {
             }
             Ok(())
         } else {
-            Err(ServiceError::NotFound(format!("PR not found: {}", pr_id)))
+            Err(PullRequestError::NotFound(format!(
+                "PR not found: {}",
+                pr_id
+            )))
         }
     }
 
-    fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), ServiceError> {
+    fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), PullRequestError> {
         if comment.is_empty() {
-            return Err(ServiceError::InvalidInput(
+            return Err(PullRequestError::InvalidInput(
                 "Comment cannot be empty".to_string(),
             ));
         }
         if *self.fail_next_write.lock().unwrap() {
             *self.fail_next_write.lock().unwrap() = false;
-            return Err(ServiceError::Other("mock write failure".to_string()));
+            return Err(PullRequestError::Other("mock write failure".to_string()));
         }
         let _ = self.get_pr(pr_id)?;
         Ok(())
     }
 
-    fn approve_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
+    fn approve_pull_request(&self, pr_id: &str) -> Result<(), PullRequestError> {
         if *self.fail_next_write.lock().unwrap() {
             *self.fail_next_write.lock().unwrap() = false;
-            return Err(ServiceError::Other("mock write failure".to_string()));
+            return Err(PullRequestError::Other("mock write failure".to_string()));
         }
         let _ = self.get_pr(pr_id)?;
         Ok(())
     }
 
-    fn get_pr_diff(&self, pr_id: &str) -> Result<String, ServiceError> {
+    fn get_pr_diff(&self, pr_id: &str) -> Result<String, PullRequestError> {
         let _ = self.get_pr(pr_id)?;
         Ok("mock diff".to_string())
     }
 
-    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, ServiceError> {
+    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, PullRequestError> {
         let pr = self.get_pr(pr_id)?;
         Ok(PullRequestInfo {
             id: pr.id,
@@ -399,7 +409,7 @@ impl PullRequestService for MockPullRequestService {
     fn get_current_branch_pull_request(
         &self,
         current_branch: &str,
-    ) -> Result<Option<String>, ServiceError> {
+    ) -> Result<Option<String>, PullRequestError> {
         Ok(self.branch_to_pr.lock().unwrap().get(current_branch).cloned())
     }
 }

@@ -56,6 +56,7 @@
 - 从 1.5.6 升级到 1.5.7？ → [1.5.6 → 1.5.7 迁移指南](./migration/1.5.6-to-1.5.7.md)
 
 ### 开发规范
+- 想了解错误类型定义？ → [错误类型定义](./error-definitions.md)
 - 想了解代码风格？ → [开发规范 - 代码风格](./guidelines/development.md#-代码风格规范)
 - 想了解错误处理？ → [开发规范 - 错误处理](./guidelines/development.md#-错误处理规范)
 - 想了解命名规范？ → [开发规范 - 命名规范](./guidelines/development.md#-命名规范)
@@ -86,6 +87,7 @@ cargo doc --open
 以下文档是项目的参考文档，需要长期维护：
 
 - **`guidelines/architecture.md`** - 架构设计文档
+- **`error-definitions.md`** - Domain 错误类型定义
 - **`guidelines/development.md`** - 开发规范文档
 - **`guidelines/testing.md`** - 测试规范文档
 - **`migration/`** - 迁移文档目录

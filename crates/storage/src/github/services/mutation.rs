@@ -8,13 +8,13 @@ use domain::GitHubError;
 use toolkit::log_debug;
 
 use crate::github::{
-    client::GitHubClient,
     services::{PullRequestQueryService, ServiceContext},
     types::{
         CreatePullRequestRequest, CreatePullRequestResponse, MergePullRequestRequest,
         RepositoryInfo, UpdatePullRequestRequest,
     },
 };
+use client::GitHubClient;
 
 /// Pull Request 变更服务接口
 pub trait PullRequestMutationService: Send + Sync {

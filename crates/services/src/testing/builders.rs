@@ -4,7 +4,7 @@
 
 use domain::CommitSummaryAnalysis;
 
-use super::{MockBranchService, MockCommitMessageService, MockPullRequestService};
+use crate::testing::{MockBranchService, MockCommitMessageService, MockPullRequestService};
 
 // ==================== BranchServiceTestData ====================
 

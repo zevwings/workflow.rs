@@ -4,21 +4,22 @@
 
 use std::sync::Arc;
 
+use client::{IntoLLMRequestParameters, LLMClient};
 use domain::{
-    CommitChangeType, CommitFileChange, CommitFileClassification, DirectoryStats, ServiceError,
+    CommitChangeType, CommitFileChange, CommitFileClassification, CommitSummaryError,
+    DirectoryStats,
 };
-use llm::{JsonParser, LLMExecutor};
 
-use super::FileClassifyConversation;
+use crate::summary::classify::FileClassifyConversation;
 
 /// 阶段一：文件分类服务
 pub(crate) struct FileClassifyService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl FileClassifyService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对文件变更列表执行 LLM 分类
@@ -29,16 +30,15 @@ impl FileClassifyService {
         timestamp: i64,
         files: &[CommitFileChange],
         directory_stats: &[DirectoryStats],
-        language_code: &str,
-    ) -> Result<CommitFileClassification, ServiceError> {
+    ) -> Result<CommitFileClassification, CommitSummaryError> {
         let input_json = build_input_json(commit_id, author, timestamp, files, directory_stats);
         let conversation = FileClassifyConversation::new(input_json);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "file_classify")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
-        JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!(
+            .llm_client
+            .call(&conversation.to_params())
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
+        response.to_model::<CommitFileClassification>().map_err(|e| {
+            CommitSummaryError::ParseFailed(format!(
                 "Failed to parse file classification results: {}",
                 e
             ))

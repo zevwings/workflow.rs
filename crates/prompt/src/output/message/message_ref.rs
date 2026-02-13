@@ -1,7 +1,7 @@
 //! MessageRef 结构体定义和实现
 
-use super::message::Message;
 use crate::error::{PromptError, Result};
+use crate::output::message::message::Message;
 
 /// 全局消息输出器的便捷引用
 ///

@@ -7,7 +7,7 @@ use std::io::{self, Write};
 use tracing::{Event, Subscriber};
 use tracing_subscriber::{fmt::MakeWriter, layer::Context, Layer};
 
-use super::coordinator::{resume_spinner, suspend_spinner};
+use crate::terminal::coordinator::{resume_spinner, suspend_spinner};
 
 /// Spinner 感知的 Writer
 ///

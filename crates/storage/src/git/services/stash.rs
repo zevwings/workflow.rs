@@ -7,7 +7,7 @@ use domain::{GitError, StashApplyResult, StashEntry, StashPopResult, StashStat};
 use git2::{StashApplyOptions, StashFlags};
 use toolkit::log_warn;
 
-use super::GitContext;
+use crate::git::services::GitContext;
 
 /// Stash 服务接口
 pub trait StashService: Send + Sync {

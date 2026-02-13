@@ -13,7 +13,7 @@ use domain::{JiraAttachment, JiraError, JiraIssue, JiraTransition};
 use regex::Regex;
 use serde::Serialize;
 
-use crate::jira::client::{core::JiraClient, types::JiraResponseSerializable};
+use client::JiraClient;
 
 // 文件私有请求类型
 
@@ -81,9 +81,11 @@ impl IssueService for IssueServiceImpl {
         })?;
 
         let transitions: Vec<JiraTransition> = response
-            .data
-            .as_object()
-            .and_then(|obj| obj.get("transitions").cloned())
+            .json::<serde_json::Value>()
+            .ok()
+            .and_then(|data: serde_json::Value| {
+                data.as_object().and_then(|obj| obj.get("transitions").cloned())
+            })
             .and_then(|t| serde_json::from_value(t).ok())
             .unwrap_or_default();
 
@@ -208,7 +210,7 @@ impl IssueService for IssueServiceImpl {
             }
         }
 
-        Ok((issue, attachments, description))
+        Ok((issue, attachments, description.clone()))
     }
 }
 

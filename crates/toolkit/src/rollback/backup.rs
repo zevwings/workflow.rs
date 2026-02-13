@@ -8,7 +8,7 @@ use std::path::PathBuf;
 #[cfg(unix)]
 use std::process::Command;
 
-use super::error::RollbackError;
+use crate::rollback::error::RollbackError;
 use crate::util::fs::directory;
 
 /// 创建备份目录

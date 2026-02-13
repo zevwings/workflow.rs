@@ -3,6 +3,7 @@
 //! 包含 Shell Completion 相关的实体和服务接口
 
 pub mod entity;
+pub mod error;
 pub mod service;
 
 // Re-export public types
@@ -12,4 +13,5 @@ pub use entity::{
     get_shell_source_path, CompletionCheckResult, CompletionGenerateResult, CompletionRemoveResult,
     ShellCompletionStatus,
 };
+pub use error::CompletionError;
 pub use service::CompletionService;

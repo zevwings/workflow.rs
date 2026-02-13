@@ -52,7 +52,4 @@ pub enum GitError {
 
     #[error("Hook 执行失败: {0}")]
     HookFailed(String),
-
-    #[error("其他错误: {0}")]
-    Other(String),
 }

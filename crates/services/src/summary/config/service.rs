@@ -4,19 +4,21 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{CommitConfigAnalysis, CommitFileChange, CommitFileClassification, ServiceError};
-use llm::{JsonParser, LLMExecutor};
+use client::{IntoLLMRequestParameters, LLMClient};
+use domain::{
+    CommitConfigAnalysis, CommitFileChange, CommitFileClassification, CommitSummaryError,
+};
 
-use super::ConfigAnalyzeConversation;
+use crate::summary::config::ConfigAnalyzeConversation;
 
 /// 阶段二 2.3：配置/文档分析服务
 pub(crate) struct ConfigAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl ConfigAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对配置和文档文件执行分析
@@ -27,8 +29,7 @@ impl ConfigAnalyzeService {
         stage1: &CommitFileClassification,
         file_diffs: &HashMap<String, String>,
         files: &[CommitFileChange],
-        language_code: &str,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, CommitSummaryError> {
         let config_paths: Vec<&String> = stage1.categories.by_nature.configuration.iter().collect();
         let doc_paths: Vec<&String> = stage1.categories.by_nature.documentation.iter().collect();
 
@@ -76,15 +77,17 @@ impl ConfigAnalyzeService {
         );
         let conversation = ConfigAnalyzeConversation::new(user_prompt);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "config_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitConfigAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!(
-                "Failed to parse configuration analysis results: {}",
-                e
-            ))
-        })?;
-        serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
+            .llm_client
+            .call(&conversation.to_params())
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
+        let result: CommitConfigAnalysis =
+            response.to_model::<CommitConfigAnalysis>().map_err(|e| {
+                CommitSummaryError::ParseFailed(format!(
+                    "Failed to parse configuration analysis results: {}",
+                    e
+                ))
+            })?;
+        serde_json::to_string(&result)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }
 }

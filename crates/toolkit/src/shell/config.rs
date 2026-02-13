@@ -6,7 +6,7 @@ use std::{fs, path::PathBuf};
 
 use clap_complete::Shell;
 
-use super::{config_file_path, error::ShellError};
+use crate::shell::{config_file_path, error::ShellError};
 
 /// 添加 source 语句到 Shell 配置文件
 ///

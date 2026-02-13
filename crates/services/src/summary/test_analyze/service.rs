@@ -1,18 +1,18 @@
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{CommitFileClassification, CommitTestAnalysis, ServiceError};
-use llm::{JsonParser, LLMExecutor};
+use client::{IntoLLMRequestParameters, LLMClient};
+use domain::{CommitFileClassification, CommitSummaryError, CommitTestAnalysis};
 
-use super::TestAnalyzeConversation;
+use crate::summary::test_analyze::TestAnalyzeConversation;
 
 /// 阶段二 2.4：测试文件分析服务
 pub(crate) struct TestAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl TestAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对测试文件执行分析
@@ -22,8 +22,7 @@ impl TestAnalyzeService {
         &self,
         stage1: &CommitFileClassification,
         file_diffs: &HashMap<String, String>,
-        language_code: &str,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, CommitSummaryError> {
         let test_paths = &stage1.categories.by_nature.tests;
         if test_paths.is_empty() {
             return Ok("{}".to_string());
@@ -38,12 +37,17 @@ impl TestAnalyzeService {
         let user_prompt = format!("## Test File Changes\n{}\n", combined);
         let conversation = TestAnalyzeConversation::new(user_prompt);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "test_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitTestAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!("Failed to parse test analysis results: {}", e))
-        })?;
-        serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
+            .llm_client
+            .call(&conversation.to_params())
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
+        let result: CommitTestAnalysis =
+            response.to_model::<CommitTestAnalysis>().map_err(|e| {
+                CommitSummaryError::ParseFailed(format!(
+                    "Failed to parse test analysis results: {}",
+                    e
+                ))
+            })?;
+        serde_json::to_string(&result)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }
 }

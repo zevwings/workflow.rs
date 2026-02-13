@@ -4,19 +4,19 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, ServiceError};
-use llm::{JsonParser, LLMExecutor};
+use client::{IntoLLMRequestParameters, LLMClient};
+use domain::{CommitFileChange, CommitFileClassification, CommitLogicAnalysis, CommitSummaryError};
 
-use super::LogicAnalyzeConversation;
+use crate::summary::logic::LogicAnalyzeConversation;
 
 /// 阶段二 2.2：核心逻辑分析服务
 pub(crate) struct LogicAnalyzeService {
-    llm_executor: Arc<dyn LLMExecutor>,
+    llm_client: Arc<dyn LLMClient>,
 }
 
 impl LogicAnalyzeService {
-    pub fn new(llm_executor: Arc<dyn LLMExecutor>) -> Self {
-        Self { llm_executor }
+    pub fn new(llm_client: Arc<dyn LLMClient>) -> Self {
+        Self { llm_client }
     }
 
     /// 对核心逻辑文件执行深入分析
@@ -27,8 +27,7 @@ impl LogicAnalyzeService {
         stage1: &CommitFileClassification,
         file_diffs: &HashMap<String, String>,
         files: &[CommitFileChange],
-        language_code: &str,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, CommitSummaryError> {
         let focus_group = &stage1.analysis_strategy.focus_group;
         if focus_group.is_empty() {
             return Ok("{}".to_string());
@@ -68,13 +67,18 @@ File type: {}
 
         let conversation = LogicAnalyzeConversation::new(user_prompt);
         let response = self
-            .llm_executor
-            .execute(&conversation, language_code, "logic_analyze")
-            .map_err(|e| ServiceError::Other(e.to_string()))?;
-        let result: CommitLogicAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            ServiceError::Other(format!("Failed to parse logic analysis results: {}", e))
-        })?;
-        serde_json::to_string(&result).map_err(|e| ServiceError::Other(e.to_string()))
+            .llm_client
+            .call(&conversation.to_params())
+            .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
+        let result: CommitLogicAnalysis =
+            response.to_model::<CommitLogicAnalysis>().map_err(|e| {
+                CommitSummaryError::ParseFailed(format!(
+                    "Failed to parse logic analysis results: {}",
+                    e
+                ))
+            })?;
+        serde_json::to_string(&result)
+            .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }
 }
 

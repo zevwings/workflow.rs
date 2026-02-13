@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use domain::{
-    CodePlatform, CommitSummaryService, GitHubRepository, GitRepository, PrStatus, PullRequestInfo,
-    PullRequestService, ServiceError,
+    CodePlatform, CommitSummaryService, GitHubRepository, GitRepository, PrStatus,
+    PullRequestError, PullRequestInfo, PullRequestService,
 };
 
 /// Pull Request 服务实现
@@ -33,24 +33,24 @@ impl PullRequestServiceImpl {
     }
 
     /// 获取 PR repository，同时检查仓库类型是否支持 PR 操作（当前仅支持 GitHub）
-    fn get_pr_repository(&self) -> Result<Arc<dyn GitHubRepository>, ServiceError> {
+    fn get_pr_repository(&self) -> Result<Arc<dyn GitHubRepository>, PullRequestError> {
         let repo_info = self.git_repo.get_repo_info();
         match repo_info.kind.unwrap_or(CodePlatform::Unknown) {
             CodePlatform::GitHub => Ok(self.github_repo.clone()),
-            _ => Err(ServiceError::UnsupportedOperation(
+            _ => Err(PullRequestError::UnsupportedOperation(
                 "PR operations are not supported for this repository".to_string(),
             )),
         }
     }
 
     /// 解析 PR ID（支持自动检测当前分支的 PR）
-    fn resolve_pr_id(&self, pr_id_or_branch: Option<&str>) -> Result<String, ServiceError> {
+    fn resolve_pr_id(&self, pr_id_or_branch: Option<&str>) -> Result<String, PullRequestError> {
         match pr_id_or_branch {
             Some(id) => Ok(id.to_string()),
             None => {
                 let current_branch = self.git_repo.get_current_branch()?;
                 self.get_current_branch_pull_request(&current_branch)?.ok_or_else(|| {
-                    ServiceError::NotFound(format!(
+                    PullRequestError::NotFound(format!(
                         "No PR found for current branch '{}'",
                         current_branch
                     ))
@@ -60,10 +60,6 @@ impl PullRequestServiceImpl {
     }
 }
 
-fn map_github_err<T, E: std::fmt::Display>(r: Result<T, E>) -> Result<T, ServiceError> {
-    r.map_err(|e| ServiceError::Other(format!("GitHub API error: {}", e)))
-}
-
 impl PullRequestService for PullRequestServiceImpl {
     fn create_pull_request(
         &self,
@@ -71,7 +67,7 @@ impl PullRequestService for PullRequestServiceImpl {
         title: Option<&str>,
         description: Option<&str>,
         target_branch: Option<&str>,
-    ) -> Result<String, ServiceError> {
+    ) -> Result<String, PullRequestError> {
         // 获取当前分支信息
         let current_branch = self.git_repo.get_current_branch()?;
 
@@ -86,7 +82,7 @@ impl PullRequestService for PullRequestServiceImpl {
             // 使用 CommitSummaryService 生成 PR 内容
             let analysis =
                 self.commit_summary_service.run_analysis(Some(&final_target_branch)).map_err(
-                    |e| ServiceError::Other(format!("Failed to generate PR content: {}", e)),
+                    |e| PullRequestError::Other(format!("Failed to generate PR content: {}", e)),
                 )?;
 
             // 从 commit message 生成 PR 标题
@@ -170,26 +166,26 @@ impl PullRequestService for PullRequestServiceImpl {
         };
 
         let repo = self.get_pr_repository()?;
-        let pr_id = map_github_err(repo.create_pull_request(
+        let pr_id = repo.create_pull_request(
             &final_title,
             &final_description,
             &current_branch,
             &final_target_branch,
-        ))?;
+        )?;
 
         Ok(pr_id)
     }
 
-    fn merge_pull_request(&self, pr_id: &str, force: bool) -> Result<(), ServiceError> {
+    fn merge_pull_request(&self, pr_id: &str, force: bool) -> Result<(), PullRequestError> {
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.merge_pull_request(pr_id, force))
+        repo.merge_pull_request(pr_id, force).map_err(PullRequestError::GitHub)
     }
 
-    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, ServiceError> {
+    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, PullRequestError> {
         let pr_id = self.resolve_pr_id(pr_id_or_branch)?;
         let repo = self.get_pr_repository()?;
-        let (state, merged, _merged_at) = map_github_err(repo.get_pull_request_status(&pr_id))?;
-        let pr_info = map_github_err(repo.get_pull_request(&pr_id))?;
+        let (state, merged, _merged_at) = repo.get_pull_request_status(&pr_id)?;
+        let pr_info = repo.get_pull_request(&pr_id)?;
 
         Ok(PrStatus {
             id: pr_id,
@@ -199,18 +195,18 @@ impl PullRequestService for PullRequestServiceImpl {
         })
     }
 
-    fn close_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
+    fn close_pull_request(&self, pr_id: &str) -> Result<(), PullRequestError> {
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.close_pull_request(pr_id))
+        repo.close_pull_request(pr_id).map_err(PullRequestError::GitHub)
     }
 
     fn list_pull_requests(
         &self,
         state: Option<&str>,
         limit: Option<usize>,
-    ) -> Result<Vec<PrStatus>, ServiceError> {
+    ) -> Result<Vec<PrStatus>, PullRequestError> {
         let repo = self.get_pr_repository()?;
-        let prs = map_github_err(repo.list_pull_requests(state, limit))?;
+        let prs = repo.list_pull_requests(state, limit)?;
 
         Ok(prs
             .into_iter()
@@ -228,41 +224,42 @@ impl PullRequestService for PullRequestServiceImpl {
         pr_id: &str,
         title: Option<&str>,
         body: Option<&str>,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<(), PullRequestError> {
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.update_pull_request(pr_id, title, body))
+        repo.update_pull_request(pr_id, title, body).map_err(PullRequestError::GitHub)
     }
 
-    fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), ServiceError> {
+    fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), PullRequestError> {
         if comment.is_empty() {
-            return Err(ServiceError::InvalidInput(
+            return Err(PullRequestError::InvalidInput(
                 "Comment cannot be empty".to_string(),
             ));
         }
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.add_comment(pr_id, comment))
+        repo.add_comment(pr_id, comment).map_err(PullRequestError::GitHub)
     }
 
-    fn approve_pull_request(&self, pr_id: &str) -> Result<(), ServiceError> {
+    fn approve_pull_request(&self, pr_id: &str) -> Result<(), PullRequestError> {
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.approve_pull_request(pr_id))
+        repo.approve_pull_request(pr_id).map_err(PullRequestError::GitHub)
     }
 
-    fn get_pr_diff(&self, pr_id: &str) -> Result<String, ServiceError> {
+    fn get_pr_diff(&self, pr_id: &str) -> Result<String, PullRequestError> {
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.get_pr_diff(pr_id))
+        repo.get_pr_diff(pr_id).map_err(PullRequestError::GitHub)
     }
 
-    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, ServiceError> {
+    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, PullRequestError> {
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.get_pull_request(pr_id))
+        repo.get_pull_request(pr_id).map_err(PullRequestError::GitHub)
     }
 
     fn get_current_branch_pull_request(
         &self,
         current_branch: &str,
-    ) -> Result<Option<String>, ServiceError> {
+    ) -> Result<Option<String>, PullRequestError> {
         let repo = self.get_pr_repository()?;
-        map_github_err(repo.get_current_branch_pull_request(current_branch))
+        repo.get_current_branch_pull_request(current_branch)
+            .map_err(PullRequestError::GitHub)
     }
 }

@@ -8,7 +8,7 @@ use domain::{CommitChangeType, CommitFileChange, GitError};
 use git2::{Delta, Diff, DiffDelta, DiffFormat, DiffHunk, DiffLine, DiffOptions};
 use toolkit::log_warn;
 
-use super::GitContext;
+use crate::git::services::GitContext;
 
 /// Diff 服务接口
 pub trait DiffService: Send + Sync {

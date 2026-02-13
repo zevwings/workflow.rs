@@ -4,7 +4,8 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use domain::{JiraAttachment, JiraConfigContext, JiraIssue};
+use client::JiraConfigContext;
+use domain::{JiraAttachment, JiraIssue};
 use regex::Regex;
 
 /// URL 解析器

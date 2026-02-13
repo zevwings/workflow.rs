@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use domain::{BranchInfo, GitError};
 use git2::{BranchType, ErrorCode, PushOptions, Repository};
 
-use super::GitContext;
+use crate::git::services::GitContext;
 
 /// 分支服务接口
 pub trait BranchService: Send + Sync {

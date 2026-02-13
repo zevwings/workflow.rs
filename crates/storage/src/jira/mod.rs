@@ -25,7 +25,7 @@
 //! - `types` - 数据模型定义（API 响应类型）
 
 mod api;
-mod client;
+// mod client;
 mod history;
 
 // 仅在本 crate 内（registry）使用
@@ -33,7 +33,7 @@ pub(crate) use api::{
     AttachmentService, AttachmentServiceImpl, IssueService, IssueServiceImpl, JiraRepositoryImpl,
     StatusService, StatusServiceImpl, UserService, UserServiceImpl,
 };
-pub(crate) use client::{JiraClient, JiraClientImpl};
+// pub(crate) use client::{JiraClient, JiraClientImpl};
 pub(crate) use history::{
     JiraWorkHistoryRepositoryImpl, WorkHistoryService, WorkHistoryServiceImpl,
 };

@@ -27,7 +27,7 @@ where
 pub mod validators {
     use regex::Regex;
 
-    use super::Validator;
+    use crate::dialog::input::Validator;
 
     /// 必填字段验证器
     ///

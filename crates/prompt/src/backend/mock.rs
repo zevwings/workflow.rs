@@ -14,7 +14,7 @@ use std::{
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
-use super::Backend;
+use crate::backend::Backend;
 
 /// Mock 后端
 ///

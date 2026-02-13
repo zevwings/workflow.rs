@@ -2,9 +2,9 @@
 //!
 //! 构建用于生成 commit message 的 LLM 对话。
 
-use llm::LLMConversation;
+use client::LLMConversation;
 
-use super::service::FileStatistics;
+use crate::commit::message::service::FileStatistics;
 
 /// Commit Message 对话构建器
 pub(super) struct CommitMessageConversation {
@@ -75,11 +75,11 @@ Please analyze the above changes and generate a high-quality commit message foll
 }
 
 impl LLMConversation for CommitMessageConversation {
-    fn get_system_prompt(&self, _language_code: &str) -> String {
+    fn get_system_prompt(&self) -> String {
         include_str!("prompt.md").to_string()
     }
 
-    fn get_user_prompt(&self, _language_code: &str) -> String {
+    fn get_user_prompt(&self) -> String {
         self.build_user_prompt()
     }
 }

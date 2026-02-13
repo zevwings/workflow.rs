@@ -2,13 +2,14 @@
 //!
 //! 提供版本获取和比较功能。
 
-use http::{Authorization, HttpClient, Response};
+use client::{Authorization, HttpClientHolder, HttpResponse};
+use di::Container;
 use prompt::{info, success, Spinner};
 use toolkit::log_debug;
 
 // Re-export VersionComparison from types for convenience
-pub use super::types::VersionComparison;
-use super::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
+pub use crate::commands::update::types::VersionComparison;
+use crate::commands::update::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
 
 /// 获取当前安装的版本号
 ///
@@ -44,14 +45,18 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String, Box<dyn st
     let spinner = Spinner::new("Fetching latest version...");
     let spinner_instance = spinner.start();
 
-    let http_client = HttpClient::global()?;
+    // 获取 HTTP 客户端
+    let http_client = Container::global()
+        .get()
+        .map_err(|e| format!("Failed to get HTTP client: {}", e))?;
+    let client = HttpClientHolder::new(http_client);
 
     // 构建请求并发送
     let response = if let Some(token) = github_token {
         log_debug!("Using GitHub token for API request");
-        http_client.get(&url).auth(Authorization::bearer(token)).send()
+        client.get(&url).auth(Authorization::bearer(token)).send()
     } else {
-        http_client.get(&url).send()
+        client.get(&url).send()
     }
     .map_err(|e| format!("Failed to fetch latest release from GitHub: {}", e));
 
@@ -75,7 +80,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String, Box<dyn st
 }
 
 /// 处理 GitHub API 错误响应
-fn handle_github_api_error(response: &Response) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_github_api_error(response: &HttpResponse) -> Result<(), Box<dyn std::error::Error>> {
     let status = response.status;
 
     if (200..300).contains(&status) {

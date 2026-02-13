@@ -1,7 +1,7 @@
 //! 设置 Jira 配置命令
 
-use super::utils::{ensure_jira_status_config, get_jira_id_interactive_optional};
 use crate::bootstrap;
+use crate::commands::jira::utils::{ensure_jira_status_config, get_jira_id_interactive_optional};
 
 /// Jira Setup 命令
 pub struct JiraStatusCommand {

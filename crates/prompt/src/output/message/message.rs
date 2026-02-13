@@ -102,11 +102,11 @@ impl Message {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn global() -> super::message_ref::MessageRef {
+    pub fn global() -> crate::output::message::message_ref::MessageRef {
         // 确保单例已初始化
         static MESSAGE: OnceLock<Mutex<Message>> = OnceLock::new();
         MESSAGE.get_or_init(|| Mutex::new(Message::new()));
-        super::message_ref::MessageRef
+        crate::output::message::message_ref::MessageRef
     }
 
     /// 获取全局 Message 单例的原始 Mutex 引用（高级用法）

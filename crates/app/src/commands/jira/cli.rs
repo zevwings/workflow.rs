@@ -4,7 +4,7 @@
 
 use clap::{ArgAction, Args, Subcommand};
 
-use super::super::args::JiraIdArg;
+use crate::commands::args::JiraIdArg;
 
 /// 输出格式（用于 `workflow jira info`）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

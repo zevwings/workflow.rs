@@ -71,7 +71,7 @@ pub(super) fn start_render_thread(bar: &ProgressBar) {
 
             let theme = get_theme();
             let terminal_width = get_terminal_width();
-            let params = super::format::ProgressFormatParams {
+            let params = crate::output::progress::format::ProgressFormatParams {
                 message: &msg,
                 total: total_val,
                 current: current_val,

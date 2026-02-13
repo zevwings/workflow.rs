@@ -4,8 +4,8 @@ use domain::{CodePlatform, GitRepository};
 use prompt::{error, info, select, spinner, success, warning};
 use toolkit::BrowserExt;
 
-use super::types::TargetBranchOption;
 use crate::bootstrap;
+use crate::commands::pr::create::types::TargetBranchOption;
 
 /// PR 创建结果
 #[derive(Debug, Clone)]

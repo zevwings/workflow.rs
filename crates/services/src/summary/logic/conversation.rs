@@ -2,7 +2,7 @@
 //!
 //! 对业务代码、服务层等核心文件的完整 diff 进行深入分析。
 
-use llm::LLMConversation;
+use client::LLMConversation;
 
 use crate::summary::prompt;
 
@@ -20,15 +20,19 @@ impl LogicAnalyzeConversation {
 }
 
 impl LLMConversation for LogicAnalyzeConversation {
-    fn get_system_prompt(&self, _language_code: &str) -> String {
+    fn get_system_prompt(&self) -> String {
         prompt::analyze_logic().to_string()
     }
 
-    fn get_user_prompt(&self, _language_code: &str) -> String {
+    fn get_user_prompt(&self) -> String {
         self.user_prompt.clone()
     }
 
-    fn get_execution_params(&self) -> (Option<u32>, f32) {
-        (None, 0.3)
+    fn get_max_tokens(&self) -> Option<u32> {
+        None
+    }
+
+    fn get_temperature(&self) -> f32 {
+        0.3
     }
 }

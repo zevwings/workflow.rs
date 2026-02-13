@@ -15,8 +15,8 @@ use domain::{
 };
 use toolkit::{file, log_debug};
 
-use super::entity::JiraConfig;
-use crate::jira::JiraClient;
+use crate::jira::api::services::status::entity::JiraConfig;
+use client::JiraClient;
 
 /// 状态服务接口
 pub trait StatusService: Send + Sync {
@@ -159,7 +159,10 @@ impl StatusService for StatusServiceImpl {
                 ))
             })?;
 
-        let data = response.data;
+        let data: serde_json::Value = response
+            .json()
+            .map_err(|e| JiraError::ApiError(format!("Failed to parse response JSON: {}", e)))?;
+
         let statuses = data
             .as_array()
             .and_then(|arr| arr.first())

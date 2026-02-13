@@ -4,18 +4,20 @@
 
 use std::{
     fs::{self, File},
-    io::{Read, Write},
+    io::Write,
     path::Path,
+    sync::Arc,
 };
 
-use http::HttpClient;
+use client::{HttpClient, HttpClientHolder};
+use di::Container;
 use prompt::{info, success, warning, Progress, Spinner};
 use toolkit::{
     archive, build_checksum_url, calculate_sha256, log_debug, parse_hash_from_content,
     verify_checksum, SizeExt,
 };
 
-use super::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
+use crate::commands::update::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
 
 /// 构建下载 URL
 ///
@@ -54,53 +56,40 @@ pub fn download_file(
         }
     }
 
-    // 使用流式下载
-    let http_client = HttpClient::global()?;
-    let mut response = http_client
+    // 获取 HTTP 客户端
+    let http_client: Arc<dyn HttpClient> = Container::global()
+        .get()
+        .map_err(|e| format!("Failed to get HTTP client: {}", e))?;
+    let client = HttpClientHolder::new(http_client);
+
+    let response = client
         .get(url)
-        .stream()
+        .send()
         .map_err(|e| format!("Failed to send HTTP request: {}", e))?;
 
-    if !response.status().is_success() {
-        return Err(format!("Download failed: HTTP {}", response.status()).into());
+    if !response.is_success() {
+        return Err(format!("Download failed: HTTP {}", response.status).into());
     }
 
     // 获取文件总大小（如果可用）
-    let total_size: Option<u64> = response
-        .headers()
-        .get("content-length")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse::<u64>().ok());
+    let content_length = response.header("content-length").and_then(|v| v.parse::<u64>().ok());
 
     // 创建进度条
-    let progress = if let Some(size) = total_size {
+    let progress = if let Some(size) = content_length {
         info!("File size: {}", size.to_size_string());
         Progress::new_download(size, "Downloading update package...")
     } else {
         Progress::new_unknown("Downloading update package...")
     };
 
+    // 获取响应体
+    let bytes = response.bytes();
+    progress.set_position(bytes.len() as u64);
+
     let mut file = File::create(output_path)
         .map_err(|e| format!("Failed to create file {}: {}", output_path.display(), e))?;
 
-    let mut buffer = vec![0u8; 8192];
-    let mut downloaded_bytes = 0u64;
-
-    loop {
-        let bytes_read = response
-            .read(&mut buffer)
-            .map_err(|e| format!("Failed to read response data: {}", e))?;
-
-        if bytes_read == 0 {
-            break;
-        }
-
-        file.write_all(&buffer[..bytes_read])
-            .map_err(|e| format!("Failed to write to file: {}", e))?;
-
-        downloaded_bytes += bytes_read as u64;
-        progress.set_position(downloaded_bytes);
-    }
+    file.write_all(bytes).map_err(|e| format!("Failed to write to file: {}", e))?;
 
     progress.finish_with_message("Download complete!");
     Ok(())
@@ -117,10 +106,14 @@ pub fn verify_file_checksum(
 
     log_debug!("Checksum URL: {}", checksum_url);
 
-    let http_client = HttpClient::global()?;
+    // 获取 HTTP 客户端
+    let http_client: Arc<dyn HttpClient> = Container::global()
+        .get()
+        .map_err(|e| format!("Failed to get HTTP client: {}", e))?;
+    let client = HttpClientHolder::new(http_client);
 
     // 尝试下载校验和文件
-    match http_client.get(&checksum_url).send() {
+    match client.get(&checksum_url).send() {
         Ok(response) => {
             if response.status == 404 {
                 // 校验和文件不存在
@@ -136,7 +129,7 @@ pub fn verify_file_checksum(
                 return Ok(());
             }
 
-            if response.status < 200 || response.status >= 300 {
+            if !response.is_success() {
                 warning!("Failed to download checksum file: HTTP {}", response.status);
                 warning!("  Proceeding with update without verification...");
 
@@ -147,8 +140,9 @@ pub fn verify_file_checksum(
             }
 
             let checksum_content = response
-                .into_text()
-                .map_err(|e| format!("Failed to read checksum file: {}", e))?;
+                .text()
+                .map_err(|e| format!("Failed to read checksum file: {}", e))?
+                .to_string();
 
             // 解析哈希值
             let expected_hash = parse_hash_from_content(&checksum_content)

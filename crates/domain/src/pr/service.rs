@@ -2,7 +2,8 @@
 //!
 //! 提供完整的 Pull Request 生命周期管理功能，包括创建、更新、合并、关闭等操作。
 
-use crate::{errors::ServiceError, pr::entity::PullRequestInfo};
+use crate::pr::entity::PullRequestInfo;
+use crate::pr::error::PullRequestError;
 
 /// PR 服务接口
 ///
@@ -67,16 +68,16 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::Git`] - Git 操作失败（无法推送、分支不存在等）
-    /// * [`ServiceError::GitHub`] - GitHub API 调用失败（权限不足、网络错误等）
-    /// * [`ServiceError::Other`] - LLM 生成标题/描述失败（仅当未提供标题时）或其他错误
+    /// * [`PullRequestError::Git`] - Git 操作失败（无法推送、分支不存在等）
+    /// * [`PullRequestError::GitHub`] - GitHub API 调用失败（权限不足、网络错误等）
+    /// * [`PullRequestError::Other`] - LLM 生成标题/描述失败（仅当未提供标题时）或其他错误
     fn create_pull_request(
         &self,
         jira_id: Option<&str>,
         title: Option<&str>,
         description: Option<&str>,
         target_branch: Option<&str>,
-    ) -> Result<String, ServiceError>;
+    ) -> Result<String, PullRequestError>;
 
     /// 合并 Pull Request
     ///
@@ -89,14 +90,14 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::GitHub`] - 合并失败（冲突、权限不足、CI 未通过等）
-    /// * [`ServiceError::Other`] - 其他错误
+    /// * [`PullRequestError::GitHub`] - 合并失败（冲突、权限不足、CI 未通过等）
+    /// * [`PullRequestError::Other`] - 其他错误
     ///
     /// # 注意
     ///
     /// - `force = true` 可能绕过仓库保护规则，需谨慎使用
     /// - 合并后源分支不会自动删除，需手动清理
-    fn merge_pull_request(&self, pr_id: &str, force: bool) -> Result<(), ServiceError>;
+    fn merge_pull_request(&self, pr_id: &str, force: bool) -> Result<(), PullRequestError>;
 
     /// 获取 PR 状态
     ///
@@ -112,10 +113,10 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::GitHub`] - PR 不存在或 API 调用失败
-    /// * [`ServiceError::Git`] - 无法确定当前分支
-    /// * [`ServiceError::NotFound`] - 当前分支没有关联的 PR
-    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, ServiceError>;
+    /// * [`PullRequestError::GitHub`] - PR 不存在或 API 调用失败
+    /// * [`PullRequestError::Git`] - 无法确定当前分支
+    /// * [`PullRequestError::NotFound`] - 当前分支没有关联的 PR
+    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, PullRequestError>;
 
     /// 关闭 Pull Request
     ///
@@ -127,14 +128,14 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::GitHub`] - PR 不存在或已关闭
-    /// * [`ServiceError::Other`] - 其他错误
+    /// * [`PullRequestError::GitHub`] - PR 不存在或已关闭
+    /// * [`PullRequestError::Other`] - 其他错误
     ///
     /// # 注意
     ///
     /// - 关闭的 PR 可以重新打开（如果平台支持）
     /// - 源分支不会自动删除
-    fn close_pull_request(&self, pr_id: &str) -> Result<(), ServiceError>;
+    fn close_pull_request(&self, pr_id: &str) -> Result<(), PullRequestError>;
 
     /// 列出 Pull Requests
     ///
@@ -156,13 +157,13 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::GitHub`] - API 调用失败
-    /// * [`ServiceError::Other`] - 其他错误
+    /// * [`PullRequestError::GitHub`] - API 调用失败
+    /// * [`PullRequestError::Other`] - 其他错误
     fn list_pull_requests(
         &self,
         state: Option<&str>,
         limit: Option<usize>,
-    ) -> Result<Vec<PrStatus>, ServiceError>;
+    ) -> Result<Vec<PrStatus>, PullRequestError>;
 
     /// 更新 Pull Request 的标题和/或描述
     ///
@@ -176,8 +177,8 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::GitHub`] - PR 不存在或 API 调用失败
-    /// * [`ServiceError::Other`] - 其他错误
+    /// * [`PullRequestError::GitHub`] - PR 不存在或 API 调用失败
+    /// * [`PullRequestError::Other`] - 其他错误
     ///
     /// # 注意
     ///
@@ -187,7 +188,7 @@ pub trait PullRequestService: Send + Sync {
         pr_id: &str,
         title: Option<&str>,
         body: Option<&str>,
-    ) -> Result<(), ServiceError>;
+    ) -> Result<(), PullRequestError>;
 
     /// 添加评论到 Pull Request
     ///
@@ -200,9 +201,9 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::GitHub`] - PR 不存在或权限不足
-    /// * [`ServiceError::Other`] - 其他错误
-    fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), ServiceError>;
+    /// * [`PullRequestError::GitHub`] - PR 不存在或权限不足
+    /// * [`PullRequestError::Other`] - 其他错误
+    fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), PullRequestError>;
 
     /// 批准 Pull Request
     ///
@@ -214,14 +215,14 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 错误
     ///
-    /// * [`ServiceError::GitHub`] - PR 不存在或权限不足（不能批准自己的 PR）
-    /// * [`ServiceError::Other`] - 其他错误
+    /// * [`PullRequestError::GitHub`] - PR 不存在或权限不足（不能批准自己的 PR）
+    /// * [`PullRequestError::Other`] - 其他错误
     ///
     /// # 注意
     ///
     /// - 在某些平台，不能批准自己创建的 PR
     /// - 批准不代表自动合并，仍需调用 `merge_pull_request`
-    fn approve_pull_request(&self, pr_id: &str) -> Result<(), ServiceError>;
+    fn approve_pull_request(&self, pr_id: &str) -> Result<(), PullRequestError>;
 
     /// 获取 Pull Request 的 diff 内容
     ///
@@ -230,7 +231,7 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 返回
     /// PR 的 diff 内容（字符串格式）
-    fn get_pr_diff(&self, pr_id: &str) -> Result<String, ServiceError>;
+    fn get_pr_diff(&self, pr_id: &str) -> Result<String, PullRequestError>;
 
     /// 获取 Pull Request 详细信息
     ///
@@ -239,7 +240,7 @@ pub trait PullRequestService: Send + Sync {
     ///
     /// # 返回
     /// Pull Request 的完整信息
-    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, ServiceError>;
+    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, PullRequestError>;
 
     /// 获取当前分支的 PR ID
     ///
@@ -251,7 +252,7 @@ pub trait PullRequestService: Send + Sync {
     fn get_current_branch_pull_request(
         &self,
         current_branch: &str,
-    ) -> Result<Option<String>, ServiceError>;
+    ) -> Result<Option<String>, PullRequestError>;
 }
 
 // ==================== 类型定义 ====================

@@ -6,10 +6,8 @@ use std::sync::Arc;
 
 use domain::GitHubError;
 
-use crate::github::{
-    client::GitHubClient,
-    services::{PullRequestQueryService, ServiceContext},
-};
+use crate::github::services::{PullRequestQueryService, ServiceContext};
+use client::GitHubClient;
 
 const PR_APPROVE_EVENT: &str = "APPROVE";
 const PR_APPROVE_EMOJI: &str = "👍";
