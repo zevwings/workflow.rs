@@ -260,15 +260,15 @@ fn configure_openai(
     let builder = FormBuilder::new()
         .with_title("OpenAI 配置")
         .add_password(
-            PasswordFormField::new("api_key", "请输入您的 OpenAI API 密钥")
+            PasswordFormField::new("api_key", "Please enter your OpenAI API key")
                 .default(default_key)
-                .result_title("您的 OpenAI API 密钥")
+                .result_title("Your OpenAI API key")
                 .required(),
         )
         .add_input(
-            InputFormField::new("model", "请输入您的 OpenAI 模型")
+            InputFormField::new("model", "Please enter your OpenAI model")
                 .default(default_model)
-                .result_title("您的 OpenAI 模型")
+                .result_title("Your OpenAI model")
                 .required(),
         )
         .add_select(build_language_field(
@@ -297,14 +297,14 @@ fn configure_deepseek(
     let builder = FormBuilder::new()
         .with_title("DeepSeek 配置")
         .add_password(
-            PasswordFormField::new("api_key", "请输入您的 DeepSeek API 密钥")
+            PasswordFormField::new("api_key", "Please enter your DeepSeek API key")
                 .default(default_key)
-                .result_title("您的 DeepSeek API 密钥"),
+                .result_title("Your DeepSeek API key"),
         )
         .add_input(
-            InputFormField::new("model", "请输入您的 DeepSeek 模型")
+            InputFormField::new("model", "Please enter your DeepSeek model")
                 .default(default_model)
-                .result_title("您的 DeepSeek 模型")
+                .result_title("Your DeepSeek model")
                 .required(),
         )
         .add_select(build_language_field(
@@ -334,21 +334,21 @@ fn configure_proxy(
     let builder = FormBuilder::new()
         .with_title("自定义提供商（代理）配置")
         .add_input(
-            InputFormField::new("url", "请输入您的 LLM 代理 URL")
+            InputFormField::new("url", "Please enter your LLM proxy URL")
                 .default(default_url)
-                .result_title("您的 LLM 代理 URL")
+                .result_title("Your LLM proxy URL")
                 .required(),
         )
         .add_password(
-            PasswordFormField::new("api_key", "请输入您的 LLM 代理密钥")
+            PasswordFormField::new("api_key", "Please enter your LLM proxy key")
                 .default(default_key)
-                .result_title("您的 LLM 代理密钥")
+                .result_title("Your LLM proxy key")
                 .required(),
         )
         .add_input(
-            InputFormField::new("model", "请输入您的 LLM 模型")
+            InputFormField::new("model", "Please enter your LLM model")
                 .default(default_model)
-                .result_title("您的 LLM 模型")
+                .result_title("Your LLM model")
                 .required(),
         )
         .add_select(build_language_field(
@@ -369,7 +369,7 @@ fn configure_proxy(
 fn build_language_field(prompt: &str, options: &[String], default_index: usize) -> SelectFormField {
     SelectFormField::new("language", prompt.to_string(), options.to_vec())
         .default(default_index)
-        .result_title("您的输出语言")
+        .result_title("Your output language")
 }
 
 fn build_language_prompt(
@@ -380,9 +380,12 @@ fn build_language_prompt(
         language_codes.iter().position(|code| code == &current_language).unwrap_or(0);
 
     let prompt = if current_language.is_empty() {
-        "请选择您的输出语言".to_string()
+        "Please select your output language".to_string()
     } else {
-        format!("请选择您的输出语言 [当前: {}]", current_language)
+        format!(
+            "Please select your output language [current: {}]",
+            current_language
+        )
     };
 
     (prompt, default_language_index)

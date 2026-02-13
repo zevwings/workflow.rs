@@ -147,12 +147,12 @@ pub mod validators {
     /// use prompt::validators;
     ///
     /// // 验证数字
-    /// let validator = validators::regex(r"^\d+$", Some("请输入数字"))?;
+    /// let validator = validators::regex(r"^\d+$", Some("Please enter a number"))?;
     ///
     /// // 验证邮箱（更严格）
     /// let validator = validators::regex(
     ///     r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-    ///     Some("请输入有效的邮箱地址")
+    ///     Some("Please enter a valid email address")
     /// )?;
     /// # Ok::<(), String>(())
     /// ```

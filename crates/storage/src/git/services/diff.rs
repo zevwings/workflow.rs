@@ -36,6 +36,27 @@ pub trait DiffService: Send + Sync {
         branch: &str,
         target_branch: &str,
     ) -> Result<Vec<CommitFileChange>, GitError>;
+
+    /// 检测文件是否为纯格式化变更
+    ///
+    /// 对比正常 diff 和忽略空白的 diff：
+    /// - 如果正常 diff 有变更，但忽略空白后无变更 → 纯格式化
+    /// - 否则为实质性变更
+    ///
+    /// # 参数
+    /// - `base_ref`: 基准引用（分支名或 commit SHA）
+    /// - `target_ref`: 目标引用
+    /// - `file_path`: 要检测的文件路径
+    ///
+    /// # 返回
+    /// - `Ok(true)`: 纯格式化变更
+    /// - `Ok(false)`: 包含实质性变更
+    fn is_formatting_only_change(
+        &self,
+        base_ref: &str,
+        target_ref: &str,
+        file_path: &str,
+    ) -> Result<bool, GitError>;
 }
 
 /// Diff 服务实现
@@ -456,6 +477,81 @@ impl DiffService for DiffServiceImpl {
 
         Ok(files)
     }
+
+    fn is_formatting_only_change(
+        &self,
+        base_ref: &str,
+        target_ref: &str,
+        file_path: &str,
+    ) -> Result<bool, GitError> {
+        let repo = self.ctx.repository();
+
+        // 解析 base 和 target 引用
+        let base_commit = repo
+            .revparse_single(base_ref)
+            .map_err(|_| GitError::CommitNotFound(base_ref.to_string()))?
+            .peel_to_commit()
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        let target_commit = repo
+            .revparse_single(target_ref)
+            .map_err(|_| GitError::CommitNotFound(target_ref.to_string()))?
+            .peel_to_commit()
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        let base_tree = base_commit.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+        let target_tree =
+            target_commit.tree().map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        // 1. 正常 diff（包含空白变更）
+        let normal_diff = repo
+            .diff_tree_to_tree(Some(&base_tree), Some(&target_tree), None)
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        // 2. 忽略空白的 diff
+        let mut opts = DiffOptions::new();
+        opts.ignore_whitespace(true);
+        let ignore_ws_diff = repo
+            .diff_tree_to_tree(Some(&base_tree), Some(&target_tree), Some(&mut opts))
+            .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
+        // 3. 统计指定文件的变更量
+        let normal_changes = count_file_changes(&normal_diff, file_path);
+        let ignore_ws_changes = count_file_changes(&ignore_ws_diff, file_path);
+
+        // 4. 判断：正常有变更 && 忽略空白后无变更 = 纯格式化
+        Ok(normal_changes > 0 && ignore_ws_changes == 0)
+    }
+}
+
+/// 统计指定文件在 diff 中的变更行数
+///
+/// 仅统计 '+' 和 '-' 行（不包含上下文行）
+fn count_file_changes(diff: &Diff, target_path: &str) -> u32 {
+    let mut changes = 0u32;
+    let _ = diff.foreach(
+        &mut |delta, _progress| {
+            // 只处理匹配目标路径的文件
+            let matches = delta
+                .new_file()
+                .path()
+                .or_else(|| delta.old_file().path())
+                .and_then(|p| p.to_str())
+                .map(|p| p == target_path)
+                .unwrap_or(false);
+            matches
+        },
+        None,
+        None,
+        Some(&mut |_delta, _hunk, line| {
+            // 统计新增和删除行
+            if matches!(line.origin(), '+' | '-') {
+                changes = changes.saturating_add(1);
+            }
+            true
+        }),
+    );
+    changes
 }
 
 fn delta_status_to_commit_change_type(status: Delta) -> CommitChangeType {

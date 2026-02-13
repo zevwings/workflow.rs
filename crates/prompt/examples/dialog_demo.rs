@@ -14,11 +14,11 @@ use prompt::{
 };
 
 fn main() {
-    println!("对话框功能演示");
+    println!("Dialog functionality demonstration");
     println!("==============");
     println!();
-    println!("此示例演示各种交互式对话框。");
-    println!("按 Ctrl+C 或 Esc 可以取消任何对话框。");
+    println!("This example demonstrates various interactive dialogs.");
+    println!("Press Ctrl+C or Esc to cancel any dialog.");
     println!();
 
     let msg = Message::global();
@@ -26,45 +26,45 @@ fn main() {
     // 演示 1：确认对话框
     if let Err(e) = demo_confirm(&msg) {
         if is_cancelled(&e) {
-            let _ = msg.warning("演示被用户取消");
+            let _ = msg.warning("Demo cancelled by user");
             return;
         }
-        let _ = msg.error(format!("错误: {}", e));
+        let _ = msg.error(format!("Error: {}", e));
         return;
     }
 
     // 演示 2：输入对话框
     if let Err(e) = demo_input(&msg) {
         if is_cancelled(&e) {
-            let _ = msg.warning("演示被用户取消");
+            let _ = msg.warning("Demo cancelled by user");
             return;
         }
-        let _ = msg.error(format!("错误: {}", e));
+        let _ = msg.error(format!("Error: {}", e));
         return;
     }
 
     // 演示 3：选择对话框
     if let Err(e) = demo_select(&msg) {
         if is_cancelled(&e) {
-            let _ = msg.warning("演示被用户取消");
+            let _ = msg.warning("Demo cancelled by user");
             return;
         }
-        let _ = msg.error(format!("错误: {}", e));
+        let _ = msg.error(format!("Error: {}", e));
         return;
     }
 
     // 演示 4：多选对话框
     if let Err(e) = demo_multiselect(&msg) {
         if is_cancelled(&e) {
-            let _ = msg.warning("演示被用户取消");
+            let _ = msg.warning("Demo cancelled by user");
             return;
         }
-        let _ = msg.error(format!("错误: {}", e));
+        let _ = msg.error(format!("Error: {}", e));
         return;
     }
 
     let _ = msg.break_line();
-    let _ = msg.success("所有演示完成！");
+    let _ = msg.success("All demos completed!");
 }
 
 /// 检查是否是用户取消操作
@@ -77,21 +77,24 @@ fn demo_confirm(msg: &prompt::MessageRef) -> prompt::Result<()> {
     let _ = msg.separator_with_text('-', 50, "Demo 1: Confirm");
 
     // 基本确认
-    let continue_demo = confirm!("是否继续演示？").default(true).prompt()?;
+    let continue_demo = confirm!("Do you want to continue the demo?").default(true).prompt()?;
 
     if !continue_demo {
-        let _ = msg.info("用户选择不继续");
+        let _ = msg.info("User chose not to continue");
         return Ok(());
     }
 
     // 带格式化消息的确认
     let branch = "feature/demo";
-    let confirmed = confirm!("是否要合并分支 '{}' 到 main？", branch)
+    let confirmed = confirm!("Do you want to merge branch '{}' to main?", branch)
         .default(false)
         .result_title("Merge")
         .prompt()?;
 
-    let _ = msg.info(format!("合并选择: {}", if confirmed { "是" } else { "否" }));
+    let _ = msg.info(format!(
+        "Merge choice: {}",
+        if confirmed { "Yes" } else { "No" }
+    ));
 
     Ok(())
 }
@@ -102,45 +105,45 @@ fn demo_input(msg: &prompt::MessageRef) -> prompt::Result<()> {
     let _ = msg.separator_with_text('-', 50, "Demo 2: Input");
 
     // 基本输入
-    let name = input!("请输入您的姓名")
+    let name = input!("Please enter your name")
         .default("User")
-        .placeholder("输入姓名...")
+        .placeholder("Enter your name...")
         .result_title("Name")
         .prompt()?;
 
-    let _ = msg.info(format!("您好, {}!", name));
+    let _ = msg.info(format!("Hello, {}!", name));
 
     // 带验证的输入（使用 regex 验证邮箱）
     let email_validator = validators::regex(
         r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
-        Some("请输入有效的邮箱地址"),
+        Some("Please enter a valid email address"),
     )
     .expect("Invalid regex");
 
-    let email = input!("请输入您的邮箱")
+    let email = input!("Please enter your email")
         .placeholder("example@email.com")
         .validator(email_validator)
         .result_title("Email")
         .prompt()?;
 
-    let _ = msg.info(format!("邮箱: {}", email));
+    let _ = msg.info(format!("Email: {}", email));
 
     // 带长度验证的输入
-    let username = input!("请输入用户名（至少 3 个字符）")
+    let username = input!("Please enter your username (at least 3 characters)")
         .validator(validators::min_length(3))
         .result_title("Username")
         .prompt()?;
 
-    let _ = msg.info(format!("用户名: {}", username));
+    let _ = msg.info(format!("Username: {}", username));
 
     // 多行输入
-    let changes = input!("请输入变更说明（可多行）")
+    let changes = input!("Please enter your changes (can be multiple lines)")
         .multiline()
-        .placeholder("例如：\n- 修复了 XXX\n- 优化了 YYY\n- 新增了 ZZZ")
+        .placeholder("For example:\n- Fixed XXX\n- Optimized YYY\n- Added ZZZ")
         .result_title("Changes")
         .prompt()?;
 
-    let _ = msg.info(format!("变更说明:\n{}", changes));
+    let _ = msg.info(format!("Changes:\n{}", changes));
 
     Ok(())
 }
@@ -152,12 +155,12 @@ fn demo_select(msg: &prompt::MessageRef) -> prompt::Result<()> {
 
     // 基本选择
     let colors = vec!["Red", "Green", "Blue", "Yellow", "Purple"];
-    let color = select!("请选择您喜欢的颜色", colors)
+    let color = select!("Please select your favorite color", colors)
         .default(0)
         .result_title("Color")
         .prompt()?;
 
-    let _ = msg.info(format!("您选择了: {}", color));
+    let _ = msg.info(format!("You selected: {}", color));
 
     // 带分页的选择（当选项多时）
     let languages = vec![
@@ -174,12 +177,15 @@ fn demo_select(msg: &prompt::MessageRef) -> prompt::Result<()> {
         "Ruby",
         "PHP",
     ];
-    let lang = select!("请选择您最喜欢的编程语言", languages)
-        .page_size(5)
-        .result_title("Language")
-        .prompt()?;
+    let lang = select!(
+        "Please select your favorite programming language",
+        languages
+    )
+    .page_size(5)
+    .result_title("Language")
+    .prompt()?;
 
-    let _ = msg.info(format!("您选择了: {}", lang));
+    let _ = msg.info(format!("You selected: {}", lang));
 
     Ok(())
 }
@@ -199,15 +205,15 @@ fn demo_multiselect(msg: &prompt::MessageRef) -> prompt::Result<()> {
         "Monitoring",
     ];
 
-    let selected = multiselect!("请选择要启用的功能", features)
-        .default(vec![0, 2]) // 默认选中第 1 和第 3 项
+    let selected = multiselect!("Please select the features to enable", features)
+        .default(vec![0, 2]) // default selected the 1st and 3rd item
         .result_title("Features")
         .prompt()?;
 
     if selected.is_empty() {
-        let _ = msg.warning("未选择任何功能");
+        let _ = msg.warning("No features selected");
     } else {
-        let _ = msg.info(format!("已选择 {} 个功能:", selected.len()));
+        let _ = msg.info(format!("Selected {} features:", selected.len()));
         for feature in &selected {
             let _ = msg.print(format!("  - {}", feature));
         }
@@ -219,12 +225,15 @@ fn demo_multiselect(msg: &prompt::MessageRef) -> prompt::Result<()> {
         "Qwik",
     ];
 
-    let selected_frameworks = multiselect!("请选择您熟悉的前端框架", frameworks)
-        .page_size(5)
-        .result_title("Frameworks")
-        .prompt()?;
+    let selected_frameworks = multiselect!(
+        "Please select the frontend frameworks you are familiar with",
+        frameworks
+    )
+    .page_size(5)
+    .result_title("Frameworks")
+    .prompt()?;
 
-    let _ = msg.info(format!("已选择: {:?}", selected_frameworks));
+    let _ = msg.info(format!("Selected: {:?}", selected_frameworks));
 
     Ok(())
 }

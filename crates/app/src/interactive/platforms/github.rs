@@ -74,19 +74,22 @@ impl GitHubConfigurator {
     fn build_account_form_fields(&self, builder: FormBuilder) -> FormBuilder {
         builder
             .add_input(
-                InputFormField::new("name", "请输入您的 GitHub 账户名称")
+                InputFormField::new("name", "Please enter your GitHub account name")
                     .result_title("您的 GitHub 账户名称")
                     .required(),
             )
             .add_input(
-                InputFormField::new("email", "请输入您的 GitHub 邮箱")
+                InputFormField::new("email", "Please enter your GitHub email")
                     .result_title("您的 GitHub 邮箱")
                     .required(),
             )
             .add_password(
-                PasswordFormField::new("api_token", "请输入您的 GitHub Personal Access Token")
-                    .result_title("您的 GitHub Personal Access Token")
-                    .required(),
+                PasswordFormField::new(
+                    "api_token",
+                    "Please enter your GitHub Personal Access Token",
+                )
+                .result_title("您的 GitHub Personal Access Token")
+                .required(),
             )
     }
 
@@ -99,22 +102,25 @@ impl GitHubConfigurator {
     ) -> FormBuilder {
         builder
             .add_input(
-                InputFormField::new("name", "请输入您的 GitHub 账户名称")
+                InputFormField::new("name", "Please enter your GitHub account name")
                     .default(current_name)
-                    .result_title("您的 GitHub 账户名称")
+                    .result_title("Your GitHub account name")
                     .required(),
             )
             .add_input(
-                InputFormField::new("email", "请输入您的 GitHub 邮箱")
+                InputFormField::new("email", "Please enter your GitHub email")
                     .default(current_email)
-                    .result_title("您的 GitHub 邮箱")
+                    .result_title("Your GitHub email")
                     .required(),
             )
             .add_password(
-                PasswordFormField::new("api_token", "请输入您的 GitHub Personal Access Token")
-                    .default(current_token)
-                    .result_title("您的 GitHub Personal Access Token")
-                    .required(),
+                PasswordFormField::new(
+                    "api_token",
+                    "Please enter your GitHub Personal Access Token",
+                )
+                .default(current_token)
+                .result_title("Your GitHub Personal Access Token")
+                .required(),
             )
     }
 
