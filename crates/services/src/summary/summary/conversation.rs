@@ -2,8 +2,7 @@
 //!
 //! 综合阶段一分类结果与阶段二各分析结果，生成结构化的 commit 总结。
 
-use llm::{LLMConversation, SupportedLanguage};
-use toolkit::log_info;
+use client::{LLMConversation, SupportedLanguage};
 
 use crate::summary::{prompt, summary::SummaryAnalyzeInput};
 
@@ -12,20 +11,21 @@ use crate::summary::{prompt, summary::SummaryAnalyzeInput};
 /// 阶段三：全局总结对话
 pub struct SummaryAnalyzeConversation {
     input: SummaryAnalyzeInput,
+    language: SupportedLanguage,
 }
 
 impl SummaryAnalyzeConversation {
-    pub fn new(input: SummaryAnalyzeInput) -> Self {
-        Self { input }
+    pub fn new(input: SummaryAnalyzeInput, language: SupportedLanguage) -> Self {
+        Self { input, language }
     }
 }
 
 impl LLMConversation for SummaryAnalyzeConversation {
-    fn get_system_prompt(&self, _language_code: &str) -> String {
+    fn get_system_prompt(&self) -> String {
         prompt::summary().to_string()
     }
 
-    fn get_user_prompt(&self, language_code: &str) -> String {
+    fn get_user_prompt(&self) -> String {
         let i = &self.input;
 
         // 构建未提交变更警告（如果存在）
@@ -34,13 +34,6 @@ impl LLMConversation for SummaryAnalyzeConversation {
         } else {
             ""
         };
-
-        let language_name = SupportedLanguage::find(language_code)
-            .map(|lang| lang.native_name)
-            .unwrap_or("en");
-
-        log_info!("language_name: {}", language_name);
-        log_info!("language_code: {}", language_code);
 
         format!(
             r##"🌐 LANGUAGE REQUIREMENT:
@@ -87,8 +80,8 @@ The RESPOND LANGUAGE MUST use the {}({})
 - Modified: {}
 - Renamed: {}
 - Line changes: +{} -{}{}"##,
-            language_name,
-            language_code,
+            self.language.name,
+            self.language.code,
             i.commit_count,
             i.commit_history_summary,
             i.stage1_classification,

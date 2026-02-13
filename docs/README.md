@@ -35,13 +35,6 @@
 - 测试命令参考
 - 测试工具使用（pretty_assertions、rstest、insta、mockito）
 
-### [错误类型定义](./error-definitions.md)
-
-Domain 层错误类型设计，包含：
-- 按服务/接口划分的错误类型
-- 各错误类型的变体定义
-- 用于替代已删除的 `ServiceError`
-
 ### [迁移文档](./migration/)
 
 版本迁移指南，包含：

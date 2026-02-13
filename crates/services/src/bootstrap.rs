@@ -4,13 +4,13 @@
 
 use std::sync::Arc;
 
+use client::{LLMClient, LLMConfigContext, LanguageManager};
 use di::{bind, Container, InjectionError, Scope};
 use domain::{
     AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
     GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository, PathService,
     PullRequestService, VerificationService,
 };
-use llm::{LLMClient, LLMConfigContext};
 
 use crate::{
     alias::AliasServiceImpl, branch::BranchServiceImpl, commit::CommitMessageServiceImpl,
@@ -38,8 +38,7 @@ pub fn register_services() -> Result<(), InjectionError> {
 
     bind!(dyn BranchService, |c: &Container| {
         let llm_client = c.get::<dyn LLMClient>()?;
-        let llm_context = c.get::<dyn LLMConfigContext>()?;
-        Ok(Arc::new(BranchServiceImpl::new(llm_client, llm_context)))
+        Ok(Arc::new(BranchServiceImpl::new(llm_client)))
     })
     .in_scope(Scope::Singleton)?;
 
@@ -62,10 +61,12 @@ pub fn register_services() -> Result<(), InjectionError> {
         let git_repo = c.get::<dyn GitRepository>()?;
         let llm_client = c.get::<dyn LLMClient>()?;
         let llm_context = c.get::<dyn LLMConfigContext>()?;
+        let llm_language_manager = c.get::<dyn LanguageManager>()?;
         Ok(Arc::new(CommitSummaryServiceImpl::new(
             git_repo,
             llm_client,
             llm_context,
+            llm_language_manager,
         )))
     })
     .in_scope(Scope::Singleton)?;
@@ -74,11 +75,8 @@ pub fn register_services() -> Result<(), InjectionError> {
     bind!(dyn CommitMessageService, |c: &Container| {
         let git_repo = c.get::<dyn GitRepository>()?;
         let llm_client = c.get::<dyn LLMClient>()?;
-        let llm_context = c.get::<dyn LLMConfigContext>()?;
         Ok(Arc::new(CommitMessageServiceImpl::new(
-            git_repo,
-            llm_client,
-            llm_context,
+            git_repo, llm_client,
         )))
     })
     .in_scope(Scope::Singleton)?;
@@ -100,8 +98,10 @@ pub fn register_services() -> Result<(), InjectionError> {
         let config_repository = c.get::<dyn GlobalConfigRepository>()?;
         let jira_repository = c.get::<dyn JiraRepository>()?;
         let github_repository = c.get::<dyn GitHubRepository>()?;
+        let llm_language_manager = c.get::<dyn LanguageManager>()?;
         Ok(Arc::new(VerificationServiceImpl::new(
             llm_client,
+            llm_language_manager,
             config_repository,
             jira_repository,
             github_repository,

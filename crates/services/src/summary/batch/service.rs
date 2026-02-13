@@ -4,8 +4,8 @@
 
 use std::{collections::HashMap, sync::Arc};
 
+use client::{IntoLLMRequestParameters, LLMClient};
 use domain::{CommitBatchAnalysis, CommitFileChange, CommitFileClassification, CommitSummaryError};
-use llm::{IntoLLMRequestParameters, JsonParser, LLMClient};
 
 use crate::summary::batch::BatchAnalyzeConversation;
 
@@ -29,7 +29,6 @@ impl BatchAnalyzeService {
         stage1: &CommitFileClassification,
         file_diffs: &HashMap<String, String>,
         files: &[CommitFileChange],
-        language_code: &str,
     ) -> Result<String, CommitSummaryError> {
         let batch_group = &stage1.analysis_strategy.batch_group;
         if batch_group.is_empty() {
@@ -87,14 +86,15 @@ Selection strategy: {}
         let conversation = BatchAnalyzeConversation::new(user_prompt);
         let response = self
             .llm_client
-            .call(&conversation.to_params(language_code))
+            .call(&conversation.to_params())
             .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
-        let result: CommitBatchAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            CommitSummaryError::ParseFailed(format!(
-                "Failed to parse batch analysis results: {}",
-                e
-            ))
-        })?;
+        let result: CommitBatchAnalysis =
+            response.to_model::<CommitBatchAnalysis>().map_err(|e| {
+                CommitSummaryError::ParseFailed(format!(
+                    "Failed to parse batch analysis results: {}",
+                    e
+                ))
+            })?;
         serde_json::to_string(&result)
             .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }

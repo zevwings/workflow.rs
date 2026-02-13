@@ -4,11 +4,11 @@
 
 use std::sync::Arc;
 
+use client::{IntoLLMRequestParameters, LLMClient};
 use domain::{
     CommitChangeType, CommitFileChange, CommitFileClassification, CommitSummaryError,
     DirectoryStats,
 };
-use llm::{IntoLLMRequestParameters, JsonParser, LLMClient};
 
 use crate::summary::classify::FileClassifyConversation;
 
@@ -30,15 +30,14 @@ impl FileClassifyService {
         timestamp: i64,
         files: &[CommitFileChange],
         directory_stats: &[DirectoryStats],
-        language_code: &str,
     ) -> Result<CommitFileClassification, CommitSummaryError> {
         let input_json = build_input_json(commit_id, author, timestamp, files, directory_stats);
         let conversation = FileClassifyConversation::new(input_json);
         let response = self
             .llm_client
-            .call(&conversation.to_params(language_code))
+            .call(&conversation.to_params())
             .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
-        JsonParser::to_model(&response).map_err(|e| {
+        response.to_model::<CommitFileClassification>().map_err(|e| {
             CommitSummaryError::ParseFailed(format!(
                 "Failed to parse file classification results: {}",
                 e

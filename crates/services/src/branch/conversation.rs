@@ -2,7 +2,7 @@
 //!
 //! 用于根据标题生成分支名。
 
-use llm::LLMConversation;
+use client::LLMConversation;
 
 /// 分支名对话
 ///
@@ -28,7 +28,7 @@ impl BranchNameConversation {
 }
 
 impl LLMConversation for BranchNameConversation {
-    fn get_system_prompt(&self, _language_code: &str) -> String {
+    fn get_system_prompt(&self) -> String {
         r#"You are a helpful Assistant that generates a git branch name.
 
 Generate a branch name based on the input above, and return the branch name in JSON format.
@@ -50,7 +50,7 @@ Return JSON format:
         .to_string()
     }
 
-    fn get_user_prompt(&self, _language_code: &str) -> String {
+    fn get_user_prompt(&self) -> String {
         // 构建输入文本
         let mut input_parts = Vec::with_capacity(1);
         if let Some(title) = &self.title {

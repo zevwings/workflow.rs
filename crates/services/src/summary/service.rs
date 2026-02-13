@@ -4,12 +4,12 @@
 
 use std::{collections::HashMap, sync::Arc};
 
+use client::{LLMClient, LLMConfigContext, LanguageManager};
 use domain::{
     CommitChangeType, CommitFileChange, CommitFileClassification, CommitInfo,
     CommitSummaryAnalysis, CommitSummaryError, CommitSummaryService, DirectoryStats,
     DirectoryStatusDistribution, GitRepository,
 };
-use llm::{LLMClient, LLMConfigContext};
 
 use crate::summary::{
     BatchAnalyzeService, ConfigAnalyzeService, FileClassifyService, LogicAnalyzeService,
@@ -62,6 +62,7 @@ pub(crate) struct CommitSummaryServiceImpl {
     git_repo: Arc<dyn GitRepository>,
     llm_client: Arc<dyn LLMClient>,
     llm_context: Arc<dyn LLMConfigContext>,
+    llm_language_manager: Arc<dyn LanguageManager>,
 }
 
 impl CommitSummaryServiceImpl {
@@ -69,11 +70,13 @@ impl CommitSummaryServiceImpl {
         git_repo: Arc<dyn GitRepository>,
         llm_client: Arc<dyn LLMClient>,
         llm_context: Arc<dyn LLMConfigContext>,
+        llm_language_manager: Arc<dyn LanguageManager>,
     ) -> Self {
         Self {
             git_repo,
             llm_client,
             llm_context,
+            llm_language_manager,
         }
     }
 
@@ -181,7 +184,6 @@ impl CommitSummaryServiceImpl {
             ctx.commit_info.author_time,
             &ctx.files,
             &ctx.directory_stats,
-            &ctx.language_code,
         )
     }
 
@@ -206,7 +208,6 @@ impl CommitSummaryServiceImpl {
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
-                            &ctx.language_code,
                         )
                     },
                     // 2.2 核心逻辑分析
@@ -215,7 +216,6 @@ impl CommitSummaryServiceImpl {
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
-                            &ctx.language_code,
                         )
                     },
                 )
@@ -228,16 +228,12 @@ impl CommitSummaryServiceImpl {
                             stage1,
                             &ctx.file_diffs,
                             &ctx.files,
-                            &ctx.language_code,
                         )
                     },
                     // 2.4 测试文件分析
                     || {
-                        TestAnalyzeService::new(self.llm_client.clone()).analyze(
-                            stage1,
-                            &ctx.file_diffs,
-                            &ctx.language_code,
-                        )
+                        TestAnalyzeService::new(self.llm_client.clone())
+                            .analyze(stage1, &ctx.file_diffs)
                     },
                 )
             },
@@ -318,7 +314,11 @@ impl CommitSummaryService for CommitSummaryServiceImpl {
             commit_count: ctx.commit_count,
         };
 
-        SummaryAnalyzeService::new(self.llm_client.clone()).summarize(input, &ctx.language_code)
+        let language = self
+            .llm_language_manager
+            .find_language(&ctx.language_code)
+            .unwrap_or_else(|| self.llm_language_manager.get_default_language());
+        SummaryAnalyzeService::new(self.llm_client.clone(), language.clone()).summarize(input)
     }
 }
 

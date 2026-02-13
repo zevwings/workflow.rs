@@ -3,13 +3,13 @@
 use std::error::Error;
 
 use domain::{GlobalConfig, LLMSettings, VerificationService};
-use llm::SupportedLanguage;
 use prompt::{
     br, confirm, info, separator, FormBuilder, FormResult, InputFormField, PasswordFormField,
     PromptError, SelectBuilder, SelectFormField,
 };
 use toolkit::Sensitive;
 
+use crate::bootstrap::get_language_manager;
 use crate::interactive::{
     core::{
         context::{WorkflowContext, WorkflowMode},
@@ -29,8 +29,9 @@ impl LlmStage {
         let llm = &mut settings.llm;
         let has_llm = !llm.is_empty();
 
-        let language_codes = SupportedLanguage::supported_codes();
-        let language_options = SupportedLanguage::supported_display_names();
+        let language_manager = get_language_manager();
+        let language_codes = language_manager.get_supported_codes();
+        let language_options = language_manager.get_supported_display_names();
         let (language_prompt, default_language_index) =
             build_language_prompt(&llm.language, language_codes.as_slice());
 

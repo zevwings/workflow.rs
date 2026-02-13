@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
+use client::{IntoLLMRequestParameters, LLMClient};
 use domain::{CommitFileClassification, CommitSummaryError, CommitTestAnalysis};
-use llm::{IntoLLMRequestParameters, JsonParser, LLMClient};
 
 use crate::summary::test_analyze::TestAnalyzeConversation;
 
@@ -22,7 +22,6 @@ impl TestAnalyzeService {
         &self,
         stage1: &CommitFileClassification,
         file_diffs: &HashMap<String, String>,
-        language_code: &str,
     ) -> Result<String, CommitSummaryError> {
         let test_paths = &stage1.categories.by_nature.tests;
         if test_paths.is_empty() {
@@ -39,11 +38,15 @@ impl TestAnalyzeService {
         let conversation = TestAnalyzeConversation::new(user_prompt);
         let response = self
             .llm_client
-            .call(&conversation.to_params(language_code))
+            .call(&conversation.to_params())
             .map_err(|e| CommitSummaryError::LLMError(e.to_string()))?;
-        let result: CommitTestAnalysis = JsonParser::to_model(&response).map_err(|e| {
-            CommitSummaryError::ParseFailed(format!("Failed to parse test analysis results: {}", e))
-        })?;
+        let result: CommitTestAnalysis =
+            response.to_model::<CommitTestAnalysis>().map_err(|e| {
+                CommitSummaryError::ParseFailed(format!(
+                    "Failed to parse test analysis results: {}",
+                    e
+                ))
+            })?;
         serde_json::to_string(&result)
             .map_err(|e| CommitSummaryError::SerializeFailed(e.to_string()))
     }

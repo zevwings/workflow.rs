@@ -7,13 +7,14 @@ mod context;
 
 use std::sync::{Arc, LazyLock};
 
+use client::LanguageManager;
 use domain::{
     AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
     GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository,
     JiraWorkHistoryRepository, PathService, PullRequestService, RepoConfigRepository,
     VerificationService,
 };
-use llm::register_llm;
+use infra::register_client;
 use services::register_services;
 use storage::register_storage;
 
@@ -39,9 +40,9 @@ static APP_INITIALIZED: LazyLock<()> = LazyLock::new(|| {
     }
 
     // 1. 注册 LLM 层服务（LLMClient, LLMExecutor）
-    if let Err(e) = register_llm() {
-        eprintln!("Fatal: Failed to register llm module: {e}");
-        panic!("Failed to register llm module: {e}");
+    if let Err(e) = register_client() {
+        eprintln!("Fatal: Failed to register client module: {e}");
+        panic!("Failed to register client module: {e}");
     }
 
     // 2. 注册 storage 层服务（基础仓储实现）
@@ -178,4 +179,8 @@ pub fn get_path_service() -> Arc<dyn PathService> {
 /// 获取 LoggerManager
 pub fn get_logger_manager() -> Arc<dyn LoggerManager> {
     get_service::<dyn LoggerManager>()
+}
+
+pub fn get_language_manager() -> Arc<dyn LanguageManager> {
+    get_service::<dyn LanguageManager>()
 }

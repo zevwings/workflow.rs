@@ -19,41 +19,40 @@
 
 use std::sync::Arc;
 
+use client::{
+    IntoLLMRequestParameters, LLMClient, LLMConversation, LanguageManager, SupportedLanguage,
+};
 use domain::{
     ConfigError, GitHubAccountInfo, GitHubRepository, GitHubVerificationResult,
     GitHubVerificationSummary, GlobalConfigRepository, JiraConfigInfo, JiraRepository,
     JiraVerificationResult, JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult,
     LLMVerificationStatus, LogConfigInfo, LogVerificationResult, VerificationService,
 };
-use llm::{IntoLLMRequestParameters, LLMClient, LLMConversation, SupportedLanguage};
 use toolkit::Sensitive;
 
 /// 验证对话
 ///
 /// 负责构建 prompt 和业务逻辑，不直接调用 LLM API。
-struct VerifyConversation;
+struct VerifyConversation {
+    language: SupportedLanguage,
+}
 
 impl VerifyConversation {
     /// 创建新的验证对话实例
-    pub fn new() -> Self {
-        Self
+    pub fn new(language: SupportedLanguage) -> Self {
+        Self { language }
     }
 }
 
 impl LLMConversation for VerifyConversation {
-    fn get_system_prompt(&self, _language_code: &str) -> String {
+    fn get_system_prompt(&self) -> String {
         "You are a helpful assistant.".to_string()
     }
 
-    fn get_user_prompt(&self, language_code: &str) -> String {
-        let lang = match SupportedLanguage::find(language_code) {
-            Some(lang) => lang,
-            None => SupportedLanguage::default_language(),
-        };
-
+    fn get_user_prompt(&self) -> String {
         let greeting = format!(
             "Say hello, and you should respond in {}({}) only.",
-            lang.name, lang.code
+            self.language.name, self.language.code
         );
         greeting.to_string()
     }
@@ -70,6 +69,7 @@ impl LLMConversation for VerifyConversation {
 /// 验证服务实现
 pub(crate) struct VerificationServiceImpl {
     llm_client: Arc<dyn LLMClient>,
+    language_manager: Arc<dyn LanguageManager>,
     config_repository: Arc<dyn GlobalConfigRepository>,
     jira_repository: Arc<dyn JiraRepository>,
     github_repository: Arc<dyn GitHubRepository>,
@@ -78,12 +78,14 @@ pub(crate) struct VerificationServiceImpl {
 impl VerificationServiceImpl {
     pub fn new(
         llm_client: Arc<dyn LLMClient>,
+        language_manager: Arc<dyn LanguageManager>,
         config_repository: Arc<dyn GlobalConfigRepository>,
         jira_repository: Arc<dyn JiraRepository>,
         github_repository: Arc<dyn GitHubRepository>,
     ) -> Self {
         Self {
             llm_client,
+            language_manager,
             config_repository,
             jira_repository,
             github_repository,
@@ -237,17 +239,25 @@ impl VerificationService for VerificationServiceImpl {
             language: language.clone(),
         };
 
-        let conversation = VerifyConversation::new();
+        let language = self
+            .language_manager
+            .find_language(&language)
+            .unwrap_or_else(|| self.language_manager.get_default_language());
+        let conversation = VerifyConversation::new(language.clone());
         let response = self
             .llm_client
-            .call(&conversation.to_params(&language))
+            .call(&conversation.to_params())
+            .map_err(|e| ConfigError::OperationFailed(e.to_string()))?;
+
+        let content = response
+            .get_content()
             .map_err(|e| ConfigError::OperationFailed(e.to_string()))?;
 
         Ok(LLMVerificationResult {
             configured: true,
             config: Some(config),
             verification: Some(LLMVerificationStatus::Success {
-                test_response: response,
+                test_response: content,
             }),
         })
     }

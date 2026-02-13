@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use client::LLMConfigContext;
 use domain::{GlobalConfigRepository, LLMSettings};
-use llm::LLMConfigContext;
 
 /// LLM 配置上下文实现
 ///

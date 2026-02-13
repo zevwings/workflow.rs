@@ -1,7 +1,9 @@
 [workspace]
 members = [
+    "crates/client",
     "crates/domain",
     "crates/http",
+    "crates/infra",
     "crates/llm",
     "crates/storage",
     "crates/services",
@@ -86,7 +88,9 @@ mockito = "1.2"
 insta = { version = "1.38", features = ["json"] }
 
 # 内部 crate 依赖
+client = { path = "crates/client" }
 domain = { path = "crates/domain" }
+infra = { path = "crates/infra" }
 storage = { path = "crates/storage" }
 services = { path = "crates/services" }
 toolkit = { path = "crates/toolkit" }

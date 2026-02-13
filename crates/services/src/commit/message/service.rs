@@ -4,11 +4,11 @@
 
 use std::sync::Arc;
 
+use client::{IntoLLMRequestParameters, LLMClient};
 use domain::{
     CommitChangeType, CommitFileChange, CommitMessageError, CommitMessageService,
     CommitSummaryAnalysis, GitRepository,
 };
-use llm::{IntoLLMRequestParameters, JsonParser, LLMClient, LLMConfigContext};
 
 use crate::commit::message::conversation::CommitMessageConversation;
 
@@ -38,20 +38,14 @@ const MAX_DIFF_LINES: usize = 2000;
 pub(crate) struct CommitMessageServiceImpl {
     git_repo: Arc<dyn GitRepository>,
     llm_client: Arc<dyn LLMClient>,
-    llm_context: Arc<dyn LLMConfigContext>,
 }
 
 impl CommitMessageServiceImpl {
     /// 创建新的服务实例
-    pub fn new(
-        git_repo: Arc<dyn GitRepository>,
-        llm_client: Arc<dyn LLMClient>,
-        llm_context: Arc<dyn LLMConfigContext>,
-    ) -> Self {
+    pub fn new(git_repo: Arc<dyn GitRepository>, llm_client: Arc<dyn LLMClient>) -> Self {
         Self {
             git_repo,
             llm_client,
-            llm_context,
         }
     }
 
@@ -103,17 +97,16 @@ impl CommitMessageServiceImpl {
         let diff_content = smart_truncate_diff(&input.diff, &input.files, MAX_DIFF_LINES);
 
         // 2. 构建 LLM 对话
-        let language_code = self.llm_context.get_language();
         let conversation =
             CommitMessageConversation::new(file_summary, diff_content, input.stats.clone());
 
         // 3. 单次 LLM 调用
         let response = self
             .llm_client
-            .call(&conversation.to_params(&language_code))
+            .call(&conversation.to_params())
             .map_err(|e| CommitMessageError::LLMError(e.to_string()))?;
 
-        JsonParser::to_model(&response).map_err(|e| {
+        response.to_model::<CommitSummaryAnalysis>().map_err(|e| {
             CommitMessageError::ParseFailed(format!("Failed to parse commit message: {}", e))
         })
     }
