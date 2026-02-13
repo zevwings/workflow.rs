@@ -5,7 +5,6 @@
 mod batch;
 mod classify;
 mod config;
-mod prompt;
 mod service;
 // 允许模块嵌套：summary/summary 模块用于阶段三的总结分析
 mod logic;

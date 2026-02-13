@@ -4,8 +4,6 @@
 
 use client::LLMConversation;
 
-use crate::summary::prompt;
-
 /// 核心逻辑分析对话
 pub(crate) struct LogicAnalyzeConversation {
     user_prompt: String,
@@ -21,7 +19,7 @@ impl LogicAnalyzeConversation {
 
 impl LLMConversation for LogicAnalyzeConversation {
     fn get_system_prompt(&self) -> String {
-        prompt::analyze_logic().to_string()
+        include_str!("prompt.md").to_string()
     }
 
     fn get_user_prompt(&self) -> String {

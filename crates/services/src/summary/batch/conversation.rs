@@ -4,8 +4,6 @@
 
 use client::LLMConversation;
 
-use crate::summary::prompt;
-
 // ── Conversation ──────────────────────────────────────────────
 
 /// 批量操作分析对话
@@ -23,7 +21,7 @@ impl BatchAnalyzeConversation {
 
 impl LLMConversation for BatchAnalyzeConversation {
     fn get_system_prompt(&self) -> String {
-        prompt::analyze_batch().to_string()
+        include_str!("prompt.md").to_string()
     }
 
     fn get_user_prompt(&self) -> String {

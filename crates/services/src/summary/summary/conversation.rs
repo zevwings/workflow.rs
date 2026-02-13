@@ -4,7 +4,7 @@
 
 use client::{LLMConversation, SupportedLanguage};
 
-use crate::summary::{prompt, summary::SummaryAnalyzeInput};
+use crate::summary::summary::SummaryAnalyzeInput;
 
 // ── Conversation ──────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ impl SummaryAnalyzeConversation {
 
 impl LLMConversation for SummaryAnalyzeConversation {
     fn get_system_prompt(&self) -> String {
-        prompt::summary().to_string()
+        include_str!("prompt.md").to_string()
     }
 
     fn get_user_prompt(&self) -> String {

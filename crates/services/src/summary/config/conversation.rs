@@ -4,8 +4,6 @@
 
 use client::LLMConversation;
 
-use crate::summary::prompt;
-
 /// 配置/文档分析对话
 pub(crate) struct ConfigAnalyzeConversation {
     user_prompt: String,
@@ -21,7 +19,7 @@ impl ConfigAnalyzeConversation {
 
 impl LLMConversation for ConfigAnalyzeConversation {
     fn get_system_prompt(&self) -> String {
-        prompt::analyze_config().to_string()
+        include_str!("prompt.md").to_string()
     }
 
     fn get_user_prompt(&self) -> String {
