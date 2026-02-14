@@ -95,11 +95,15 @@ fn ensure_initialized() {
 pub fn get_service<T: 'static + Send + Sync + ?Sized>() -> Arc<T> {
     ensure_initialized();
     di::resolve::<T>().unwrap_or_else(|e| {
-        panic!(
-            "Failed to resolve service {}: {}",
-            std::any::type_name::<T>(),
-            e
-        )
+        let msg = match &e {
+            di::InjectionError::ValidationError(s) => s.clone(),
+            _ => format!(
+                "Failed to resolve service {}: {}",
+                std::any::type_name::<T>(),
+                e
+            ),
+        };
+        panic!("{msg}")
     })
 }
 

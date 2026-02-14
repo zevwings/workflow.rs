@@ -19,9 +19,9 @@ impl Tabled for AttachmentRow {
     fn headers() -> Vec<String> {
         vec![
             "#".to_string(),
-            "文件名".to_string(),
-            "大小".to_string(),
-            "MIME 类型".to_string(),
+            "Filename".to_string(),
+            "Size".to_string(),
+            "MIME type".to_string(),
         ]
     }
 

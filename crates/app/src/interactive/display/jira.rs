@@ -17,9 +17,9 @@ pub struct JiraConfigRow {
 impl Tabled for JiraConfigRow {
     fn headers() -> Vec<String> {
         vec![
-            "邮箱".to_string(),
-            "服务地址".to_string(),
-            "API 令牌".to_string(),
+            "Email".to_string(),
+            "Service address".to_string(),
+            "API token".to_string(),
         ]
     }
 
@@ -54,13 +54,13 @@ impl VerificationResultFormatter for JiraVerificationResult {
             match verification {
                 JiraVerificationStatus::Success { email, account_id } => {
                     if !account_id.is_empty() {
-                        success!("Jira 验证成功！邮箱: {} (账户 ID: {})", email, account_id);
+                        success!("Jira verification successful! Email: {} (Account ID: {})", email, account_id);
                     } else {
-                        success!("Jira 验证成功！邮箱: {}", email);
+                        success!("Jira verification successful! Email: {}", email);
                     }
                 }
                 JiraVerificationStatus::Failed { reason, .. } => {
-                    warning!("Jira 验证错误: {}", reason);
+                    warning!("Jira verification error: {}", reason);
                 }
             }
         }

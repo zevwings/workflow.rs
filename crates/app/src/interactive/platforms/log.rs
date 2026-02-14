@@ -23,8 +23,8 @@ impl LogStage {
         let default_enable_logging = has_level;
 
         if let Some(level) = &settings.log.level {
-            info!("检测到日志配置！");
-            info!("  - 日志级别: {}", level);
+            info!("Log configuration detected!");
+            info!("  - Log level: {}", level);
             br!();
         }
 
@@ -46,30 +46,30 @@ impl LogStage {
         }
 
         // 分隔符
-        separator!('─', 80, "日志配置");
+        separator!('─', 80, "Log configuration");
         br!();
 
         // 构建表单
         let builder = FormBuilder::new()
             .add_confirm(
-                ConfirmFormField::new("enable_logging", "是否启用日志？")
+                ConfirmFormField::new("enable_logging", "Enable logging?")
                     .default(default_enable_logging)
-                    .result_title("启用日志"),
+                    .result_title("Enable logging"),
             )
             .add_confirm(
-                ConfirmFormField::new("enable_console", "是否启用控制台输出以记录追踪日志？")
+                ConfirmFormField::new("enable_console", "Enable console output for trace logs?")
                     .default(settings.log.enable_trace_console.unwrap_or(false))
-                    .result_title("启用控制台输出")
+                    .result_title("Enable console output")
                     .condition(Box::new(|result| result.get_bool("enable_logging"))),
             )
             .add_select(
                 SelectFormField::new(
                     "log_level",
-                    format!("请选择您的日志级别 [当前: {}]", current_level),
+                    format!("Please select your log level [current: {}]", current_level),
                     level_options.clone(),
                 )
                 .default(default_index)
-                .result_title("您的日志级别")
+                .result_title("Your log level")
                 .condition(Box::new(|result| result.get_bool("enable_logging"))),
             );
 

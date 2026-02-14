@@ -19,11 +19,11 @@ pub struct LLMConfigRow {
 impl Tabled for LLMConfigRow {
     fn headers() -> Vec<String> {
         vec![
-            "提供商".to_string(),
-            "模型".to_string(),
-            "密钥".to_string(),
-            "语言".to_string(),
-            "验证".to_string(),
+            "Provider".to_string(),
+            "Model".to_string(),
+            "Key".to_string(),
+            "Language".to_string(),
+            "Verification".to_string(),
         ]
     }
 
@@ -45,13 +45,13 @@ impl VerificationResultFormatter for LLMVerificationResult {
             let (verification_status, failure_reason) =
                 if let Some(ref verification) = self.verification {
                     match verification {
-                        LLMVerificationStatus::Success { .. } => ("✓ 有效".to_string(), None),
+                        LLMVerificationStatus::Success { .. } => ("✓ Valid".to_string(), None),
                         LLMVerificationStatus::Failed { reason, .. } => {
-                            ("✗ 失败".to_string(), Some(reason.clone()))
+                            ("✗ Failed".to_string(), Some(reason.clone()))
                         }
                     }
                 } else {
-                    ("未验证".to_string(), None)
+                    ("Not verified".to_string(), None)
                 };
 
             let row = LLMConfigRow {
@@ -67,7 +67,7 @@ impl VerificationResultFormatter for LLMVerificationResult {
 
             // 如果验证失败，显示错误信息
             if let Some(reason) = failure_reason {
-                error!("LLM 验证失败: {}", reason);
+                error!("LLM verification failed: {}", reason);
             }
         } else if !self.configured {
             // 如果没有配置，直接返回
@@ -76,10 +76,10 @@ impl VerificationResultFormatter for LLMVerificationResult {
 
         // 如果验证成功，输出成功消息和测试详情
         if let Some(LLMVerificationStatus::Success { test_response }) = &self.verification {
-            info!("  系统提示: You are a helpful assistant.");
-            info!("  用户提示: Say hello");
-            info!("  响应: {}", test_response);
-            success!("LLM 验证成功！");
+            info!("  System prompt: You are a helpful assistant.");
+            info!("  User prompt: Say hello");
+            info!("  Response: {}", test_response);
+            success!("LLM verification successful!");
         }
 
         br!();

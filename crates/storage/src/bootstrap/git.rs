@@ -40,11 +40,12 @@ pub(super) fn register_git() -> Result<(), InjectionError> {
     // 第一步：注册 GitContextHolder (基础服务，无依赖)
     // 注意：GitContext::discover() 要求程序在 Git 仓库中运行
     bind!(dyn GitContextHolder, |_: &Container| {
-        let ctx = GitContext::discover().map_err(|e| {
-            di::InjectionError::ValidationError(format!(
-                "Application must run in a git repository: {}",
-                e
-            ))
+        let ctx = GitContext::discover().map_err(|_| {
+            di::InjectionError::ValidationError(
+                "Current directory is not a Git repository.\n\n\
+                Please run this command in the project directory managed by the workflow, e.g.:\n  cd /path/to/your/project\n  workflow check"
+                    .to_string(),
+            )
         })?;
         Ok(Arc::new(DiscoveredContext(ctx)))
     })

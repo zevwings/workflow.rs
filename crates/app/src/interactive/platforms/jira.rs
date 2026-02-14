@@ -22,7 +22,7 @@ pub struct JiraStage;
 impl JiraStage {
     /// 运行 Jira 配置表单
     fn run_form(settings: &mut GlobalConfig) -> Result<(), String> {
-        info!("配置 Jira 服务地址、邮箱和 API 令牌。留空字段以保留默认值或跳过。");
+        info!("Configure Jira service address, email and API token. Leave fields empty to keep defaults or skip.");
         br!();
 
         let jira = &mut settings.jira;
@@ -31,7 +31,7 @@ impl JiraStage {
         let current_token = jira.api_token.clone();
 
         let builder = FormBuilder::new()
-            .with_title("Jira 配置")
+            .with_title("Jira configuration")
             .add_input(
                 InputFormField::new("service_address", "Please enter your Jira service address")
                     .default(current_service)
@@ -79,7 +79,7 @@ impl WorkflowStage for JiraStage {
         let mode = context.mode();
         let settings = context.settings_mut();
 
-        separator!('─', 80, "Jira 配置");
+        separator!('─', 80, "Jira configuration");
         br!();
 
         let jira = &settings.jira;
@@ -88,20 +88,20 @@ impl WorkflowStage for JiraStage {
             || !jira.service_address.is_empty();
 
         if has_jira {
-            info!("检测到 Jira 配置！");
-            info!("  - 服务地址: {}", jira.service_address);
-            info!("  - Jira 邮箱: {}", jira.email);
+            info!("Jira configuration detected!");
+            info!("  - Service address: {}", jira.service_address);
+            info!("  - Jira email: {}", jira.email);
             if !jira.api_token.is_empty() {
-                info!("  - API 令牌: {}", jira.api_token.mask());
+                info!("  - API token: {}", jira.api_token.mask());
             }
             br!();
         }
 
         // 处理模式特定的交互
         if mode == WorkflowMode::Setup && has_jira {
-            let keep = confirm!("检测到现有 Jira 配置。是否保留当前值？")
+            let keep = confirm!("Existing Jira configuration detected. Keep current values?")
                 .default(true)
-                .result_title("保留 Jira 配置")
+                .result_title("Keep Jira configuration")
                 .prompt()
                 .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
 

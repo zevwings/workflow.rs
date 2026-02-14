@@ -75,12 +75,12 @@ impl GitHubConfigurator {
         builder
             .add_input(
                 InputFormField::new("name", "Please enter your GitHub account name")
-                    .result_title("您的 GitHub 账户名称")
+                    .result_title("Your GitHub account name")
                     .required(),
             )
             .add_input(
                 InputFormField::new("email", "Please enter your GitHub email")
-                    .result_title("您的 GitHub 邮箱")
+                    .result_title("Your GitHub email")
                     .required(),
             )
             .add_password(
@@ -88,7 +88,7 @@ impl GitHubConfigurator {
                     "api_token",
                     "Please enter your GitHub Personal Access Token",
                 )
-                .result_title("您的 GitHub Personal Access Token")
+                .result_title("Your GitHub Personal Access Token")
                 .required(),
             )
     }
@@ -128,7 +128,7 @@ impl GitHubConfigurator {
         let (name, email, api_token) = self.extract_basic_fields(form_result);
 
         if api_token.trim().is_empty() {
-            return Err("添加新账户需要 GitHub API 令牌。".to_string());
+            return Err("Adding a new account requires a GitHub API token.".to_string());
         }
 
         let account_name = if name.trim().is_empty() {
@@ -248,11 +248,11 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     let settings: &GitHubSettings = context.settings().get_settings();
 
     if !settings.has_accounts() {
-        return Err("没有可更新的 GitHub 账户".to_string());
+        return Err("No GitHub accounts to update".to_string());
     }
 
     br!();
-    info!("正在更新 GitHub 账户信息...");
+    info!("Updating GitHub account information...");
     br!();
 
     let account_options: Vec<String> = settings
@@ -267,22 +267,22 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
         .position(|acc| acc.name() == settings.current())
         .unwrap_or(0);
 
-    let selected_account = SelectBuilder::new("请选择要更新的 GitHub 账户", account_options)
+    let selected_account = SelectBuilder::new("Please select the GitHub account to update", account_options)
         .default(default_index)
-        .result_title("要更新的账户")
+        .result_title("Account to update")
         .prompt()
         .map_err(|e: PromptError| e.to_string())?;
 
     let account_name = selected_account
         .split(' ')
         .next()
-        .ok_or_else(|| "解析账户名称失败".to_string())?
+        .ok_or_else(|| "Failed to parse account name".to_string())?
         .to_string();
 
     let settings: &GitHubSettings = context.settings().get_settings();
     let account = settings
         .find_account(&account_name)
-        .ok_or_else(|| format!("未找到账户 '{}'", account_name))?;
+        .ok_or_else(|| format!("Account '{}' not found", account_name))?;
 
     let old_name = account.name().to_string();
     let current_name = account.name().to_string();
@@ -291,8 +291,8 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     let was_current = settings.current() == old_name;
 
     br!();
-    info!("正在更新账户: {}", account_name);
-    info!("留空字段以保留当前值。");
+    info!("Updating account: {}", account_name);
+    info!("Leave fields empty to keep current values.");
     br!();
 
     let builder = configurator.build_update_form(&account_name);
@@ -306,7 +306,7 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
         let settings: &GitHubSettings = context.settings().get_settings();
         if settings.account_exists(&new_name_trimmed) {
             return Err(format!(
-                "账户名称 '{}' 已存在。请选择不同的名称。",
+                "Account name '{}' already exists. Please choose a different name.",
                 new_name_trimmed
             ));
         }
@@ -315,7 +315,7 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     let settings: &mut GitHubSettings = context.settings_mut().get_settings_mut();
     let account = settings
         .find_account_mut(&account_name)
-        .ok_or_else(|| format!("未找到账户 '{}'", account_name))?;
+        .ok_or_else(|| format!("Account '{}' not found", account_name))?;
 
     let updated_name = configurator.update_account_from_form(account, &form_result, &old_name)?;
 
@@ -324,20 +324,20 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
     }
 
     if context.mode() == WorkflowMode::Command {
-        context.save().map_err(|e| format!("保存配置失败: {}", e))?;
+        context.save().map_err(|e| format!("Failed to save configuration: {}", e))?;
 
         br!();
-        success!("GitHub 账户 '{}' 更新成功。", updated_name);
+        success!("GitHub account '{}' updated successfully.", updated_name);
 
         if configurator.auto_verify_in_command_setup() {
             br!();
             if let Err(err) = configurator.verify() {
-                warning!("验证 GitHub 账户失败: {}", err);
+                warning!("Failed to verify GitHub account: {}", err);
             }
         }
     } else {
         br!();
-        success!("GitHub 账户 '{}' 更新成功。", updated_name);
+        success!("GitHub account '{}' updated successfully.", updated_name);
     }
 
     Ok(())

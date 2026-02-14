@@ -8,22 +8,22 @@ use crate::interactive::display::formatter::VerificationResultFormatter;
 impl VerificationResultFormatter for LogVerificationResult {
     fn format(&self) {
         if !self.configured {
-            info!("日志级别: 未配置（日志已禁用）");
+            info!("Log level: Not configured (logging disabled)");
             br!();
             return;
         }
 
         if let Some(ref config) = self.config {
-            let level = config.level.as_deref().unwrap_or("未配置");
-            info!("日志级别: {}", level);
+            let level = config.level.as_deref().unwrap_or("Not configured");
+            info!("Log level: {}", level);
 
             let enable_trace_console = config.enable_trace_console;
             info!(
-                "追踪控制台: {}",
+                "Trace console: {}",
                 if enable_trace_console {
-                    "已启用"
+                    "Enabled"
                 } else {
-                    "已禁用"
+                    "Disabled"
                 }
             );
         }
