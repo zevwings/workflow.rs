@@ -17,17 +17,17 @@ pub fn get_jira_id_interactive(
 ) -> Result<String, Box<dyn std::error::Error>> {
     if let Some(id) = jira_id {
         // 验证格式
-        validate_jira_ticket_format(&id).map_err(|e| format!("无效的 JIRA ID 格式: {}", e))?;
+        validate_jira_ticket_format(&id).map_err(|e| format!("Invalid JIRA ID format: {}", e))?;
         Ok(id)
     } else {
         // 交互式输入
         let id = input!("Please enter your JIRA ticket ID (e.g.: PROJ-123):")
             .validator(|input: &str| {
                 validate_jira_ticket_format(input)
-                    .map_err(|e| format!("无效的 JIRA ID 格式: {}", e))
+                    .map_err(|e| format!("Invalid JIRA ID format: {}", e))
             })
             .prompt()
-            .map_err(|e| format!("获取 JIRA ID 失败: {}", e))?;
+            .map_err(|e| format!("Failed to get JIRA ID: {}", e))?;
         Ok(id)
     }
 }
@@ -49,7 +49,7 @@ pub fn get_jira_id_interactive_optional(
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {
     if let Some(id) = jira_id {
         // 验证格式
-        validate_jira_ticket_format(&id).map_err(|e| format!("无效的 JIRA ID 格式: {}", e))?;
+        validate_jira_ticket_format(&id).map_err(|e| format!("Invalid JIRA ID format: {}", e))?;
         Ok(Some(id))
     } else {
         // 交互式输入
@@ -64,7 +64,7 @@ pub fn get_jira_id_interactive_optional(
             } else {
                 // 验证格式
                 validate_jira_ticket_format(trimmed)
-                    .map_err(|e| format!("无效的 JIRA ID 格式: {}", e))?;
+                    .map_err(|e| format!("Invalid JIRA ID format: {}", e))?;
                 Ok(Some(trimmed.to_string()))
             }
         } else {
@@ -99,14 +99,14 @@ pub fn ensure_jira_status_config(
     }
 
     // 如果没有配置，提示配置
-    info!("未找到 {} 的状态配置，正在配置...", ticket);
+    info!("Status config not found for {}, configuring...", ticket);
 
     let config_result = configure_jira_status_interactive(jira_repo, ticket)?;
 
-    success!("Jira 状态配置已保存");
-    info!("项目名称: {}", config_result.project);
-    info!("PR 创建状态: {}", config_result.created_pull_request_status);
-    info!("PR 合并状态: {}", config_result.merged_pull_request_status);
+    success!("Jira status configuration saved");
+    info!("Project name: {}", config_result.project);
+    info!("PR status on creation: {}", config_result.created_pull_request_status);
+    info!("PR status on merge: {}", config_result.merged_pull_request_status);
 
     Ok(Some(config_result.created_pull_request_status))
 }
@@ -130,7 +130,7 @@ fn configure_jira_status_interactive(
 ) -> Result<JiraStatusConfigResult, Box<dyn std::error::Error>> {
     let project = extract_jira_project(jira_ticket).ok_or_else(|| {
         format!(
-            "无效的 Jira 工单格式: 无法从 '{}' 中提取项目名称",
+            "Invalid Jira ticket format: cannot extract project name from '{}'",
             jira_ticket
         )
     })?;
@@ -138,33 +138,33 @@ fn configure_jira_status_interactive(
     // 验证项目名格式
     if !project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return Err(format!(
-            "无效的 Jira 项目名称格式: '{}'。Jira 项目名称应仅包含 ASCII 字母、数字和下划线。",
+            "Invalid Jira project name format: '{}'. Jira project names should contain only ASCII letters, numbers, and underscores.",
             project
         )
         .into());
     }
 
     // 从 Jira API 获取项目状态列表
-    let statuses = spinner!("正在获取项目 {} 的状态列表...", project)
+    let statuses = spinner!("Fetching status list for project {}...", project)
         .with(|| jira_repo.get_project_statuses(project))
         .map_err(|e| format!(
-            "获取 '{}' 的项目状态失败。请检查:\n  - 项目名称是否正确\n  - 项目是否存在于您的 Jira 实例中\n  - 您是否有访问此项目的权限\n错误: {}",
+            "Failed to fetch project statuses for '{}'. Please check:\n  - The project name is correct\n  - The project exists in your Jira instance\n  - You have access to this project\nError: {}",
             project, e
         ))?;
 
     if statuses.is_empty() {
-        return Err(format!("项目 {} 未找到任何状态", project).into());
+        return Err(format!("No statuses found for project {}", project).into());
     }
 
     // 交互式选择 PR 创建时的状态
-    let created_pull_request_status = select!("选择 PR 创建时的状态:", statuses.clone())
+    let created_pull_request_status = select!("Select status for PR creation:", statuses.clone())
         .prompt()
-        .map_err(|e| format!("选择状态失败: {}", e))?;
+        .map_err(|e| format!("Failed to select status: {}", e))?;
 
     // 交互式选择 PR 合并时的状态
-    let merged_pull_request_status = select!("选择 PR 合并时的状态:", statuses)
+    let merged_pull_request_status = select!("Select status for PR merge:", statuses)
         .prompt()
-        .map_err(|e| format!("选择状态失败: {}", e))?;
+        .map_err(|e| format!("Failed to select status: {}", e))?;
 
     // 保存配置
     let jira_config = JiraStatusConfig {
@@ -175,7 +175,7 @@ fn configure_jira_status_interactive(
 
     jira_repo
         .write_status_config(&jira_config)
-        .map_err(|e| format!("写入 Jira 状态配置失败: {}", e))?;
+        .map_err(|e| format!("Failed to write Jira status configuration: {}", e))?;
 
     Ok(JiraStatusConfigResult {
         project: project.to_string(),

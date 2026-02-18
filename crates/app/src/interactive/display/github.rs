@@ -65,7 +65,10 @@ impl VerificationResultFormatter for GitHubVerificationResult {
 
         // 显示验证结果
         if self.summary.success_count == self.summary.total_count {
-            success!("All {} GitHub account(s) verified successfully!", self.summary.total_count);
+            success!(
+                "All {} GitHub account(s) verified successfully!",
+                self.summary.total_count
+            );
         } else {
             warning!("Some GitHub account(s) verification failed. Please check configuration.");
         }

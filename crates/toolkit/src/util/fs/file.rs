@@ -358,7 +358,7 @@ mod tests {
         #[rstest]
         #[case("Hello, World!\nThis is a test file.", false)]
         #[case("", true)] // 空文件需要先创建
-        #[case("Hello, 世界!\n测试文件\némoji🚀", false)]
+        #[case("Hello, world!\nTest file\n🚀", false)]
         fn test_read_string(
             temp_dir: TempDir,
             #[case] content: &str,
@@ -612,7 +612,7 @@ name = "test"
         #[rstest]
         #[case("Hello, World!\nThis is a test.")]
         #[case("")]
-        #[case("Hello, 世界!\n测试文件\némoji🚀")]
+        #[case("Hello, world!\nTest file\n🚀")]
         fn test_write_string(temp_dir: TempDir, #[case] content: &str) -> Result<(), FileError> {
             let file_path = temp_dir.path().join("test.txt");
 

@@ -154,7 +154,7 @@ impl StatusService for StatusServiceImpl {
             .get(&path, None)
             .map_err(|e| {
                 JiraError::ApiError(format!(
-                    "Failed to fetch project statuses for '{}'. Please check:\n  - The project name is correct\n  - The project exists in your Jira instance\n  - You have access to this project\n  - The project name format is correct (e.g., 'PROJ', not 'zw/修改打包脚本问题')\nError: {}",
+                    "Failed to fetch project statuses for '{}'. Please check:\n  - The project name is correct\n  - The project exists in your Jira instance\n  - You have access to this project\n  - The project name format is correct (e.g., 'PROJ', not 'zw/fix-packaging-script')\nError: {}",
                     project, e
                 ))
             })?;

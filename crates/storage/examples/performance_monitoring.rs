@@ -25,10 +25,10 @@ fn create_commit_service(ctx: GitContext) -> CommitServiceImpl {
 
 #[cfg(feature = "testing")]
 fn main() {
-    println!("=== 性能监控示例 ===\n");
+    println!("=== Performance monitoring example ===\n");
 
     // 1. 使用 PerformanceTimer
-    println!("1. 使用 PerformanceTimer:");
+    println!("1. Using PerformanceTimer:");
     {
         let (_tmp, ctx) = setup_repo_with_files(10);
 
@@ -37,13 +37,13 @@ fn main() {
         let service = create_commit_service(ctx);
         let status = service.get_working_tree_status().unwrap();
 
-        println!("   文件数: {}", status.staged.len());
+        println!("   File count: {}", status.staged.len());
         let duration = timer.stop();
-        println!("   耗时: {:?}\n", duration);
+        println!("   Duration: {:?}\n", duration);
     }
 
     // 2. 使用 measure 函数
-    println!("2. 使用 measure 函数:");
+    println!("2. Using measure function:");
     {
         let (_tmp, ctx) = setup_repo_with_file();
         let service = create_commit_service(ctx);
@@ -52,12 +52,12 @@ fn main() {
             service.get_commit_info("HEAD").unwrap()
         });
 
-        println!("   提交: {}", info.sha);
-        println!("   作者: {}\n", info.author_name);
+        println!("   Commit: {}", info.sha);
+        println!("   Author: {}\n", info.author_name);
     }
 
     // 3. 使用 PerformanceCollector 进行批量测试
-    println!("3. 使用 PerformanceCollector:");
+    println!("3. Using PerformanceCollector:");
     {
         let (_tmp, ctx) = setup_repo_with_commits(5);
         let service = create_commit_service(ctx);
@@ -75,12 +75,12 @@ fn main() {
         collector.print_stats();
     }
 
-    println!("\n=== 示例完成 ===");
+    println!("\n=== Example completed ===");
 }
 
 #[cfg(not(feature = "testing"))]
 fn main() {
-    eprintln!("此示例需要 testing feature");
-    eprintln!("运行: cargo run -p storage --example performance_monitoring --features testing");
+    eprintln!("This example requires the testing feature");
+    eprintln!("Run: cargo run -p storage --example performance_monitoring --features testing");
     std::process::exit(1);
 }

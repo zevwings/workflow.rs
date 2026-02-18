@@ -26,6 +26,7 @@
 | [integration.md](./integration.md) | ⏳ 待实施 | 0% | 中 |
 | [i18n.md](./i18n.md) | ⏳ 待实施 | 0% | 高 |
 | [ssh.md](./ssh.md) | ⏳ 待实施 | 0% | 中 |
+| [chinese-content.md](./chinese-content.md) | 📋 参考 | - | 中 |
 
 ### 文档详情
 
@@ -41,6 +42,9 @@
 
 #### [ssh.md](./ssh.md)
 - **内容**：SSH 密钥管理工具，`ssh status` / `add` / `remove` 子命令
+
+#### [chinese-content.md](./chinese-content.md)
+- **内容**：中文内容统一规范（适用范围、术语、句式）
 
 ---
 

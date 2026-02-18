@@ -8,22 +8,22 @@ use crate::github::GitHubError;
 /// Pull Request 服务错误
 #[derive(Error, Debug)]
 pub enum PullRequestError {
-    #[error("Git 操作失败: {0}")]
+    #[error("The Git operation failed: {0}")]
     Git(String),
 
-    #[error("GitHub 操作失败")]
+    #[error("The GitHub operation failed")]
     GitHub(#[from] GitHubError),
 
-    #[error("未找到: {0}")]
+    #[error("The {0} is not found")]
     NotFound(String),
 
-    #[error("无效输入: {0}")]
+    #[error("The input is invalid: {0}")]
     InvalidInput(String),
 
-    #[error("不支持的操作: {0}")]
+    #[error("The operation is not supported: {0}")]
     UnsupportedOperation(String),
 
-    #[error("{0}")]
+    #[error("Other error: {0}")]
     Other(String),
 }
 

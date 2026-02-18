@@ -156,9 +156,9 @@ mod tests {
     fn test_commit_template_vars_with_chinese_content() -> Result<(), serde_json::Error> {
         let vars = CommitTemplateVars {
             commit_type: "feat".to_string(),
-            scope: Some("用户模块".to_string()),
-            subject: "实现用户注册功能".to_string(),
-            body: Some("包含邮箱验证和密码加密".to_string()),
+            scope: Some("user module".to_string()),
+            subject: "implement user registration function".to_string(),
+            body: Some("contains email verification and password encryption".to_string()),
             jira_key: Some("PROJ-123".to_string()),
             use_scope: true,
         };

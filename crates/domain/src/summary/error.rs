@@ -7,18 +7,18 @@ use crate::git::GitError;
 /// 提交总结分析错误
 #[derive(Error, Debug)]
 pub enum CommitSummaryError {
-    #[error("LLM 调用失败: {0}")]
+    #[error("The LLM call failed: {0}")]
     LLMError(String),
 
-    #[error("解析失败: {0}")]
+    #[error("The parsing failed: {0}")]
     ParseFailed(String),
 
-    #[error("序列化失败: {0}")]
+    #[error("The serialization failed: {0}")]
     SerializeFailed(String),
 
-    #[error("无变更可分析：基准分支之后无已提交变更，且暂存区无变更。请先提交或暂存变更")]
+    #[error("There are no changes to analyze: the base branch has no committed changes after the commit, and the staging area has no changes. Please commit or stage the changes first")]
     NoChangesToAnalyze,
 
-    #[error("Git 操作失败")]
+    #[error("The Git operation failed")]
     Git(#[from] GitError),
 }

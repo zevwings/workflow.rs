@@ -197,7 +197,7 @@ fn render_input<B: Backend>(
         {
             let _ = writeln!(
                 file,
-                "[DEBUG] render_input: 开始渲染输入，输入长度: {}",
+                "[DEBUG] render_input: Start rendering input, input length: {}",
                 editor.as_str().len()
             );
         }
@@ -242,7 +242,7 @@ fn render_input<B: Backend>(
         if let Ok(mut file) =
             std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
-            let _ = writeln!(file, "[DEBUG] render_input: 移动光标到列 {}", target_column);
+            let _ = writeln!(file, "[DEBUG] render_input: Move cursor to column {}", target_column);
         }
     }
 
@@ -254,7 +254,7 @@ fn render_input<B: Backend>(
         if let Ok(mut file) =
             std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
-            let _ = writeln!(file, "[DEBUG] render_input: 完成渲染");
+            let _ = writeln!(file, "[DEBUG] render_input: Completed rendering");
         }
     }
     Ok(())
@@ -1346,7 +1346,7 @@ mod tests {
 
         let builder = InputBuilder::new("Changes")
             .multiline()
-            .placeholder("例如：\n- 修复了 XXX\n- 优化了 YYY\n- 新增了 ZZZ");
+            .placeholder("For example:\n- Fixed XXX\n- Optimized YYY\n- Added ZZZ");
         let editor = InputEditor::new(builder.placeholder.clone());
 
         let mut cursor_row = 0u16;

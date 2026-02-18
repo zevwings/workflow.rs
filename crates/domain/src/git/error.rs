@@ -5,51 +5,51 @@ use thiserror::Error;
 /// Git 操作错误
 #[derive(Error, Debug)]
 pub enum GitError {
-    #[error("Git 操作失败: {0}")]
+    #[error("Git operation failed: {0}")]
     OperationFailed(String),
 
-    #[error("不是 Git 仓库")]
+    #[error("The current directory is not a Git repository")]
     NotGitRepo,
 
-    #[error("仓库不存在: {0}")]
+    #[error("The repository at {0} is not found")]
     RepositoryNotFound(String),
 
-    #[error("分支不存在: {0}")]
+    #[error("The branch {0} is not found")]
     BranchNotFound(String),
 
-    #[error("分支未完全合并: {0}")]
+    #[error("The branch {0} is not fully merged")]
     BranchNotFullyMerged(String),
 
-    #[error("提交不存在: {0}")]
+    #[error("The commit {0} is not found")]
     CommitNotFound(String),
 
-    #[error("工作区有未提交的更改")]
+    #[error("There are uncommitted changes in the working directory")]
     UncommittedChanges,
 
-    #[error("合并冲突")]
+    #[error("There are merge conflicts")]
     MergeConflict,
 
-    #[error("Git 仓库已损坏: {0}\n\n建议修复步骤：\n  1. 运行 'git fsck' 检查仓库完整性\n  2. 如果可能，从远程仓库重新克隆\n  3. 或者尝试 'git fsck --full' 和 'git gc' 来修复")]
+    #[error("The Git repository at {0} is corrupted\n\nSuggested repair steps:\n  1. Run 'git fsck' to check repository integrity\n  2. If possible, re-clone from remote repository\n  3. Or try 'git fsck --full' and 'git gc' to repair")]
     RepositoryCorrupted(String),
 
-    #[error("无效的引用: {0}")]
+    #[error("The reference {0} is invalid")]
     InvalidReference(String),
 
-    #[error("对象不存在: {0}")]
+    #[error("The object {0} is not found")]
     ObjectNotFound(String),
 
-    #[error("索引操作失败: {0}")]
+    #[error("The index operation failed: {0}")]
     IndexError(String),
 
-    #[error("配置错误: {0}")]
+    #[error("The configuration is invalid: {0}")]
     ConfigError(String),
 
-    #[error("远程操作失败: {0}")]
+    #[error("The remote operation failed: {0}")]
     RemoteError(String),
 
-    #[error("签名错误: {0}")]
+    #[error("The signature is invalid: {0}")]
     SignatureError(String),
 
-    #[error("Hook 执行失败: {0}")]
+    #[error("The hook execution failed: {0}")]
     HookFailed(String),
 }

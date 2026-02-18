@@ -54,7 +54,11 @@ impl VerificationResultFormatter for JiraVerificationResult {
             match verification {
                 JiraVerificationStatus::Success { email, account_id } => {
                     if !account_id.is_empty() {
-                        success!("Jira verification successful! Email: {} (Account ID: {})", email, account_id);
+                        success!(
+                            "Jira verification successful! Email: {} (Account ID: {})",
+                            email,
+                            account_id
+                        );
                     } else {
                         success!("Jira verification successful! Email: {}", email);
                     }

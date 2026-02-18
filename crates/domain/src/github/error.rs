@@ -5,19 +5,19 @@ use thiserror::Error;
 /// GitHub API 错误
 #[derive(Error, Debug)]
 pub enum GitHubError {
-    #[error("GitHub API 调用失败: {0}")]
+    #[error("The GitHub API call failed: {0}")]
     ApiError(String),
 
-    #[error("认证失败")]
+    #[error("The authentication failed")]
     AuthenticationFailed,
 
-    #[error("资源不存在: {0}")]
+    #[error("The resource {0} is not found")]
     NotFound(String),
 
-    #[error("权限不足")]
+    #[error("The permissions are insufficient")]
     InsufficientPermissions,
 
-    #[error("速率限制: {0}")]
+    #[error("The rate limit exceeded: {0}")]
     RateLimitExceeded(String),
 }
 

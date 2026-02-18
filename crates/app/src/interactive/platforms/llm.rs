@@ -39,7 +39,10 @@ impl LlmStage {
             LlmProvider::options().iter().map(|option| option.to_string()).collect();
         let default_provider = LlmProvider::from_str(&llm.provider).unwrap_or_default();
         let provider_prompt = if has_llm {
-            format!("Please select your LLM provider [current: {}]", llm.provider)
+            format!(
+                "Please select your LLM provider [current: {}]",
+                llm.provider
+            )
         } else {
             "Please select your LLM provider (required)".to_string()
         };

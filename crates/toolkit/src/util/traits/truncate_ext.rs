@@ -12,8 +12,8 @@
 /// ```
 /// use toolkit::Truncate;
 ///
-/// let text = "这是一个很长的文本...";
-/// let truncated = text.truncate(10, "... (共 {} 字符)");
+/// let text = "This is a very long text...";
+/// let truncated = text.truncate(10, "... (Total {} characters)");
 /// ```
 pub trait Truncate {
     /// 截断字符串内容，避免超过指定长度限制
@@ -34,9 +34,9 @@ pub trait Truncate {
     /// ```
     /// use toolkit::Truncate;
     ///
-    /// let text = "这是一个很长的文本，需要被截断";
-    /// let result = text.truncate(10, "... (共 {} 字符)");
-    /// assert!(result.contains("... (共"));
+    /// let text = "This is a very long text, it needs to be truncated";
+    /// let result = text.truncate(10, "... (Total {} characters)");
+    /// assert!(result.contains("... (Total"));
     /// ```
     fn truncate(&self, max_length: usize, truncation_suffix_template: &str) -> String;
 }
@@ -83,32 +83,32 @@ mod tests {
     #[test]
     fn test_truncate_short_text() {
         let text = "short";
-        let result = text.truncate(10, "... (共 {} 字符)");
+        let result = text.truncate(10, "... (Total {} characters)");
         assert_eq!(result, "short");
     }
 
     #[test]
     fn test_truncate_long_text() {
-        let text = "这是一个很长的文本，需要被截断";
-        let result = text.truncate(10, "... (共 {} 字符)");
+        let text = "This is a very long text, it needs to be truncated";
+        let result = text.truncate(10, "... (Total {} characters)");
         // 截断后的内容应该包含后缀
-        assert!(result.contains("... (共"));
+        assert!(result.contains("... (Total"));
         // 截断后的内容应该以截断的文本开头
-        assert!(result.starts_with("这是一个很长的"));
+        assert!(result.starts_with("This is a very long text"));
     }
 
     #[test]
     fn test_truncate_with_newline() {
         let text = "line1\nline2\nline3";
-        let result = text.truncate(10, "... (共 {} 字符)");
+        let result = text.truncate(10, "... (Total {} characters)");
         // 应该在换行符处截断
         assert!(result.contains("line1"));
     }
 
     #[test]
     fn test_truncate_string_type() {
-        let text = String::from("这是一个很长的文本");
-        let result = text.truncate(5, "... (共 {} 字符)");
-        assert!(result.contains("... (共"));
+        let text = String::from("This is a very long text");
+        let result = text.truncate(5, "... (Total {} characters)");
+        assert!(result.contains("... (Total"));
     }
 }

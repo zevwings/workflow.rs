@@ -543,15 +543,15 @@ mod tests {
                     // 当前 shell 是 zsh 或 fish 时：应只移除当前 shell 的配置
                     assert!(
                         result.removed_configs.len() <= 1,
-                        "应最多移除 1 个配置，实际移除 {} 个",
+                        "Should remove at most 1 configuration, actually removed {} configurations",
                         result.removed_configs.len()
                     );
                 }
                 Err(e) => {
                     // 当前 shell 是 sh 等不支持的类型时：应返回错误（如 CI/tarpaulin 环境）
                     assert!(
-                        e.to_string().contains("不支持的 Shell 类型"),
-                        "应返回不支持 shell 的错误，实际: {}",
+                        e.to_string().contains("Unsupported shell type"),
+                        "Should return an error for unsupported shell type, actually: {}",
                         e
                     );
                 }

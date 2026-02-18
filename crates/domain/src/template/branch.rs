@@ -30,7 +30,7 @@ mod tests {
         let vars = BranchTemplateVars {
             prefix: Some("zw".to_string()),
             jira_key: Some("PROJ-123".to_string()),
-            jira_summary: Some("实现用户登录功能".to_string()),
+            jira_summary: Some("implement user login function".to_string()),
             summary_slug: Some("implement-user-login".to_string()),
             jira_type: Some("Feature".to_string()),
         };
@@ -46,7 +46,7 @@ mod tests {
         let json = r#"{
             "prefix": "zw",
             "jira_key": "PROJ-123",
-            "jira_summary": "实现用户登录功能",
+            "jira_summary": "implement user login function",
             "summary_slug": "implement-user-login",
             "jira_type": "Feature"
         }"#;
@@ -54,7 +54,7 @@ mod tests {
         let vars: BranchTemplateVars = serde_json::from_str(json).unwrap();
         assert_eq!(vars.prefix, Some("zw".to_string()));
         assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
-        assert_eq!(vars.jira_summary, Some("实现用户登录功能".to_string()));
+        assert_eq!(vars.jira_summary, Some("implement user login function".to_string()));
         assert_eq!(vars.summary_slug, Some("implement-user-login".to_string()));
         assert_eq!(vars.jira_type, Some("Feature".to_string()));
     }
@@ -129,7 +129,7 @@ mod tests {
         let original = BranchTemplateVars {
             prefix: Some("dev".to_string()),
             jira_key: Some("TEST-001".to_string()),
-            jira_summary: Some("测试任务".to_string()),
+            jira_summary: Some("test task".to_string()),
             summary_slug: Some("test-task".to_string()),
             jira_type: Some("Task".to_string()),
         };

@@ -91,7 +91,7 @@ impl OptionListRenderer {
         // 渲染搜索框
         if let Some(query) = params.search_query {
             backend.move_to_column(0)?;
-            let search_label = params.theme.hint.apply("搜索: ", params.theme.enable_color);
+            let search_label = params.theme.hint.apply("Search: ", params.theme.enable_color);
             let search_text = params.theme.answer.apply(query, params.theme.enable_color);
             backend.writeln(&format!("{}{}", search_label, search_text))?;
         }
@@ -297,7 +297,7 @@ mod tests {
         assert_eq!(lines, 4);
 
         let output = backend.output_string();
-        assert!(output.contains("搜索"));
+        assert!(output.contains("Search"));
         assert!(output.contains("test"));
     }
 
