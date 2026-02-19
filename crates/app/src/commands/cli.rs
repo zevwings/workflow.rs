@@ -9,8 +9,9 @@ use clap::{Parser, Subcommand};
 pub use crate::commands::alias::AliasCommand;
 // 从 commands 重新导出共享参数（供外部使用）
 pub use crate::commands::args::{DryRunArgs, ForceArgs, JiraIdArg};
+pub use crate::commands::commit::CommitCommand;
 #[cfg(feature = "develop")]
-pub use crate::commands::commit::{CommitCommand, CommitSubcommand};
+pub use crate::commands::commit::CommitSubcommand;
 #[cfg(feature = "develop")]
 pub use crate::commands::rollback::RollbackCommand;
 pub use crate::commands::{
@@ -73,7 +74,6 @@ pub enum Command {
     #[command(subcommand)]
     Branch(BranchSubcommand),
     /// Commit management commands
-    #[cfg(feature = "develop")]
     Commit(CommitCommand),
     /// Stash management commands
     #[command(subcommand)]

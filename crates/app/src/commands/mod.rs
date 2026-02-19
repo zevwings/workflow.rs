@@ -12,7 +12,6 @@ pub mod cli;
 pub mod alias;
 pub mod branch;
 pub mod check;
-#[cfg(feature = "develop")]
 pub mod commit;
 pub mod completion;
 pub mod github;

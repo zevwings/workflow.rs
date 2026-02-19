@@ -35,7 +35,6 @@ impl LoggerManagerImpl {
             Command::Github(_) => Some("github"),
             Command::Jira(_) => Some("jira"),
             Command::Branch(_) => Some("branch"),
-            #[cfg(feature = "develop")]
             Command::Commit(_) => Some("commit"),
             Command::Stash(_) => Some("stash"),
             Command::Tag(_) => Some("tag"),

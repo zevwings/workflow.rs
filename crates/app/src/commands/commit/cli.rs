@@ -2,7 +2,9 @@
 //!
 //! 提交管理子命令结构定义
 
-use clap::{Args, Subcommand};
+use clap::Args;
+#[cfg(feature = "develop")]
+use clap::Subcommand;
 
 use crate::commands::args::DryRunArgs;
 
