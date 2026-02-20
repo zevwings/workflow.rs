@@ -93,8 +93,8 @@ mod tests {
         let result = text.truncate(10, "... (Total {} characters)");
         // 截断后的内容应该包含后缀
         assert!(result.contains("... (Total"));
-        // 截断后的内容应该以截断的文本开头
-        assert!(result.starts_with("This is a very long text"));
+        // 截断后的内容应该以截断的文本开头（max_length=10，取前10个字符）
+        assert!(result.starts_with("This is a "));
     }
 
     #[test]
