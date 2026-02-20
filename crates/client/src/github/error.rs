@@ -5,12 +5,12 @@ use thiserror::Error;
 /// GitHub API 错误
 #[derive(Error, Debug)]
 pub enum GitHubClientError {
-    #[error("GitHub API 调用失败: {0}")]
+    #[error("GitHub API call failed: {0}")]
     ApiError(String),
 
-    #[error("认证失败")]
+    #[error("Authentication failed")]
     AuthenticationFailed,
 
-    #[error("配置错误: {0}")]
+    #[error("Configuration error: {0}")]
     ConfigError(String),
 }

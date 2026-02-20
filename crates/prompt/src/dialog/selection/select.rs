@@ -93,7 +93,7 @@ where
     /// 使用指定后端执行提示（内部使用）
     pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<T> {
         if self.options.is_empty() {
-            return Err(PromptError::InvalidInput("选项列表不能为空".to_string()));
+            return Err(PromptError::InvalidInput("The option list cannot be empty".to_string()));
         }
 
         let theme = get_theme();
@@ -333,7 +333,7 @@ where
                                     rendered_lines,
                                     theme: &theme,
                                     renderer: &renderer,
-                                    hint_text: "使用 ↑/↓ 导航，输入搜索，回车确认",
+                                    hint_text: "Use ↑/↓ to navigate, enter search, and press Enter to confirm",
                                     search_query: None,
                                     page_size: self.page_size,
                                 },
@@ -354,9 +354,9 @@ where
 
 fn get_hint_text(search_query: &str) -> &'static str {
     if search_query.is_empty() {
-        "使用 ↑/↓ 导航，输入搜索，回车确认"
+        "Use ↑/↓ to navigate, enter search, and press Enter to confirm"
     } else {
-        "使用 ↑/↓ 导航，Esc 清除搜索，回车确认"
+        "Use ↑/↓ to navigate, press Esc to clear search, and press Enter to confirm"
     }
 }
 

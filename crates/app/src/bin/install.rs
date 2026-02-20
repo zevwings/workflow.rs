@@ -27,14 +27,14 @@ use clap::Parser;
 /// Workflow CLI 安装程序
 #[derive(Parser, Debug)]
 #[command(name = "install")]
-#[command(about = "安装 Workflow CLI 到系统路径")]
+#[command(about = "Install Workflow CLI to system path")]
 #[command(version)]
 struct Args {
-    /// 仅安装二进制文件
+    /// Install binaries only
     #[arg(long, conflicts_with = "completions_only")]
     binaries_only: bool,
 
-    /// 仅安装 shell completion 脚本
+    /// Install shell completion scripts only
     #[arg(long, conflicts_with = "binaries_only")]
     completions_only: bool,
 }

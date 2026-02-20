@@ -43,7 +43,7 @@ pub fn generate_branch_name_from_template(
 ) -> Result<String, Box<dyn std::error::Error>> {
     // 获取配置
     let config_repo = bootstrap::get_repo_config_repository();
-    let repo_config = config_repo.load().map_err(|e| format!("加载仓库配置失败: {}", e))?;
+    let repo_config = config_repo.load().map_err(|e| format!("Failed to load repository configuration: {}", e))?;
 
     // 获取对应类型的模板
     let template = match branch_type {
@@ -71,7 +71,7 @@ pub fn generate_branch_name_from_template(
     let engine = TemplateEngine::new();
     let branch_name = engine
         .render_string(template, &vars)
-        .map_err(|e| format!("渲染模板失败: {}", e))?;
+        .map_err(|e| format!("Failed to render template: {}", e))?;
 
     Ok(branch_name)
 }
@@ -139,12 +139,12 @@ pub fn select_branch_type() -> Result<BranchType, Box<dyn std::error::Error>> {
     let branch_type_options: Vec<String> =
         BranchType::all().iter().map(|t| t.as_str().to_string()).collect();
 
-    let selected_type = select!("选择分支类型", branch_type_options)
+    let selected_type = select!("Select branch type", branch_type_options)
         .prompt()
-        .map_err(|e| format!("选择分支类型失败: {}", e))?;
+        .map_err(|e| format!("Failed to select branch type: {}", e))?;
 
     let branch_type = BranchType::parse(&selected_type)
-        .ok_or_else(|| format!("无效的分支类型: {}", selected_type))?;
+        .ok_or_else(|| format!("Invalid branch type: {}", selected_type))?;
 
     Ok(branch_type)
 }
@@ -167,12 +167,12 @@ pub fn generate_branch_name_by_summary(
 
     // 使用 LLM 生成基础分支名（不包含 branch_type 前缀）
     let branch_service = bootstrap::get_branch_service();
-    let base_branch_name = match spinner!("正在生成分支名...")
+    let base_branch_name = match spinner!("Generating branch name...")
         .with(|| branch_service.generate_branch_name(Some(summary), &exists_branches))
     {
         Ok(name) => strip_branch_type_prefix(&name),
         Err(e) => {
-            info!("LLM 生成失败: {}, 使用备用方法", e);
+            info!("LLM generation failed: {}, using fallback method", e);
             to_slug(summary)
         }
     };
@@ -223,9 +223,9 @@ pub fn generate_branch_name_from_jira(
     let jira_repo = bootstrap::get_jira_repository();
 
     // 获取 JIRA ticket 信息
-    let issue = spinner!("正在获取 JIRA 工单 '{}'...", jira_id)
+    let issue = spinner!("Fetching JIRA ticket '{}'...", jira_id)
         .with(|| jira_repo.get_issue_info(jira_id))
-        .map_err(|e| format!("获取 JIRA 工单失败: {}", e))?;
+        .map_err(|e| format!("Failed to fetch JIRA ticket: {}", e))?;
 
     let summary = issue.fields.summary.clone();
 

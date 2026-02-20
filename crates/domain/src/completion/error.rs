@@ -8,12 +8,12 @@ use crate::path::PathError;
 /// Shell Completion 错误
 #[derive(Error, Debug)]
 pub enum CompletionError {
-    #[error("无效输入: {0}")]
+    #[error("The input is invalid: {0}")]
     InvalidInput(String),
 
-    #[error("Shell 检测失败: {0}")]
+    #[error("The shell detection failed: {0}")]
     Shell(#[from] ShellError),
 
-    #[error("路径错误")]
+    #[error("The path error: {0}")]
     Path(#[from] PathError),
 }

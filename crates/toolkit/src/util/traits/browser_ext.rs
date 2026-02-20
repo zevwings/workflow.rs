@@ -314,11 +314,11 @@ mod tests {
         // 测试各种无效 URL 格式会正确返回错误
         // 注意：ftp://example.com 是有效的 URL 格式，Url::parse() 会接受它
         let invalid_urls = vec![
-            ("not a url", "无效格式"),
-            ("example.com", "缺少协议"),
-            ("://example.com", "无效协议"),
-            ("", "空字符串"),
-            ("   ", "空白字符"),
+            ("not a url", "Invalid format"),
+            ("example.com", "Missing protocol"),
+            ("://example.com", "Invalid protocol"),
+            ("", "Empty string"),
+            ("   ", "Blank character"),
         ];
 
         for (url, description) in invalid_urls {

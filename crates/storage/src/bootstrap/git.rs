@@ -33,12 +33,8 @@ impl GitRepoRepository for GitRepoRepositoryWrapper {
 /// 1. **GitContextHolder** (无依赖) - 必须最先注册
 /// 2. **HookService** (依赖 GitContextHolder)
 /// 3. **其他服务** (依赖 GitContextHolder, 部分依赖 HookService)
-///
-/// Factory 闭包中的 `.expect()` 表示程序员错误（注册顺序错误），
-/// 而非运行时错误。如果触发 panic，说明注册顺序不正确。
 pub(super) fn register_git() -> Result<(), InjectionError> {
-    // 第一步：注册 GitContextHolder (基础服务，无依赖)
-    // 注意：GitContext::discover() 要求程序在 Git 仓库中运行
+    // 注册 GitContextHolder（基础服务，无依赖）。GitContext::discover() 要求程序在 Git 仓库中运行
     bind!(dyn GitContextHolder, |_: &Container| {
         let ctx = GitContext::discover().map_err(|_| {
             di::InjectionError::ValidationError(
@@ -51,8 +47,7 @@ pub(super) fn register_git() -> Result<(), InjectionError> {
     })
     .in_scope(Scope::Singleton)?;
 
-    // 第二步：注册依赖 GitContextHolder 的服务
-    // 注意：以下 .expect() 表示依赖未注册（程序员错误），而非运行时错误
+    // 注册依赖 GitContextHolder 的服务
     bind!(dyn BlameService, |c: &Container| {
         let holder = c.get::<dyn GitContextHolder>()?;
         Ok(Arc::new(BlameServiceImpl::new(holder.context())))

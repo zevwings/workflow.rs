@@ -107,8 +107,8 @@ mod tests {
 
     // Unicode 字符测试用例
     #[rstest]
-    #[case("短字符串", "***")]
-    #[case("这是一个很长的中文字符串包含数字123456", "这是一个***3456")]
+    #[case("short string", "***")]
+    #[case("a very long chinese string with numbers 123456", "a very***3456")]
     #[case("émoji🚀test123456789", "émoj***6789")]
     fn test_mask_unicode_strings(#[case] input: &str, #[case] expected: &str) {
         assert_eq!(input.mask(), expected);

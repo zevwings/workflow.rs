@@ -1,11 +1,75 @@
 //! Pull Request 模板渲染工具
 
 use domain::{
-    get_all_change_types, ChangeTypeItem, JiraIssue, PrTitleTemplateVars, PullRequestTemplateVars,
+    ChangeTypeItem, JiraIssue, PrTitleTemplateVars, PullRequestError, PullRequestTemplateVars, get_all_change_types
 };
+use prompt::input;
 use toolkit::TemplateEngine;
 
 use crate::bootstrap::{get_global_config_repository, get_repo_config_repository};
+
+/// 交互式获取 JIRA ID（必填）
+///
+/// 如果提供了 JIRA ID，直接返回；否则提示用户输入。
+///
+/// # 参数
+///
+/// * `jira_id` - 可选的 JIRA ID
+///
+/// # 返回
+///
+/// 返回验证后的 JIRA ID 字符串
+pub fn get_pull_request_id_interactive(
+    pull_request_id: Option<String>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    if let Some(id) = pull_request_id {
+        // 验证格式
+        validate_pull_request_id(&id).map_err(|e| format!("Invalid Pull Request ID format: {}", e))?;
+        Ok(id)
+    } else {
+        // 交互式输入
+        let id = input!("Please enter your Pull Request ID (e.g.: 123):")
+            .validator(|input: &str| {
+                validate_pull_request_id(input)
+                    .map_err(|e| format!("Invalid Pull Request ID format: {}", e))
+            })
+            .prompt()
+            .map_err(|e| format!("Failed to get Pull Request ID: {}", e))?;
+        Ok(id)
+    }
+}
+
+
+/// 验证 Jira ticket 格式
+///
+/// Jira ticket 应该是 PROJECT-123 格式（ticket），或纯项目名（PROJECT）。
+/// 项目名只能包含字母、数字和下划线。
+///
+/// # 示例
+/// ```
+/// use domain::validate_jira_ticket_format;
+/// assert!(validate_jira_ticket_format("PROJ-123").is_ok());
+/// assert!(validate_jira_ticket_format("PROJ").is_ok());
+/// assert!(validate_jira_ticket_format("PROJ-123-456").is_ok());
+/// assert!(validate_jira_ticket_format("invalid/ticket").is_err());
+/// ```
+pub fn validate_pull_request_id(pull_request_id: &str) -> Result<(), PullRequestError> {
+
+    if pull_request_id.trim().is_empty() {
+        return Err(PullRequestError::InvalidPullRequestId(pull_request_id.to_string()));
+    }
+
+    let pr_number: u64 = pull_request_id
+        .parse()
+        .map_err(|_| PullRequestError::InvalidPullRequestId(pull_request_id.to_string()))?;
+
+
+    if pr_number == 0 {
+        return Err(PullRequestError::InvalidPullRequestId(pull_request_id.to_string()));
+    }
+
+    Ok(())
+}
 
 /// 使用配置的 PR 标题模板渲染标题
 ///

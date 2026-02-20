@@ -267,11 +267,14 @@ fn update_github_account(context: &mut WorkflowContext) -> Result<(), String> {
         .position(|acc| acc.name() == settings.current())
         .unwrap_or(0);
 
-    let selected_account = SelectBuilder::new("Please select the GitHub account to update", account_options)
-        .default(default_index)
-        .result_title("Account to update")
-        .prompt()
-        .map_err(|e: PromptError| e.to_string())?;
+    let selected_account = SelectBuilder::new(
+        "Please select the GitHub account to update",
+        account_options,
+    )
+    .default(default_index)
+    .result_title("Account to update")
+    .prompt()
+    .map_err(|e: PromptError| e.to_string())?;
 
     let account_name = selected_account
         .split(' ')

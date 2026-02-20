@@ -98,8 +98,8 @@ mod tests {
     fn test_pull_request_template_vars_serialize() {
         let vars = PullRequestTemplateVars {
             jira_key: Some("PROJ-123".to_string()),
-            jira_summary: Some("实现新功能".to_string()),
-            jira_description: Some("详细描述".to_string()),
+            jira_summary: Some("implement new function".to_string()),
+            jira_description: Some("detailed description".to_string()),
             jira_type: Some("Feature".to_string()),
             jira_service_address: Some("https://jira.example.com".to_string()),
             change_types: vec![
@@ -112,8 +112,8 @@ mod tests {
                     selected: false,
                 },
             ],
-            short_description: Some("添加用户认证".to_string()),
-            dependency: Some("依赖 PR #100".to_string()),
+            short_description: Some("add user authentication".to_string()),
+            dependency: Some("depends on PR #100".to_string()),
         };
 
         let json = serde_json::to_string(&vars).unwrap();
@@ -125,20 +125,20 @@ mod tests {
     fn test_pull_request_template_vars_deserialize() {
         let json = r#"{
             "jira_key": "PROJ-456",
-            "jira_summary": "修复登录问题",
+            "jira_summary": "fix login issue",
             "jira_description": null,
             "jira_type": "Bug",
             "jira_service_address": "https://jira.example.com",
             "change_types": [
                 {"name": "Bug Fix", "selected": true}
             ],
-            "short_description": "修复空指针异常",
+            "short_description": "fix null pointer exception",
             "dependency": null
         }"#;
 
         let vars: PullRequestTemplateVars = serde_json::from_str(json).unwrap();
         assert_eq!(vars.jira_key, Some("PROJ-456".to_string()));
-        assert_eq!(vars.jira_summary, Some("修复登录问题".to_string()));
+        assert_eq!(vars.jira_summary, Some("fix login issue".to_string()));
         assert_eq!(vars.jira_description, None);
         assert_eq!(vars.change_types.len(), 1);
         assert!(vars.change_types[0].selected);
@@ -198,8 +198,8 @@ mod tests {
     fn test_pull_request_template_vars_roundtrip() {
         let original = PullRequestTemplateVars {
             jira_key: Some("TEST-001".to_string()),
-            jira_summary: Some("测试摘要".to_string()),
-            jira_description: Some("测试描述".to_string()),
+            jira_summary: Some("test summary".to_string()),
+            jira_description: Some("test description".to_string()),
             jira_type: Some("Task".to_string()),
             jira_service_address: Some("https://jira.test.com".to_string()),
             change_types: vec![
@@ -212,8 +212,8 @@ mod tests {
                     selected: false,
                 },
             ],
-            short_description: Some("简短描述".to_string()),
-            dependency: Some("依赖信息".to_string()),
+            short_description: Some("short description".to_string()),
+            dependency: Some("dependency information".to_string()),
         };
 
         let json = serde_json::to_string(&original).unwrap();

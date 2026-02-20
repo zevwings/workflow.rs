@@ -12,19 +12,19 @@ pub enum BranchServiceError {
     /// LLM API 调用失败
     ///
     /// 当 LLM 服务不可用、网络超时或 API 返回错误时抛出此错误。
-    #[error("LLM API 调用失败: {0}")]
+    #[error("The LLM API call failed: {0}")]
     LLMError(String),
 
     /// 生成分支名失败
     ///
     /// 当 LLM 生成的内容不符合预期格式或无法转换为有效分支名时抛出此错误。
-    #[error("生成分支名失败: {0}")]
+    #[error("The branch name generation failed: {0}")]
     GenerateBranchNameFailed(String),
 
     /// JSON 解析失败
     ///
     /// 当 LLM 返回的 JSON 格式无效或字段缺失时抛出此错误。
-    #[error("JSON 解析失败: {0}")]
+    #[error("The JSON parsing failed: {0}")]
     JsonParseFailed(String),
 }
 

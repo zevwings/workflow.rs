@@ -295,7 +295,7 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<(), JiraError> {
 
     if !is_valid_format {
         return Err(JiraError::ValidationError(format!(
-            "{}: '{}'. {}\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
+            "{}: '{}'. {}\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/fix-packaging-script')",
             VALIDATION_INVALID_JIRA_ID_FORMAT, ticket, VALIDATION_JIRA_ID_FORMAT_HELP
         )));
     }
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn test_validate_jira_ticket_format_branch_like() {
         // 类似分支名的格式（应该失败）
-        assert!(validate_jira_ticket_format("zw/修改打包脚本问题").is_err());
+        assert!(validate_jira_ticket_format("zw/fix-packaging-script").is_err());
         assert!(validate_jira_ticket_format("feature/test").is_err());
     }
 

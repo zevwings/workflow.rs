@@ -9,8 +9,9 @@ use clap::{Parser, Subcommand};
 pub use crate::commands::alias::AliasCommand;
 // 从 commands 重新导出共享参数（供外部使用）
 pub use crate::commands::args::{DryRunArgs, ForceArgs, JiraIdArg};
+pub use crate::commands::commit::CommitCommand;
 #[cfg(feature = "develop")]
-pub use crate::commands::commit::{CommitCommand, CommitSubcommand};
+pub use crate::commands::commit::CommitSubcommand;
 #[cfg(feature = "develop")]
 pub use crate::commands::rollback::RollbackCommand;
 pub use crate::commands::{
@@ -32,11 +33,11 @@ pub use crate::commands::{
     name = "workflow",
     author,
     version = env!("CARGO_PKG_VERSION"),
-    about = "Workflow CLI - Git / PR / Jira / LLM 工作流助手",
+    about = "Workflow CLI - Git / PR / Jira / LLM workflow assistant",
     propagate_version = true
 )]
 pub struct Cli {
-    /// 子命令
+    /// Subcommands
     #[command(subcommand)]
     pub command: Command,
 }
@@ -44,59 +45,58 @@ pub struct Cli {
 /// 支持的子命令
 #[derive(Subcommand)]
 pub enum Command {
-    /// 显示版本信息
+    /// Show version information
     Version,
-    /// 查看当前配置并执行环境检查
+    /// Check current configuration and run environment verification
     Check,
-    /// 交互式初始化或更新配置
+    /// Interactive setup or update configuration
     Setup,
-    /// 更新 Workflow CLI 到最新版本
+    /// Update Workflow CLI to latest version
     Update(UpdateArgs),
-    /// 卸载 Workflow CLI
+    /// Uninstall Workflow CLI
     Uninstall(UninstallArgs),
-    /// 仓库管理命令
+    /// Repository management commands
     #[command(subcommand)]
     Repo(RepoCommand),
-    /// 日志管理命令
+    /// Log management commands
     #[command(subcommand)]
     Log(LogCommand),
-    /// LLM 配置管理命令
+    /// LLM configuration management commands
     #[command(subcommand)]
     Llm(LlmCommand),
-    /// GitHub 账号管理命令
+    /// GitHub account management commands
     #[command(subcommand)]
     Github(GithubCommand),
-    /// Jira 配置管理命令
+    /// Jira configuration management commands
     #[command(subcommand)]
     Jira(JiraCommand),
-    /// 分支管理命令
+    /// Branch management commands
     #[command(subcommand)]
     Branch(BranchSubcommand),
-    /// 提交管理命令
-    #[cfg(feature = "develop")]
+    /// Commit management commands
     Commit(CommitCommand),
-    /// Stash 管理命令
+    /// Stash management commands
     #[command(subcommand)]
     Stash(StashSubcommand),
-    /// Tag 管理命令
+    /// Tag management commands
     #[command(subcommand)]
     Tag(TagSubcommand),
-    /// Pull Request 管理命令
+    /// Pull Request management commands
     #[command(subcommand)]
     Pr(PrSubcommand),
-    /// 推送当前分支到远程
+    /// Push current branch to remote
     #[cfg(feature = "develop")]
     Push,
-    /// 从远程拉取当前分支
+    /// Pull current branch from remote
     #[cfg(feature = "develop")]
     Pull,
-    /// Shell Completion 管理命令
+    /// Shell completion management commands
     #[command(subcommand)]
     Completion(CompletionCommand),
-    /// 别名管理命令
+    /// Alias management commands
     #[command(subcommand)]
     Alias(AliasCommand),
-    /// 回滚管理命令（开发用）
+    /// Rollback management commands (development only)
     #[cfg(feature = "develop")]
     #[command(subcommand)]
     Rollback(RollbackCommand),
@@ -105,15 +105,15 @@ pub enum Command {
 /// Update 命令参数
 #[derive(Parser, Debug)]
 pub struct UpdateArgs {
-    /// 目标版本号（如 1.2.3），不指定则更新到最新版本
+    /// Target version (e.g. 1.2.3), omit to update to latest
     #[arg(short = 't', long = "target")]
     pub target_version: Option<String>,
 
-    /// 跳过确认，直接执行更新
+    /// Skip confirmation and force update
     #[arg(short, long)]
     pub force: bool,
 
-    /// GitHub Token（用于提高 API 速率限制，也可通过 GITHUB_TOKEN 环境变量设置）
+    /// GitHub Token (for higher API rate limit, or set via GITHUB_TOKEN env var)
     #[arg(long)]
     pub github_token: Option<String>,
 }
@@ -121,11 +121,11 @@ pub struct UpdateArgs {
 /// Uninstall 命令参数
 #[derive(Parser, Debug)]
 pub struct UninstallArgs {
-    /// 跳过确认，直接执行卸载
+    /// Skip confirmation and force uninstall
     #[arg(short, long)]
     pub force: bool,
 
-    /// 保留配置文件（不删除 workflow.toml 等）
+    /// Keep config files (do not delete workflow.toml, etc.)
     #[arg(long)]
     pub keep_config: bool,
 }

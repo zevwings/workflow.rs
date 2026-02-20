@@ -126,7 +126,7 @@ impl CommitCreateCommand {
             .with(|| git_repo.commit(&commit_message, false)) // false 因为文件已经在 Step 1 中添加到暂存区
             .map_err(|e| format!("Failed to create commit: {}", e))?;
 
-        success!("✓ Created commit: {}", oid);
+        success!("Created commit: {}", oid);
 
         // Step 5: 询问是否推送到远端
         if self.push {

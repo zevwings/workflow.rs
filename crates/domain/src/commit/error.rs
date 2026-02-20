@@ -7,15 +7,15 @@ use crate::git::GitError;
 /// Commit 消息生成错误
 #[derive(Error, Debug)]
 pub enum CommitMessageError {
-    #[error("LLM 调用失败: {0}")]
+    #[error("The LLM call failed: {0}")]
     LLMError(String),
 
-    #[error("解析失败: {0}")]
+    #[error("The parsing failed: {0}")]
     ParseFailed(String),
 
-    #[error("无变更可提交: {0}")]
+    #[error("There are no changes to commit: {0}")]
     EmptyChanges(String),
 
-    #[error("Git 操作失败")]
+    #[error("The Git operation failed")]
     Git(#[from] GitError),
 }

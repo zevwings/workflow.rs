@@ -16,8 +16,11 @@ use std::{
 use prompt::{progress_bar, terminal_state};
 
 fn main() {
-    println!("进度条功能演示");
-    println!("==============");
+    println!("Progress bar demonstration");
+    println!("=================");
+    println!();
+    println!("This example demonstrates how to use ProgressBar to display progress.");
+    println!("Press Ctrl+C or Esc to cancel the progress bar.");
     println!();
 
     // 演示 1：基本进度条
@@ -38,12 +41,12 @@ fn main() {
     // 演示 6：与日志协调
     demo_progress_with_logs();
 
-    println!("\n=== 所有演示完成 ===");
+    println!("\n=== All demonstrations completed ===");
 }
 
 /// 演示 1：基本进度条
 fn demo_basic_progress() {
-    println!("\n=== Demo 1: 基本进度条 ===\n");
+    println!("\n=== Demo 1: Basic progress bar ===\n");
 
     let total = 50u64;
     let pb = progress_bar("Processing items...").with_total(total).start();
@@ -53,12 +56,12 @@ fn demo_basic_progress() {
         pb.inc(1);
     }
 
-    pb.with_success("处理完成！");
+    pb.with_success("Processing completed!");
 }
 
 /// 演示 2：下载模式
 fn demo_download_mode() {
-    println!("\n=== Demo 2: 下载模式 ===\n");
+    println!("\n=== Demo 2: Download mode ===\n");
 
     // 模拟下载 10MB 文件
     let total_bytes = 10 * 1024 * 1024u64;
@@ -82,15 +85,15 @@ fn demo_download_mode() {
         pb.inc(remaining);
     }
 
-    pb.with_success("下载完成！");
+    pb.with_success("Download completed!");
 }
 
 /// 演示 3：自定义样式
 fn demo_custom_style() {
-    println!("\n=== Demo 3: 自定义样式 ===\n");
+    println!("\n=== Demo 3: Custom style ===\n");
 
     // 样式 1：使用 #>-
-    println!("样式 1: #>-");
+    println!("Style 1: #>-");
     let pb = progress_bar("Loading...")
         .with_total(30)
         .with_progress_chars("#>-")
@@ -101,10 +104,10 @@ fn demo_custom_style() {
         thread::sleep(Duration::from_millis(50));
         pb.inc(1);
     }
-    pb.with_success("完成");
+    pb.with_success("Completed");
 
     // 样式 2：使用 =>
-    println!("\n样式 2: =>");
+    println!("\nStyle 2: =>");
     let pb = progress_bar("Processing...")
         .with_total(30)
         .with_progress_chars("=>")
@@ -115,10 +118,10 @@ fn demo_custom_style() {
         thread::sleep(Duration::from_millis(50));
         pb.inc(1);
     }
-    pb.with_success("完成");
+    pb.with_success("Completed");
 
     // 样式 3：使用 ▓░
-    println!("\n样式 3: ▓░");
+    println!("\nStyle 3: ▓░");
     let pb = progress_bar("Rendering...")
         .with_total(30)
         .with_progress_chars("▓░")
@@ -129,12 +132,12 @@ fn demo_custom_style() {
         thread::sleep(Duration::from_millis(50));
         pb.inc(1);
     }
-    pb.with_success("完成");
+    pb.with_success("Completed");
 }
 
 /// 演示 4：不同完成状态
 fn demo_completion_states() {
-    println!("\n=== Demo 4: 不同完成状态 ===\n");
+    println!("\n=== Demo 4: Different completion states ===\n");
 
     // 成功完成
     let pb = progress_bar("Task 1...").with_total(20).start();
@@ -143,7 +146,7 @@ fn demo_completion_states() {
         thread::sleep(Duration::from_millis(30));
         pb.inc(1);
     }
-    pb.with_success("任务 1 成功！");
+    pb.with_success("Task 1 completed!");
 
     // 失败 (使用 with_error)
     let pb = progress_bar("Task 2...").with_total(20).start();
@@ -152,7 +155,7 @@ fn demo_completion_states() {
         thread::sleep(Duration::from_millis(30));
         pb.inc(1);
     }
-    pb.with_error("任务 2 失败");
+    pb.with_error("Task 2 failed");
 
     // 信息 (使用 with_info)
     let pb = progress_bar("Task 3...").with_total(20).start();
@@ -161,12 +164,12 @@ fn demo_completion_states() {
         thread::sleep(Duration::from_millis(30));
         pb.inc(1);
     }
-    pb.with_info("任务 3 完成，有信息");
+    pb.with_info("Task 3 completed, with information");
 }
 
 /// 演示 5：未知总量（不确定进度）
 fn demo_indeterminate_progress() {
-    println!("\n=== Demo 5: 未知总量 ===\n");
+    println!("\n=== Demo 5: Unknown total ===\n");
 
     // 不设置 total，显示不确定进度
     let pb = progress_bar("Scanning files...").start();
@@ -182,7 +185,7 @@ fn demo_indeterminate_progress() {
         }
     }
 
-    pb.with_success("扫描完成，共找到 500 个文件");
+    pb.with_success("Scan completed, found 500 files");
 }
 
 /// 模拟日志输出（在实际应用中由 tracing 触发）
@@ -201,7 +204,7 @@ fn simulate_log_output(message: &str) {
 
 /// 演示 6：ProgressBar 与日志协调
 fn demo_progress_with_logs() {
-    println!("\n=== Demo 6: ProgressBar 与日志协调 ===\n");
+    println!("\n=== Demo 6: ProgressBar with logs ===\n");
 
     let total = 10u64;
     let pb = progress_bar("Downloading...").with_total(total).start();

@@ -1,4 +1,4 @@
-//! 输入提示主逻辑
+//! Input prompt main logic.
 
 use std::io::Write as _;
 
@@ -22,22 +22,19 @@ use crate::{
 };
 
 fn normalize_paste_text(text: &str, multiline: bool) -> String {
-    // 统一换行：\r\n / \r -> \n
     let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
     if multiline {
         normalized
     } else {
-        // 单行输入不允许换行，避免破坏 UI
+        // Single-line: replace newlines with spaces to avoid breaking UI layout
         normalized.replace('\n', " ")
     }
 }
 
-/// 获取调试日志文件路径（跨平台）
 fn debug_log_path() -> std::path::PathBuf {
     std::env::temp_dir().join("workflow_debug.log")
 }
 
-/// 渲染提示行，根据验证状态显示不同的前缀
 fn render_prompt_line<B: Backend>(
     backend: &mut B,
     builder: &InputBuilder,
@@ -45,7 +42,6 @@ fn render_prompt_line<B: Backend>(
     validation_status: ValidationStatus,
     cursor_line: &mut CursorLine,
 ) -> Result<()> {
-    // 确保光标在提示行
     if *cursor_line != CursorLine::PromptLine {
         if *cursor_line == CursorLine::InputLine {
             backend.move_up(1)?;
@@ -53,18 +49,15 @@ fn render_prompt_line<B: Backend>(
         *cursor_line = CursorLine::PromptLine;
     }
 
-    // 清除提示行
     backend.move_to_column(0)?;
     backend.clear_line()?;
 
-    // 根据验证状态选择前缀和颜色
     let (prefix, prefix_style) = match validation_status {
         ValidationStatus::Initial => (PROMPT_PREFIX, &theme.warning),
         ValidationStatus::Valid => ("✓ ", &theme.success),
         ValidationStatus::Invalid => ("✗ ", &theme.error),
     };
 
-    // 构建提示文本
     let prompt_text = if let Some(ref default) = builder.default {
         if builder.password {
             format!("{}[{}]", builder.message, PASSWORD_MASK)
@@ -75,21 +68,18 @@ fn render_prompt_line<B: Backend>(
         builder.message.clone()
     };
 
-    // 应用样式
     let styled_prefix = prefix_style.apply(prefix, theme.enable_color);
     let styled_text = theme.title.apply(&prompt_text, theme.enable_color);
 
     backend.write(&format!("{}{}", styled_prefix, styled_text))?;
     backend.flush()?;
 
-    // 回到输入行
     backend.move_down(1)?;
     *cursor_line = CursorLine::InputLine;
 
     Ok(())
 }
 
-/// 实时验证输入并更新提示行状态
 fn validate_and_update_prompt<B: Backend>(
     backend: &mut B,
     builder: &InputBuilder,
@@ -117,7 +107,6 @@ fn validate_and_update_prompt<B: Backend>(
     }
 }
 
-/// 清除输入区域并显示结果
 fn clear_and_display_result<B: Backend>(
     backend: &mut B,
     builder: &InputBuilder,
@@ -126,7 +115,6 @@ fn clear_and_display_result<B: Backend>(
 ) -> Result<()> {
     let theme = get_theme();
 
-    // 确保光标在输入行
     if *cursor_line != CursorLine::InputLine {
         if *cursor_line == CursorLine::PromptLine {
             backend.move_down(1)?;
@@ -134,17 +122,12 @@ fn clear_and_display_result<B: Backend>(
         *cursor_line = CursorLine::InputLine;
     }
 
-    // 清除输入行
     backend.move_to_column(0)?;
     backend.clear_line()?;
-    // 上移一行到提示行
     backend.move_up(1)?;
-
-    // 清除提示行
     backend.move_to_column(0)?;
     backend.clear_line()?;
 
-    // 在提示行位置显示格式化的结果
     let display_value = if builder.password {
         PASSWORD_MASK
     } else {
@@ -164,7 +147,6 @@ fn clear_and_display_result<B: Backend>(
     Ok(())
 }
 
-/// 确保光标在输入行
 fn ensure_cursor_on_input_line<B: Backend>(
     backend: &mut B,
     cursor_line: &mut CursorLine,
@@ -179,7 +161,6 @@ fn ensure_cursor_on_input_line<B: Backend>(
     Ok(())
 }
 
-/// 渲染输入行
 fn render_input<B: Backend>(
     backend: &mut B,
     builder: &InputBuilder,
@@ -197,7 +178,7 @@ fn render_input<B: Backend>(
         {
             let _ = writeln!(
                 file,
-                "[DEBUG] render_input: 开始渲染输入，输入长度: {}",
+                "[DEBUG] render_input: Start rendering input, input length: {}",
                 editor.as_str().len()
             );
         }
@@ -206,11 +187,9 @@ fn render_input<B: Backend>(
     backend.move_to_column(0)?;
     backend.clear_line()?;
 
-    // 显示输入框前缀
     let prefix = theme.success.apply("> ", theme.enable_color);
     backend.write(&prefix)?;
 
-    // 显示输入或 placeholder
     let display = if editor.as_str().is_empty() {
         if builder.password {
             String::new()
@@ -230,7 +209,6 @@ fn render_input<B: Backend>(
     };
     backend.write(&display)?;
 
-    // 移动光标到正确位置
     let prefix_len = 2;
     let target_column = if editor.as_str().is_empty() {
         prefix_len
@@ -242,7 +220,7 @@ fn render_input<B: Backend>(
         if let Ok(mut file) =
             std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
-            let _ = writeln!(file, "[DEBUG] render_input: 移动光标到列 {}", target_column);
+            let _ = writeln!(file, "[DEBUG] render_input: Move cursor to column {}", target_column);
         }
     }
 
@@ -254,7 +232,7 @@ fn render_input<B: Backend>(
         if let Ok(mut file) =
             std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
-            let _ = writeln!(file, "[DEBUG] render_input: 完成渲染");
+            let _ = writeln!(file, "[DEBUG] render_input: Completed rendering");
         }
     }
     Ok(())
@@ -284,12 +262,10 @@ fn render_multiline<B: Backend>(
     cursor_row: &mut u16,
     rendered_input_lines: &mut u16,
 ) -> Result<()> {
-    // 当前位置在输入区内：向上回到 prompt 行
     backend.move_up(cursor_row.saturating_add(1))?;
     backend.move_to_column(0)?;
     backend.clear_line()?;
 
-    // 渲染 prompt 行（带校验状态）
     let (prefix, prefix_style) = match validation_status {
         ValidationStatus::Initial => (PROMPT_PREFIX, &theme.warning),
         ValidationStatus::Valid => ("✓ ", &theme.success),
@@ -311,10 +287,8 @@ fn render_multiline<B: Backend>(
     backend.write(&format!("{}{}", styled_prefix, styled_text))?;
     backend.flush()?;
 
-    // 下移到输入区首行
     backend.move_down(1)?;
 
-    // 清理旧输入区（多行）
     let old_lines = (*rendered_input_lines).max(1);
     for i in 0..old_lines {
         backend.move_to_column(0)?;
@@ -323,17 +297,10 @@ fn render_multiline<B: Backend>(
             backend.move_down(1)?;
         }
     }
-    // 回到输入区首行，开始重绘
     backend.move_up(old_lines.saturating_sub(1))?;
 
-    // =============================================================================
-    // 计算“要渲染的可视行”
-    //
-    // 关键点：placeholder 可能包含 '\n'。在 raw mode 下直接写入包含 '\n' 的字符串，
-    // 会出现换行不回到列 0 的情况，导致缩进越来越深、甚至和其他输出叠在同一行。
-    // 因此这里必须将 placeholder 按行拆开渲染。
-    // =============================================================================
-
+    // Placeholder may contain '\n'. In raw mode, writing '\n' directly does not reset to column 0,
+    // causing cascading indent. Must split by lines and render each separately.
     let (visual_lines, cursor_row_target, cursor_col_target): (Vec<String>, u16, u16) =
         if editor.as_str().is_empty() && !builder.password {
             if let Some(placeholder) = editor.placeholder() {
@@ -345,13 +312,11 @@ fn render_multiline<B: Backend>(
                 } else {
                     raw_lines.into_iter().map(|l| hint_style.apply(l, theme.enable_color)).collect()
                 };
-                // 空输入时，光标应在第一行起始位置（在 "> " 之后）
                 (lines, 0, 0)
             } else {
                 (vec![String::new()], 0, 0)
             }
         } else if builder.password {
-            // 多行密码：按行掩码，保持换行结构与光标定位一致
             let raw_lines: Vec<&str> = editor.as_str().split('\n').collect();
             let lines = if raw_lines.is_empty() {
                 vec![String::new()]
@@ -406,7 +371,6 @@ fn render_multiline<B: Backend>(
         }
     }
 
-    // 写完后光标在最后一行末尾，移动到目标行列
     if new_lines > 0 {
         let last_row = new_lines - 1;
         let target_row = cursor_row_target.min(last_row);
@@ -414,7 +378,6 @@ fn render_multiline<B: Backend>(
         backend.move_up(up)?;
     }
 
-    // 每行前缀宽度固定为 2（"> " 或 "  "）
     backend.move_to_column(2 + cursor_col_target)?;
     backend.show_cursor()?;
     backend.flush()?;
@@ -433,13 +396,11 @@ fn clear_and_display_result_multiline<B: Backend>(
 ) -> Result<()> {
     let theme = get_theme();
 
-    // 回到 prompt 行
     backend.move_up(cursor_row.saturating_add(1))?;
     backend.move_to_column(0)?;
     backend.clear_line()?;
     backend.move_down(1)?;
 
-    // 清空输入区
     let lines = rendered_input_lines.max(1);
     for i in 0..lines {
         backend.move_to_column(0)?;
@@ -449,11 +410,9 @@ fn clear_and_display_result_multiline<B: Backend>(
         }
     }
 
-    // 回到 prompt 行并输出结果
     backend.move_up(lines)?;
     backend.move_to_column(0)?;
 
-    // 多行输入只显示第一行并添加省略号
     let display_value = if builder.password {
         PASSWORD_MASK
     } else {
@@ -463,7 +422,6 @@ fn clear_and_display_result_multiline<B: Backend>(
     let title_text = builder.result_title.as_ref().unwrap_or(&builder.message);
     let title = theme.title.apply(title_text, theme.enable_color);
 
-    // 只显示第一行，如果有多行则添加省略号
     let first_line = display_value.lines().next().unwrap_or("");
     let result_text = if display_value.contains('\n') {
         format!("{}...", first_line)
@@ -479,7 +437,6 @@ fn clear_and_display_result_multiline<B: Backend>(
     Ok(())
 }
 
-/// 打印取消消息
 fn print_cancelled_message<B: Backend>(
     backend: &mut B,
     editor: &InputEditor,
@@ -487,10 +444,8 @@ fn print_cancelled_message<B: Backend>(
 ) -> Result<()> {
     let theme = get_theme();
 
-    // 确保光标在输入行
     ensure_cursor_on_input_line(backend, cursor_line)?;
 
-    // 清除输入行并显示已输入的内容（如果有）
     backend.move_to_column(0)?;
     backend.clear_line()?;
 
@@ -500,7 +455,6 @@ fn print_cancelled_message<B: Backend>(
         backend.writeln(&format!("{}{}", prefix, input_text))?;
         backend.move_to_column(0)?;
     } else {
-        // 如果没有输入，直接换行
         backend.writeln("")?;
         backend.move_to_column(0)?;
     }
@@ -1256,7 +1210,7 @@ mod tests {
     #[test]
     fn test_input_unicode_characters() {
         let events = [
-            MockBackend::type_string("你好世界"),
+            MockBackend::type_string("Hello World"),
             vec![MockBackend::press_enter()],
         ]
         .concat();
@@ -1265,7 +1219,7 @@ mod tests {
         let result = InputBuilder::new("Enter text").prompt_with_backend(&mut backend);
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "你好世界");
+        assert_eq!(result.unwrap(), "Hello World");
     }
 
     #[test]
@@ -1346,7 +1300,7 @@ mod tests {
 
         let builder = InputBuilder::new("Changes")
             .multiline()
-            .placeholder("例如：\n- 修复了 XXX\n- 优化了 YYY\n- 新增了 ZZZ");
+            .placeholder("For example:\n- Fixed XXX\n- Optimized YYY\n- Added ZZZ");
         let editor = InputEditor::new(builder.placeholder.clone());
 
         let mut cursor_row = 0u16;

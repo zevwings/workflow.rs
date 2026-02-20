@@ -7,18 +7,18 @@ use crate::path::PathError;
 /// 配置服务错误
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("IO 错误: {0}")]
+    #[error("The IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("TOML 解析错误: {0}")]
+    #[error("The TOML parsing error: {0}")]
     Toml(#[from] toml::de::Error),
 
-    #[error("路径错误")]
+    #[error("The path error: {0}")]
     Path(#[from] PathError),
 
-    #[error("获取锁失败: {0}")]
+    #[error("The lock failed: {0}")]
     LockFailed(String),
 
-    #[error("操作失败: {0}")]
+    #[error("The operation failed: {0}")]
     OperationFailed(String),
 }

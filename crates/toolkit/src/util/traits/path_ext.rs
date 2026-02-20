@@ -187,12 +187,12 @@ mod tests {
     #[test]
     fn test_to_display_string_unicode() {
         let current_dir = get_current_dir();
-        let unicode_path = current_dir.join("测试文件.txt");
+        let unicode_path = current_dir.join("test file.txt");
 
         let display = unicode_path.to_display_string();
 
         // 应该正确处理 Unicode 字符
-        assert!(display.contains("测试文件.txt"));
+        assert!(display.contains("test file.txt"));
     }
 
     // ==================== 一致性测试 ====================

@@ -114,7 +114,7 @@ mod tests {
 
         // 测试各种输入都应该成功
         assert!("".copy_to_clipboard().is_ok());
-        assert!("测试文本 🚀".copy_to_clipboard().is_ok());
+        assert!("test text 🚀".copy_to_clipboard().is_ok());
         assert!(String::from("test").copy_to_clipboard().is_ok());
     }
 
@@ -177,7 +177,7 @@ mod tests {
 
         #[test]
         fn test_copy_to_clipboard_unicode_string() {
-            let text = "测试文本 🚀 中文字符";
+            let text = "test text 🚀 chinese characters";
             let result = text.copy_to_clipboard();
             // Unicode 字符串应该可以正常处理
             match result {

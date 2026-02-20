@@ -69,14 +69,14 @@ fn test_concurrent_read_access() {
 
     let duration = start.elapsed();
     println!(
-        "并发读取测试完成: {} 线程, 耗时: {:?}",
+        "Concurrent read test completed: {} threads, duration: {:?}",
         thread_count, duration
     );
 
     // 断言性能在合理范围内（100 线程应该在 30 秒内完成）
     assert!(
         duration < Duration::from_secs(30),
-        "并发读取耗时过长: {:?}",
+        "Concurrent read test duration too long: {:?}",
         duration
     );
 }
@@ -126,11 +126,11 @@ fn test_concurrent_mixed_operations() {
     }
 
     let duration = start.elapsed();
-    println!("混合操作测试完成, 耗时: {:?}", duration);
+    println!("Concurrent mixed operations test completed, duration: {:?}", duration);
 
     assert!(
         duration < Duration::from_secs(20),
-        "混合操作耗时过长: {:?}",
+        "Concurrent mixed operations test duration too long: {:?}",
         duration
     );
 }
@@ -147,7 +147,7 @@ fn test_large_file_count_performance() {
     let file_counts = [100, 500, 1000, 2000];
 
     for &count in &file_counts {
-        println!("\n测试 {} 个文件...", count);
+        println!("\nTesting {} files...", count);
         let start = Instant::now();
 
         let (_tmp, ctx) = setup_repo_with_files(count);
@@ -160,16 +160,16 @@ fn test_large_file_count_performance() {
         let status = service.get_working_tree_status().unwrap();
         let status_time = status_start.elapsed();
 
-        println!("  - 设置耗时: {:?}", setup_time);
-        println!("  - 状态查询耗时: {:?}", status_time);
-        println!("  - 文件总数: {}", status.staged.len());
+        println!("  - Setup duration: {:?}", setup_time);
+        println!("  - Status query duration: {:?}", status_time);
+        println!("  - File count: {}", status.staged.len());
 
         // 断言性能合理
         // 2000 个文件的状态查询应该在 5 秒内完成
         if count <= 2000 {
             assert!(
                 status_time < Duration::from_secs(5),
-                "{} 文件的状态查询耗时过长: {:?}",
+                "{} file status query duration too long: {:?}",
                 count,
                 status_time
             );
@@ -185,7 +185,7 @@ fn test_large_file_blame_performance() {
     let line_counts = [1000, 5000, 10000];
 
     for &count in &line_counts {
-        println!("\n测试 {} 行文件的 blame...", count);
+        println!("\nTesting {} line file blame...", count);
 
         let (_tmp, ctx) = setup_repo_with_large_file(count);
         let service = BlameServiceImpl::new(ctx);
@@ -194,8 +194,8 @@ fn test_large_file_blame_performance() {
         let blame = service.get_file_blame("large_file.txt", None).unwrap();
         let duration = start.elapsed();
 
-        println!("  - Blame 耗时: {:?}", duration);
-        println!("  - 行数: {}", blame.len());
+        println!("  - Blame duration: {:?}", duration);
+        println!("  - Line count: {}", blame.len());
 
         assert_eq!(blame.len(), count);
 
@@ -203,7 +203,7 @@ fn test_large_file_blame_performance() {
         if count <= 10000 {
             assert!(
                 duration < Duration::from_secs(30),
-                "{} 行的 blame 耗时过长: {:?}",
+                "{} line blame duration too long: {:?}",
                 count,
                 duration
             );
@@ -219,7 +219,7 @@ fn test_large_branch_count_performance() {
     let branch_counts = [50, 100, 200];
 
     for &count in &branch_counts {
-        println!("\n测试 {} 个分支...", count);
+        println!("\nTesting {} branches...", count);
 
         let (_tmp, ctx) = setup_repo_with_branches(count);
         let service = BranchServiceImpl::new(ctx);
@@ -228,13 +228,13 @@ fn test_large_branch_count_performance() {
         let branches = service.list_branches(false, false).unwrap();
         let duration = start.elapsed();
 
-        println!("  - 列出分支耗时: {:?}", duration);
-        println!("  - 分支数: {}", branches.len());
+        println!("  - List branches duration: {:?}", duration);
+        println!("  - Branch count: {}", branches.len());
 
         // 200 个分支应该在 2 秒内完成
         assert!(
             duration < Duration::from_secs(2),
-            "{} 个分支列表耗时过长: {:?}",
+            "{} branch list duration too long: {:?}",
             count,
             duration
         );
@@ -253,7 +253,7 @@ fn test_commit_all_performance() {
     let file_counts = [10, 50, 100];
 
     for &count in &file_counts {
-        println!("\n测试提交 {} 个文件 (--all)...", count);
+        println!("\nTesting commit {} files (--all)...", count);
 
         let (_tmp, ctx) = setup_repo_with_changes(count, count);
         let service = create_commit_service(ctx);
@@ -262,12 +262,12 @@ fn test_commit_all_performance() {
         service.commit("test commit", true).unwrap();
         let duration = start.elapsed();
 
-        println!("  - 提交耗时: {:?}", duration);
+        println!("  - Commit duration: {:?}", duration);
 
         // 100 个文件应该在 10 秒内完成
         assert!(
             duration < Duration::from_secs(10),
-            "{} 文件的提交耗时过长: {:?}",
+            "{} file commit duration too long: {:?}",
             count,
             duration
         );
@@ -306,7 +306,7 @@ fn test_lock_contention() {
             times_clone.lock().unwrap().push(duration);
 
             if i % 10 == 0 {
-                println!("Thread {} - 耗时: {:?}", i, duration);
+                println!("Thread {} - Duration: {:?}", i, duration);
             }
         });
 
@@ -323,15 +323,15 @@ fn test_lock_contention() {
     let avg = total / times.len() as u32;
     let max = times.iter().max().unwrap();
 
-    println!("\n锁竞争统计:");
-    println!("  - 线程数: {}", thread_count);
-    println!("  - 平均耗时: {:?}", avg);
-    println!("  - 最大耗时: {:?}", max);
+    println!("\nLock contention statistics:");
+    println!("  - Thread count: {}", thread_count);
+    println!("  - Average duration: {:?}", avg);
+    println!("  - Maximum duration: {:?}", max);
 
     // 平均耗时应该小于 500ms
     assert!(
         avg < Duration::from_millis(500),
-        "锁竞争导致平均耗时过长: {:?}",
+        "Lock contention caused average duration too long: {:?}",
         avg
     );
 }
@@ -345,7 +345,7 @@ fn test_lock_contention() {
 #[ignore]
 #[cfg(feature = "testing")]
 fn test_memory_stability() {
-    println!("开始内存稳定性测试...");
+    println!("Starting memory stability test...");
 
     let (_tmp, ctx) = setup_repo_with_files(100);
 
@@ -356,11 +356,11 @@ fn test_memory_stability() {
         service.get_working_tree_status().unwrap();
 
         if i % 100 == 0 {
-            println!("  已完成 {} 次操作", i);
+            println!("  - Completed {} operations", i);
         }
     }
 
-    println!("内存稳定性测试完成");
+    println!("Memory stability test completed");
 }
 
 // ============================================================
@@ -372,7 +372,7 @@ fn test_memory_stability() {
 #[ignore]
 #[cfg(feature = "testing")]
 fn test_realistic_workflow() {
-    println!("模拟真实工作流...");
+    println!("Simulating realistic workflow...");
 
     // 1. 创建仓库
     let (_tmp, ctx) = setup_repo_with_files(50);
@@ -384,31 +384,31 @@ fn test_realistic_workflow() {
 
     // 2. 检查状态
     let status = commit_service.get_working_tree_status().unwrap();
-    println!("  - 状态: {} 个文件", status.staged.len());
+    println!("  - Status: {} files", status.staged.len());
 
     // 3. 创建分支
     branch_service.create_branch("feature-branch").unwrap();
-    println!("  - 创建分支完成");
+    println!("  - Create branch completed");
 
     // 4. 切换分支
     branch_service.checkout_branch("feature-branch").unwrap();
-    println!("  - 切换分支完成");
+    println!("  - Checkout branch completed");
 
     // 5. 列出分支
     let branches = branch_service.list_branches(false, false).unwrap();
-    println!("  - 分支数: {}", branches.len());
+    println!("  - Branch count: {}", branches.len());
 
     // 6. 获取提交信息
     let info = commit_service.get_commit_info("HEAD").unwrap();
-    println!("  - 当前提交: {}", info.sha);
+    println!("  - Current commit: {}", info.sha);
 
     let duration = start.elapsed();
-    println!("工作流完成，总耗时: {:?}", duration);
+    println!("Workflow completed, total duration: {:?}", duration);
 
     // 整个工作流应该在 5 秒内完成
     assert!(
         duration < Duration::from_secs(5),
-        "工作流耗时过长: {:?}",
+        "Workflow duration too long: {:?}",
         duration
     );
 }

@@ -228,30 +228,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
         },
-        #[cfg(feature = "develop")]
         Command::Commit(commit_cmd) => {
-            if let Some(sub) = &commit_cmd.subcommand {
-                match sub {
-                    CommitSubcommand::CommitToMerge {
-                        source_branch,
-                        target_branch,
-                    } => {
-                        let cmd = commands::commit::CommitToMergeCommand::new(
-                            source_branch.clone(),
-                            target_branch.clone(),
-                        );
-                        cmd.run()?;
+            #[cfg(feature = "develop")]
+            {
+                if let Some(sub) = &commit_cmd.subcommand {
+                    match sub {
+                        CommitSubcommand::CommitToMerge {
+                            source_branch,
+                            target_branch,
+                        } => {
+                            let cmd = commands::commit::CommitToMergeCommand::new(
+                                source_branch.clone(),
+                                target_branch.clone(),
+                            );
+                            cmd.run()?;
+                        }
+                        CommitSubcommand::CommitFiles { ref_or_sha } => {
+                            let cmd =
+                                commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
+                            cmd.run()?;
+                        }
+                        CommitSubcommand::CommitDiff { ref_or_sha } => {
+                            let cmd =
+                                commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
+                            cmd.run()?;
+                        }
                     }
-                    CommitSubcommand::CommitFiles { ref_or_sha } => {
-                        let cmd = commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
-                        cmd.run()?;
-                    }
-                    CommitSubcommand::CommitDiff { ref_or_sha } => {
-                        let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
-                        cmd.run()?;
-                    }
+                } else {
+                    let cmd = commands::commit::CommitCreateCommand::new(
+                        commit_cmd.all,
+                        commit_cmd.push,
+                        commit_cmd.dry_run.is_dry_run(),
+                        commit_cmd.message.clone(),
+                    );
+                    cmd.run()?;
                 }
-            } else {
+            }
+            #[cfg(not(feature = "develop"))]
+            {
                 let cmd = commands::commit::CommitCreateCommand::new(
                     commit_cmd.all,
                     commit_cmd.push,
@@ -355,7 +369,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             PrSubcommand::Merge { pr_id, force } => {
                 let cmd = commands::pr::PullRequestMergeCommand::new(
-                    Some(pr_id.clone()),
+                    pr_id.clone(),
                     force.is_force(),
                 );
                 cmd.run()?;
