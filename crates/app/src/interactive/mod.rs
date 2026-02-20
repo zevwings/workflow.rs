@@ -5,7 +5,6 @@
 pub mod core;
 pub mod display;
 pub mod platforms;
-pub mod setup;
 
 // 重新导出常用接口
 pub use core::{WorkflowContext, WorkflowExecutor, WorkflowMode, WorkflowStage};
