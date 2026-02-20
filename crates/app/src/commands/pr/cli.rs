@@ -45,8 +45,8 @@ pub enum PrSubcommand {
     },
     /// 合并 Pull Request
     Merge {
-        /// PR ID（数字）
-        pr_id: String,
+        /// PR ID（数字，可选，不提供时交互式输入）
+        pr_id: Option<String>,
         #[command(flatten)]
         force: ForceArgs,
     },

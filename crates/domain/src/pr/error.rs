@@ -8,6 +8,9 @@ use crate::github::GitHubError;
 /// Pull Request 服务错误
 #[derive(Error, Debug)]
 pub enum PullRequestError {
+    #[error("The Pull Request ID is invalid: {0}")]
+    InvalidPullRequestId(String),
+
     #[error("The Git operation failed: {0}")]
     Git(String),
 

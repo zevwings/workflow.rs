@@ -1,12 +1,12 @@
 //! 合并 Pull Request 命令
 
 use domain::{extract_jira_ticket_id, GitError};
-use prompt::{confirm, error, info, input, spinner, success, validators, warning};
+use prompt::{confirm, error, info, spinner, success, warning};
 
-use crate::bootstrap::{
+use crate::{bootstrap::{
     get_git_repository, get_jira_repository, get_jira_work_history_repository,
     get_pull_request_service,
-};
+}, commands::pr::utils::get_pull_request_id_interactive};
 
 /// Pull Request Merge 命令
 pub struct PullRequestMergeCommand {
@@ -29,24 +29,7 @@ impl PullRequestMergeCommand {
             info!("Force mode enabled: remote branch will be deleted after merge");
         }
 
-        let pr_id = if let Some(pr_id) = &self.pr_id {
-            pr_id.clone()
-        } else {
-            // 带验证的输入（使用 regex 验证邮箱）
-            let pr_id_validator =
-                validators::regex(r"^[0-9]+$", Some("Please enter a valid PR ID"))
-                    .map_err(|e| format!("Invalid PR ID regex: {}", e))?;
-            // 交互式输入
-            let input_id = input!("Please enter your PR ID:")
-                .validator(pr_id_validator)
-                .prompt()
-                .map_err(|e| format!("Failed to get PR ID: {}", e))?;
-
-            if input_id.trim().is_empty() {
-                return Err("PR ID is required".into());
-            }
-            input_id.trim().to_string()
-        };
+        let pr_id = get_pull_request_id_interactive(self.pr_id.clone())?;
 
         // 1. 获取 PR 信息（在合并前获取源分支、目标分支和标题）
         let pr_info = pr_service

@@ -369,7 +369,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             PrSubcommand::Merge { pr_id, force } => {
                 let cmd = commands::pr::PullRequestMergeCommand::new(
-                    Some(pr_id.clone()),
+                    pr_id.clone(),
                     force.is_force(),
                 );
                 cmd.run()?;
