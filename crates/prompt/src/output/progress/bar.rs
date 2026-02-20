@@ -363,8 +363,8 @@ mod tests {
         // update_message
         bar.update_message("Updated");
         assert_eq!(*bar.message.lock().unwrap(), "Updated");
-        bar.update_message("下载中 📥");
-        assert_eq!(*bar.message.lock().unwrap(), "下载中 📥");
+        bar.update_message("Downloading 📥");
+        assert_eq!(*bar.message.lock().unwrap(), "Downloading 📥");
     }
 
     #[test]

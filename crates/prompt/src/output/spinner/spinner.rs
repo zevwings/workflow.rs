@@ -317,8 +317,8 @@ mod tests {
         spinner.update_message("Updated");
         assert_eq!(*spinner.message.lock().unwrap(), "Updated");
 
-        spinner.update_message("处理中 🔄");
-        assert_eq!(*spinner.message.lock().unwrap(), "处理中 🔄");
+        spinner.update_message("Processing 🔄");
+        assert_eq!(*spinner.message.lock().unwrap(), "Processing 🔄");
 
         spinner.update_message("");
         assert_eq!(*spinner.message.lock().unwrap(), "");

@@ -162,7 +162,7 @@ fn test_large_file_count_performance() {
 
         println!("  - Setup duration: {:?}", setup_time);
         println!("  - Status query duration: {:?}", status_time);
-        println!("  - 文件总数: {}", status.staged.len());
+        println!("  - File count: {}", status.staged.len());
 
         // 断言性能合理
         // 2000 个文件的状态查询应该在 5 秒内完成

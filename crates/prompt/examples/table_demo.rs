@@ -1,11 +1,6 @@
-//! 表格渲染示例
+//! Table rendering example.
 //!
-//! 演示 Table 的构建和渲染功能。
-//!
-//! 运行方式：
-//! ```bash
-//! cargo run -p prompt --example table_demo
-//! ```
+//! Run: `cargo run -p prompt --example table_demo`
 
 use prompt::{table, Alignment, TableBuilder, TableStyle};
 
@@ -17,30 +12,19 @@ fn main() -> prompt::Result<()> {
     println!("Press Ctrl+C or Esc to cancel the table.");
     println!();
 
-    // 演示 1：基本表格
     demo_basic_table()?;
-
-    // 演示 2：不同样式
     demo_table_styles()?;
-
-    // 演示 3：对齐方式
     demo_alignment()?;
-
-    // 演示 4：带标题的表格
     demo_table_with_title()?;
-
-    // 演示 5：实际应用场景
     demo_real_world_usage()?;
 
-    println!("\n=== 所有演示完成 ===");
+    println!("\n=== All demos completed ===");
     Ok(())
 }
 
-/// 演示 1：基本表格
 fn demo_basic_table() -> prompt::Result<()> {
     println!("\n=== Demo 1: Basic table ===\n");
 
-    // 使用便捷函数创建表格
     let t = table(vec!["Name", "Age", "City"])
         .add_row(vec!["Alice", "30", "New York"])
         .add_row(vec!["Bob", "25", "London"])
@@ -51,7 +35,6 @@ fn demo_basic_table() -> prompt::Result<()> {
     Ok(())
 }
 
-/// 演示 2：不同样式
 fn demo_table_styles() -> prompt::Result<()> {
     println!("\n=== Demo 2: Table styles ===\n");
 
@@ -62,42 +45,29 @@ fn demo_table_styles() -> prompt::Result<()> {
         vec!["Orange", "$0.75", "150"],
     ];
 
-    // Modern 样式
+    fn print_with_style(headers: &[&str], rows: &[Vec<&str>], style: TableStyle) -> prompt::Result<()> {
+        let mut t = TableBuilder::new(headers.to_vec());
+        for row in rows {
+            t = t.add_row(row.clone());
+        }
+        t.with_style(style).print()
+    }
+
     println!("Modern style:");
-    let mut t = TableBuilder::new(headers.clone());
-    for row in &rows {
-        t = t.add_row(row.clone());
-    }
-    t.with_style(TableStyle::Modern).print()?;
-
+    print_with_style(&headers, &rows, TableStyle::Modern)?;
     println!();
-
-    // Compact 样式
     println!("Compact style:");
-    let mut t = TableBuilder::new(headers.clone());
-    for row in &rows {
-        t = t.add_row(row.clone());
-    }
-    t.with_style(TableStyle::Compact).print()?;
-
+    print_with_style(&headers, &rows, TableStyle::Compact)?;
     println!();
-
-    // Minimal 样式
     println!("Minimal style:");
-    let mut t = TableBuilder::new(headers.clone());
-    for row in &rows {
-        t = t.add_row(row.clone());
-    }
-    t.with_style(TableStyle::Minimal).print()?;
+    print_with_style(&headers, &rows, TableStyle::Minimal)?;
 
     Ok(())
 }
 
-/// 演示 3：对齐方式
 fn demo_alignment() -> prompt::Result<()> {
     println!("\n=== Demo 3: Alignment ===\n");
 
-    // 全局左对齐（默认）
     println!("Left alignment:");
     table(vec!["Item", "Quantity", "Price"])
         .add_row(vec!["Widget", "10", "$5.00"])
@@ -107,7 +77,6 @@ fn demo_alignment() -> prompt::Result<()> {
 
     println!();
 
-    // 全局居中对齐
     println!("Center alignment:");
     table(vec!["Item", "Quantity", "Price"])
         .add_row(vec!["Widget", "10", "$5.00"])
@@ -117,7 +86,6 @@ fn demo_alignment() -> prompt::Result<()> {
 
     println!();
 
-    // 全局右对齐
     println!("Right alignment:");
     table(vec!["Item", "Quantity", "Price"])
         .add_row(vec!["Widget", "10", "$5.00"])
@@ -127,7 +95,6 @@ fn demo_alignment() -> prompt::Result<()> {
 
     println!();
 
-    // 列级别对齐
     println!("Column level alignment (name left, quantity center, price right):");
     table(vec!["Item", "Quantity", "Price"])
         .add_row(vec!["Widget", "10", "$5.00"])
@@ -138,7 +105,6 @@ fn demo_alignment() -> prompt::Result<()> {
     Ok(())
 }
 
-/// 演示 4：带标题的表格
 fn demo_table_with_title() -> prompt::Result<()> {
     println!("\n=== Demo 4: Table with title ===\n");
 
@@ -152,11 +118,9 @@ fn demo_table_with_title() -> prompt::Result<()> {
     Ok(())
 }
 
-/// 演示 5：实际应用场景
 fn demo_real_world_usage() -> prompt::Result<()> {
     println!("\n=== Demo 5: Real world usage ===\n");
 
-    // Git 分支列表
     println!("Git branches list:");
     table(vec!["Branch", "Last Commit", "Author"])
         .add_row(vec!["main", "2 hours ago", "Alice"])
@@ -167,7 +131,6 @@ fn demo_real_world_usage() -> prompt::Result<()> {
 
     println!();
 
-    // 测试结果
     println!("Test results:");
     table(vec!["Test Suite", "Passed", "Failed", "Skipped"])
         .add_row(vec!["Unit Tests", "45", "2", "0"])
@@ -183,7 +146,6 @@ fn demo_real_world_usage() -> prompt::Result<()> {
 
     println!();
 
-    // 依赖信息
     println!("Dependencies information:");
     table(vec!["Package", "Version", "License"])
         .add_row(vec!["crossterm", "0.27", "MIT"])
