@@ -54,7 +54,10 @@ mod tests {
         let vars: BranchTemplateVars = serde_json::from_str(json).unwrap();
         assert_eq!(vars.prefix, Some("zw".to_string()));
         assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
-        assert_eq!(vars.jira_summary, Some("implement user login function".to_string()));
+        assert_eq!(
+            vars.jira_summary,
+            Some("implement user login function".to_string())
+        );
         assert_eq!(vars.summary_slug, Some("implement-user-login".to_string()));
         assert_eq!(vars.jira_type, Some("Feature".to_string()));
     }

@@ -277,16 +277,12 @@ impl PullRequestService for MockPullRequestService {
         }
     }
 
-    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, PullRequestError> {
-        let pr_id = match pr_id_or_branch {
-            Some(id) => id.to_string(),
-            None => {
-                let current = "current-branch".to_string();
-                self.branch_to_pr.lock().unwrap().get(&current).cloned().ok_or_else(|| {
-                    PullRequestError::NotFound(format!("No PR for branch {}", current))
-                })?
-            }
-        };
+    fn get_pr_status(&self) -> Result<PrStatus, PullRequestError> {
+        let current = "current-branch".to_string();
+        let pr_id =
+            self.branch_to_pr.lock().unwrap().get(&current).cloned().ok_or_else(|| {
+                PullRequestError::NotFound(format!("No PR for branch {}", current))
+            })?;
         let pr = self.get_pr(&pr_id)?;
         Ok(PrStatus {
             id: pr.id,
@@ -462,7 +458,7 @@ mod tests {
     fn mock_pull_request_service_add_and_get() {
         let service = MockPullRequestService::new();
         service.add_pr("1", "Title", "Body", "open", false, "feature/a", "main");
-        let status = service.get_pr_status(Some("1")).unwrap();
+        let status = service.get_pr_status().unwrap();
         assert_eq!(status.id, "1");
         assert_eq!(status.title, "Title");
         assert_eq!(status.state, "open");

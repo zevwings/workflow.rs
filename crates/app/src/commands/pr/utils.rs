@@ -1,7 +1,8 @@
 //! Pull Request 模板渲染工具
 
 use domain::{
-    ChangeTypeItem, JiraIssue, PrTitleTemplateVars, PullRequestError, PullRequestTemplateVars, get_all_change_types
+    get_all_change_types, ChangeTypeItem, JiraIssue, PrTitleTemplateVars, PullRequestError,
+    PullRequestTemplateVars,
 };
 use prompt::input;
 use toolkit::TemplateEngine;
@@ -24,7 +25,8 @@ pub fn get_pull_request_id_interactive(
 ) -> Result<String, Box<dyn std::error::Error>> {
     if let Some(id) = pull_request_id {
         // 验证格式
-        validate_pull_request_id(&id).map_err(|e| format!("Invalid Pull Request ID format: {}", e))?;
+        validate_pull_request_id(&id)
+            .map_err(|e| format!("Invalid Pull Request ID format: {}", e))?;
         Ok(id)
     } else {
         // 交互式输入
@@ -38,7 +40,6 @@ pub fn get_pull_request_id_interactive(
         Ok(id)
     }
 }
-
 
 /// 验证 Jira ticket 格式
 ///
@@ -54,18 +55,20 @@ pub fn get_pull_request_id_interactive(
 /// assert!(validate_jira_ticket_format("invalid/ticket").is_err());
 /// ```
 pub fn validate_pull_request_id(pull_request_id: &str) -> Result<(), PullRequestError> {
-
     if pull_request_id.trim().is_empty() {
-        return Err(PullRequestError::InvalidPullRequestId(pull_request_id.to_string()));
+        return Err(PullRequestError::InvalidPullRequestId(
+            pull_request_id.to_string(),
+        ));
     }
 
     let pr_number: u64 = pull_request_id
         .parse()
         .map_err(|_| PullRequestError::InvalidPullRequestId(pull_request_id.to_string()))?;
 
-
     if pr_number == 0 {
-        return Err(PullRequestError::InvalidPullRequestId(pull_request_id.to_string()));
+        return Err(PullRequestError::InvalidPullRequestId(
+            pull_request_id.to_string(),
+        ));
     }
 
     Ok(())

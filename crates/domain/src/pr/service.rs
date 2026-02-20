@@ -116,7 +116,7 @@ pub trait PullRequestService: Send + Sync {
     /// * [`PullRequestError::GitHub`] - PR 不存在或 API 调用失败
     /// * [`PullRequestError::Git`] - 无法确定当前分支
     /// * [`PullRequestError::NotFound`] - 当前分支没有关联的 PR
-    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, PullRequestError>;
+    fn get_pr_status(&self) -> Result<PrStatus, PullRequestError>;
 
     /// 关闭 Pull Request
     ///

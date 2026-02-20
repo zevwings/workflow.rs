@@ -220,7 +220,11 @@ fn render_input<B: Backend>(
         if let Ok(mut file) =
             std::fs::OpenOptions::new().create(true).append(true).open(debug_log_path())
         {
-            let _ = writeln!(file, "[DEBUG] render_input: Move cursor to column {}", target_column);
+            let _ = writeln!(
+                file,
+                "[DEBUG] render_input: Move cursor to column {}",
+                target_column
+            );
         }
     }
 

@@ -105,8 +105,14 @@ pub fn ensure_jira_status_config(
 
     success!("Jira status configuration saved");
     info!("Project name: {}", config_result.project);
-    info!("PR status on creation: {}", config_result.created_pull_request_status);
-    info!("PR status on merge: {}", config_result.merged_pull_request_status);
+    info!(
+        "PR status on creation: {}",
+        config_result.created_pull_request_status
+    );
+    info!(
+        "PR status on merge: {}",
+        config_result.merged_pull_request_status
+    );
 
     Ok(Some(config_result.created_pull_request_status))
 }

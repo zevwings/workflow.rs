@@ -244,13 +244,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             cmd.run()?;
                         }
                         CommitSubcommand::CommitFiles { ref_or_sha } => {
-                            let cmd =
-                                commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
+                            let cmd = commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
                             cmd.run()?;
                         }
                         CommitSubcommand::CommitDiff { ref_or_sha } => {
-                            let cmd =
-                                commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
+                            let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
                             cmd.run()?;
                         }
                     }
@@ -356,22 +354,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
             PrSubcommand::Update {
-                pr_id,
-                message,
+                pr_id: _,
+                message: _,
                 dry_run,
             } => {
-                let cmd = commands::pr::PullRequestUpdateCommand::new(
-                    pr_id.clone(),
-                    message.clone(),
-                    dry_run.is_dry_run(),
-                );
+                let cmd = commands::pr::PullRequestUpdateCommand::new(dry_run.is_dry_run());
                 cmd.run()?;
             }
             PrSubcommand::Merge { pr_id, force } => {
-                let cmd = commands::pr::PullRequestMergeCommand::new(
-                    pr_id.clone(),
-                    force.is_force(),
-                );
+                let cmd =
+                    commands::pr::PullRequestMergeCommand::new(pr_id.clone(), force.is_force());
                 cmd.run()?;
             }
             PrSubcommand::Close { pr_id } => {

@@ -51,7 +51,10 @@ impl ServiceContext for ServiceContextImpl {
                     };
                     format!("{}{}", url_hint, fix_hint)
                 })
-                .unwrap_or_else(|| " (The origin remote is not configured or the origin URL cannot be parsed)".to_string());
+                .unwrap_or_else(|| {
+                    " (The origin remote is not configured or the origin URL cannot be parsed)"
+                        .to_string()
+                });
             GitHubError::ApiError(format!(
                 "Failed to get repository owner from repo info{}",
                 hint

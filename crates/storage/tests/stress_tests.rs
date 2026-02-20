@@ -126,7 +126,10 @@ fn test_concurrent_mixed_operations() {
     }
 
     let duration = start.elapsed();
-    println!("Concurrent mixed operations test completed, duration: {:?}", duration);
+    println!(
+        "Concurrent mixed operations test completed, duration: {:?}",
+        duration
+    );
 
     assert!(
         duration < Duration::from_secs(20),

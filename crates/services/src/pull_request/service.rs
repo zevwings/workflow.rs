@@ -44,19 +44,14 @@ impl PullRequestServiceImpl {
     }
 
     /// 解析 PR ID（支持自动检测当前分支的 PR）
-    fn resolve_pr_id(&self, pr_id_or_branch: Option<&str>) -> Result<String, PullRequestError> {
-        match pr_id_or_branch {
-            Some(id) => Ok(id.to_string()),
-            None => {
-                let current_branch = self.git_repo.get_current_branch()?;
-                self.get_current_branch_pull_request(&current_branch)?.ok_or_else(|| {
-                    PullRequestError::NotFound(format!(
-                        "No PR found for current branch '{}'",
-                        current_branch
-                    ))
-                })
-            }
-        }
+    fn resolve_pr_id(&self) -> Result<String, PullRequestError> {
+        let current_branch = self.git_repo.get_current_branch()?;
+        self.get_current_branch_pull_request(&current_branch)?.ok_or_else(|| {
+            PullRequestError::NotFound(format!(
+                "No PR found for current branch '{}'",
+                current_branch
+            ))
+        })
     }
 }
 
@@ -181,8 +176,8 @@ impl PullRequestService for PullRequestServiceImpl {
         repo.merge_pull_request(pr_id, force).map_err(PullRequestError::GitHub)
     }
 
-    fn get_pr_status(&self, pr_id_or_branch: Option<&str>) -> Result<PrStatus, PullRequestError> {
-        let pr_id = self.resolve_pr_id(pr_id_or_branch)?;
+    fn get_pr_status(&self) -> Result<PrStatus, PullRequestError> {
+        let pr_id = self.resolve_pr_id()?;
         let repo = self.get_pr_repository()?;
         let (state, merged, _merged_at) = repo.get_pull_request_status(&pr_id)?;
         let pr_info = repo.get_pull_request(&pr_id)?;

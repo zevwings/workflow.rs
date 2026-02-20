@@ -51,7 +51,10 @@ fn demo_basic_style() {
 
     // 禁用颜色时的效果
     println!("\nWhen color is disabled:");
-    println!("{}", red_style.apply("Color is disabled, displaying original text", false));
+    println!(
+        "{}",
+        red_style.apply("Color is disabled, displaying original text", false)
+    );
 }
 
 /// 演示 2：样式组合
@@ -79,7 +82,10 @@ fn demo_theme_usage() {
     let theme = get_theme();
 
     // 使用主题中的预定义样式
-    println!("{}", theme.info.apply("ℹ This is info style", theme.enable_color));
+    println!(
+        "{}",
+        theme.info.apply("ℹ This is info style", theme.enable_color)
+    );
     println!(
         "{}",
         theme.success.apply("✓ This is success style", theme.enable_color)
@@ -96,7 +102,10 @@ fn demo_theme_usage() {
         "{}",
         theme.debug.apply("⚙ This is debug style", theme.enable_color)
     );
-    println!("{}", theme.hint.apply("This is hint style", theme.enable_color));
+    println!(
+        "{}",
+        theme.hint.apply("This is hint style", theme.enable_color)
+    );
 }
 
 /// 演示 4：自定义主题

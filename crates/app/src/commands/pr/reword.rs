@@ -70,7 +70,7 @@ impl PullRequestRewordCommand {
         }
 
         let pr_status = spinner!("Fetching PR information...")
-            .with(|| pr_service.get_pr_status(None))
+            .with(|| pr_service.get_pr_status())
             .map_err(|e| format!("No PR for current branch or API error: {}", e))?;
 
         // 2. 从分支名得到 branch_type，生成模板所需的 selected_change_types

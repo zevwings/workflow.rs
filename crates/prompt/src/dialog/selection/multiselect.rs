@@ -115,7 +115,9 @@ where
     /// 使用指定后端执行提示（内部使用）
     pub(crate) fn prompt_with_backend<B: Backend>(self, backend: &mut B) -> Result<Vec<T>> {
         if self.options.is_empty() {
-            return Err(PromptError::InvalidInput("The option list cannot be empty".to_string()));
+            return Err(PromptError::InvalidInput(
+                "The option list cannot be empty".to_string(),
+            ));
         }
 
         let theme = get_theme();

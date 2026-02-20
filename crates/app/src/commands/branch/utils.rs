@@ -43,7 +43,9 @@ pub fn generate_branch_name_from_template(
 ) -> Result<String, Box<dyn std::error::Error>> {
     // 获取配置
     let config_repo = bootstrap::get_repo_config_repository();
-    let repo_config = config_repo.load().map_err(|e| format!("Failed to load repository configuration: {}", e))?;
+    let repo_config = config_repo
+        .load()
+        .map_err(|e| format!("Failed to load repository configuration: {}", e))?;
 
     // 获取对应类型的模板
     let template = match branch_type {

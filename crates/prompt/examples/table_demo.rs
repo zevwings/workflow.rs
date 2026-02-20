@@ -45,7 +45,11 @@ fn demo_table_styles() -> prompt::Result<()> {
         vec!["Orange", "$0.75", "150"],
     ];
 
-    fn print_with_style(headers: &[&str], rows: &[Vec<&str>], style: TableStyle) -> prompt::Result<()> {
+    fn print_with_style(
+        headers: &[&str],
+        rows: &[Vec<&str>],
+        style: TableStyle,
+    ) -> prompt::Result<()> {
         let mut t = TableBuilder::new(headers.to_vec());
         for row in rows {
             t = t.add_row(row.clone());

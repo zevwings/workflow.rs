@@ -3,10 +3,13 @@
 use domain::{extract_jira_ticket_id, GitError};
 use prompt::{confirm, error, info, spinner, success, warning};
 
-use crate::{bootstrap::{
-    get_git_repository, get_jira_repository, get_jira_work_history_repository,
-    get_pull_request_service,
-}, commands::pr::utils::get_pull_request_id_interactive};
+use crate::{
+    bootstrap::{
+        get_git_repository, get_jira_repository, get_jira_work_history_repository,
+        get_pull_request_service,
+    },
+    commands::pr::utils::get_pull_request_id_interactive,
+};
 
 /// Pull Request Merge 命令
 pub struct PullRequestMergeCommand {

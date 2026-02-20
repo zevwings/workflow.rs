@@ -217,7 +217,10 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
     }
 
     let use_git = result.get_bool("use_git");
-    let _ = msg.print(format!("  Git repository: {}", if use_git { "Yes" } else { "No" }));
+    let _ = msg.print(format!(
+        "  Git repository: {}",
+        if use_git { "Yes" } else { "No" }
+    ));
 
     if use_git {
         let remote = result.get_string("git_remote");
@@ -227,7 +230,10 @@ fn demo_conditional_form(msg: &prompt::MessageRef) -> prompt::Result<()> {
     }
 
     let add_ci = result.get_bool("add_ci");
-    let _ = msg.print(format!("  CI configuration: {}", if add_ci { "Yes" } else { "No" }));
+    let _ = msg.print(format!(
+        "  CI configuration: {}",
+        if add_ci { "Yes" } else { "No" }
+    ));
 
     if add_ci {
         let platforms = result.get_int_slice("ci_platforms");
