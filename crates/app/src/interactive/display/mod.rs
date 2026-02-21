@@ -8,5 +8,6 @@ mod github;
 mod jira;
 mod llm;
 mod log;
+mod ssh;
 
 pub use formatter::VerificationResultFormatter;

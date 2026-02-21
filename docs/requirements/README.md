@@ -41,7 +41,7 @@
 - **内容**：rust-i18n 框架、CLI/错误/日志国际化、LLM Prompt 语言支持、中英文双语
 
 #### [ssh.md](./ssh.md)
-- **内容**：SSH 密钥管理工具，`ssh status` / `add` / `remove` 子命令
+- **内容**：SSH 密钥管理工具，含设计与需求。`ssh generate` 密钥生成，`ssh status` / `add` / `remove` agent 管理
 
 #### [chinese-content.md](./chinese-content.md)
 - **内容**：中文内容统一规范（适用范围、术语、句式）

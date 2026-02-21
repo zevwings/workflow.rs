@@ -34,6 +34,7 @@ impl LoggerManagerImpl {
             Command::Llm(_) => Some("llm"),
             Command::Github(_) => Some("github"),
             Command::Jira(_) => Some("jira"),
+            Command::Ssh(_) => Some("ssh"),
             Command::Branch(_) => Some("branch"),
             Command::Commit(_) => Some("commit"),
             Command::Stash(_) => Some("stash"),

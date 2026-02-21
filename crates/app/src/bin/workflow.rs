@@ -9,7 +9,7 @@ use app::{
     cli::{
         AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
         IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
-        StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
+        SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
     },
     commands,
 };
@@ -163,6 +163,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             #[cfg(feature = "develop")]
             JiraCommand::Assign(args) => {
                 let cmd = commands::jira::JiraAssignCommand::new(args.jira_id);
+                cmd.run()?;
+            }
+        },
+        Command::Ssh(ssh_cmd) => match ssh_cmd {
+            SshCommand::Generate {
+                output,
+                algorithm,
+                comment,
+                force,
+                no_passphrase,
+            } => {
+                let cmd = commands::ssh::SshGenerateCommand::new(
+                    output,
+                    algorithm,
+                    comment,
+                    force,
+                    no_passphrase,
+                );
+                cmd.run()?;
+            }
+            SshCommand::Status => {
+                let cmd = commands::ssh::SshStatusCommand::new();
+                cmd.run()?;
+            }
+            SshCommand::Add { key, lifetime } => {
+                let cmd = commands::ssh::SshAddCommand::new(key, lifetime);
+                cmd.run()?;
+            }
+            SshCommand::Remove { fingerprint, all } => {
+                let cmd = commands::ssh::SshRemoveCommand::new(fingerprint, all);
+                cmd.run()?;
+            }
+            SshCommand::Check => {
+                let cmd = commands::ssh::SshCheckCommand::new();
+                cmd.run()?;
+            }
+            SshCommand::Setup => {
+                let cmd = commands::ssh::SshSetupCommand::new();
                 cmd.run()?;
             }
         },

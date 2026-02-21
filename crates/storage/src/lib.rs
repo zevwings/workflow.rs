@@ -20,5 +20,6 @@ pub(crate) mod bootstrap;
 pub(crate) mod config;
 pub(crate) mod github;
 pub(crate) mod jira;
+pub(crate) mod ssh;
 
 pub use bootstrap::register_storage;

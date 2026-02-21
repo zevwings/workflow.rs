@@ -23,6 +23,7 @@ pub use crate::commands::{
     log::LogCommand,
     pr::PrSubcommand,
     repo::RepoCommand,
+    ssh::SshCommand,
     stash::StashSubcommand,
     tag::TagSubcommand,
 };
@@ -70,6 +71,9 @@ pub enum Command {
     /// Jira configuration management commands
     #[command(subcommand)]
     Jira(JiraCommand),
+    /// SSH key management commands
+    #[command(subcommand)]
+    Ssh(SshCommand),
     /// Branch management commands
     #[command(subcommand)]
     Branch(BranchSubcommand),

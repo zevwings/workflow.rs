@@ -14,6 +14,7 @@ pub(crate) mod github;
 pub(crate) mod jira;
 pub(crate) mod path;
 pub(crate) mod pr;
+pub(crate) mod ssh;
 pub(crate) mod summary;
 pub(crate) mod template;
 
@@ -70,6 +71,7 @@ pub use config::{
     PullRequestsTemplates,
     RepoConfig,
     RepoConfigRepository,
+    SshVerificationResult,
     TemplateConfig,
     UserConfig,
     VerificationService,
@@ -82,6 +84,8 @@ pub use git::{
     StashPopResult, StashStat, TagCreateInfo, TagCreateScope, TagDeleteInfo, TagDeleteScope,
     WorkingTreeStatus,
 };
+// Re-export SSH types
+pub use ssh::{SshError, SshKeyInfo, SshService};
 // Re-export external service types
 pub use github::{GitHubError, GitHubRepository, GitHubUser};
 pub use jira::{

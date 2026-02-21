@@ -8,6 +8,7 @@ pub mod jira;
 pub mod llm;
 pub mod log;
 pub mod repository;
+pub mod ssh;
 pub mod verification_service;
 
 // Re-export public types
@@ -22,4 +23,5 @@ pub use llm::{
 };
 pub use log::{LogConfigInfo, LogSettings, LogVerificationResult};
 pub use repository::GlobalConfigRepository;
+pub use ssh::SshVerificationResult;
 pub use verification_service::VerificationService;
