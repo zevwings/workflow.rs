@@ -2,7 +2,8 @@
 
 use prompt::{br, separator};
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::jira::jira_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, JIRA_STAGE_NAME};
 
 /// Jira Check 命令
 pub struct JiraCheckCommand;
@@ -23,6 +24,9 @@ impl JiraCheckCommand {
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         separator!('─', 80, "Jira Configuration Check");
         br!();
-        WorkflowExecutor::new(jira_stage()).run_verify()
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(JIRA_STAGE_NAME)
+            .expect("Jira stage must be registered");
+        WorkflowExecutor::new(stage).run_verify()
     }
 }

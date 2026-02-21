@@ -2,7 +2,8 @@
 
 use prompt::{br, separator};
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::llm::llm_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, LLM_STAGE_NAME};
 
 /// Llm Check 命令
 pub struct LlmCheckCommand;
@@ -23,6 +24,9 @@ impl LlmCheckCommand {
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         separator!('─', 80, "LLM Configuration Check");
         br!();
-        WorkflowExecutor::new(llm_stage()).run_verify()
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(LLM_STAGE_NAME)
+            .expect("LLM stage must be registered");
+        WorkflowExecutor::new(stage).run_verify()
     }
 }

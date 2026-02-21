@@ -458,7 +458,15 @@ mod tests {
     fn mock_pull_request_service_add_and_get() {
         let service = MockPullRequestService::new();
         // get_pr_status() 使用 "current-branch" 作为当前分支，需添加对应 PR
-        service.add_pr("1", "Title", "Body", "open", false, "current-branch", "main");
+        service.add_pr(
+            "1",
+            "Title",
+            "Body",
+            "open",
+            false,
+            "current-branch",
+            "main",
+        );
         let status = service.get_pr_status().unwrap();
         assert_eq!(status.id, "1");
         assert_eq!(status.title, "Title");
