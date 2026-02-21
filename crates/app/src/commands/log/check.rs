@@ -2,7 +2,8 @@
 
 use prompt::{br, separator};
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::log::log_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, LOG_STAGE_NAME};
 
 /// Log Check 命令
 pub struct LogCheckCommand;
@@ -23,8 +24,10 @@ impl LogCheckCommand {
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         separator!('─', 80, "Log Configuration Check");
         br!();
-        let executor = WorkflowExecutor::new(log_stage());
-        executor.run_verify()?;
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(LOG_STAGE_NAME)
+            .expect("Log stage must be registered");
+        WorkflowExecutor::new(stage).run_verify()?;
 
         Ok(())
     }

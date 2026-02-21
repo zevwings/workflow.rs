@@ -1,6 +1,7 @@
 //! 设置 LLM 配置命令
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::llm::llm_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, LLM_STAGE_NAME};
 
 /// Llm Setup 命令
 pub struct LlmSetupCommand;
@@ -19,6 +20,9 @@ impl LlmSetupCommand {
 
     /// 运行 `workflow llm setup` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        WorkflowExecutor::new(llm_stage()).run_command_setup()
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(LLM_STAGE_NAME)
+            .expect("LLM stage must be registered");
+        WorkflowExecutor::new(stage).run_command_setup()
     }
 }

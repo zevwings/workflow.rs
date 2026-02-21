@@ -1,6 +1,7 @@
 //! 设置 Jira 配置命令
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::jira::jira_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, JIRA_STAGE_NAME};
 
 /// Jira Setup 命令
 pub struct JiraSetupCommand;
@@ -19,6 +20,9 @@ impl JiraSetupCommand {
 
     /// 运行 `workflow jira setup` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        WorkflowExecutor::new(jira_stage()).run_command_setup()
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(JIRA_STAGE_NAME)
+            .expect("Jira stage must be registered");
+        WorkflowExecutor::new(stage).run_command_setup()
     }
 }

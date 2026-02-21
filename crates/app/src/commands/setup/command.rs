@@ -6,10 +6,8 @@
 
 use prompt::{br, info, is_user_cancelled, separator, success, warning};
 
-use crate::interactive::{
-    github_stage, jira_stage, llm_stage, log_stage, WorkflowContext, WorkflowExecutor,
-    WorkflowMode, WorkflowStage,
-};
+use crate::bootstrap::get_workflow_stage_registry;
+use crate::interactive::{WorkflowContext, WorkflowExecutor, WorkflowMode};
 
 /// Setup 命令
 pub struct SetupCommand;
@@ -34,8 +32,8 @@ impl SetupCommand {
 
         let mut context = WorkflowContext::load(WorkflowMode::Setup)?;
 
-        let stages: Vec<&dyn WorkflowStage> =
-            vec![jira_stage(), github_stage(), llm_stage(), log_stage()];
+        let registry = get_workflow_stage_registry();
+        let stages = registry.stages();
 
         for stage in &stages {
             let executor = WorkflowExecutor::new(*stage);

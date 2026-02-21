@@ -1,6 +1,7 @@
 //! 设置日志级别命令
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::log::log_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, LOG_STAGE_NAME};
 
 /// Log Setup 命令
 pub struct LogSetupCommand;
@@ -19,9 +20,9 @@ impl LogSetupCommand {
 
     /// 运行 `workflow log setup` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // 使用 v2 WorkflowExecutor
-        let executor = WorkflowExecutor::new(log_stage());
-        executor.run_command_setup()?;
-        Ok(())
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(LOG_STAGE_NAME)
+            .expect("Log stage must be registered");
+        WorkflowExecutor::new(stage).run_command_setup()
     }
 }

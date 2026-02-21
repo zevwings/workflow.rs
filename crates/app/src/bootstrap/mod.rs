@@ -19,6 +19,7 @@ use services::register_services;
 use storage::register_storage;
 use toolkit::log_error;
 
+use crate::interactive::WorkflowStageManager;
 use crate::logger::LoggerManager;
 
 /// 应用程序初始化标记
@@ -188,4 +189,11 @@ pub fn get_logger_manager() -> Arc<dyn LoggerManager> {
 
 pub fn get_language_manager() -> Arc<dyn LanguageManager> {
     get_service::<dyn LanguageManager>()
+}
+
+/// 获取 WorkflowStageRegistry
+pub fn get_workflow_stage_registry() -> &'static dyn WorkflowStageManager {
+    use crate::interactive::manager::WorkflowStageManagerImpl;
+    static REGISTRY: WorkflowStageManagerImpl = WorkflowStageManagerImpl;
+    &REGISTRY
 }

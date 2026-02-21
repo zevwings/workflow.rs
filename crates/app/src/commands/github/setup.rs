@@ -1,6 +1,7 @@
 //! 设置 GitHub 账号命令
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::github::github_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, GITHUB_STAGE_NAME};
 
 /// Github Setup 命令
 pub struct GithubSetupCommand;
@@ -19,6 +20,9 @@ impl GithubSetupCommand {
 
     /// 运行 `workflow github setup` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        WorkflowExecutor::new(github_stage()).run_command_setup()
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(GITHUB_STAGE_NAME)
+            .expect("GitHub stage must be registered");
+        WorkflowExecutor::new(stage).run_command_setup()
     }
 }

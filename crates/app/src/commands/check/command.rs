@@ -3,16 +3,9 @@
 use prompt::{br, info, separator, success, warning};
 
 use crate::{
-    bootstrap::{get_global_config_repository, get_path_service},
-    interactive::{
-        core::stage::{WorkflowExecutor, WorkflowStage},
-        platforms::{github::github_stage, jira::jira_stage, llm::llm_stage, log::log_stage},
-    },
+    bootstrap::{get_global_config_repository, get_path_service, get_workflow_stage_registry},
+    interactive::core::stage::WorkflowExecutor,
 };
-
-/// 所有需要验证的 stages
-const STAGES: &[fn() -> &'static dyn WorkflowStage] =
-    &[jira_stage, github_stage, llm_stage, log_stage];
 
 /// Check 命令
 pub struct CheckCommand;
@@ -70,8 +63,8 @@ impl CheckCommand {
         separator!('─', 80, "Configuration Verification");
         br!();
 
-        for stage_fn in STAGES {
-            let stage = stage_fn();
+        let registry = get_workflow_stage_registry();
+        for stage in registry.stages() {
             let executor = WorkflowExecutor::new(stage);
             if let Err(err) = executor.run_verify() {
                 warning!("{} verification failed: {}", stage.stage_name(), err);

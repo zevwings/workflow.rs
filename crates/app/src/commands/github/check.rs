@@ -2,7 +2,8 @@
 
 use prompt::{br, separator};
 
-use crate::interactive::{core::stage::WorkflowExecutor, platforms::github::github_stage};
+use crate::bootstrap;
+use crate::interactive::{core::stage::WorkflowExecutor, GITHUB_STAGE_NAME};
 
 /// Github Check 命令
 pub struct GithubCheckCommand;
@@ -23,6 +24,9 @@ impl GithubCheckCommand {
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         separator!('─', 80, "GitHub Configuration Check");
         br!();
-        WorkflowExecutor::new(github_stage()).run_verify()
+        let stage = bootstrap::get_workflow_stage_registry()
+            .stage_by_name(GITHUB_STAGE_NAME)
+            .expect("GitHub stage must be registered");
+        WorkflowExecutor::new(stage).run_verify()
     }
 }
