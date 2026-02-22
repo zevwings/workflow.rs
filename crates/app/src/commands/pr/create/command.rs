@@ -6,9 +6,6 @@ use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_reque
 use crate::{
     bootstrap,
     commands::{
-        branch::util::{
-            generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
-        },
         jira::utils::{ensure_jira_status_config, get_jira_id_interactive_optional},
         pr::create::{
             branch::{handle_default_branch, handle_non_default_branch},
@@ -17,11 +14,14 @@ use crate::{
             types::BranchHandleContext,
         },
     },
-    util::branch::to_slug,
+    util::{
+        generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
+        to_slug,
+    },
 };
 
 /// 创建分支并创建 PR 时的 JIRA/描述上下文
-struct CreatePullRequrestContext<'a> {
+struct CreatePullRequestContext<'a> {
     jira_id: &'a Option<String>,
     jira_created_status: &'a Option<String>,
     description: Option<&'a str>,
@@ -144,7 +144,7 @@ impl PullRequestCreateCommand {
 
         // 如果返回了分支名，说明需要创建新分支并创建 PR
         if let Some(new_branch_name) = final_branch_name {
-            let ctx = CreatePullRequrestContext {
+            let ctx = CreatePullRequestContext {
                 jira_id: &jira_id,
                 jira_created_status: &jira_created_status,
                 description: description_for_commit.as_deref(),
@@ -169,7 +169,7 @@ impl PullRequestCreateCommand {
         new_branch_name: &str,
         branch_type: BranchType,
         target_branch: Option<&str>,
-        ctx: &CreatePullRequrestContext<'_>,
+        ctx: &CreatePullRequestContext<'_>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 检查分支是否已存在
         let (exists_local, exists_remote) = branch_repo
@@ -238,12 +238,7 @@ impl PullRequestCreateCommand {
             }
         }
 
-        // 生成 PR 摘要（三阶段分析，用于 type/scope 和标题）
         let pr_summary = generate_pr_summary(target_branch)?;
-
-        // // 根据分支名解析分支类型，生成 PR body（模板 + 变更类型与分支类型一致）
-        // let branch_type = branch_type_from_branch_name(new_branch_name)
-        //     .unwrap_or(BranchType::Feature);
         let selected_change_types = get_change_types_by_branch_type(branch_type);
         let pr_body = generate_pull_request_body(
             &selected_change_types,
@@ -302,23 +297,7 @@ impl PullRequestCreateCommand {
         Ok(())
     }
 
-    /// PR 创建后更新 Jira ticket
-    ///
-    /// 如果有 Jira ticket 和状态配置，更新 ticket：
-    /// - 更新状态到 "PR 创建" 状态
-    /// - 添加评论（PR URL）
-    /// - 写入工作历史记录
-    ///
-    /// # 参数
-    ///
-    /// * `jira_repo` - Jira 仓储
-    /// * `work_history_repo` - 工作历史记录仓储
-    /// * `jira_ticket` - 可选的 Jira ticket ID
-    /// * `created_status` - 可选的 PR 创建状态
-    /// * `pr_id` - PR ID
-    /// * `pr_url` - PR URL
-    /// * `repository_url` - 仓库 URL
-    /// * `branch_name` - 分支名称
+    /// PR 创建后更新 Jira ticket：更新状态、添加 PR 评论、写入工作历史。
     pub fn update_jira_after_pr_created(
         &self,
         jira_ticket: &Option<String>,
