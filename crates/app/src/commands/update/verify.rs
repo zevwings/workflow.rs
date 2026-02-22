@@ -107,7 +107,7 @@ fn verify_binaries() -> Result<Vec<BinaryStatus>, Box<dyn std::error::Error>> {
     let bin_name = path_service.get_binary_name()?;
     let path = install_dir.join(&bin_name);
 
-    let spinner = Spinner::new("Verifying binaries...");
+    let spinner = Spinner::new("Verifying...");
     let spinner_instance = spinner.start();
 
     let status = verify_single_binary(&path.to_string_lossy(), &bin_name)?;
@@ -143,7 +143,7 @@ fn verify_completions() -> Result<bool, Box<dyn std::error::Error>> {
 
     let mut all_valid = true;
 
-    let spinner = Spinner::new("Verifying completion scripts...");
+    let spinner = Spinner::new("Verifying completion...");
     let spinner_instance = spinner.start();
 
     for file in &files {
@@ -161,9 +161,9 @@ fn verify_completions() -> Result<bool, Box<dyn std::error::Error>> {
     spinner_instance.stop();
 
     if all_valid {
-        success!("Completion script verification passed");
+        success!("Completion OK");
     } else {
-        warning!("Some completion script verifications failed");
+        warning!("Completion verification failed");
     }
 
     Ok(all_valid)
@@ -183,10 +183,7 @@ pub fn verify_installation() -> Result<VerificationResult, Box<dyn std::error::E
             warning!("Binary file is not executable: {}", binary.path);
             all_binaries_ok = false;
         } else {
-            success!(
-                "{} verification passed (file exists and is executable)",
-                binary.name
-            );
+            success!("{} OK", binary.name);
         }
     }
 
@@ -197,9 +194,9 @@ pub fn verify_installation() -> Result<VerificationResult, Box<dyn std::error::E
     let all_checks_passed = all_binaries_ok && completions_installed;
 
     if all_checks_passed {
-        success!("All verifications passed!");
+        success!("All checks passed");
     } else {
-        warning!("Some verifications failed, please check the above warning messages");
+        warning!("Some verifications failed");
     }
 
     Ok(VerificationResult { all_checks_passed })
@@ -232,7 +229,7 @@ pub fn run_installer(extract_dir: &Path) -> Result<(), Box<dyn std::error::Error
     // 运行安装程序，捕获输出以避免与 spinner 冲突
     // stdin 继承以支持交互式输入（如 sudo 密码）
     // stdout/stderr 捕获，在 spinner 停止后显示
-    let spinner = Spinner::new("Installing binaries and completion scripts...");
+    let spinner = Spinner::new("Installing...");
     let spinner_instance = spinner.start();
 
     let output = Command::new(&install_binary)
@@ -259,6 +256,5 @@ pub fn run_installer(extract_dir: &Path) -> Result<(), Box<dyn std::error::Error
         return Err("Installation failed".into());
     }
 
-    success!("Binaries and completion scripts installation complete");
     Ok(())
 }

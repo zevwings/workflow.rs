@@ -11,10 +11,10 @@ use std::{
 
 use client::{HttpClient, HttpClientHolder};
 use di::Container;
-use prompt::{info, spinner, success, warning, Progress, Spinner};
+use prompt::{info, spinner, success, warning, Spinner};
 use toolkit::{
     archive, build_checksum_url, calculate_sha256, log_debug, parse_hash_from_content,
-    verify_checksum, SizeExt,
+    verify_checksum,
 };
 
 use crate::commands::update::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
@@ -61,38 +61,24 @@ pub fn download_file(
         .map_err(|e| format!("Failed to get HTTP client: {}", e))?;
     let client = HttpClientHolder::new(http_client);
 
-    let response = spinner!("Downloading update package...").with(|| {
-        client
+    spinner!("Downloading...").with(|| -> Result<(), Box<dyn std::error::Error>> {
+        let response = client
             .get(url)
             .send()
-            .map_err(|e| format!("Failed to send HTTP request: {}", e))
+            .map_err(|e| format!("Failed to send HTTP request: {}", e))?;
+
+        if !response.is_success() {
+            return Err(format!("Download failed: HTTP {}", response.status).into());
+        }
+
+        let bytes = response.bytes();
+        let mut file = File::create(output_path)
+            .map_err(|e| format!("Failed to create file {}: {}", output_path.display(), e))?;
+
+        file.write_all(bytes).map_err(|e| format!("Failed to write to file: {}", e))?;
+
+        Ok(())
     })?;
-
-    if !response.is_success() {
-        return Err(format!("Download failed: HTTP {}", response.status).into());
-    }
-
-    // 获取文件总大小（如果可用）
-    let content_length = response.header("content-length").and_then(|v| v.parse::<u64>().ok());
-
-    // 创建进度条
-    let progress = if let Some(size) = content_length {
-        info!("File size: {}", size.to_size_string());
-        Progress::new_download(size, "Downloading update package...")
-    } else {
-        Progress::new_unknown("Downloading update package...")
-    };
-
-    // 获取响应体
-    let bytes = response.bytes();
-    progress.set_position(bytes.len() as u64);
-
-    let mut file = File::create(output_path)
-        .map_err(|e| format!("Failed to create file {}: {}", output_path.display(), e))?;
-
-    file.write_all(bytes).map_err(|e| format!("Failed to write to file: {}", e))?;
-
-    progress.finish();
     Ok(())
 }
 
@@ -150,11 +136,10 @@ pub fn verify_file_checksum(
                 .map_err(|e| format!("Failed to parse checksum file: {}", e))?;
 
             // 验证文件
-            info!("Verifying file integrity...");
             verify_checksum(archive_path, &expected_hash)
                 .map_err(|e| format!("File integrity verification failed: {}", e))?;
 
-            success!("File integrity verification passed");
+            success!("Integrity verified");
         }
         Err(e) => {
             // 网络错误等，给出警告但继续
@@ -181,7 +166,7 @@ pub fn extract_archive(
     log_debug!("Extracting: {}", archive_path.display());
     log_debug!("Extracting to: {}", output_dir.display());
 
-    let spinner = Spinner::new("Extracting update package...");
+    let spinner = Spinner::new("Extracting...");
     let spinner_instance = spinner.start();
 
     let result = archive::extract(archive_path, output_dir);
@@ -190,7 +175,7 @@ pub fn extract_archive(
 
     result.map_err(|e| format!("Failed to extract archive: {}", e))?;
 
-    success!("Extraction complete");
+    success!("Extracted");
 
     Ok(())
 }

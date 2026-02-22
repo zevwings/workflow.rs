@@ -123,6 +123,25 @@ macro_rules! print {
     };
 }
 
+/// 输出多行 banner（success 样式，无 ✓ 前缀）
+///
+/// 用于 ASCII art 等多行内容，应用 success 主题样式（绿色）。
+///
+/// # Examples
+///
+/// ```
+/// use prompt::banner_success;
+///
+/// banner_success!(" ____  / /_\n/ __ \\/ __ \\");
+/// banner_success!(format!("Version {}", "1.0"));
+/// ```
+#[macro_export]
+macro_rules! banner_success {
+    ($text:expr) => {
+        let _ = $crate::Message::global().banner_success($text);
+    };
+}
+
 /// 输出换行
 ///
 /// # Examples

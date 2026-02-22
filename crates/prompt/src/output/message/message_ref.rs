@@ -62,6 +62,11 @@ impl MessageRef {
         Self::with_lock(|m| m.print(msg))
     }
 
+    /// 输出多行 banner（success 样式，无 ✓ 前缀）
+    pub fn banner_success(&self, text: impl AsRef<str>) -> Result<()> {
+        Self::with_lock(|m| m.banner_success(text))
+    }
+
     /// 输出空行
     pub fn break_line(&self) -> Result<()> {
         Self::with_lock(|m| m.break_line())

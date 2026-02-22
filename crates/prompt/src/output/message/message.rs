@@ -203,6 +203,18 @@ impl Message {
         Ok(())
     }
 
+    /// 输出多行 banner（success 样式，无 ✓ 前缀）
+    ///
+    /// 用于 ASCII art 等多行内容，应用 success 主题样式。
+    pub fn banner_success(&mut self, text: impl AsRef<str>) -> Result<()> {
+        for line in text.as_ref().lines() {
+            let styled =
+                self.theme.success.apply(line, self.theme.enable_color);
+            writeln!(self.writer, "{}", styled).map_err(PromptError::Io)?;
+        }
+        Ok(())
+    }
+
     /// 输出空行
     pub fn break_line(&mut self) -> Result<()> {
         writeln!(self.writer).map_err(PromptError::Io)?;
