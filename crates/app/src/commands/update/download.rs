@@ -11,7 +11,7 @@ use std::{
 
 use client::{HttpClient, HttpClientHolder};
 use di::Container;
-use prompt::{info, success, warning, Progress, Spinner};
+use prompt::{info, spinner, success, warning, Progress, Spinner};
 use toolkit::{
     archive, build_checksum_url, calculate_sha256, log_debug, parse_hash_from_content,
     verify_checksum, SizeExt,
@@ -45,7 +45,6 @@ pub fn download_file(
     output_path: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let url = url.as_ref();
-    info!("Downloading update package...");
     log_debug!("Download URL: {}", url);
     log_debug!("Saving to: {}", output_path.display());
 
@@ -62,10 +61,12 @@ pub fn download_file(
         .map_err(|e| format!("Failed to get HTTP client: {}", e))?;
     let client = HttpClientHolder::new(http_client);
 
-    let response = client
-        .get(url)
-        .send()
-        .map_err(|e| format!("Failed to send HTTP request: {}", e))?;
+    let response = spinner!("Downloading update package...").with(|| {
+        client
+            .get(url)
+            .send()
+            .map_err(|e| format!("Failed to send HTTP request: {}", e))
+    })?;
 
     if !response.is_success() {
         return Err(format!("Download failed: HTTP {}", response.status).into());
@@ -91,7 +92,7 @@ pub fn download_file(
 
     file.write_all(bytes).map_err(|e| format!("Failed to write to file: {}", e))?;
 
-    progress.finish_with_message("Download complete!");
+    progress.finish();
     Ok(())
 }
 

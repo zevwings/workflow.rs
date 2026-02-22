@@ -4,6 +4,10 @@
 # 项目名称
 BINARY_NAME = workflow
 
+# 构建信息（用于 version 命令显示）
+WORKFLOW_BUILD_DATE := $(shell date -u +%Y-%m-%d 2>/dev/null || echo "unknown")
+WORKFLOW_GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
 # Help 信息
 define HELP_BUILD
 	@echo "构建相关："
@@ -31,7 +35,7 @@ dev:
 # 构建 release 版本（打包）
 release:
 	@echo "构建 release 版本..."
-	cargo build --release
+	WORKFLOW_BUILD_DATE=$(WORKFLOW_BUILD_DATE) WORKFLOW_GIT_COMMIT=$(WORKFLOW_GIT_COMMIT) cargo build --release
 	@echo "打包完成: target/release/$(BINARY_NAME)"
 	@echo "二进制文件:"
 	@ls -lh target/release/{workflow,install} 2>/dev/null || ls -lh target/release/$(BINARY_NAME)
@@ -53,7 +57,7 @@ install:
 	@echo "构建 release 版本（排除 develop feature，确保使用最新代码）..."
 	@echo "清理增量编译缓存以确保重新编译..."
 	@rm -rf target/release/incremental/*/$(BINARY_NAME)-* 2>/dev/null || true
-	@CARGO_INCREMENTAL=0 cargo build --release --no-default-features -p app || cargo build --release --no-default-features -p app
+	@WORKFLOW_BUILD_DATE=$(WORKFLOW_BUILD_DATE) WORKFLOW_GIT_COMMIT=$(WORKFLOW_GIT_COMMIT) CARGO_INCREMENTAL=0 cargo build --release --no-default-features -p app || WORKFLOW_BUILD_DATE=$(WORKFLOW_BUILD_DATE) WORKFLOW_GIT_COMMIT=$(WORKFLOW_GIT_COMMIT) cargo build --release --no-default-features -p app
 	@echo ""
 	@echo "安装 Workflow CLI (二进制文件 + shell completion)..."
 	@./target/release/install
@@ -61,7 +65,7 @@ install:
 # 更新 Workflow CLI（v2 无 workflow update 子命令，仅重新构建并显示版本）
 update:
 	@echo "重新构建 Workflow CLI..."
-	@cargo build --release -p app
+	@WORKFLOW_BUILD_DATE=$(WORKFLOW_BUILD_DATE) WORKFLOW_GIT_COMMIT=$(WORKFLOW_GIT_COMMIT) cargo build --release -p app
 	@./target/release/$(BINARY_NAME) --version
 	@echo "若需更新到最新版，请重新拉取仓库后执行 make install"
 
