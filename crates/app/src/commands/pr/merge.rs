@@ -8,7 +8,7 @@ use crate::{
         get_git_repository, get_jira_repository, get_jira_work_history_repository,
         get_pull_request_service,
     },
-    commands::pr::utils::get_pull_request_id_interactive,
+    commands::pr::utils::get_pull_request_id_interactive_optional,
 };
 
 /// Pull Request Merge 命令
@@ -32,7 +32,21 @@ impl PullRequestMergeCommand {
             info!("Force mode enabled: remote branch will be deleted after merge");
         }
 
-        let pr_id = get_pull_request_id_interactive(self.pr_id.clone())?;
+        let pr_id_option = get_pull_request_id_interactive_optional(self.pr_id.clone())?;
+        let pr_id = if let Some(pr_id) = pr_id_option {
+            pr_id
+        } else {
+            let current_branch = git_repo.get_current_branch()?;
+            let pr_id = pr_service.get_current_branch_pull_request(&current_branch)?;
+            if pr_id.is_none() {
+                return Err("No PR found for current branch".into());
+            }
+            if let Some(pr_id) = pr_id {
+                pr_id
+            } else {
+                return Err("No PR found for current branch".into());
+            }
+        };
 
         // 1. 获取 PR 信息（在合并前获取源分支、目标分支和标题）
         let pr_info = pr_service

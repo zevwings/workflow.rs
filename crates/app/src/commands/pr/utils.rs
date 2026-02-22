@@ -20,24 +20,34 @@ use crate::bootstrap::{get_global_config_repository, get_repo_config_repository}
 /// # 返回
 ///
 /// 返回验证后的 JIRA ID 字符串
-pub fn get_pull_request_id_interactive(
+pub fn get_pull_request_id_interactive_optional(
     pull_request_id: Option<String>,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<Option<String>, Box<dyn std::error::Error>> {
     if let Some(id) = pull_request_id {
         // 验证格式
         validate_pull_request_id(&id)
             .map_err(|e| format!("Invalid Pull Request ID format: {}", e))?;
-        Ok(id)
+        Ok(Some(id))
     } else {
         // 交互式输入
-        let id = input!("Please enter your Pull Request ID (e.g.: 123):")
+        let id = input!("Please enter your Pull Request ID (press Enter to skip)")
             .validator(|input: &str| {
-                validate_pull_request_id(input)
-                    .map_err(|e| format!("Invalid Pull Request ID format: {}", e))
+                if input.trim().is_empty() {
+                    Ok(())
+                } else {
+                    validate_pull_request_id(input)
+                        .map_err(|e| format!("Invalid Pull Request ID format: {}", e))
+                }
             })
             .prompt()
             .map_err(|e| format!("Failed to get Pull Request ID: {}", e))?;
-        Ok(id)
+        if id.trim().is_empty() {
+            Ok(None)
+        } else {
+            validate_pull_request_id(&id)
+                .map_err(|e| format!("Invalid Pull Request ID format: {}", e))?;
+            Ok(Some(id))
+        }
     }
 }
 
