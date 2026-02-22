@@ -98,8 +98,9 @@ impl PullRequestMergeCommand {
         };
 
         // 5. 拉取最新代码（工作区已 stash 故无需再 stash）
-        info!("Pulling latest changes from '{}'...", target_branch);
-        safe_pull(&target_branch, &PullOptions::no_stash())?;
+        spinner!("Pulling latest changes from '{}'...", target_branch)
+            .with(|| safe_pull(&target_branch, &PullOptions::no_stash()))
+            .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
         success!("Pulled latest changes from '{}'", target_branch);
 
         // 6. 删除本地和远程源分支
