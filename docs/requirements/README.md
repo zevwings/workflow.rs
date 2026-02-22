@@ -26,9 +26,6 @@
 | [integration.md](./integration.md) | ⏳ 待实施 | 0% | 中 |
 | [i18n.md](./i18n.md) | ⏳ 待实施 | 0% | 高 |
 | [ssh.md](./ssh.md) | ⏳ 待实施 | 0% | 中 |
-| [ssh-guard.md](./ssh-guard.md) | ✅ 已实施 | 100% | 中 |
-| [util-migration.md](./util-migration.md) | ⏳ 待实施 | 0% | 中 |
-| [chinese-content.md](./chinese-content.md) | 📋 参考 | - | 中 |
 
 ### 文档详情
 
@@ -44,15 +41,6 @@
 
 #### [ssh.md](./ssh.md)
 - **内容**：SSH 密钥管理工具，含设计与需求。`ssh generate` 密钥生成，`ssh status` / `add` / `remove` agent 管理
-
-#### [ssh-guard.md](./ssh-guard.md)
-- **内容**：pull/push 执行前的 SSH 自动保障。密钥未添加时自动 add；无法修复时引导至 `workflow ssh`
-
-#### [util-migration.md](./util-migration.md)
-- **内容**：将 ssh_guard、to_slug、branch_type_from_branch_name 等跨命令工具迁移至 `util/` 模块
-
-#### [chinese-content.md](./chinese-content.md)
-- **内容**：中文内容统一规范（适用范围、术语、句式）
 
 ---
 

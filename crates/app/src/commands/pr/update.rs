@@ -8,7 +8,7 @@ use prompt::{error, info, spinner, success};
 use toolkit::{log_info, log_info_with_fields};
 
 use crate::bootstrap::{get_commit_message_service, get_git_repository, get_pull_request_service};
-use crate::util::ensure_ssh_ready;
+use crate::util::safe_push;
 
 /// Pull Request Update 命令
 ///
@@ -119,8 +119,7 @@ impl PullRequestUpdateCommand {
         // 6. 提交（暂存区已就绪）
         self.commit_changes(&*git_repo, &commit_message)?;
 
-        // 7. 推送到远端（SSH 远程时需确保密钥就绪）
-        ensure_ssh_ready().map_err(|e| format!("{}", e))?;
+        // 7. 推送到远端
         self.push_to_remote(&*git_repo)?;
 
         success!(
@@ -173,7 +172,7 @@ impl PullRequestUpdateCommand {
         info!("Pushing branch '{}' to remote...", current_branch);
 
         spinner!("Pushing to remote...")
-            .with(|| git_repo.push(&current_branch, false))
+            .with(|| safe_push(&current_branch, false))
             .map_err(|e| format!("Failed to push branch: {}", e))?;
 
         success!("Pushed branch '{}' to remote", current_branch);

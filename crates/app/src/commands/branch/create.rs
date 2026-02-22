@@ -3,9 +3,9 @@
 use domain::GitRepository;
 use prompt::{error, info, input, select, success};
 
-use crate::commands::branch::utils::{generate_branch_name_from_jira, select_branch_type};
+use crate::commands::branch::util::{generate_branch_name_from_jira, select_branch_type};
 use crate::util::branch::to_slug;
-use crate::util::ensure_ssh_ready;
+use crate::util::{safe_pull, PullOptions};
 use crate::{bootstrap, commands::jira::utils::get_jira_id_interactive_optional};
 
 /// 源分支选项
@@ -232,12 +232,9 @@ impl BranchCreateCommand {
             .checkout_branch(default_branch)
             .map_err(|e| format!("Failed to switch to branch '{}': {}", default_branch, e))?;
 
-        // 拉取最新代码（SSH 远程时需确保密钥就绪）
-        ensure_ssh_ready().map_err(|e| format!("{}", e))?;
+        // 拉取最新代码（工作区已 stash 故无需再 stash）
         info!("Pulling latest changes from '{}'...", default_branch);
-        branch_repo
-            .pull(default_branch)
-            .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
+        safe_pull(default_branch, &PullOptions::no_stash())?;
 
         // 返回是否需要恢复 stash（将在新分支上恢复）
         Ok(needs_stash)

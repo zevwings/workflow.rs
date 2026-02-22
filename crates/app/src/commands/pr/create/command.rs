@@ -6,7 +6,7 @@ use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_reque
 use crate::{
     bootstrap,
     commands::{
-        branch::utils::{
+        branch::util::{
             generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
         },
         jira::utils::{ensure_jira_status_config, get_jira_id_interactive_optional},

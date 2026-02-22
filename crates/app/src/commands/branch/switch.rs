@@ -1,10 +1,9 @@
 //! 切换分支命令
 
-use domain::GitError;
 use prompt::{confirm, error, info, select, success, warning};
 
 use crate::bootstrap;
-use crate::util::ensure_ssh_ready;
+use crate::util::{safe_pull, PullOptions};
 
 /// Branch Switch 命令
 pub struct BranchSwitchCommand {
@@ -110,20 +109,8 @@ impl BranchSwitchCommand {
                 .map_err(|e| format!("Failed to get confirmation: {}", e))?;
 
             if should_pull {
-                ensure_ssh_ready().map_err(|e| format!("{}", e))?;
                 info!("Pulling latest changes...");
-                if let Err(e) = branch_repo.pull(&target_branch) {
-                    if matches!(e, GitError::MergeConflict) {
-                        error!("Pull failed due to merge conflicts!");
-                        error!("Please resolve the conflicts manually:");
-                        info!("  1. Edit the conflicting files to resolve conflicts");
-                        info!("  2. Run 'git add <resolved-files>'");
-                        info!("  3. Run 'git commit' to complete the merge");
-                        info!("  Or run 'git merge --abort' to cancel the merge");
-                        return Err(format!("Pull failed: merge conflicts detected - {}", e).into());
-                    }
-                    return Err(format!("Failed to pull: {}", e).into());
-                }
+                safe_pull(&target_branch, &PullOptions::no_stash())?;
                 success!("Pulled latest changes from remote");
             }
         }
