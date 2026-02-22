@@ -123,9 +123,7 @@ impl CommitCreateCommand {
         );
 
         // Step 4: 提交代码
-        let oid = spinner!("Creating commit...")
-            .with(|| git_repo.commit(&commit_message, false)) // false 因为文件已经在 Step 1 中添加到暂存区
-            .map_err(|e| format!("Failed to create commit: {}", e))?;
+        let oid = git_repo.commit(&commit_message, false)?;
 
         success!("Created commit: {}", oid);
 
