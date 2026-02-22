@@ -88,11 +88,11 @@ pub fn push_branch(branch_repo: &dyn GitRepository) -> Result<(), Box<dyn std::e
         .get_current_branch()
         .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
-    info!("Pushing branch '{}' to remote...", current_branch);
-    safe_push(&current_branch, true)?;
+    spinner!("Pushing branch '{}' to remote...", current_branch)
+        .with(|| safe_push(&current_branch, true))
+        .map_err(|e| format!("Failed to push branch: {}", e))?;
 
     success!("Pushed branch '{}' to remote", current_branch);
-
     Ok(())
 }
 

@@ -169,9 +169,7 @@ impl PullRequestUpdateCommand {
             .get_current_branch()
             .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
-        info!("Pushing branch '{}' to remote...", current_branch);
-
-        spinner!("Pushing to remote...")
+        spinner!("Pushing branch '{}' to remote...", current_branch)
             .with(|| safe_push(&current_branch, false))
             .map_err(|e| format!("Failed to push branch: {}", e))?;
 

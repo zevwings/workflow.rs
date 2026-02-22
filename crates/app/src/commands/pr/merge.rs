@@ -87,7 +87,6 @@ impl PullRequestMergeCommand {
                     .map_err(|e| format!("Failed to stash changes: {}", e))?;
             }
 
-            info!("Switching to branch '{}'...", target_branch);
             git_repo
                 .checkout_branch(&target_branch)
                 .map_err(|e| format!("Failed to switch to branch '{}': {}", target_branch, e))?;
@@ -151,22 +150,10 @@ impl PullRequestMergeCommand {
 
         // 6.2 删除远程分支
         if remote_exists {
-            info!("Cleaning up remote branch '{}'...", source_branch);
-            match git_repo.delete_remote_branch(&source_branch) {
-                Ok(()) => {
-                    success!("Deleted remote branch '{}'", source_branch);
-                }
-                Err(GitError::BranchNotFound(_)) => {
-                    // 远程分支可能已被 GitHub 自动删除
-                    info!(
-                        "Remote branch '{}' already deleted (may have been auto-deleted by GitHub)",
-                        source_branch
-                    );
-                }
-                Err(e) => {
-                    warning!("Failed to delete remote branch '{}': {}", source_branch, e);
-                }
-            }
+            spinner!("Cleaning up remote branch '{}'...", source_branch)
+                .with(|| git_repo.delete_remote_branch(&source_branch))
+                .map_err(|e| format!("Failed to delete remote branch: {}", e))?;
+            success!("Deleted remote branch '{}'", source_branch);
         }
 
         // 7. 恢复 stash
