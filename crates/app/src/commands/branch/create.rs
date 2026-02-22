@@ -3,8 +3,9 @@
 use domain::GitRepository;
 use prompt::{error, info, input, select, success};
 
-use crate::commands::branch::util::{generate_branch_name_from_jira, select_branch_type};
-use crate::util::branch::to_slug;
+use crate::util::{
+    generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type, to_slug,
+};
 use crate::util::{safe_pull, PullOptions};
 use crate::{bootstrap, commands::jira::utils::get_jira_id_interactive_optional};
 
@@ -169,16 +170,13 @@ impl BranchCreateCommand {
         Ok(())
     }
 
-    /// 手动输入分支名（不使用 JIRA ID）
     fn generate_branch_name_manual(&self) -> Result<String, Box<dyn std::error::Error>> {
-        // 提示用户输入分支名
         let branch_name = input!("Please enter your new branch name:")
             .validator(|input: &str| {
                 let trimmed = input.trim();
                 if trimmed.is_empty() {
                     Err("Branch name cannot be empty".to_string())
                 } else if to_slug(trimmed).is_empty() {
-                    // 使用 to_slug 验证，确保生成的 slug 不为空
                     Err("Branch name must contain at least one ASCII letter or number (a-z, A-Z, 0-9)".to_string())
                 } else {
                     Ok(())
@@ -188,24 +186,14 @@ impl BranchCreateCommand {
             .map(|s: String| s.trim().to_string())
             .map_err(|e| format!("Failed to get branch name: {}", e))?;
 
-        // 将输入转换为 slug 格式
         let branch_name_slug = to_slug(&branch_name);
-
-        // 让用户选择分支类型
         let branch_type = select_branch_type()?;
-
-        // 使用模板生成分支名（不包含 JIRA ID）
-        let full_branch_name = format!("{}/{}", branch_type.as_str(), branch_name_slug);
-
+        let full_branch_name =
+            generate_branch_name_from_template(branch_type, &branch_name_slug, None)?;
         Ok(full_branch_name)
     }
 
-    /// 准备默认分支的辅助方法
-    ///
-    /// 处理 stash、切换分支、拉取最新代码等操作
-    ///
-    /// # 返回
-    /// 返回是否需要在新分支上恢复 stash
+    /// 准备默认分支：stash、切换、拉取。返回是否需在新分支上恢复 stash。
     fn prepare_default_branch(
         &self,
         branch_repo: &dyn GitRepository,
