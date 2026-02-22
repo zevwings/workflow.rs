@@ -44,6 +44,8 @@ impl LoggerManagerImpl {
             Command::Alias(_) => Some("alias"),
             #[cfg(feature = "develop")]
             Command::Rollback(_) => Some("rollback"),
+            #[cfg(feature = "develop")]
+            Command::Diff(_) => Some("diff"),
         }
     }
 }

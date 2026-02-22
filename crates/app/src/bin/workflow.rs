@@ -3,13 +3,13 @@
 //! 这里只负责解析顶层命令，将实际逻辑委托给 `commands` 模块。
 
 #[cfg(feature = "develop")]
-use app::cli::{CommitSubcommand, RollbackCommand};
+use app::cli::RollbackCommand;
 use app::{
     bootstrap::{get_alias_service, get_logger_manager},
     cli::{
-        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
-        IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
-        SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
+        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, DiffCommand,
+        GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
+        RepoCommand, SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
     },
     commands,
 };
@@ -275,49 +275,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Command::Commit(commit_cmd) => {
-            #[cfg(feature = "develop")]
-            {
-                if let Some(sub) = &commit_cmd.subcommand {
-                    match sub {
-                        CommitSubcommand::CommitToMerge {
-                            source_branch,
-                            target_branch,
-                        } => {
-                            let cmd = commands::commit::CommitToMergeCommand::new(
-                                source_branch.clone(),
-                                target_branch.clone(),
-                            );
-                            cmd.run()?;
-                        }
-                        CommitSubcommand::CommitFiles { ref_or_sha } => {
-                            let cmd = commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
-                            cmd.run()?;
-                        }
-                        CommitSubcommand::CommitDiff { ref_or_sha } => {
-                            let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
-                            cmd.run()?;
-                        }
-                    }
-                } else {
-                    let cmd = commands::commit::CommitCreateCommand::new(
-                        commit_cmd.all,
-                        commit_cmd.push,
-                        commit_cmd.dry_run.is_dry_run(),
-                        commit_cmd.message.clone(),
-                    );
-                    cmd.run()?;
-                }
-            }
-            #[cfg(not(feature = "develop"))]
-            {
-                let cmd = commands::commit::CommitCreateCommand::new(
-                    commit_cmd.all,
-                    commit_cmd.push,
-                    commit_cmd.dry_run.is_dry_run(),
-                    commit_cmd.message.clone(),
-                );
-                cmd.run()?;
-            }
+            let cmd = commands::commit::CommitCreateCommand::new(
+                commit_cmd.all,
+                commit_cmd.push,
+                commit_cmd.dry_run.is_dry_run(),
+                commit_cmd.message.clone(),
+            );
+            cmd.run()?;
         }
         Command::Stash(stash_cmd) => match stash_cmd {
             StashSubcommand::Push => {
@@ -447,6 +411,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             AliasCommand::Remove { name } => {
                 let cmd = commands::alias::AliasRemoveCommand::new(name);
+                cmd.run()?;
+            }
+        },
+        #[cfg(feature = "develop")]
+        Command::Diff(diff_cmd) => match diff_cmd {
+            DiffCommand::Merge(args) => {
+                let cmd = commands::diff::CommitToMergeCommand::new(
+                    args.source_branch.clone(),
+                    args.target_branch.clone(),
+                );
+                cmd.run()?;
+            }
+            DiffCommand::Commit(args) => {
+                let cmd = commands::diff::CommitDiffCommand::new(args.ref_or_sha.clone());
+                cmd.run()?;
+            }
+            DiffCommand::Files(args) => {
+                let cmd = commands::diff::CommitFilesCommand::new(args.ref_or_sha.clone());
                 cmd.run()?;
             }
         },

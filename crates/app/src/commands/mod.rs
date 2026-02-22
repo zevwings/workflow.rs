@@ -14,6 +14,7 @@ pub mod branch;
 pub mod check;
 pub mod commit;
 pub mod completion;
+pub mod diff;
 pub mod github;
 pub mod install;
 pub mod jira;

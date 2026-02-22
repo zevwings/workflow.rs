@@ -3,8 +3,6 @@
 //! 提交管理子命令结构定义
 
 use clap::Args;
-#[cfg(feature = "develop")]
-use clap::Subcommand;
 
 use crate::commands::args::DryRunArgs;
 
@@ -29,35 +27,4 @@ pub struct CommitCommand {
     /// Dry run 模式（仅生成 commit message，不实际提交）
     #[command(flatten)]
     pub dry_run: DryRunArgs,
-
-    /// 子命令（develop feature 下可用）
-    #[cfg(feature = "develop")]
-    #[command(subcommand)]
-    pub subcommand: Option<CommitSubcommand>,
-}
-
-/// Commit 子命令（仅 develop feature）
-#[cfg(feature = "develop")]
-#[derive(Subcommand)]
-pub enum CommitSubcommand {
-    /// 列出将源分支合并到目标分支时会引入的 commit SHA 列表
-    #[command(name = "to-merge")]
-    CommitToMerge {
-        #[arg(value_name = "SOURCE")]
-        source_branch: String,
-        #[arg(value_name = "TARGET")]
-        target_branch: String,
-    },
-    /// 获取指定 commit 变更的文件列表
-    #[command(name = "files")]
-    CommitFiles {
-        #[arg(value_name = "REF")]
-        ref_or_sha: String,
-    },
-    /// 获取指定 commit 的 diff 内容（patch）
-    #[command(name = "diff")]
-    CommitDiff {
-        #[arg(value_name = "REF")]
-        ref_or_sha: String,
-    },
 }
