@@ -9,7 +9,7 @@ use di::{bind, Container, InjectionError, Scope};
 use domain::{
     AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
     GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository, PathService,
-    PullRequestService, VerificationService,
+    PullRequestService, SshService, VerificationService,
 };
 
 use crate::{
@@ -99,12 +99,14 @@ pub fn register_services() -> Result<(), InjectionError> {
         let jira_repository = c.get::<dyn JiraRepository>()?;
         let github_repository = c.get::<dyn GitHubRepository>()?;
         let llm_language_manager = c.get::<dyn LanguageManager>()?;
+        let ssh_service = c.get::<dyn SshService>()?;
         Ok(Arc::new(VerificationServiceImpl::new(
             llm_client,
             llm_language_manager,
             config_repository,
             jira_repository,
             github_repository,
+            ssh_service,
         )))
     })
     .in_scope(Scope::Singleton)?;

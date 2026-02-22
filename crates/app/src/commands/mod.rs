@@ -14,6 +14,7 @@ pub mod branch;
 pub mod check;
 pub mod commit;
 pub mod completion;
+pub mod diff;
 pub mod github;
 pub mod install;
 pub mod jira;
@@ -24,9 +25,9 @@ pub mod repo;
 #[cfg(feature = "develop")]
 pub mod rollback;
 pub mod setup;
+pub mod ssh;
 pub mod stash;
-#[cfg(feature = "develop")]
-pub mod sync;
+
 pub mod tag;
 pub mod uninstall;
 pub mod update;

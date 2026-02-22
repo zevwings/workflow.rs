@@ -26,7 +26,8 @@ use domain::{
     ConfigError, GitHubAccountInfo, GitHubRepository, GitHubVerificationResult,
     GitHubVerificationSummary, GlobalConfigRepository, JiraConfigInfo, JiraRepository,
     JiraVerificationResult, JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult,
-    LLMVerificationStatus, LogConfigInfo, LogVerificationResult, VerificationService,
+    LLMVerificationStatus, LogConfigInfo, LogVerificationResult, SshService, SshVerificationResult,
+    VerificationService,
 };
 use toolkit::Sensitive;
 
@@ -73,6 +74,7 @@ pub(crate) struct VerificationServiceImpl {
     config_repository: Arc<dyn GlobalConfigRepository>,
     jira_repository: Arc<dyn JiraRepository>,
     github_repository: Arc<dyn GitHubRepository>,
+    ssh_service: Arc<dyn SshService>,
 }
 
 impl VerificationServiceImpl {
@@ -82,6 +84,7 @@ impl VerificationServiceImpl {
         config_repository: Arc<dyn GlobalConfigRepository>,
         jira_repository: Arc<dyn JiraRepository>,
         github_repository: Arc<dyn GitHubRepository>,
+        ssh_service: Arc<dyn SshService>,
     ) -> Self {
         Self {
             llm_client,
@@ -89,6 +92,7 @@ impl VerificationServiceImpl {
             config_repository,
             jira_repository,
             github_repository,
+            ssh_service,
         }
     }
 }
@@ -282,5 +286,26 @@ impl VerificationService for VerificationServiceImpl {
         };
 
         Ok(LogVerificationResult { configured, config })
+    }
+
+    /// 验证 SSH 配置
+    fn verify_ssh_config(&self) -> Result<SshVerificationResult, ConfigError> {
+        let agent_available = self.ssh_service.is_agent_available();
+
+        if !agent_available {
+            return Ok(SshVerificationResult {
+                agent_available: false,
+                loaded_keys: vec![],
+                error: Some("ssh-agent is not available".to_string()),
+            });
+        }
+
+        let loaded_keys = self.ssh_service.list_loaded_keys().unwrap_or_default();
+
+        Ok(SshVerificationResult {
+            agent_available: true,
+            loaded_keys,
+            error: None,
+        })
     }
 }

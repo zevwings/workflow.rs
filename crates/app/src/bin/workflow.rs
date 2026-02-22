@@ -3,13 +3,13 @@
 //! 这里只负责解析顶层命令，将实际逻辑委托给 `commands` 模块。
 
 #[cfg(feature = "develop")]
-use app::cli::{CommitSubcommand, RollbackCommand};
+use app::cli::RollbackCommand;
 use app::{
     bootstrap::{get_alias_service, get_logger_manager},
     cli::{
-        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
-        IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
-        StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
+        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, DiffCommand,
+        GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
+        RepoCommand, SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
     },
     commands,
 };
@@ -86,6 +86,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             RepoCommand::Check => {
                 let cmd = commands::repo::RepoCheckCommand::new();
+                cmd.run()?;
+            }
+            RepoCommand::Push => {
+                let cmd = commands::repo::PushCommand::new();
+                cmd.run()?;
+            }
+            RepoCommand::Pull => {
+                let cmd = commands::repo::PullCommand::new();
                 cmd.run()?;
             }
         },
@@ -166,6 +174,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cmd.run()?;
             }
         },
+        Command::Ssh(ssh_cmd) => match ssh_cmd {
+            SshCommand::Generate {
+                output,
+                algorithm,
+                comment,
+                force,
+                no_passphrase,
+            } => {
+                let cmd = commands::ssh::SshGenerateCommand::new(
+                    output,
+                    algorithm,
+                    comment,
+                    force,
+                    no_passphrase,
+                );
+                cmd.run()?;
+            }
+            SshCommand::Add { key, lifetime } => {
+                let cmd = commands::ssh::SshAddCommand::new(key, lifetime);
+                cmd.run()?;
+            }
+            SshCommand::Remove { fingerprint, all } => {
+                let cmd = commands::ssh::SshRemoveCommand::new(fingerprint, all);
+                cmd.run()?;
+            }
+            SshCommand::Check => {
+                let cmd = commands::ssh::SshCheckCommand::new();
+                cmd.run()?;
+            }
+            SshCommand::Setup => {
+                let cmd = commands::ssh::SshSetupCommand::new();
+                cmd.run()?;
+            }
+        },
         Command::Branch(branch_cmd) => match branch_cmd {
             BranchSubcommand::Create {
                 jira_id,
@@ -229,58 +271,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Command::Commit(commit_cmd) => {
-            #[cfg(feature = "develop")]
-            {
-                if let Some(sub) = &commit_cmd.subcommand {
-                    match sub {
-                        CommitSubcommand::CommitToMerge {
-                            source_branch,
-                            target_branch,
-                        } => {
-                            let cmd = commands::commit::CommitToMergeCommand::new(
-                                source_branch.clone(),
-                                target_branch.clone(),
-                            );
-                            cmd.run()?;
-                        }
-                        CommitSubcommand::CommitFiles { ref_or_sha } => {
-                            let cmd = commands::commit::CommitFilesCommand::new(ref_or_sha.clone());
-                            cmd.run()?;
-                        }
-                        CommitSubcommand::CommitDiff { ref_or_sha } => {
-                            let cmd = commands::commit::CommitDiffCommand::new(ref_or_sha.clone());
-                            cmd.run()?;
-                        }
-                    }
-                } else {
-                    let cmd = commands::commit::CommitCreateCommand::new(
-                        commit_cmd.all,
-                        commit_cmd.push,
-                        commit_cmd.dry_run.is_dry_run(),
-                        commit_cmd.message.clone(),
-                    );
-                    cmd.run()?;
-                }
-            }
-            #[cfg(not(feature = "develop"))]
-            {
-                let cmd = commands::commit::CommitCreateCommand::new(
-                    commit_cmd.all,
-                    commit_cmd.push,
-                    commit_cmd.dry_run.is_dry_run(),
-                    commit_cmd.message.clone(),
-                );
-                cmd.run()?;
-            }
-        }
-        #[cfg(feature = "develop")]
-        Command::Push => {
-            let cmd = commands::sync::push::PushCommand::new();
-            cmd.run()?;
-        }
-        #[cfg(feature = "develop")]
-        Command::Pull => {
-            let cmd = commands::sync::pull::PullCommand::new();
+            let cmd = commands::commit::CommitCreateCommand::new(
+                commit_cmd.all,
+                commit_cmd.push,
+                commit_cmd.dry_run.is_dry_run(),
+                commit_cmd.message.clone(),
+            );
             cmd.run()?;
         }
         Command::Stash(stash_cmd) => match stash_cmd {
@@ -411,6 +407,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             AliasCommand::Remove { name } => {
                 let cmd = commands::alias::AliasRemoveCommand::new(name);
+                cmd.run()?;
+            }
+        },
+        #[cfg(feature = "develop")]
+        Command::Diff(diff_cmd) => match diff_cmd {
+            DiffCommand::Merge(args) => {
+                let cmd = commands::diff::CommitToMergeCommand::new(
+                    args.source_branch.clone(),
+                    args.target_branch.clone(),
+                );
+                cmd.run()?;
+            }
+            DiffCommand::Commit(args) => {
+                let cmd = commands::diff::CommitDiffCommand::new(args.ref_or_sha.clone());
+                cmd.run()?;
+            }
+            DiffCommand::Files(args) => {
+                let cmd = commands::diff::CommitFilesCommand::new(args.ref_or_sha.clone());
                 cmd.run()?;
             }
         },

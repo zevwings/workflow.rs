@@ -34,19 +34,18 @@ impl LoggerManagerImpl {
             Command::Llm(_) => Some("llm"),
             Command::Github(_) => Some("github"),
             Command::Jira(_) => Some("jira"),
+            Command::Ssh(_) => Some("ssh"),
             Command::Branch(_) => Some("branch"),
             Command::Commit(_) => Some("commit"),
             Command::Stash(_) => Some("stash"),
             Command::Tag(_) => Some("tag"),
             Command::Pr(_) => Some("pr"),
-            #[cfg(feature = "develop")]
-            Command::Push => Some("push"),
-            #[cfg(feature = "develop")]
-            Command::Pull => Some("pull"),
             Command::Completion(_) => Some("completion"),
             Command::Alias(_) => Some("alias"),
             #[cfg(feature = "develop")]
             Command::Rollback(_) => Some("rollback"),
+            #[cfg(feature = "develop")]
+            Command::Diff(_) => Some("diff"),
         }
     }
 }

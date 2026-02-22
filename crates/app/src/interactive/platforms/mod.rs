@@ -6,8 +6,10 @@ pub mod github;
 pub mod jira;
 pub mod llm;
 pub mod log;
+pub mod ssh;
 
 pub use github::github_stage;
 pub use jira::jira_stage;
 pub use llm::llm_stage;
 pub use log::log_stage;
+pub use ssh::ssh_stage;

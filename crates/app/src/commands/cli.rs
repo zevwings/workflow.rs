@@ -10,8 +10,7 @@ pub use crate::commands::alias::AliasCommand;
 // 从 commands 重新导出共享参数（供外部使用）
 pub use crate::commands::args::{DryRunArgs, ForceArgs, JiraIdArg};
 pub use crate::commands::commit::CommitCommand;
-#[cfg(feature = "develop")]
-pub use crate::commands::commit::CommitSubcommand;
+pub use crate::commands::diff::DiffCommand;
 #[cfg(feature = "develop")]
 pub use crate::commands::rollback::RollbackCommand;
 pub use crate::commands::{
@@ -23,6 +22,7 @@ pub use crate::commands::{
     log::LogCommand,
     pr::PrSubcommand,
     repo::RepoCommand,
+    ssh::SshCommand,
     stash::StashSubcommand,
     tag::TagSubcommand,
 };
@@ -70,6 +70,9 @@ pub enum Command {
     /// Jira configuration management commands
     #[command(subcommand)]
     Jira(JiraCommand),
+    /// SSH key management commands
+    #[command(subcommand)]
+    Ssh(SshCommand),
     /// Branch management commands
     #[command(subcommand)]
     Branch(BranchSubcommand),
@@ -78,18 +81,15 @@ pub enum Command {
     /// Stash management commands
     #[command(subcommand)]
     Stash(StashSubcommand),
+    /// Diff management commands
+    #[command(subcommand)]
+    Diff(DiffCommand),
     /// Tag management commands
     #[command(subcommand)]
     Tag(TagSubcommand),
     /// Pull Request management commands
     #[command(subcommand)]
     Pr(PrSubcommand),
-    /// Push current branch to remote
-    #[cfg(feature = "develop")]
-    Push,
-    /// Pull current branch from remote
-    #[cfg(feature = "develop")]
-    Pull,
     /// Shell completion management commands
     #[command(subcommand)]
     Completion(CompletionCommand),

@@ -44,6 +44,15 @@ pub trait WorkflowStage {
     fn needs_spinner(&self) -> bool {
         true
     }
+
+    /// 此阶段是否会修改 GlobalConfig
+    ///
+    /// 返回 `true` 时，`run_command_setup` 会在配置完成后保存到 workflow.toml；
+    /// 返回 `false` 时跳过保存（如 SSH 仅操作 ssh-agent，不写入配置文件）。
+    /// 默认返回 `true`。
+    fn modifies_config(&self) -> bool {
+        true
+    }
 }
 
 /// 工作流阶段的执行器
@@ -66,13 +75,15 @@ impl<'a> WorkflowExecutor<'a> {
     }
 
     /// 作为独立命令运行设置过程
-    /// 加载配置，运行设置，然后保存配置
+    /// 加载配置，运行设置，若阶段修改了配置则保存
     pub fn run_command_setup(&self) -> Result<(), Box<dyn Error>> {
         let mut context = WorkflowContext::load(WorkflowMode::Command)?;
 
         self.run_setup(&mut context)?;
 
-        context.save()?;
+        if self.stage.modifies_config() {
+            context.save()?;
+        }
         br!();
 
         Ok(())

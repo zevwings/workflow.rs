@@ -4,11 +4,12 @@
 
 pub mod core;
 pub mod display;
-pub mod platforms;
 pub mod manager;
+pub mod platforms;
 
 // 重新导出常用接口
 pub use core::{WorkflowContext, WorkflowExecutor, WorkflowMode, WorkflowStage};
 pub use manager::{
     WorkflowStageManager, GITHUB_STAGE_NAME, JIRA_STAGE_NAME, LLM_STAGE_NAME, LOG_STAGE_NAME,
+    SSH_STAGE_NAME,
 };

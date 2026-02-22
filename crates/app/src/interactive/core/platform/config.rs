@@ -119,6 +119,7 @@ where
             AccountAction::Remove {
                 platform_name: platform_name.to_string(),
             },
+            AccountAction::Done,
         ],
     }
 }
@@ -153,5 +154,6 @@ where
         AccountAction::Switch { .. } => switch_account_generic(context, configurator),
         AccountAction::Update { .. } => update_account_fn(context),
         AccountAction::Remove { .. } => remove_account_generic(context, platform_name),
+        AccountAction::Done => Ok(()),
     }
 }

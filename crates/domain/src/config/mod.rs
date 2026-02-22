@@ -29,6 +29,7 @@ pub use global::{
     LogConfigInfo,
     LogSettings,
     LogVerificationResult,
+    SshVerificationResult,
     VerificationService,
 };
 pub use repo::{

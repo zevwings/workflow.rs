@@ -3,7 +3,7 @@
 //! 智能生成 commit message 并提交代码。
 
 use domain::GitRepository;
-use prompt::{error, info, spinner, success};
+use prompt::{confirm, error, info, spinner, success};
 use toolkit::{log_info, log_info_with_fields};
 
 use crate::bootstrap;
@@ -132,7 +132,7 @@ impl CommitCreateCommand {
         if self.push {
             self.push_to_remote(&git_repo)?;
         } else {
-            let should_push = prompt::confirm!("\nPush to remote?").default(false).prompt()?;
+            let should_push = confirm!("Push to remote?").default(true).prompt()?;
             if should_push {
                 self.push_to_remote(&git_repo)?;
             }
@@ -154,7 +154,7 @@ impl CommitCreateCommand {
             .with(|| git_repo.push(&branch_name, false))
             .map_err(|e| format!("Failed to push: {}", e))?;
 
-        success!("✓ Pushed to origin/{}", branch_name);
+        success!("Pushed to origin/{}", branch_name);
 
         Ok(())
     }

@@ -191,9 +191,12 @@ pub fn get_language_manager() -> Arc<dyn LanguageManager> {
     get_service::<dyn LanguageManager>()
 }
 
+/// 获取 SshService
+pub fn get_ssh_service() -> Arc<dyn domain::SshService> {
+    get_service::<dyn domain::SshService>()
+}
+
 /// 获取 WorkflowStageRegistry
-pub fn get_workflow_stage_registry() -> &'static dyn WorkflowStageManager {
-    use crate::interactive::manager::WorkflowStageManagerImpl;
-    static REGISTRY: WorkflowStageManagerImpl = WorkflowStageManagerImpl;
-    &REGISTRY
+pub fn get_workflow_stage_registry() -> Arc<dyn WorkflowStageManager> {
+    get_service::<dyn WorkflowStageManager>()
 }
