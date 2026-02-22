@@ -38,11 +38,15 @@ impl PullRequestMergeCommand {
             pr_id
         } else {
             let current_branch = git_repo.get_current_branch()?;
-            spinner!("Searching for PR ID for branch '{}'...", current_branch).with(|| {
+            let pr_id = spinner!("Searching for PR ID for branch '{}'...", current_branch).with(|| {
                 pr_service.get_current_branch_pull_request(&current_branch)?.ok_or_else(
                     || -> Box<dyn std::error::Error> { "No PR found for current branch".into() },
                 )
-            })?
+            })?;
+
+            success!("Found PR ID: {}", pr_id);
+
+            pr_id
         };
 
         // 1. 获取 PR 信息（在合并前获取源分支、目标分支和标题）

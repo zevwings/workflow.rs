@@ -271,7 +271,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Command::Commit(commit_cmd) => {
-            let cmd = commands::commit::CommitCreateCommand::new(
+            let cmd = commands::commit::command::CommitCommand::new(
                 commit_cmd.all,
                 commit_cmd.push,
                 commit_cmd.dry_run.is_dry_run(),

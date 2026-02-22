@@ -10,7 +10,7 @@ use crate::bootstrap;
 use crate::util::safe_push;
 
 /// Commit Create 命令
-pub struct CommitCreateCommand {
+pub struct CommitCommand {
     /// 是否自动添加所有更改
     all: bool,
     /// 是否自动推送到远端
@@ -21,7 +21,7 @@ pub struct CommitCreateCommand {
     message: Option<String>,
 }
 
-impl CommitCreateCommand {
+impl CommitCommand {
     /// 创建新的 CommitCreateCommand
     ///
     /// # 参数
