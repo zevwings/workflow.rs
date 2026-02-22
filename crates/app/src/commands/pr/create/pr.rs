@@ -122,7 +122,6 @@ pub fn create_pull_request(
     }
 
     // 创建 PR
-    info!("Creating Pull Request...");
     let pr_service = bootstrap::get_pull_request_service();
     let pr_id = spinner!("Creating Pull Request...")
         .with(|| {

@@ -8,6 +8,7 @@ use prompt::{error, info, spinner, success};
 use toolkit::{log_info, log_info_with_fields};
 
 use crate::bootstrap::{get_commit_message_service, get_git_repository, get_pull_request_service};
+use crate::util::safe_push;
 
 /// Pull Request Update 命令
 ///
@@ -171,7 +172,7 @@ impl PullRequestUpdateCommand {
         info!("Pushing branch '{}' to remote...", current_branch);
 
         spinner!("Pushing to remote...")
-            .with(|| git_repo.push(&current_branch, false))
+            .with(|| safe_push(&current_branch, false))
             .map_err(|e| format!("Failed to push branch: {}", e))?;
 
         success!("Pushed branch '{}' to remote", current_branch);

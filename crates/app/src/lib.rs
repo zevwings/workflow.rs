@@ -4,6 +4,8 @@
 
 pub mod bootstrap;
 pub mod commands;
+pub(crate) mod util;
+
 /// CLI 定义与参数（`app::commands::cli` 的便捷重导出）
 pub use commands::cli;
 pub(crate) mod interactive;

@@ -116,6 +116,7 @@ dependencies = [
  "serde_json",
  "services",
  "storage",
+ "thiserror 1.0.69",
  "toolkit",
 ]
 

@@ -1,7 +1,7 @@
 //! 合并 Pull Request 命令
 
 use domain::{extract_jira_ticket_id, GitError};
-use prompt::{confirm, error, info, spinner, success, warning};
+use prompt::{confirm, info, spinner, success, warning};
 
 use crate::{
     bootstrap::{
@@ -9,6 +9,7 @@ use crate::{
         get_pull_request_service,
     },
     commands::pr::utils::get_pull_request_id_interactive_optional,
+    util::{safe_pull, PullOptions},
 };
 
 /// Pull Request Merge 命令
@@ -38,9 +39,9 @@ impl PullRequestMergeCommand {
         } else {
             let current_branch = git_repo.get_current_branch()?;
             spinner!("Searching for PR ID for branch '{}'...", current_branch).with(|| {
-                pr_service
-                    .get_current_branch_pull_request(&current_branch)?
-                    .ok_or_else(|| -> Box<dyn std::error::Error> { "No PR found for current branch".into() })
+                pr_service.get_current_branch_pull_request(&current_branch)?.ok_or_else(
+                    || -> Box<dyn std::error::Error> { "No PR found for current branch".into() },
+                )
             })?
         };
 
@@ -97,20 +98,9 @@ impl PullRequestMergeCommand {
             false
         };
 
-        // 5. 拉取最新代码
+        // 5. 拉取最新代码（工作区已 stash 故无需再 stash）
         info!("Pulling latest changes from '{}'...", target_branch);
-        if let Err(e) = git_repo.pull(&target_branch) {
-            if matches!(e, GitError::MergeConflict) {
-                error!("Pull failed due to merge conflicts!");
-                error!("Please resolve the conflicts manually:");
-                info!("  1. Edit the conflicting files to resolve conflicts");
-                info!("  2. Run 'git add <resolved-files>'");
-                info!("  3. Run 'git commit' to complete the merge");
-                info!("  Or run 'git merge --abort' to cancel the merge");
-                return Err(format!("Pull failed: merge conflicts detected - {}", e).into());
-            }
-            return Err(format!("Failed to pull latest changes: {}", e).into());
-        }
+        safe_pull(&target_branch, &PullOptions::no_stash())?;
         success!("Pulled latest changes from '{}'", target_branch);
 
         // 6. 删除本地和远程源分支

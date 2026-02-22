@@ -4,6 +4,7 @@ use domain::GitRepository;
 use prompt::{error, info, spinner, success};
 
 use crate::bootstrap;
+use crate::util::safe_push;
 
 /// 提交代码更改
 ///
@@ -83,16 +84,12 @@ pub fn commit_changes(
 
 /// 推送分支到远端
 pub fn push_branch(branch_repo: &dyn GitRepository) -> Result<(), Box<dyn std::error::Error>> {
-    // 获取当前分支名
     let current_branch = branch_repo
         .get_current_branch()
         .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
-    // 推送分支到远端
     info!("Pushing branch '{}' to remote...", current_branch);
-    branch_repo
-        .push(&current_branch, true)
-        .map_err(|e| format!("Failed to push branch: {}", e))?;
+    safe_push(&current_branch, true)?;
 
     success!("Pushed branch '{}' to remote", current_branch);
 

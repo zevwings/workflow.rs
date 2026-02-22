@@ -4,6 +4,7 @@ use domain::GitError;
 use prompt::{confirm, error, info, input, select, success, warning};
 
 use crate::bootstrap;
+use crate::util::safe_push;
 
 /// Branch Rename 命令
 pub struct BranchRenameCommand;
@@ -85,8 +86,7 @@ impl BranchRenameCommand {
             .map_err(|e| format!("Failed to get confirmation: {}", e))?;
 
             if should_update_remote {
-                // 推送新分支到远程并设置上游跟踪
-                if let Err(e) = branch_repo.push(&new_branch, true) {
+                if let Err(e) = safe_push(&new_branch, true) {
                     error!("Failed to push new branch: {}", e);
                     warning!("Local branch renamed, but remote update failed");
                     return Err(format!("Failed to push new branch: {}", e).into());

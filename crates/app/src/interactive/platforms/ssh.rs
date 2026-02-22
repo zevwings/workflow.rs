@@ -3,15 +3,10 @@
 use std::error::Error;
 
 use domain::{GlobalConfig, VerificationService};
-use prompt::{br, separator, success, warning, SelectBuilder};
+use prompt::{br, confirm, select, separator, success, warning};
 
 use crate::{
     bootstrap::{get_ssh_service, get_verification_service},
-    commands::ssh::{
-        add::{interactive_add, SshAddCommand},
-        generate::interactive_generate,
-        remove::SshRemoveCommand,
-    },
     interactive::{
         core::{
             context::{WorkflowContext, WorkflowMode},
@@ -19,6 +14,7 @@ use crate::{
         },
         display::VerificationResultFormatter,
     },
+    util::ssh::{add_ssh_key, generate_ssh_key, remove_ssh_key, GenerateOptions},
 };
 
 /// SSH 工作流阶段
@@ -40,7 +36,7 @@ impl WorkflowStage for SshStage {
             );
             br!();
 
-            let configure_now = prompt::confirm!("Continue with SSH key setup anyway?")
+            let configure_now = confirm!("Continue with SSH key setup anyway?")
                 .default(false)
                 .result_title("Continue SSH setup")
                 .prompt()?;
@@ -75,29 +71,27 @@ impl WorkflowStage for SshStage {
             };
             options.push(exit_option.to_string());
 
-            let selected = SelectBuilder::new("What would you like to do?", options).prompt()?;
+            let selected = select!("What would you like to do?", options).prompt()?;
 
             if selected.contains("Generate") {
                 br!();
-                let key_path = interactive_generate()?;
+                let key_path = generate_ssh_key(GenerateOptions::default())?;
                 br!();
-                let add_now = prompt::confirm!("Add the new key to the ssh-agent now?")
+                let add_now = confirm!("Add the new key to the ssh-agent now?")
                     .default(true)
+                    .result_title("Add key to agent")
                     .prompt()?;
                 if add_now {
-                    interactive_add(&key_path)?;
+                    add_ssh_key(Some(key_path), None)?;
                 }
                 break;
             } else if selected.contains("Add an existing") {
                 br!();
-                if let Err(e) = SshAddCommand::new(None, None).run() {
-                    warning!("{}", e);
-                } else {
-                    break;
-                }
+                add_ssh_key(None, None)?;
+                break;
             } else if selected.contains("Remove a key") {
                 br!();
-                if let Err(e) = SshRemoveCommand::new(None, false).run() {
+                if let Err(e) = remove_ssh_key(None, false) {
                     warning!("{}", e);
                 } else {
                     break;

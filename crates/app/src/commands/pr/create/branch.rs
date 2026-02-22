@@ -9,7 +9,9 @@ use crate::commands::pr::create::{
     types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption},
 };
 use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
-use crate::{bootstrap, commands::branch::utils::branch_type_from_branch_name};
+use crate::{
+    bootstrap, util::branch::branch_type_from_branch_name, util::safe_pull, util::PullOptions,
+};
 
 /// 处理非默认分支的情况
 ///
@@ -411,11 +413,9 @@ pub fn prepare_default_branch(
         .checkout_branch(default_branch)
         .map_err(|e| format!("Failed to switch to branch '{}': {}", default_branch, e))?;
 
-    // 拉取最新代码
+    // 拉取最新代码（工作区已 stash 故无需再 stash）
     info!("Pulling latest changes from '{}'...", default_branch);
-    branch_repo
-        .pull(default_branch)
-        .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
+    safe_pull(default_branch, &PullOptions::no_stash())?;
 
     // 返回是否需要恢复 stash（将在新分支上恢复）
     Ok(needs_stash)
