@@ -6,7 +6,6 @@ use serde_with::skip_serializing_none;
 /// GitHub 用户信息
 #[skip_serializing_none]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-
 pub struct GitHubUser {
     pub login: String,
     pub name: Option<String>,

@@ -124,13 +124,7 @@ impl GitHubRepository for GitHubRepositoryImpl {
     }
 
     fn get_user_info(&self) -> Result<GitHubUser, GitHubError> {
-        let user = self.query_service.get_user_info()?;
-
-        Ok(GitHubUser {
-            login: user.login,
-            name: user.name,
-            email: user.email,
-        })
+        self.query_service.get_user_info()
     }
 
     fn close_pull_request(&self, pr_id: &str) -> Result<(), GitHubError> {

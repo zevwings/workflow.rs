@@ -5,13 +5,11 @@ use std::sync::Arc;
 use client::GitHubClient;
 use domain::{GitHubError, GitHubUser, GitHubVerificationService};
 
-/// GitHub 认证验证服务实现
 pub struct GitHubVerificationServiceImpl {
     client: Arc<dyn GitHubClient>,
 }
 
 impl GitHubVerificationServiceImpl {
-    /// 创建新的服务实例
     pub fn new(client: Arc<dyn GitHubClient>) -> Self {
         Self { client }
     }
