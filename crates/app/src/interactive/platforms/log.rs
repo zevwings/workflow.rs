@@ -57,9 +57,9 @@ impl LogStage {
                     .result_title("Enable logging"),
             )
             .add_confirm(
-                ConfirmFormField::new("enable_console", "Enable console output for trace logs?")
+                ConfirmFormField::new("enable_console", "Enable tracing output to console?")
                     .default(settings.log.enable_trace_console.unwrap_or(false))
-                    .result_title("Enable console output")
+                    .result_title("Enable tracing output to console")
                     .condition(Box::new(|result| result.get_bool("enable_logging"))),
             )
             .add_select(
