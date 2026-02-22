@@ -30,7 +30,7 @@ pub fn get_pull_request_id_interactive_optional(
         Ok(Some(id))
     } else {
         // 交互式输入
-        let id = input!("Please enter your Pull Request ID (press Enter to skip)")
+        let id = input!("Please enter your Pull Request ID (press Enter to merge current branch)")
             .validator(|input: &str| {
                 if input.trim().is_empty() {
                     Ok(())

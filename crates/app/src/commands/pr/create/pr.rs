@@ -239,10 +239,8 @@ pub fn confirm_target_branch(
 pub fn generate_pr_summary(
     base_branch: Option<&str>,
 ) -> Result<PrSummaryResult, Box<dyn std::error::Error>> {
-    info!("Generating PR summary...");
-
     let summary_service = bootstrap::get_commit_summary_service();
-    let analysis = spinner!("Analyzing commit changes (3-stage analysis)...")
+    let analysis = spinner!("generating pull request summary...")
         .with(|| summary_service.run_analysis(base_branch))
         .map_err(|e| format!("Failed to generate PR summary: {}", e))?;
 
@@ -263,11 +261,7 @@ pub fn generate_pr_summary(
         info!("Scope: {}", s);
     }
     success!("PR Summary generated successfully!");
-    println!("\n{}", pr_body);
+    info!("\n{}", pr_body);
 
-    Ok(PrSummaryResult {
-        type_,
-        scope,
-        pr_body,
-    })
+    Ok(PrSummaryResult { type_, scope, pr_body })
 }

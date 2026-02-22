@@ -54,25 +54,11 @@ pub fn commit_changes(
         return Err("No commit message available".into());
     };
 
-    // 提交更改
-    info!("Committing changes with message: {}", commit_message);
-
     // 直接尝试提交所有更改（包括未暂存的）
     // commit 函数会处理 .gitignore 并检查是否有实际更改
-    let commit_sha = match spinner!("Committing changes...")
+    let commit_sha = spinner!("Committing changes with message: {}", commit_message)
         .with(|| branch_repo.commit(&commit_message, true))
-    {
-        Ok(sha) => sha,
-        Err(e) => {
-            let err_msg = e.to_string();
-            // Check if the error is "nothing to commit"
-            if err_msg.contains("nothing to commit") || err_msg.contains("Nothing to commit") {
-                info!("No changes to commit");
-                return Ok(None);
-            }
-            return Err(format!("Failed to commit changes: {}", e).into());
-        }
-    };
+        .map_err(|e| format!("Failed to commit changes: {}", e))?;
 
     success!("Committed changes: {}", &commit_sha[..7]);
 
@@ -88,11 +74,11 @@ pub fn push_branch(branch_repo: &dyn GitRepository) -> Result<(), Box<dyn std::e
         .get_current_branch()
         .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
-    info!("Pushing branch '{}' to remote...", current_branch);
-    safe_push(&current_branch, true)?;
+    spinner!("Pushing branch '{}' to remote...", current_branch)
+        .with(|| safe_push(&current_branch, true))
+        .map_err(|e| format!("Failed to push branch: {}", e))?;
 
     success!("Pushed branch '{}' to remote", current_branch);
-
     Ok(())
 }
 

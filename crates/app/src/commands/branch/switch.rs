@@ -94,7 +94,6 @@ impl BranchSwitchCommand {
         }
 
         // 切换分支
-        info!("Switching to branch '{}'...", target_branch);
         branch_repo
             .checkout_branch(&target_branch)
             .map_err(|e| format!("Failed to switch to branch: {}", e))?;
