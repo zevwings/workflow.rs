@@ -132,7 +132,7 @@ impl CommitCreateCommand {
         if self.push {
             self.push_to_remote(&git_repo)?;
         } else {
-            let should_push = confirm!("\nPush to remote?").default(true).prompt()?;
+            let should_push = confirm!("Push to remote?").default(true).prompt()?;
             if should_push {
                 self.push_to_remote(&git_repo)?;
             }

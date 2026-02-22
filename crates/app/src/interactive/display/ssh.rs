@@ -1,7 +1,7 @@
 //! SSH 验证结果格式化实现
 
 use domain::SshVerificationResult;
-use prompt::{br, info, warning};
+use prompt::{br, info, warning, Alignment, TableBuilder};
 
 use crate::interactive::display::formatter::VerificationResultFormatter;
 
@@ -26,12 +26,17 @@ impl VerificationResultFormatter for SshVerificationResult {
                 "SSH agent: running ({} key(s) loaded)",
                 self.loaded_keys.len()
             );
+            br!();
+            let mut table = TableBuilder::new(vec!["Fingerprint", "Algorithm", "Comment"])
+                .with_alignment(Alignment::Left);
             for key in &self.loaded_keys {
-                info!(
-                    "  - {} ({}) {}",
-                    key.fingerprint, key.algorithm, key.comment
-                );
+                table = table.add_row(vec![
+                    key.fingerprint.clone(),
+                    key.algorithm.clone(),
+                    key.comment.clone(),
+                ]);
             }
+            table.print().unwrap();
         }
     }
 }

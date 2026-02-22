@@ -31,8 +31,6 @@ pub enum SshCommand {
         #[arg(long)]
         no_passphrase: bool,
     },
-    /// Show keys loaded in ssh-agent
-    Status,
     /// Add a key to ssh-agent
     Add {
         /// Path to the private key file

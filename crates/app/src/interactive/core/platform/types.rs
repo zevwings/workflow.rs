@@ -39,6 +39,8 @@ pub enum AccountAction {
     Update { platform_name: String },
     /// 删除账户 (Command 模式)
     Remove { platform_name: String },
+    /// 完成，不做任何操作 (Command 模式)
+    Done,
 }
 
 impl std::fmt::Display for AccountAction {
@@ -64,6 +66,7 @@ impl std::fmt::Display for AccountAction {
             AccountAction::Remove { platform_name } => {
                 write!(f, "Remove {} account", platform_name)
             }
+            AccountAction::Done => write!(f, "Done"),
         }
     }
 }

@@ -3,13 +3,22 @@
 use std::error::Error;
 
 use domain::{GlobalConfig, VerificationService};
-use prompt::{br, info, separator, warning, SelectBuilder};
+use prompt::{br, separator, success, warning, SelectBuilder};
 
-use crate::bootstrap::get_ssh_service;
-use crate::commands::ssh::{add::interactive_add, generate::interactive_generate};
-use crate::interactive::{
-    core::{context::WorkflowContext, stage::WorkflowStage},
-    display::VerificationResultFormatter,
+use crate::{
+    bootstrap::{get_ssh_service, get_verification_service},
+    commands::ssh::{
+        add::{interactive_add, SshAddCommand},
+        generate::interactive_generate,
+        remove::SshRemoveCommand,
+    },
+    interactive::{
+        core::{
+            context::{WorkflowContext, WorkflowMode},
+            stage::WorkflowStage,
+        },
+        display::VerificationResultFormatter,
+    },
 };
 
 /// SSH 工作流阶段
@@ -20,11 +29,10 @@ impl WorkflowStage for SshStage {
         "SSH"
     }
 
-    fn configure(&self, _context: &mut WorkflowContext) -> Result<(), Box<dyn Error>> {
+    fn configure(&self, context: &mut WorkflowContext) -> Result<(), Box<dyn Error>> {
         let ssh = get_ssh_service();
 
-        separator!('─', 80, "SSH configuration");
-        br!();
+        separator!('─', 80, "SSH Configuration");
 
         if !ssh.is_agent_available() {
             warning!(
@@ -35,86 +43,80 @@ impl WorkflowStage for SshStage {
             let configure_now = prompt::confirm!("Continue with SSH key setup anyway?")
                 .default(false)
                 .result_title("Continue SSH setup")
-                .prompt()
-                .map_err(|e| Box::new(e) as Box<dyn Error>)?;
+                .prompt()?;
 
             if !configure_now {
                 return Ok(());
             }
         }
 
-        let has_keys = ssh.list_loaded_keys().map(|keys| !keys.is_empty()).unwrap_or(false);
-
-        if has_keys {
-            info!("SSH keys detected in ssh-agent.");
-            let keys = ssh.list_loaded_keys().unwrap_or_default();
-            for key in &keys {
-                info!(
-                    "  - {} ({}) {}",
-                    key.fingerprint, key.algorithm, key.comment
-                );
-            }
+        loop {
+            br!();
+            let verification_result = get_verification_service().verify_ssh_config()?;
+            verification_result.format();
             br!();
 
-            let keep = prompt::confirm!("SSH keys are already loaded. Keep current configuration?")
-                .default(true)
-                .result_title("Keep SSH configuration")
-                .prompt()
-                .map_err(|e| Box::new(e) as Box<dyn Error>)?;
+            let has_keys = !verification_result.loaded_keys.is_empty();
+            let has_key_files = !ssh.scan_keys().is_empty();
 
-            if keep {
-                return Ok(());
+            let mut options = Vec::new();
+            if has_key_files {
+                options.push("Add an existing key to the agent".to_string());
+            }
+            options.push("Generate a new SSH key".to_string());
+            if has_keys {
+                options.push("Remove a key from the agent".to_string());
+            }
+
+            let exit_option = if context.mode() == WorkflowMode::Setup {
+                "Continue to next step"
+            } else {
+                "Done"
+            };
+            options.push(exit_option.to_string());
+
+            let selected = SelectBuilder::new("What would you like to do?", options).prompt()?;
+
+            if selected.contains("Generate") {
+                br!();
+                let key_path = interactive_generate()?;
+                br!();
+                let add_now = prompt::confirm!("Add the new key to the ssh-agent now?")
+                    .default(true)
+                    .prompt()?;
+                if add_now {
+                    interactive_add(&key_path)?;
+                }
+                break;
+            } else if selected.contains("Add an existing") {
+                br!();
+                if let Err(e) = SshAddCommand::new(None, None).run() {
+                    warning!("{}", e);
+                } else {
+                    break;
+                }
+            } else if selected.contains("Remove a key") {
+                br!();
+                if let Err(e) = SshRemoveCommand::new(None, false).run() {
+                    warning!("{}", e);
+                } else {
+                    break;
+                }
+            } else if selected.contains(exit_option) {
+                break;
             }
         }
 
-        // 交互式引导：生成新密钥或添加已有密钥
-        let existing_keys = ssh.scan_keys();
-        let has_existing_files = !existing_keys.is_empty();
-
-        let options = if has_existing_files {
-            vec![
-                "Add existing key to agent".to_string(),
-                "Generate a new SSH key".to_string(),
-                "Skip SSH configuration".to_string(),
-            ]
-        } else {
-            vec![
-                "Generate a new SSH key".to_string(),
-                "Skip SSH configuration".to_string(),
-            ]
-        };
-
-        let selected = SelectBuilder::new("How would you like to configure SSH?", options)
-            .default(0)
-            .result_title("SSH action")
-            .prompt()
-            .map_err(|e| Box::new(e) as Box<dyn Error>)?;
-
-        if selected.contains("Skip") {
-            return Ok(());
-        }
-
-        if selected.contains("Generate") {
+        if context.mode() == WorkflowMode::Command {
             br!();
-            let key_path = interactive_generate()?;
-            br!();
-            interactive_add(&key_path)?;
-        } else if selected.contains("Add existing") {
-            br!();
-            let options: Vec<String> =
-                existing_keys.iter().map(|p| p.display().to_string()).collect();
-
-            let selected_path = SelectBuilder::new("Select a key to add", options)
-                .default(0)
-                .result_title("Key")
-                .prompt()
-                .map_err(|e| Box::new(e) as Box<dyn Error>)?;
-
-            let path = std::path::PathBuf::from(selected_path);
-            interactive_add(&path)?;
+            success!("SSH configuration complete.");
         }
 
         Ok(())
+    }
+
+    fn modifies_config(&self) -> bool {
+        false
     }
 
     fn is_configured(&self, _settings: &GlobalConfig) -> bool {

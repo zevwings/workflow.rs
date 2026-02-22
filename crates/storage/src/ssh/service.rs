@@ -119,6 +119,22 @@ impl SshService for SshServiceImpl {
             }
         }
 
+        // 用户确认覆盖时，先删除旧密钥文件，避免 ssh-keygen 的交互式覆盖提示
+        if output_path.exists() && force {
+            std::fs::remove_file(output_path).map_err(|e| {
+                SshError::GenerationFailed(format!("Failed to remove existing key: {}", e))
+            })?;
+            let pub_path = output_path.with_extension("pub");
+            if pub_path.exists() {
+                std::fs::remove_file(&pub_path).map_err(|e| {
+                    SshError::GenerationFailed(format!(
+                        "Failed to remove existing public key: {}",
+                        e
+                    ))
+                })?;
+            }
+        }
+
         let mut cmd = Command::new("ssh-keygen");
         cmd.arg("-t").arg(algorithm);
 
@@ -141,7 +157,15 @@ impl SshService for SshServiceImpl {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(SshError::GenerationFailed(stderr.to_string()));
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let msg = if stderr.is_empty() && !stdout.is_empty() {
+                stdout.to_string()
+            } else if stderr.is_empty() {
+                format!("ssh-keygen exited with code {:?}", output.status.code())
+            } else {
+                stderr.to_string()
+            };
+            return Err(SshError::GenerationFailed(msg));
         }
 
         #[cfg(unix)]

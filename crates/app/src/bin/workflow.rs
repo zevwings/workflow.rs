@@ -191,10 +191,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 cmd.run()?;
             }
-            SshCommand::Status => {
-                let cmd = commands::ssh::SshStatusCommand::new();
-                cmd.run()?;
-            }
             SshCommand::Add { key, lifetime } => {
                 let cmd = commands::ssh::SshAddCommand::new(key, lifetime);
                 cmd.run()?;

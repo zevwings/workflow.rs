@@ -45,7 +45,7 @@ impl SshAddCommand {
     }
 }
 
-fn select_key_interactively() -> Result<PathBuf, Box<dyn std::error::Error>> {
+pub fn select_key_interactively() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let ssh = get_ssh_service();
     let keys = ssh.scan_keys();
 

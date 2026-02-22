@@ -37,7 +37,7 @@ impl SshRemoveCommand {
             return remove_by_fingerprint(&ssh, fp);
         }
 
-        remove_interactively(&ssh)
+        interactive_remove(&ssh)
     }
 }
 
@@ -86,7 +86,7 @@ fn remove_by_fingerprint(
     Ok(())
 }
 
-fn remove_interactively(ssh: &Arc<dyn SshService>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn interactive_remove(ssh: &Arc<dyn SshService>) -> Result<(), Box<dyn std::error::Error>> {
     let keys = ssh.list_loaded_keys()?;
 
     if keys.is_empty() {

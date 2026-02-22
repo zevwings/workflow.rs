@@ -6,7 +6,6 @@ mod cli;
 pub mod generate;
 pub mod remove;
 pub mod setup;
-pub mod status;
 
 pub use add::SshAddCommand;
 pub use check::SshCheckCommand;
@@ -14,4 +13,3 @@ pub use cli::SshCommand;
 pub use generate::SshGenerateCommand;
 pub use remove::SshRemoveCommand;
 pub use setup::SshSetupCommand;
-pub use status::SshStatusCommand;
