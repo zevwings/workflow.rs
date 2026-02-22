@@ -56,12 +56,10 @@ pub fn generate_ssh_key(opts: GenerateOptions) -> Result<PathBuf, SshOperationEr
     let force = match opts.force {
         Some(f) => {
             if output_path.exists() && !f {
-                return Err(SshOperationError::OperationFailed(
-                    format!(
-                        "Key already exists at {}. Use --force to overwrite.",
-                        output_path.display()
-                    ),
-                ));
+                return Err(SshOperationError::OperationFailed(format!(
+                    "Key already exists at {}. Use --force to overwrite.",
+                    output_path.display()
+                )));
             }
             f
         }

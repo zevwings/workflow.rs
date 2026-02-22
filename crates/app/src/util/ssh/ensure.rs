@@ -24,7 +24,7 @@ pub fn ensure_ssh_ready() -> Result<(), SshOperationError> {
         .list_loaded_keys()
         .map_err(|e| SshOperationError::OperationFailed(e.to_string()))?;
     if !keys.is_empty() {
-        return Ok(()); // Keys are already loaded
+        return Ok(());
     }
 
     br!();
@@ -65,7 +65,6 @@ pub fn ensure_ssh_ready() -> Result<(), SshOperationError> {
     let keys = ssh_service
         .list_loaded_keys()
         .map_err(|e| SshOperationError::OperationFailed(e.to_string()))?;
-    // Final check to ensure a key was actually added
     if keys.is_empty() {
         Err(SshOperationError::NoKeysAvailable)
     } else {

@@ -4,6 +4,7 @@ use domain::GitError;
 use prompt::{confirm, error, info, select, success, warning};
 
 use crate::bootstrap;
+use crate::util::ensure_ssh_ready;
 
 /// Branch Switch 命令
 pub struct BranchSwitchCommand {
@@ -109,6 +110,7 @@ impl BranchSwitchCommand {
                 .map_err(|e| format!("Failed to get confirmation: {}", e))?;
 
             if should_pull {
+                ensure_ssh_ready().map_err(|e| format!("{}", e))?;
                 info!("Pulling latest changes...");
                 if let Err(e) = branch_repo.pull(&target_branch) {
                     if matches!(e, GitError::MergeConflict) {

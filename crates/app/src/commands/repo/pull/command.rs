@@ -1,7 +1,7 @@
 use prompt::{info, success};
 use toolkit::log_debug;
 
-use crate::{bootstrap, util::ssh::ensure_ssh_ready};
+use crate::{bootstrap, util::ensure_ssh_ready};
 
 /// Pull 命令
 pub struct PullCommand;

@@ -9,7 +9,7 @@ use crate::commands::pr::create::{
     types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption},
 };
 use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
-use crate::{bootstrap, util::branch::branch_type_from_branch_name};
+use crate::{bootstrap, util::branch::branch_type_from_branch_name, util::ensure_ssh_ready};
 
 /// 处理非默认分支的情况
 ///
@@ -411,7 +411,8 @@ pub fn prepare_default_branch(
         .checkout_branch(default_branch)
         .map_err(|e| format!("Failed to switch to branch '{}': {}", default_branch, e))?;
 
-    // 拉取最新代码
+    // 拉取最新代码（SSH 远程时需确保密钥就绪）
+    ensure_ssh_ready().map_err(|e| format!("{}", e))?;
     info!("Pulling latest changes from '{}'...", default_branch);
     branch_repo
         .pull(default_branch)

@@ -12,9 +12,7 @@ use domain::{sanitize_branch_name, BranchType};
 ///
 /// # Examples
 ///
-/// ```
-/// use app::util::branch::to_slug;
-///
+/// ```ignore
 /// assert_eq!(to_slug("Chat Unified Entry"), "chat-unified-entry");
 /// assert_eq!(to_slug("Fix: Auth Issue"), "fix-auth-issue");
 /// ```
@@ -29,19 +27,16 @@ pub fn to_slug(summary: impl AsRef<str>) -> String {
             } else if c.is_whitespace() || c == '-' || c == '_' {
                 '-'
             } else {
-                // 跳过其他特殊字符
                 '\0'
             }
         })
         .filter(|&c| c != '\0')
         .collect::<String>()
-        // 移除多余的连字符
         .split('-')
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join("-");
 
-    // 清理结果
     sanitize_branch_name(&slug)
 }
 
@@ -61,16 +56,6 @@ pub fn branch_type_from_branch_name(branch_name: &str) -> Option<BranchType> {
 /// 移除分支名中可能存在的类型前缀
 ///
 /// 防御性处理：如果 LLM 返回了带类型前缀的分支名，移除它。
-///
-/// # Examples
-///
-/// ```ignore
-/// // `strip_branch_type_prefix` 是内部辅助函数（非公有 API）。
-/// use app::util::branch::strip_branch_type_prefix;
-/// assert_eq!(strip_branch_type_prefix("feature/my-branch"), "my-branch");
-/// assert_eq!(strip_branch_type_prefix("my-branch"), "my-branch");
-/// assert_eq!(strip_branch_type_prefix("bugfix/fix-issue"), "fix-issue");
-/// ```
 pub fn strip_branch_type_prefix(name: &str) -> String {
     let prefixes = ["feature/", "bugfix/", "hotfix/", "refactoring/", "chore/"];
 

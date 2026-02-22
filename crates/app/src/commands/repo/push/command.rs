@@ -19,10 +19,11 @@ impl PushCommand {
     }
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        log_debug!("push: getting git repository");
-        let git_repo = bootstrap::get_git_repository();
+        log_debug!("push: ensuring SSH ready");
         ensure_ssh_ready()?;
 
+        log_debug!("push: getting git repository");
+        let git_repo = bootstrap::get_git_repository();
         log_debug!("push: getting current branch");
         let branch_name = git_repo
             .get_current_branch()

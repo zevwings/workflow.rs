@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// 文件系统操作错误
+/// SSH 操作错误
 #[derive(Debug, Error)]
 pub enum SshOperationError {
     /// ssh-agent 不可用

@@ -1,8 +1,9 @@
-use crate::bootstrap::get_ssh_service;
-use domain::SshService;
-use prompt::{info, select};
 use std::path::PathBuf;
 
+use domain::SshService;
+use prompt::{info, select};
+
+use crate::bootstrap::get_ssh_service;
 use crate::util::SshOperationError;
 
 fn select_key_interactively() -> Result<PathBuf, SshOperationError> {
@@ -64,14 +65,12 @@ pub fn add_ssh_key(key: Option<PathBuf>, lifetime: Option<u64>) -> Result<(), Ss
 
     let key_path = match &key {
         Some(path) => path.clone(),
-        None => select_key_interactively()
-            .map_err(|e| SshOperationError::OperationFailed(e.to_string()))?,
+        None => select_key_interactively()?,
     };
 
     let lifetime = match lifetime {
         Some(lt) => Some(lt),
-        None => select_lifetime_interactively()
-            .map_err(|e| SshOperationError::OperationFailed(e.to_string()))?,
+        None => select_lifetime_interactively()?,
     };
 
     info!("Adding key: {}", key_path.display());

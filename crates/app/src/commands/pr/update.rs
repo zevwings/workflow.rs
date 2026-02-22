@@ -8,6 +8,7 @@ use prompt::{error, info, spinner, success};
 use toolkit::{log_info, log_info_with_fields};
 
 use crate::bootstrap::{get_commit_message_service, get_git_repository, get_pull_request_service};
+use crate::util::ensure_ssh_ready;
 
 /// Pull Request Update 命令
 ///
@@ -118,7 +119,8 @@ impl PullRequestUpdateCommand {
         // 6. 提交（暂存区已就绪）
         self.commit_changes(&*git_repo, &commit_message)?;
 
-        // 7. 推送到远端
+        // 7. 推送到远端（SSH 远程时需确保密钥就绪）
+        ensure_ssh_ready().map_err(|e| format!("{}", e))?;
         self.push_to_remote(&*git_repo)?;
 
         success!(

@@ -20,11 +20,10 @@ pub fn remove_ssh_key(fingerprint: Option<String>, all: bool) -> Result<(), SshO
     }
 
     if let Some(ref fp) = fingerprint {
-        return remove_by_fingerprint(fp)
-            .map_err(|e| SshOperationError::OperationFailed(e.to_string()));
+        return remove_by_fingerprint(fp);
     }
 
-    interactive_remove().map_err(|e| SshOperationError::OperationFailed(e.to_string()))?;
+    interactive_remove()?;
 
     Ok(())
 }
