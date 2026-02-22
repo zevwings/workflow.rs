@@ -70,6 +70,20 @@ pub trait JiraRepository: Send + Sync {
         on_progress: Option<ProgressCallback>,
     ) -> Result<AttachmentDownloadResult, JiraError>;
 
+    /// 使用已获取的 Issue 数据下载附件（避免重复 API 调用）
+    ///
+    /// # 参数
+    ///
+    /// * `issue` - 已获取的 Jira Issue 信息
+    /// * `base_dir` - 基础目录路径
+    /// * `on_progress` - 进度回调函数（可选）
+    fn download_attachments_with_issue(
+        &self,
+        issue: &JiraIssue,
+        base_dir: &Path,
+        on_progress: Option<ProgressCallback>,
+    ) -> Result<AttachmentDownloadResult, JiraError>;
+
     /// 清理附件目录
     ///
     /// 清理指定 JIRA ID 的附件目录，或清理所有附件目录。

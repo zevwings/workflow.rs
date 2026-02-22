@@ -33,7 +33,11 @@ impl PullRequestListCommand {
         // 显示 PR 列表
         info!("Pull Requests:");
         for pr in prs {
-            let status = if pr.merged { "merged" } else { &pr.state };
+            let status = if pr.status.merged {
+                "merged"
+            } else {
+                &pr.status.state
+            };
             println!("  #{} - {} [{}]", pr.id, pr.title, status);
         }
 

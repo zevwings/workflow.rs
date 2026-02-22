@@ -103,8 +103,7 @@ pub use path::{
 pub use pr::{
     get_all_change_types, get_change_type_by_index, get_change_type_by_name,
     get_change_type_index_by_branch_type, get_change_types_by_branch_type, ChangeType, PrContent,
-    PrStatus, PullRequestError, PullRequestInfo, PullRequestService, PullRequestStatus,
-    CHANGE_TYPES,
+    PullRequestError, PullRequestInfo, PullRequestService, PullRequestStatus, CHANGE_TYPES,
 };
 pub use summary::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,

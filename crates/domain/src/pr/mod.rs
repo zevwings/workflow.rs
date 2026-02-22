@@ -13,4 +13,4 @@ pub use entity::{
     PullRequestInfo, PullRequestStatus, CHANGE_TYPES,
 };
 pub use error::PullRequestError;
-pub use service::{PrStatus, PullRequestService};
+pub use service::PullRequestService;

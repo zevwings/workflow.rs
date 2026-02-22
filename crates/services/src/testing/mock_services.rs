@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use domain::{
     BranchService, BranchServiceError, CommitMessageError, CommitMessageService,
-    CommitSummaryAnalysis, PrStatus, PullRequestError, PullRequestInfo, PullRequestService,
+    CommitSummaryAnalysis, PullRequestError, PullRequestInfo, PullRequestService,
     PullRequestStatus,
 };
 
@@ -277,18 +277,24 @@ impl PullRequestService for MockPullRequestService {
         }
     }
 
-    fn get_pr_status(&self) -> Result<PrStatus, PullRequestError> {
+    fn get_pr_info(&self) -> Result<PullRequestInfo, PullRequestError> {
         let current = "current-branch".to_string();
         let pr_id =
             self.branch_to_pr.lock().unwrap().get(&current).cloned().ok_or_else(|| {
                 PullRequestError::NotFound(format!("No PR for branch {}", current))
             })?;
         let pr = self.get_pr(&pr_id)?;
-        Ok(PrStatus {
+        Ok(PullRequestInfo {
             id: pr.id,
             title: pr.title,
-            state: pr.state,
-            merged: pr.merged,
+            body: pr.body,
+            status: PullRequestStatus {
+                state: pr.state,
+                merged: pr.merged,
+                merged_at: None,
+            },
+            source_branch: pr.source_branch,
+            target_branch: pr.target_branch,
         })
     }
 
@@ -313,16 +319,22 @@ impl PullRequestService for MockPullRequestService {
         &self,
         state: Option<&str>,
         limit: Option<usize>,
-    ) -> Result<Vec<PrStatus>, PullRequestError> {
+    ) -> Result<Vec<PullRequestInfo>, PullRequestError> {
         let prs = self.prs.lock().unwrap();
-        let mut list: Vec<PrStatus> = prs
+        let mut list: Vec<PullRequestInfo> = prs
             .iter()
             .filter(|p| state.is_none_or(|s| p.state == s))
-            .map(|p| PrStatus {
+            .map(|p| PullRequestInfo {
                 id: p.id.clone(),
                 title: p.title.clone(),
-                state: p.state.clone(),
-                merged: p.merged,
+                body: p.body.clone(),
+                status: PullRequestStatus {
+                    state: p.state.clone(),
+                    merged: p.merged,
+                    merged_at: None,
+                },
+                source_branch: p.source_branch.clone(),
+                target_branch: p.target_branch.clone(),
             })
             .collect();
         if let Some(n) = limit {
@@ -467,11 +479,11 @@ mod tests {
             "current-branch",
             "main",
         );
-        let status = service.get_pr_status().unwrap();
+        let status = service.get_pr_info().unwrap();
         assert_eq!(status.id, "1");
         assert_eq!(status.title, "Title");
-        assert_eq!(status.state, "open");
-        assert!(!status.merged);
+        assert_eq!(status.status.state, "open");
+        assert!(!status.status.merged);
         let branch_pr = service.get_current_branch_pull_request("current-branch").unwrap();
         assert_eq!(branch_pr, Some("1".to_string()));
     }

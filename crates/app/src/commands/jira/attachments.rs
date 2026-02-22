@@ -37,11 +37,12 @@ impl JiraAttachmentsCommand {
             )
         })?;
 
-        // 1. 先获取附件列表以确定总数
-        let attachments = spinner!("Getting attachments info for {}...", jira_id)
-            .with(|| jira_repo.get_attachments(&jira_id))
-            .map_err(|e| format!("Failed to get attachments: {}", e))?;
+        // 1. 获取 Issue 信息（单次 API 调用，复用附件列表与下载）
+        let issue = spinner!("Getting attachments info for {}...", jira_id)
+            .with(|| jira_repo.get_issue_info(&jira_id))
+            .map_err(|e| format!("Failed to get issue info: {}", e))?;
 
+        let attachments = issue.fields.attachment.clone().unwrap_or_default();
         let total_files = attachments.len();
 
         if total_files == 0 {
@@ -53,9 +54,9 @@ impl JiraAttachmentsCommand {
         info!("{} file(s) will be downloaded", total_files);
         br!();
 
-        // 3. 使用 spinner 显示下载进度
+        // 3. 使用已获取的 Issue 数据下载（避免重复 API 调用）
         let result = spinner!("Downloading {} attachment(s)...", total_files)
-            .with(|| jira_repo.download_attachments(&jira_id, &base_dir, None))
+            .with(|| jira_repo.download_attachments_with_issue(&issue, &base_dir, None))
             .map_err(|e| format!("Failed to download attachments: {}", e))?;
 
         if result.downloaded_files.is_empty() {

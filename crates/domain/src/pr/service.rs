@@ -116,7 +116,7 @@ pub trait PullRequestService: Send + Sync {
     /// * [`PullRequestError::GitHub`] - PR 不存在或 API 调用失败
     /// * [`PullRequestError::Git`] - 无法确定当前分支
     /// * [`PullRequestError::NotFound`] - 当前分支没有关联的 PR
-    fn get_pr_status(&self) -> Result<PrStatus, PullRequestError>;
+    fn get_pr_info(&self) -> Result<PullRequestInfo, PullRequestError>;
 
     /// 关闭 Pull Request
     ///
@@ -163,7 +163,7 @@ pub trait PullRequestService: Send + Sync {
         &self,
         state: Option<&str>,
         limit: Option<usize>,
-    ) -> Result<Vec<PrStatus>, PullRequestError>;
+    ) -> Result<Vec<PullRequestInfo>, PullRequestError>;
 
     /// 更新 Pull Request 的标题和/或描述
     ///
@@ -255,32 +255,32 @@ pub trait PullRequestService: Send + Sync {
     ) -> Result<Option<String>, PullRequestError>;
 }
 
-// ==================== 类型定义 ====================
+// // ==================== 类型定义 ====================
 
-/// PR 状态信息
-///
-/// 表示 Pull Request 的当前状态，包括 ID、标题、状态和合并状态。
-///
-/// # 字段
-///
-/// * `id` - PR 的唯一标识符（如 "123"）
-/// * `title` - PR 的标题
-/// * `state` - PR 的状态（"open", "closed", "merged"）
-/// * `merged` - 是否已合并。`true` 表示 PR 已合并，`false` 表示未合并
-///
-/// # 注意
-///
-/// - `state = "closed"` 且 `merged = true` 表示 PR 已合并
-/// - `state = "closed"` 且 `merged = false` 表示 PR 已关闭但未合并
-/// - `state = "open"` 且 `merged = true` 是不可能的状态
-#[derive(Debug, Clone)]
-pub struct PrStatus {
-    /// PR ID
-    pub id: String,
-    /// PR 标题
-    pub title: String,
-    /// PR 状态（open/closed/merged）
-    pub state: String,
-    /// 是否已合并
-    pub merged: bool,
-}
+// /// PR 状态信息
+// ///
+// /// 表示 Pull Request 的当前状态，包括 ID、标题、状态和合并状态。
+// ///
+// /// # 字段
+// ///
+// /// * `id` - PR 的唯一标识符（如 "123"）
+// /// * `title` - PR 的标题
+// /// * `state` - PR 的状态（"open", "closed", "merged"）
+// /// * `merged` - 是否已合并。`true` 表示 PR 已合并，`false` 表示未合并
+// ///
+// /// # 注意
+// ///
+// /// - `state = "closed"` 且 `merged = true` 表示 PR 已合并
+// /// - `state = "closed"` 且 `merged = false` 表示 PR 已关闭但未合并
+// /// - `state = "open"` 且 `merged = true` 是不可能的状态
+// #[derive(Debug, Clone)]
+// pub struct PullRequestInfo {
+//     /// PR ID
+//     pub id: String,
+//     /// PR 标题
+//     pub title: String,
+//     /// PR 状态（open/closed/merged）
+//     pub state: String,
+//     /// 是否已合并
+//     pub merged: bool,
+// }
