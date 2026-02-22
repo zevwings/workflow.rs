@@ -30,7 +30,6 @@ pub fn commit_changes(
             }
         } else {
             // 获取 JIRA summary
-            info!("Fetching JIRA ticket '{}'...", jira_id);
             let jira_repo = bootstrap::get_jira_repository();
 
             // 尝试获取 JIRA ticket 信息，如果失败则使用 JIRA ID 作为降级方案
