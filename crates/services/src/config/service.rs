@@ -23,7 +23,7 @@ use client::{
     IntoLLMRequestParameters, LLMClient, LLMConversation, LanguageManager, SupportedLanguage,
 };
 use domain::{
-    ConfigError, GitHubAccountInfo, GitHubRepository, GitHubVerificationResult,
+    ConfigError, GitHubAccountInfo, GitHubVerificationResult, GitHubVerificationService,
     GitHubVerificationSummary, GlobalConfigRepository, JiraConfigInfo, JiraRepository,
     JiraVerificationResult, JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult,
     LLMVerificationStatus, LogConfigInfo, LogVerificationResult, SshService, SshVerificationResult,
@@ -73,7 +73,7 @@ pub(crate) struct VerificationServiceImpl {
     language_manager: Arc<dyn LanguageManager>,
     config_repository: Arc<dyn GlobalConfigRepository>,
     jira_repository: Arc<dyn JiraRepository>,
-    github_repository: Arc<dyn GitHubRepository>,
+    github_verification_service: Arc<dyn GitHubVerificationService>,
     ssh_service: Arc<dyn SshService>,
 }
 
@@ -83,7 +83,7 @@ impl VerificationServiceImpl {
         language_manager: Arc<dyn LanguageManager>,
         config_repository: Arc<dyn GlobalConfigRepository>,
         jira_repository: Arc<dyn JiraRepository>,
-        github_repository: Arc<dyn GitHubRepository>,
+        github_verification_service: Arc<dyn GitHubVerificationService>,
         ssh_service: Arc<dyn SshService>,
     ) -> Self {
         Self {
@@ -91,7 +91,7 @@ impl VerificationServiceImpl {
             language_manager,
             config_repository,
             jira_repository,
-            github_repository,
+            github_verification_service,
             ssh_service,
         }
     }
@@ -151,7 +151,7 @@ impl VerificationService for VerificationServiceImpl {
         let mut github_valid = false;
         let mut verification_error: Option<String> = None;
 
-        match self.github_repository.get_user_info() {
+        match self.github_verification_service.get_user_info() {
             Ok(_) => {
                 github_valid = true;
             }

@@ -87,7 +87,7 @@ pub use git::{
 // Re-export SSH types
 pub use ssh::{SshError, SshKeyInfo, SshService};
 // Re-export external service types
-pub use github::{GitHubError, GitHubRepository, GitHubUser};
+pub use github::{GitHubError, GitHubRepository, GitHubUser, GitHubVerificationService};
 pub use jira::{
     extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
     AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraComponent,

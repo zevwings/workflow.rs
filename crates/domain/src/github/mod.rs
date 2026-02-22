@@ -5,7 +5,9 @@
 pub mod entity;
 pub mod error;
 pub mod repository;
+pub mod verification;
 
 pub use entity::GitHubUser;
 pub use error::GitHubError;
 pub use repository::GitHubRepository;
+pub use verification::GitHubVerificationService;
