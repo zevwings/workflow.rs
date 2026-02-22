@@ -2,6 +2,7 @@ use prompt::{info, success};
 use toolkit::log_debug;
 
 use crate::bootstrap;
+use crate::util::ensure_ssh_ready;
 
 /// Push 命令
 pub struct PushCommand;
@@ -20,6 +21,7 @@ impl PushCommand {
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         log_debug!("push: getting git repository");
         let git_repo = bootstrap::get_git_repository();
+        ensure_ssh_ready()?;
 
         log_debug!("push: getting current branch");
         let branch_name = git_repo

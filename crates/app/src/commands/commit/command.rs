@@ -7,6 +7,7 @@ use prompt::{confirm, error, info, spinner, success};
 use toolkit::{log_info, log_info_with_fields};
 
 use crate::bootstrap;
+use crate::util::ensure_ssh_ready;
 
 /// Commit Create 命令
 pub struct CommitCreateCommand {
@@ -40,6 +41,7 @@ impl CommitCreateCommand {
     /// 运行 `workflow commit create` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let git_repo = bootstrap::get_git_repository();
+        ensure_ssh_ready()?;
 
         // Step 1: Stage 代码（如果需要）
         if self.all {

@@ -8,7 +8,6 @@ use crate::{
     commands::{
         branch::utils::{
             generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type,
-            to_slug,
         },
         jira::utils::{ensure_jira_status_config, get_jira_id_interactive_optional},
         pr::create::{
@@ -18,6 +17,7 @@ use crate::{
             types::BranchHandleContext,
         },
     },
+    util::branch::to_slug,
 };
 
 /// 创建分支并创建 PR 时的 JIRA/描述上下文

@@ -9,6 +9,7 @@ use crate::{
         get_pull_request_service,
     },
     commands::pr::utils::get_pull_request_id_interactive_optional,
+    util::ssh::ensure_ssh_ready,
 };
 
 /// Pull Request Merge 命令
@@ -25,6 +26,8 @@ impl PullRequestMergeCommand {
 
     /// 运行 `workflow pr merge` 命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        ensure_ssh_ready()?;
+
         let pr_service = get_pull_request_service();
         let git_repo = get_git_repository();
 
@@ -38,9 +41,9 @@ impl PullRequestMergeCommand {
         } else {
             let current_branch = git_repo.get_current_branch()?;
             spinner!("Searching for PR ID for branch '{}'...", current_branch).with(|| {
-                pr_service
-                    .get_current_branch_pull_request(&current_branch)?
-                    .ok_or_else(|| -> Box<dyn std::error::Error> { "No PR found for current branch".into() })
+                pr_service.get_current_branch_pull_request(&current_branch)?.ok_or_else(
+                    || -> Box<dyn std::error::Error> { "No PR found for current branch".into() },
+                )
             })?
         };
 

@@ -9,7 +9,7 @@ use crate::commands::pr::create::{
     types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption},
 };
 use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
-use crate::{bootstrap, commands::branch::utils::branch_type_from_branch_name};
+use crate::{bootstrap, util::branch::branch_type_from_branch_name};
 
 /// 处理非默认分支的情况
 ///

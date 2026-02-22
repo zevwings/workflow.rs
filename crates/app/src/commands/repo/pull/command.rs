@@ -1,7 +1,7 @@
 use prompt::{info, success};
 use toolkit::log_debug;
 
-use crate::bootstrap;
+use crate::{bootstrap, util::ssh::ensure_ssh_ready};
 
 /// Pull 命令
 pub struct PullCommand;
@@ -19,6 +19,9 @@ impl PullCommand {
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         log_debug!("pull: getting git repository");
+
+        ensure_ssh_ready()?;
+
         let git_repo = bootstrap::get_git_repository();
 
         // 检查工作区状态
