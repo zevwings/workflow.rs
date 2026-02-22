@@ -57,7 +57,13 @@ pub fn commit_changes(
     info!("Committing changes with message: {}", commit_message);
     // 直接尝试提交所有更改（包括未暂存的）
     // commit 函数会处理 .gitignore 并检查是否有实际更改
-    let commit_sha = branch_repo.commit(&commit_message, true)?;
+    let commit_sha = branch_repo.commit(&commit_message, true).map_err(|e| {
+        let err_msg = e.to_string();
+        if err_msg.contains("nothing to commit") {
+            return "No changes to commit".into();
+        }
+        format!("Failed to commit changes: {}", e)
+    })?;
 
     success!("Committed changes: {}", &commit_sha[..7]);
 

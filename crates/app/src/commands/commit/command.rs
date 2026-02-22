@@ -123,9 +123,15 @@ impl CommitCreateCommand {
         );
 
         // Step 4: 提交代码
-        let oid = git_repo.commit(&commit_message, false)?;
+        let commit_sha = git_repo.commit(&commit_message, false).map_err(|e| {
+            let err_msg = e.to_string();
+            if err_msg.contains("nothing to commit") {
+                return "No changes to commit".into();
+            }
+            format!("Failed to commit changes: {}", e)
+        })?;
 
-        success!("Created commit: {}", oid);
+        success!("Created commit: {}", commit_sha);
 
         // Step 5: 询问是否推送到远端
         if self.push {
