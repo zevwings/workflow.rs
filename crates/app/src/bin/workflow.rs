@@ -3,13 +3,13 @@
 //! 这里只负责解析顶层命令，将实际逻辑委托给 `commands` 模块。
 
 #[cfg(feature = "develop")]
-use app::cli::RollbackCommand;
+use app::cli::{DiffCommand, RollbackCommand};
 use app::{
     bootstrap::{get_alias_service, get_logger_manager},
     cli::{
-        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, DiffCommand,
-        GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
-        RepoCommand, SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
+        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
+        IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
+        SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
     },
     commands,
 };
