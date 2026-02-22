@@ -263,5 +263,9 @@ pub fn generate_pr_summary(
     success!("PR Summary generated successfully!");
     info!("\n{}", pr_body);
 
-    Ok(PrSummaryResult { type_, scope, pr_body })
+    Ok(PrSummaryResult {
+        type_,
+        scope,
+        pr_body,
+    })
 }
