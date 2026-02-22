@@ -154,7 +154,7 @@ impl CommitCreateCommand {
             .with(|| git_repo.push(&branch_name, false))
             .map_err(|e| format!("Failed to push: {}", e))?;
 
-        success!("✓ Pushed to origin/{}", branch_name);
+        success!("Pushed to origin/{}", branch_name);
 
         Ok(())
     }
