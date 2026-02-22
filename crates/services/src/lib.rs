@@ -12,6 +12,7 @@ pub(crate) mod branch;
 pub(crate) mod commit;
 pub(crate) mod completion;
 pub(crate) mod config;
+pub(crate) mod github;
 pub(crate) mod path;
 pub(crate) mod pull_request;
 pub(crate) mod summary;

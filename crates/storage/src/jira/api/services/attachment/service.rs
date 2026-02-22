@@ -5,7 +5,7 @@
 use std::{path::Path, sync::Arc};
 
 use client::JiraConfigContext;
-use domain::{AttachmentDownloadResult, JiraError, ProgressCallback};
+use domain::{AttachmentDownloadResult, JiraError, JiraIssue, ProgressCallback};
 
 use crate::jira::api::services::attachment::{
     directory::DirectoryManager, downloader::ConcurrentDownloader, entity::UrlResolver,
@@ -26,6 +26,20 @@ pub trait AttachmentService: Send + Sync {
     fn download_attachments(
         &self,
         issue_id: &str,
+        base_dir: &Path,
+        on_progress: Option<ProgressCallback>,
+    ) -> Result<AttachmentDownloadResult, JiraError>;
+
+    /// 使用已获取的 Issue 数据下载附件（避免重复 API 调用）
+    ///
+    /// # 参数
+    ///
+    /// * `issue` - 已获取的 Jira Issue 信息
+    /// * `base_dir` - 基础目录路径
+    /// * `on_progress` - 进度回调函数（可选）
+    fn download_attachments_with_issue(
+        &self,
+        issue: &JiraIssue,
         base_dir: &Path,
         on_progress: Option<ProgressCallback>,
     ) -> Result<AttachmentDownloadResult, JiraError>;
@@ -139,6 +153,62 @@ impl AttachmentService for AttachmentServiceImpl {
         }
 
         download_result.map(|_| result)
+    }
+
+    fn download_attachments_with_issue(
+        &self,
+        issue: &JiraIssue,
+        base_dir: &Path,
+        on_progress: Option<ProgressCallback>,
+    ) -> Result<AttachmentDownloadResult, JiraError> {
+        let issue_id = &issue.key;
+        let download_dir = DirectoryManager::prepare_directory(base_dir, issue_id)?;
+
+        let mut result = AttachmentDownloadResult {
+            base_dir: download_dir.clone(),
+            downloaded_files: Vec::new(),
+            failed_files: Vec::new(),
+        };
+
+        let attachments = issue.fields.attachment.clone().unwrap_or_default();
+
+        if attachments.is_empty() {
+            return Err(JiraError::ApiError(format!(
+                "No attachments found for {}",
+                issue_id
+            )));
+        }
+
+        let url_resolver = UrlResolver::new(issue, Arc::clone(&self.config_context));
+
+        let tasks: Vec<_> = attachments
+            .iter()
+            .map(|attachment| {
+                let file_path = download_dir.join(&attachment.filename);
+                let urls = url_resolver.get_download_urls(attachment);
+                (
+                    attachment.filename.clone(),
+                    attachment.clone(),
+                    file_path,
+                    urls,
+                )
+            })
+            .collect();
+
+        let max_concurrent = 5;
+        let (downloaded, failed) = match on_progress {
+            Some(progress_fn) => {
+                let wrapper: Box<dyn Fn(&str) + Send + Sync> =
+                    Box::new(move |_: &str| (*progress_fn)());
+                self.downloader.download_concurrent(tasks, max_concurrent, Some(&wrapper))
+            }
+            None => self.downloader.download_concurrent(tasks, max_concurrent, None),
+        };
+
+        result.downloaded_files.extend(downloaded);
+        result.failed_files.extend(failed);
+
+        Ok(result)
     }
 
     fn clean_attachments(&self, jira_id: Option<&str>) -> Result<(), JiraError> {

@@ -6,7 +6,7 @@
 use domain::{
     extract_jira_ticket_id, get_change_types_by_branch_type, BranchType, PullRequestService,
 };
-use prompt::{confirm, info, spinner, success, warning};
+use prompt::{br, confirm, info, spinner, success, warning};
 
 use crate::commands::pr::utils::generate_pull_request_body;
 use crate::{
@@ -31,19 +31,20 @@ impl PullRequestRewordCommand {
     }
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        info!("starting 3-stage commit summary analysis...");
-
         // 1. 解析当前分支与 PR
         let git_repo = get_git_repository();
         let current_branch = git_repo
             .get_current_branch()
             .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
-        // 2. 获取当前分支的 PR ID
+        // 2. 获取当前分支的 PR 信息（单次 API 调用，避免重复）
         let pr_service: std::sync::Arc<dyn PullRequestService> = get_pull_request_service();
 
-        let pr_id = pr_service.get_current_branch_pull_request(&current_branch)?;
-        if pr_id.is_none() {
+        let pr_info = spinner!("Fetching PR information...")
+            .with(|| pr_service.get_pr_info())
+            .map_err(|e| format!("Failed to get PR info: {}", e))?;
+
+        if pr_info.id.is_empty() {
             if self.dry_run {
                 warning!("[DRY RUN] No PR found for current branch.");
             } else {
@@ -52,8 +53,13 @@ impl PullRequestRewordCommand {
         }
 
         let summary_service = get_commit_summary_service();
-        let summary = summary_service.run_analysis(None)?;
-        info!("Pull request reword analysis completed.");
+        let summary = spinner!("Analyzing commit summary...")
+            .with(|| summary_service.run_analysis(None))
+            .map_err(|e| format!("Failed to analyze commit summary: {}", e))?;
+
+        success!("Pull request reword analysis completed.");
+        br!();
+
         info!("Pull request reword: \n{}", summary.to_markdown());
 
         if self.dry_run {
@@ -68,10 +74,6 @@ impl PullRequestRewordCommand {
             info!("Pull request reword cancelled.");
             return Err("Pull request reword cancelled.".into());
         }
-
-        let pr_status = spinner!("Fetching PR information...")
-            .with(|| pr_service.get_pr_status())
-            .map_err(|e| format!("No PR for current branch or API error: {}", e))?;
 
         // 2. 从分支名得到 branch_type，生成模板所需的 selected_change_types
         let branch_type =
@@ -91,14 +93,14 @@ impl PullRequestRewordCommand {
 
         // 4. 仅更新 PR 描述（不改标题）
         if self.dry_run {
-            info!("[DRY RUN] Would update PR #{} description:", pr_status.id);
+            info!("[DRY RUN] Would update PR #{} description:", pr_info.id);
             if !pr_body.is_empty() {
                 info!("{}", pr_body);
             }
             success!("[DRY RUN] Pull request reword skipped (no changes made).");
         } else {
             spinner!("Updating PR description...")
-                .with(|| pr_service.update_pull_request(&pr_status.id, None, Some(&pr_body)))
+                .with(|| pr_service.update_pull_request(&pr_info.id, None, Some(&pr_body)))
                 .map_err(|e| format!("Failed to update PR description: {}", e))?;
             success!("Pull request reworded successfully.");
         }

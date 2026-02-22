@@ -17,7 +17,7 @@ use crate::{
         },
         terminal_state,
     },
-    style::theme::get_theme,
+    style::theme::get_theme, success,
 };
 
 /// 进度条模式
@@ -35,7 +35,7 @@ pub(super) fn finish_with_message(bar: ProgressBar, message: impl Into<String>) 
     let theme = get_theme();
     let formatted = message.into();
     let styled = theme.progress.apply(&formatted, theme.enable_color);
-    eprintln!("{}", styled);
+    success!("{}", styled);
 }
 
 /// 进度条指示器

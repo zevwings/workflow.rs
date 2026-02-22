@@ -418,6 +418,10 @@ jobs:
       - name: 🔨 Build binaries
         shell: bash
         run: |
+          # 构建信息（用于 version 命令显示）
+          export WORKFLOW_BUILD_DATE=$(date -u +%Y-%m-%d)
+          export WORKFLOW_GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
           # 设置交叉编译环境变量（仅 Linux ARM64）
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc

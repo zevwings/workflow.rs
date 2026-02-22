@@ -5,8 +5,8 @@
 
 use std::path::PathBuf;
 
-use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
-use toolkit::{backup, cleanup_backup, rollback, Platform};
+use prompt::{banner_success, br, error, info, print, success, warning, ConfirmBuilder};
+use toolkit::{backup, cleanup_backup, log_debug, rollback, Platform};
 
 use crate::bootstrap::get_path_service;
 use crate::commands::update::{
@@ -15,6 +15,14 @@ use crate::commands::update::{
     verify::{run_installer, verify_installation},
     version::{compare_versions, get_current_version, get_target_version, VersionComparison},
 };
+
+/// Workflow ASCII banner（Oh My Zsh 风格）
+const BANNER: &str = r#" _       ______  ____  __ __ ________    ____ _       __   __
+| |     / / __ \/ __ \/ //_// ____/ /   / __ \ |     / /  / /
+| | /| / / / / / /_/ / ,<  / /_  / /   / / / / | /| / /  / /
+| |/ |/ / /_/ / _, _/ /| |/ __/ / /___/ /_/ /| |/ |/ /  /_/
+|__/|__/\____/_/ |_/_/ |_/_/   /_____/\____/ |__/|__/  (_)
+"#;
 
 /// 更新命令
 pub struct UpdateCommand {
@@ -38,28 +46,19 @@ impl UpdateCommand {
 
     /// 运行更新命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Starting Workflow CLI update...");
-        br!();
-
-        // 获取当前版本
+        // 获取当前版本和平台
         let current_version = get_current_version();
-        if let Some(ref current) = current_version {
-            info!("Current version: v{}", current);
-        } else {
+        let platform = Platform::detect().release_identifier()?;
+
+        if current_version.is_none() {
             warning!("Unable to detect current version, will continue update process");
         }
-        br!();
-
-        // 检测平台
-        let platform = Platform::detect().release_identifier()?;
-        info!("Detected platform: {}", platform);
-        br!();
 
         // 获取目标版本号
         let target_version =
             get_target_version(self.target_version.clone(), self.github_token.as_deref())?;
 
-        // 比较版本
+        // 比较版本并显示
         if let Some(ref current) = current_version {
             match compare_versions(current, &target_version) {
                 VersionComparison::UpToDate => {
@@ -67,34 +66,23 @@ impl UpdateCommand {
                     return Ok(());
                 }
                 VersionComparison::NeedsUpdate => {
-                    info!("New version found: v{} -> v{}", current, target_version);
+                    info!("v{} → v{} ({})", current, target_version, platform);
                 }
                 VersionComparison::Downgrade => {
-                    warning!(
-                        "Target version (v{}) is lower than current version (v{})",
-                        target_version,
-                        current
-                    );
-                    warning!("This will perform a downgrade operation");
+                    warning!("v{} → v{} (downgrade)", current, target_version);
                 }
             }
         } else {
-            info!("Target version: v{}", target_version);
+            info!("v{} ({})", target_version, platform);
         }
         br!();
 
         // 获取用户确认
         if !self.force {
             let confirm_message = if let Some(ref current) = current_version {
-                format!(
-                    "Are you sure you want to update Workflow CLI?\n  Current version: v{}\n  Target version: v{}",
-                    current, target_version
-                )
+                format!("Update Workflow CLI? v{} → v{}", current, target_version)
             } else {
-                format!(
-                    "Are you sure you want to update Workflow CLI to v{}?",
-                    target_version
-                )
+                format!("Update Workflow CLI to v{}?", target_version)
             };
 
             let confirmed = ConfirmBuilder::new(&confirm_message)
@@ -111,13 +99,11 @@ impl UpdateCommand {
 
         // 创建备份
         let backup_dir = self.create_backup();
-        br!();
 
         // 准备临时目录
         let temp_manager = TempDirManager::new(&target_version, &platform)?;
         let download_url = build_download_url(&target_version, &platform);
-        info!("Download URL: {}", download_url);
-        br!();
+        log_debug!("Download URL: {}", download_url);
 
         // 执行更新操作
         let update_result = self.perform_update(&temp_manager, &download_url, &target_version);
@@ -125,8 +111,11 @@ impl UpdateCommand {
         if let Some(backup_dir) = backup_dir {
             match update_result {
                 Ok(()) => {
-                    // 更新成功，清理资源
-                    success!("Workflow CLI update complete! All verifications passed.");
+                    // 更新成功，输出 banner 和完成消息
+                    br!();
+                    banner_success!(BANNER);
+                    br!();
+                    success!("Update complete (v{})", target_version);
                     Ok(())
                 }
                 Err(e) => {
@@ -164,11 +153,8 @@ impl UpdateCommand {
         };
         match backup(bin_name.as_str(), install_dir.clone()) {
             Ok(backup_dir) => {
-                info!(
-                    "Backup created: {} -> {}",
-                    install_dir.display(),
-                    backup_dir.display()
-                );
+                log_debug!("Backup: {} -> {}", install_dir.display(), backup_dir.display());
+                success!("Backup created");
                 Some(backup_dir)
             }
             Err(e) => {
@@ -189,23 +175,18 @@ impl UpdateCommand {
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 下载文件
         download_file(download_url, &temp_manager.archive_path)?;
-        br!();
 
         // 验证文件完整性
         verify_file_checksum(&temp_manager.archive_path, download_url)?;
-        br!();
 
         // 解压文件
         extract_archive(&temp_manager.archive_path, &temp_manager.extract_dir)?;
-        br!();
 
         // 安装
         run_installer(&temp_manager.extract_dir)?;
-        br!();
 
         // 验证安装结果
         let verification_result = verify_installation()?;
-        br!();
 
         if !verification_result.all_checks_passed {
             return Err("Installation verification failed, some checks did not pass".into());

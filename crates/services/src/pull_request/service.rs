@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use domain::{
-    CodePlatform, CommitSummaryService, GitHubRepository, GitRepository, PrStatus,
-    PullRequestError, PullRequestInfo, PullRequestService,
+    CodePlatform, CommitSummaryService, GitHubRepository, GitRepository, PullRequestError,
+    PullRequestInfo, PullRequestService, PullRequestStatus,
 };
 
 /// Pull Request 服务实现
@@ -46,12 +46,15 @@ impl PullRequestServiceImpl {
     /// 解析 PR ID（支持自动检测当前分支的 PR）
     fn resolve_pr_id(&self) -> Result<String, PullRequestError> {
         let current_branch = self.git_repo.get_current_branch()?;
-        self.get_current_branch_pull_request(&current_branch)?.ok_or_else(|| {
-            PullRequestError::NotFound(format!(
+        let pr_id = self.get_current_branch_pull_request(&current_branch)?;
+        if let Some(pr_id) = pr_id {
+            Ok(pr_id)
+        } else {
+            Err(PullRequestError::NotFound(format!(
                 "No PR found for current branch '{}'",
                 current_branch
-            ))
-        })
+            )))
+        }
     }
 }
 
@@ -176,18 +179,10 @@ impl PullRequestService for PullRequestServiceImpl {
         repo.merge_pull_request(pr_id, force).map_err(PullRequestError::GitHub)
     }
 
-    fn get_pr_status(&self) -> Result<PrStatus, PullRequestError> {
+    fn get_pr_info(&self) -> Result<PullRequestInfo, PullRequestError> {
         let pr_id = self.resolve_pr_id()?;
         let repo = self.get_pr_repository()?;
-        let (state, merged, _merged_at) = repo.get_pull_request_status(&pr_id)?;
-        let pr_info = repo.get_pull_request(&pr_id)?;
-
-        Ok(PrStatus {
-            id: pr_id,
-            title: pr_info.title,
-            state,
-            merged,
-        })
+        repo.get_pull_request(&pr_id).map_err(PullRequestError::GitHub)
     }
 
     fn close_pull_request(&self, pr_id: &str) -> Result<(), PullRequestError> {
@@ -199,17 +194,23 @@ impl PullRequestService for PullRequestServiceImpl {
         &self,
         state: Option<&str>,
         limit: Option<usize>,
-    ) -> Result<Vec<PrStatus>, PullRequestError> {
+    ) -> Result<Vec<PullRequestInfo>, PullRequestError> {
         let repo = self.get_pr_repository()?;
         let prs = repo.list_pull_requests(state, limit)?;
 
         Ok(prs
             .into_iter()
-            .map(|pr| PrStatus {
+            .map(|pr| PullRequestInfo {
                 id: pr.id,
                 title: pr.title,
-                state: pr.status.state,
-                merged: pr.status.merged,
+                body: pr.body,
+                status: PullRequestStatus {
+                    state: pr.status.state,
+                    merged: pr.status.merged,
+                    merged_at: pr.status.merged_at,
+                },
+                source_branch: pr.source_branch,
+                target_branch: pr.target_branch,
             })
             .collect())
     }

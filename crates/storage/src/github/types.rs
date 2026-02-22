@@ -2,17 +2,9 @@
 //!
 //! 定义所有与 GitHub API 交互时使用的数据结构。
 
+use domain::GitHubUser;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-
-/// GitHub 用户信息
-#[skip_serializing_none]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GitHubUserInfo {
-    pub login: String,
-    pub name: Option<String>,
-    pub email: Option<String>,
-}
 
 /// 创建 Pull Request 请求
 #[derive(Debug, Serialize)]
@@ -62,7 +54,7 @@ pub struct PullRequestInfo {
     pub html_url: String,
     pub head: PullRequestBranch,
     pub base: PullRequestBranch,
-    pub user: Option<GitHubUserInfo>,
+    pub user: Option<GitHubUser>,
 }
 
 /// Pull Request 分支信息

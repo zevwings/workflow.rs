@@ -1,7 +1,11 @@
 //! GitHub 实体类型
 
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
+
 /// GitHub 用户信息
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[skip_serializing_none]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GitHubUser {
     pub login: String,
     pub name: Option<String>,

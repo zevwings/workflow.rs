@@ -4,7 +4,7 @@
 
 use client::{Authorization, HttpClientHolder, HttpResponse};
 use di::Container;
-use prompt::{info, success, Spinner};
+use prompt::Spinner;
 use toolkit::log_debug;
 
 // Re-export VersionComparison from types for convenience
@@ -28,7 +28,7 @@ pub fn get_target_version(
 ) -> Result<String, Box<dyn std::error::Error>> {
     match version {
         Some(v) => {
-            info!("Using specified version: v{}", v);
+            log_debug!("Using specified version: v{}", v);
             Ok(v)
         }
         None => fetch_latest_version(github_token),
@@ -42,7 +42,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String, Box<dyn st
         GITHUB_API_BASE, REPO_OWNER, REPO_NAME
     );
 
-    let spinner = Spinner::new("Fetching latest version...");
+    let spinner = Spinner::new("Fetching...");
     let spinner_instance = spinner.start();
 
     // 获取 HTTP 客户端
@@ -74,8 +74,7 @@ fn fetch_latest_version(github_token: Option<&str>) -> Result<String, Box<dyn st
     )?;
 
     let version = tag_name.trim_start_matches('v').to_string();
-
-    success!("Latest version: v{}", version);
+    log_debug!("Latest version: v{}", version);
     Ok(version)
 }
 

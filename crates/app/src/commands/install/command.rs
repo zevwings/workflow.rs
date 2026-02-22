@@ -11,7 +11,7 @@ use std::{env, path::PathBuf};
 use clap::CommandFactory;
 use clap_complete::{generate, Shell};
 use domain::get_completion_cache_shell_dir;
-use prompt::{br, info, print, success, warning};
+use prompt::{br, info, success, warning};
 use toolkit::{detect_shell, directory, log_debug, shell_to_string};
 
 use crate::{
@@ -38,9 +38,6 @@ impl InstallCommand {
 
     /// 运行安装命令
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        print!("Installing Workflow CLI...");
-        br!();
-
         if self.completions_only {
             // 只安装 completion
             self.install_completions()?;
@@ -54,8 +51,7 @@ impl InstallCommand {
             self.install_completions()?;
         }
 
-        br!();
-        success!("Installation completed!");
+        success!("Done");
 
         Ok(())
     }
@@ -66,7 +62,7 @@ impl InstallCommand {
     /// 并将其复制到系统二进制目录（通常是 /usr/local/bin）。
     fn install_binaries(&self) -> Result<(), Box<dyn std::error::Error>> {
         let install_dir = get_path_service().get_binary_install_dir()?;
-        info!("Installing binaries to {}...", install_dir.display());
+        info!("Installing to {}...", install_dir.display());
 
         // 创建安装目录（Windows 需要）
         let install_path = PathBuf::from(&install_dir);
@@ -92,7 +88,7 @@ impl InstallCommand {
             return Err(format!("Binary file {} does not exist", source.display()).into());
         }
 
-        info!("  Installing {} -> {}", bin_name, target.display());
+        info!("  {} → {}", bin_name, target.display());
 
         // Unix: 使用 sudo 复制文件
         // Windows: 直接复制文件
@@ -134,7 +130,7 @@ impl InstallCommand {
             })?;
         }
 
-        success!("  {} installed", bin_name);
+        success!("  ✓ {}", bin_name);
 
         Ok(())
     }
@@ -143,7 +139,7 @@ impl InstallCommand {
     ///
     /// 自动检测当前 shell 类型并安装相应的 completion 脚本。
     fn install_completions(&self) -> Result<(), Box<dyn std::error::Error>> {
-        info!("Installing shell completion scripts...");
+        info!("Installing completion...");
 
         // 检测 shell 类型
         let shell = detect_shell().map_err(|e| format!("Failed to detect shell type: {}", e))?;
@@ -161,28 +157,13 @@ impl InstallCommand {
             .map_err(|e| format!("Failed to save and configure completion: {}", e))?;
 
         // 显示结果
-        success!(
-            "  Generated completion script: {}",
-            result.script_path.display()
-        );
-
-        if let Some(config_file) = &result.config_file {
-            success!(
-                "  Created completion config file: {}",
-                config_file.display()
-            );
-        }
-
         if result.config_added {
-            success!("  Added completion config to shell config file");
+            success!("  ✓ Added to shell config");
         } else {
-            info!("  Completion config already exists, skipped");
+            success!("  ✓ Already configured");
         }
 
-        success!("Shell completion installation complete");
-        br!();
-        info!("Please run the following command to reload configuration:");
-        info!("  {}", result.reload_hint);
+        info!("  Reload: {}", result.reload_hint);
 
         Ok(())
     }

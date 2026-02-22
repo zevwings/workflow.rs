@@ -88,6 +88,16 @@ impl JiraRepository for JiraRepositoryImpl {
         self.attachment_service.download_attachments(issue_id, base_dir, on_progress)
     }
 
+    fn download_attachments_with_issue(
+        &self,
+        issue: &domain::JiraIssue,
+        base_dir: &std::path::Path,
+        on_progress: Option<ProgressCallback>,
+    ) -> Result<AttachmentDownloadResult, JiraError> {
+        self.attachment_service
+            .download_attachments_with_issue(issue, base_dir, on_progress)
+    }
+
     fn clean_attachments(&self, jira_id: Option<&str>) -> Result<(), JiraError> {
         self.attachment_service.clean_attachments(jira_id)
     }

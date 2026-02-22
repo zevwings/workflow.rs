@@ -4,13 +4,10 @@
 
 use std::{fmt::Write, sync::Arc};
 
-use domain::GitHubError;
+use domain::{GitHubError, GitHubUser};
 use toolkit::log_debug;
 
-use crate::github::{
-    services::ServiceContext,
-    types::{GitHubUserInfo, PullRequestInfo},
-};
+use crate::github::{services::ServiceContext, types::PullRequestInfo};
 use client::GitHubClient;
 
 /// Pull Request 查询服务接口
@@ -50,7 +47,7 @@ pub trait PullRequestQueryService: Send + Sync {
     fn fetch_pr_info(&self, pr_number: u64) -> Result<PullRequestInfo, GitHubError>;
 
     /// 获取 GitHub 用户信息
-    fn get_user_info(&self) -> Result<GitHubUserInfo, GitHubError>;
+    fn get_user_info(&self) -> Result<GitHubUser, GitHubError>;
 }
 
 /// Pull Request 查询服务实现
@@ -213,13 +210,13 @@ impl PullRequestQueryService for PullRequestQueryServiceImpl {
         Ok(pr_info)
     }
 
-    fn get_user_info(&self) -> Result<GitHubUserInfo, GitHubError> {
+    fn get_user_info(&self) -> Result<GitHubUser, GitHubError> {
         let url = "/user";
         let response = self.client.get(url)?;
         let json_value = response
             .json()
             .map_err(|e| GitHubError::ApiError(format!("Failed to parse response JSON: {}", e)))?;
-        let user: GitHubUserInfo = serde_json::from_value(json_value).map_err(|e| {
+        let user: GitHubUser = serde_json::from_value(json_value).map_err(|e| {
             GitHubError::ApiError(format!("Failed to deserialize user info: {}", e))
         })?;
 

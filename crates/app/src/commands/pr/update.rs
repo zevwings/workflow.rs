@@ -42,7 +42,7 @@ impl PullRequestUpdateCommand {
 
         // 1. 获取 PR 状态并从标题解析 Jira key
         let pr_status = spinner!("Fetching PR information...")
-            .with(|| pr_service.get_pr_status())
+            .with(|| pr_service.get_pr_info())
             .map_err(|e| format!("Failed to get PR status: {}", e))?;
 
         info!("Found PR #{}: {}", pr_status.id, pr_status.title);

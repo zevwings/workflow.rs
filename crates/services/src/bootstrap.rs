@@ -4,17 +4,18 @@
 
 use std::sync::Arc;
 
-use client::{LLMClient, LLMConfigContext, LanguageManager};
+use client::{GitHubClient, LLMClient, LLMConfigContext, LanguageManager};
 use di::{bind, Container, InjectionError, Scope};
 use domain::{
     AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
-    GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository, PathService,
-    PullRequestService, SshService, VerificationService,
+    GitHubRepository, GitHubVerificationService, GitRepository, GlobalConfigRepository,
+    JiraRepository, PathService, PullRequestService, SshService, VerificationService,
 };
 
 use crate::{
     alias::AliasServiceImpl, branch::BranchServiceImpl, commit::CommitMessageServiceImpl,
-    completion::CompletionServiceImpl, config::VerificationServiceImpl, path::PathServiceImpl,
+    completion::CompletionServiceImpl, config::VerificationServiceImpl,
+    github::verification::GitHubVerificationServiceImpl, path::PathServiceImpl,
     pull_request::PullRequestServiceImpl, summary::CommitSummaryServiceImpl,
 };
 
@@ -93,11 +94,17 @@ pub fn register_services() -> Result<(), InjectionError> {
     })
     .in_scope(Scope::Singleton)?;
 
+    bind!(dyn GitHubVerificationService, |c: &Container| {
+        let client = c.get::<dyn GitHubClient>()?;
+        Ok(Arc::new(GitHubVerificationServiceImpl::new(client)))
+    })
+    .in_scope(Scope::Singleton)?;
+
     bind!(dyn VerificationService, |c: &Container| {
         let llm_client = c.get::<dyn LLMClient>()?;
         let config_repository = c.get::<dyn GlobalConfigRepository>()?;
         let jira_repository = c.get::<dyn JiraRepository>()?;
-        let github_repository = c.get::<dyn GitHubRepository>()?;
+        let github_verification_service = c.get::<dyn GitHubVerificationService>()?;
         let llm_language_manager = c.get::<dyn LanguageManager>()?;
         let ssh_service = c.get::<dyn SshService>()?;
         Ok(Arc::new(VerificationServiceImpl::new(
@@ -105,7 +112,7 @@ pub fn register_services() -> Result<(), InjectionError> {
             llm_language_manager,
             config_repository,
             jira_repository,
-            github_repository,
+            github_verification_service,
             ssh_service,
         )))
     })

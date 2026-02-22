@@ -8,6 +8,7 @@
 
 use std::{fs::File, io::Read, path::Path};
 
+use regex::Regex;
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
@@ -218,7 +219,10 @@ pub fn verify_checksum_lenient(
 
 /// 从下载 URL 构建校验和 URL
 ///
-/// 在下载 URL 后添加 `.sha256` 后缀来构建校验和文件的 URL。
+/// 支持两种 Release 命名约定：
+/// 1. **Workflow 格式**：`workflow-{version}-{platform}.{ext}` → `sha256-{platform}.txt`
+///    适配 GitHub Release 中 `sha256-macOS-AppleSilicon.txt` 等文件
+/// 2. **通用格式**：在 URL 后添加 `.sha256` 后缀
 ///
 /// # 参数
 ///
@@ -227,17 +231,29 @@ pub fn verify_checksum_lenient(
 /// # 返回
 ///
 /// 返回校验和文件的 URL。
-///
-/// # 示例
-///
-/// ```
-/// use toolkit::build_checksum_url;
-///
-/// let url = build_checksum_url("https://example.com/file.tar.gz");
-/// assert_eq!(url, "https://example.com/file.tar.gz.sha256");
-/// ```
 pub fn build_checksum_url(download_url: impl AsRef<str>) -> String {
-    format!("{}.sha256", download_url.as_ref())
+    let url = download_url.as_ref();
+
+    // 提取 URL 路径中的文件名（最后一个 path segment）
+    let filename = url.split('/').next_back().unwrap_or("");
+
+    // 匹配 workflow release 格式: workflow-{version}-{platform}.tar.gz 或 .zip
+    static RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+    let re = RE.get_or_init(|| {
+        Regex::new(r"workflow-[\d.]+-(.+)\.(tar\.gz|zip)$").expect("checksum regex")
+    });
+
+    if let Some(caps) = re.captures(filename) {
+        let platform = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+        if !platform.is_empty() {
+            // 替换文件名为 sha256-{platform}.txt
+            let base = url.rsplit_once('/').map(|(base, _)| base).unwrap_or(url);
+            return format!("{}/sha256-{}.txt", base, platform);
+        }
+    }
+
+    // 回退：通用格式
+    format!("{}.sha256", url)
 }
 
 // ============================================================================
@@ -327,7 +343,33 @@ mod tests {
 
     #[test]
     fn test_build_checksum_url() {
+        // 通用格式：非 workflow 命名时回退到 .sha256 后缀
         let url = build_checksum_url("https://example.com/file.tar.gz");
         assert_eq!(url, "https://example.com/file.tar.gz.sha256");
+
+        // Workflow Release 格式：生成 sha256-{platform}.txt
+        let url = build_checksum_url(
+            "https://github.com/zevwings/workflow.rs/releases/download/v1.6.9/workflow-1.6.9-macOS-AppleSilicon.tar.gz",
+        );
+        assert_eq!(
+            url,
+            "https://github.com/zevwings/workflow.rs/releases/download/v1.6.9/sha256-macOS-AppleSilicon.txt"
+        );
+
+        let url = build_checksum_url(
+            "https://github.com/zevwings/workflow.rs/releases/download/v1.6.9/workflow-1.6.9-Linux-x86_64-static.tar.gz",
+        );
+        assert_eq!(
+            url,
+            "https://github.com/zevwings/workflow.rs/releases/download/v1.6.9/sha256-Linux-x86_64-static.txt"
+        );
+
+        let url = build_checksum_url(
+            "https://github.com/zevwings/workflow.rs/releases/download/v1.6.9/workflow-1.6.9-Windows-x86_64.zip",
+        );
+        assert_eq!(
+            url,
+            "https://github.com/zevwings/workflow.rs/releases/download/v1.6.9/sha256-Windows-x86_64.txt"
+        );
     }
 }

@@ -87,7 +87,7 @@ pub use git::{
 // Re-export SSH types
 pub use ssh::{SshError, SshKeyInfo, SshService};
 // Re-export external service types
-pub use github::{GitHubError, GitHubRepository, GitHubUser};
+pub use github::{GitHubError, GitHubRepository, GitHubUser, GitHubVerificationService};
 pub use jira::{
     extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,
     AttachmentDownloadResult, DeleteHistoryResult, JiraAttachment, JiraComment, JiraComponent,
@@ -103,8 +103,7 @@ pub use path::{
 pub use pr::{
     get_all_change_types, get_change_type_by_index, get_change_type_by_name,
     get_change_type_index_by_branch_type, get_change_types_by_branch_type, ChangeType, PrContent,
-    PrStatus, PullRequestError, PullRequestInfo, PullRequestService, PullRequestStatus,
-    CHANGE_TYPES,
+    PullRequestError, PullRequestInfo, PullRequestService, PullRequestStatus, CHANGE_TYPES,
 };
 pub use summary::{
     CommitBatchAnalysis, CommitConfigAnalysis, CommitFileClassification, CommitLogicAnalysis,
