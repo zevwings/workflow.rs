@@ -88,12 +88,6 @@ pub enum Command {
     /// Pull Request management commands
     #[command(subcommand)]
     Pr(PrSubcommand),
-    /// Push current branch to remote
-    #[cfg(feature = "develop")]
-    Push,
-    /// Pull current branch from remote
-    #[cfg(feature = "develop")]
-    Pull,
     /// Shell completion management commands
     #[command(subcommand)]
     Completion(CompletionCommand),

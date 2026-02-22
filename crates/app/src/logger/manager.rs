@@ -40,10 +40,6 @@ impl LoggerManagerImpl {
             Command::Stash(_) => Some("stash"),
             Command::Tag(_) => Some("tag"),
             Command::Pr(_) => Some("pr"),
-            #[cfg(feature = "develop")]
-            Command::Push => Some("push"),
-            #[cfg(feature = "develop")]
-            Command::Pull => Some("pull"),
             Command::Completion(_) => Some("completion"),
             Command::Alias(_) => Some("alias"),
             #[cfg(feature = "develop")]

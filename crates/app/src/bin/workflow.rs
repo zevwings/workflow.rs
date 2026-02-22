@@ -88,6 +88,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let cmd = commands::repo::RepoCheckCommand::new();
                 cmd.run()?;
             }
+            RepoCommand::Push => {
+                let cmd = commands::repo::PushCommand::new();
+                cmd.run()?;
+            }
+            RepoCommand::Pull => {
+                let cmd = commands::repo::PullCommand::new();
+                cmd.run()?;
+            }
         },
         Command::Log(log_cmd) => match log_cmd {
             LogCommand::Setup => {
@@ -310,16 +318,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 cmd.run()?;
             }
-        }
-        #[cfg(feature = "develop")]
-        Command::Push => {
-            let cmd = commands::sync::push::PushCommand::new();
-            cmd.run()?;
-        }
-        #[cfg(feature = "develop")]
-        Command::Pull => {
-            let cmd = commands::sync::pull::PullCommand::new();
-            cmd.run()?;
         }
         Command::Stash(stash_cmd) => match stash_cmd {
             StashSubcommand::Push => {

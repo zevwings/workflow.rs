@@ -13,4 +13,8 @@ pub enum RepoCommand {
     Status,
     /// 验证仓库配置
     Check,
+    /// Push current branch to remote
+    Push,
+    /// Pull current branch from remote
+    Pull,
 }

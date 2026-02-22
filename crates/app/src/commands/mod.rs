@@ -26,8 +26,7 @@ pub mod rollback;
 pub mod setup;
 pub mod ssh;
 pub mod stash;
-#[cfg(feature = "develop")]
-pub mod sync;
+
 pub mod tag;
 pub mod uninstall;
 pub mod update;

@@ -58,6 +58,12 @@ pub trait WorkflowStageManager: Send + Sync {
 /// Stage 顺序固定为：Jira → SSH → GitHub → LLM → Log
 pub struct WorkflowStageManagerImpl;
 
+impl WorkflowStageManagerImpl {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
 impl WorkflowStageManager for WorkflowStageManagerImpl {
     fn stages(&self) -> Vec<&'static dyn WorkflowStage> {
         vec![

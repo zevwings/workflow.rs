@@ -10,7 +10,10 @@ use std::sync::Arc;
 use di::{bind, Container, InjectionError, Scope};
 use domain::GlobalConfigRepository;
 
-use crate::logger::{LoggerManager, LoggerManagerImpl};
+use crate::{
+    interactive::{manager::WorkflowStageManagerImpl, WorkflowStageManager},
+    logger::{LoggerManager, LoggerManagerImpl},
+};
 
 /// 注册应用层服务
 ///
@@ -77,6 +80,11 @@ pub fn register_app() -> Result<(), InjectionError> {
     bind!(dyn LoggerManager, |c: &Container| {
         let global_config_repository = c.get::<dyn GlobalConfigRepository>()?;
         Ok(Arc::new(LoggerManagerImpl::new(global_config_repository)))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    bind!(dyn WorkflowStageManager, |_: &Container| {
+        Ok(Arc::new(WorkflowStageManagerImpl::new()))
     })
     .in_scope(Scope::Singleton)?;
 
