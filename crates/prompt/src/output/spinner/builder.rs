@@ -11,6 +11,8 @@ pub struct SpinnerBuilder {
     message: String,
     frames: Option<Vec<String>>,
     interval: Option<Duration>,
+    /// 完成后清除行而非显示消息（用于后续会显示 success 等独立完成提示的场景）
+    clear_on_complete: bool,
 }
 
 impl SpinnerBuilder {
@@ -19,7 +21,17 @@ impl SpinnerBuilder {
             message: message.into(),
             frames: None,
             interval: None,
+            clear_on_complete: false,
         }
+    }
+
+    /// 完成后清除 spinner 行而非显示完成消息
+    ///
+    /// 适用于后续会调用 `success!` 等宏单独显示完成提示的场景，
+    /// 避免 "xxx..." 与 "✓ xxx" 重复显示。
+    pub fn clear_on_complete(mut self, clear: bool) -> Self {
+        self.clear_on_complete = clear;
+        self
     }
 
     pub fn with_frames(mut self, frames: Vec<impl Into<String>>) -> Self {
@@ -38,12 +50,13 @@ impl SpinnerBuilder {
         F: FnOnce() -> Result<T, E>,
     {
         let message_str = self.message.clone();
+        let clear_on_complete = self.clear_on_complete;
         let spinner = self.start();
         let start = std::time::Instant::now();
         let result = operation();
         let elapsed = start.elapsed();
 
-        if elapsed < Duration::from_millis(100) {
+        if elapsed < Duration::from_millis(100) && !clear_on_complete {
             spinner.finish_with_message(message_str);
         } else {
             spinner.stop();

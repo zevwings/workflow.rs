@@ -1,7 +1,7 @@
 //! 删除分支命令
 
 use domain::{GitError, GitRepository};
-use prompt::{error, info, multiselect, success, warning};
+use prompt::{error, info, multiselect, spinner, success, warning};
 
 use crate::bootstrap;
 
@@ -53,8 +53,8 @@ impl BranchRemoveCommand {
             vec![name.clone()]
         } else {
             // 交互式选择分支（包含本地和远程）
-            let branch_items = branch_repo
-                .list_branches(false, true)
+            let branch_items = spinner!("Loading branches...")
+                .with(|| branch_repo.list_branches(false, true))
                 .map_err(|e| format!("Failed to list branches: {}", e))?;
 
             if branch_items.is_empty() {
@@ -195,8 +195,9 @@ impl BranchRemoveCommand {
 
             // 删除本地分支
             if delete_local {
-                info!("Removing local branch '{}'...", target_branch);
-                match branch_repo.delete_local_branch(&target_branch, self.force) {
+                let result = spinner!("Removing local branch '{}'...", target_branch)
+                    .with(|| branch_repo.delete_local_branch(&target_branch, self.force));
+                match result {
                     Ok(()) => {
                         success!("Removed local branch '{}'", target_branch);
                     }
@@ -238,8 +239,9 @@ impl BranchRemoveCommand {
 
             // 删除远程分支
             if delete_remote {
-                info!("Removing remote branch '{}'...", target_branch);
-                match branch_repo.delete_remote_branch(&target_branch) {
+                let result = spinner!("Deleting remote branch '{}'...", target_branch)
+                    .with(|| branch_repo.delete_remote_branch(&target_branch));
+                match result {
                     Ok(()) => {
                         success!("Removed remote branch '{}'", target_branch);
                     }
@@ -322,8 +324,9 @@ impl BranchRemoveCommand {
         branch_name: &str,
         enable_force_all: bool,
     ) -> Result<UnmergedBranchAction, Box<dyn std::error::Error>> {
-        info!("Force removing local branch '{}'...", branch_name);
-        match branch_repo.delete_local_branch(branch_name, true) {
+        let result = spinner!("Force removing local branch '{}'...", branch_name)
+            .with(|| branch_repo.delete_local_branch(branch_name, true));
+        match result {
             Ok(()) => {
                 success!("Removed local branch '{}'", branch_name);
                 if enable_force_all {
