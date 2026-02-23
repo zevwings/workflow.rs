@@ -45,7 +45,7 @@ impl PullRequestUpdateCommand {
             .with(|| pr_service.get_pr_info())
             .map_err(|e| format!("Failed to get PR status: {}", e))?;
 
-        log_debug!("Found PR #{}: {}", pr_status.id, pr_status.title);
+        success!("Found PR #{}: {}", pr_status.id, pr_status.title);
 
         let jira_key = extract_jira_ticket_id(pr_status.title.as_str());
 
