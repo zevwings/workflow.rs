@@ -11,7 +11,7 @@ use std::{
 
 use client::{HttpClient, HttpClientHolder};
 use di::Container;
-use prompt::{Spinner, info, spinner, success, warning};
+use prompt::{info, spinner, success, warning, Spinner};
 use toolkit::{
     archive, build_checksum_url, calculate_sha256, log_debug, log_info, parse_hash_from_content,
     verify_checksum, SizeExt,
@@ -116,81 +116,81 @@ pub fn verify_file_checksum(
     // 尝试下载校验和文件（带 spinner）
     spinner!("Verifying integrity...").with(|| -> Result<(), Box<dyn std::error::Error>> {
         match client.get(&checksum_url).send() {
-        Ok(response) => {
-            if response.status == 404 {
-                // 校验和文件不存在
-                let actual_hash = calculate_sha256(archive_path).ok();
-                log_info!(
-                    "Checksum skipped (404) | url={} actual_hash={:?}",
-                    checksum_url,
-                    actual_hash
-                );
-                warning!("Checksum file not found, skipping integrity verification");
-                warning!("  Checksum URL: {}", checksum_url);
-                warning!("  This may indicate the release does not include checksum files");
-                warning!("  Proceeding with update without verification...");
+            Ok(response) => {
+                if response.status == 404 {
+                    // 校验和文件不存在
+                    let actual_hash = calculate_sha256(archive_path).ok();
+                    log_info!(
+                        "Checksum skipped (404) | url={} actual_hash={:?}",
+                        checksum_url,
+                        actual_hash
+                    );
+                    warning!("Checksum file not found, skipping integrity verification");
+                    warning!("  Checksum URL: {}", checksum_url);
+                    warning!("  This may indicate the release does not include checksum files");
+                    warning!("  Proceeding with update without verification...");
 
-                if let Some(hash) = actual_hash {
-                    info!("Downloaded file SHA256: {}", hash);
+                    if let Some(hash) = actual_hash {
+                        info!("Downloaded file SHA256: {}", hash);
+                    }
+                    return Ok(());
                 }
-                return Ok(());
-            }
 
-            if !response.is_success() {
-                let actual_hash = calculate_sha256(archive_path).ok();
-                log_info!(
-                    "Checksum skipped (HTTP {}) | url={} actual_hash={:?}",
-                    response.status,
-                    checksum_url,
-                    actual_hash
-                );
-                warning!("Failed to download checksum file: HTTP {}", response.status);
-                warning!("  Proceeding with update without verification...");
+                if !response.is_success() {
+                    let actual_hash = calculate_sha256(archive_path).ok();
+                    log_info!(
+                        "Checksum skipped (HTTP {}) | url={} actual_hash={:?}",
+                        response.status,
+                        checksum_url,
+                        actual_hash
+                    );
+                    warning!("Failed to download checksum file: HTTP {}", response.status);
+                    warning!("  Proceeding with update without verification...");
 
-                if let Some(hash) = actual_hash {
-                    info!("Downloaded file SHA256: {}", hash);
+                    if let Some(hash) = actual_hash {
+                        info!("Downloaded file SHA256: {}", hash);
+                    }
+                    return Ok(());
                 }
-                return Ok(());
-            }
 
-            let checksum_content = response
-                .text()
-                .map_err(|e| format!("Failed to read checksum file: {}", e))?
-                .to_string();
+                let checksum_content = response
+                    .text()
+                    .map_err(|e| format!("Failed to read checksum file: {}", e))?
+                    .to_string();
 
-            // 解析哈希值
-            let expected_hash = parse_hash_from_content(&checksum_content)
-                .map_err(|e| format!("Failed to parse checksum file: {}", e))?;
+                // 解析哈希值
+                let expected_hash = parse_hash_from_content(&checksum_content)
+                    .map_err(|e| format!("Failed to parse checksum file: {}", e))?;
 
-            // 验证文件
-            verify_checksum(archive_path, &expected_hash)
-                .map_err(|e| format!("File integrity verification failed: {}", e))?;
+                // 验证文件
+                verify_checksum(archive_path, &expected_hash)
+                    .map_err(|e| format!("File integrity verification failed: {}", e))?;
 
-            log_info!(
+                log_info!(
                 "Integrity verified | archive={} checksum_url={} expected_hash={} algorithm=sha256",
                 archive_path.display(),
                 checksum_url,
                 expected_hash
             );
-        }
-        Err(e) => {
-            // 网络错误等，给出警告但继续
-            let actual_hash = calculate_sha256(archive_path).ok();
-            log_info!(
-                "Checksum skipped (error) | url={} error={} actual_hash={:?}",
-                checksum_url,
-                e,
-                actual_hash
-            );
-            warning!("Failed to download checksum file: {}", e);
-            warning!("  Proceeding with update without verification...");
+            }
+            Err(e) => {
+                // 网络错误等，给出警告但继续
+                let actual_hash = calculate_sha256(archive_path).ok();
+                log_info!(
+                    "Checksum skipped (error) | url={} error={} actual_hash={:?}",
+                    checksum_url,
+                    e,
+                    actual_hash
+                );
+                warning!("Failed to download checksum file: {}", e);
+                warning!("  Proceeding with update without verification...");
 
-            // 仍然计算并显示文件的 SHA256，供用户参考
-            if let Some(hash) = actual_hash {
-                info!("Downloaded file SHA256: {}", hash);
+                // 仍然计算并显示文件的 SHA256，供用户参考
+                if let Some(hash) = actual_hash {
+                    info!("Downloaded file SHA256: {}", hash);
+                }
             }
         }
-    }
 
         Ok(())
     })?;

@@ -54,8 +54,8 @@ impl PullRequestMergeCommand {
         };
 
         // 1. 获取 PR 信息（在合并前获取源分支、目标分支和标题）
-        let pr_info = pr_service
-            .get_pull_request(&pr_id)
+        let pr_info = spinner!("Fetching PR information...")
+            .with(|| pr_service.get_pull_request(&pr_id))
             .map_err(|e| format!("Failed to get PR info: {}", e))?;
         let source_branch = pr_info.source_branch;
         let target_branch = pr_info.target_branch;
@@ -81,25 +81,29 @@ impl PullRequestMergeCommand {
             .map_err(|e| format!("Failed to get current branch: {}", e))?;
 
         let needs_stash = if current_branch != target_branch {
-            // 检查是否有未提交的更改
-            let status = git_repo
-                .get_working_tree_status()
-                .map_err(|e| format!("Failed to get status: {}", e))?;
+            spinner!("Switching to branch '{}'...", target_branch)
+                .with(|| {
+                    // 检查是否有未提交的更改
+                    let status = git_repo
+                        .get_working_tree_status()
+                        .map_err(|e| format!("Failed to get status: {}", e))?;
 
-            let needs_stash = !status.is_clean();
+                    let needs_stash = !status.is_clean();
 
-            if needs_stash {
-                log_info!("Stashing uncommitted changes before switching branch");
-                git_repo
-                    .stash_push(Some("Auto-stash before switching to target branch"))
-                    .map_err(|e| format!("Failed to stash changes: {}", e))?;
-            }
+                    if needs_stash {
+                        log_info!("Stashing uncommitted changes before switching branch");
+                        git_repo
+                            .stash_push(Some("Auto-stash before switching to target branch"))
+                            .map_err(|e| format!("Failed to stash changes: {}", e))?;
+                    }
 
-            git_repo
-                .checkout_branch(&target_branch)
-                .map_err(|e| format!("Failed to switch to branch '{}': {}", target_branch, e))?;
+                    git_repo.checkout_branch(&target_branch).map_err(|e| {
+                        format!("Failed to switch to branch '{}': {}", target_branch, e)
+                    })?;
 
-            needs_stash
+                    Ok::<bool, String>(needs_stash)
+                })
+                .map_err(|e| -> Box<dyn std::error::Error> { e.into() })?
         } else {
             false
         };
@@ -173,9 +177,8 @@ impl PullRequestMergeCommand {
 
         // 7. 恢复 stash
         if needs_stash {
-            log_info!("Restoring stashed changes");
-            git_repo
-                .stash_pop(0)
+            spinner!("Restoring stashed changes...")
+                .with(|| git_repo.stash_pop(0))
                 .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
             log_info!("Stashed changes restored");
         }
