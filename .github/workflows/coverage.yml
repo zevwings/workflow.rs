@@ -1,0 +1,98 @@
+# 测试覆盖率 Workflow
+# 周期性在 main 分支运行（每周一 00:00 UTC）
+# 用于生成覆盖率报告、上传 Codecov、检查覆盖率阈值
+# 当前已禁用 schedule，仅支持 workflow_dispatch 手动触发
+
+name: Coverage
+
+on:
+  # schedule:
+  #   - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  coverage:
+    name: 📊 Test Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main  # 定时任务始终检查 main 分支
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-coverage-
+            ${{ runner.os }}-cargo-
+
+      - name: 📦 Install system dependencies
+        run: bash scripts/dev/shell/deps/install-basic.sh
+
+      - name: 📦 Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: 📊 Generate coverage report
+        run: |
+          mkdir -p coverage
+          cargo tarpaulin \
+            --skip-clean \
+            --out Html \
+            --out Json \
+            --out Lcov \
+            --output-dir coverage \
+            --exclude-files "src/bin/*" \
+            --exclude-files "tests/*" \
+            --exclude-files "benches/*" \
+            --exclude-files "src/*/mod.rs" \
+            --exclude-files "*/testing/*" \
+            --exclude-files "*/mock/*" \
+            --timeout 300 \
+            --verbose
+
+      - name: 📤 Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          name: codecov-umbrella
+
+      - name: ✅ Check coverage threshold
+        run: |
+          python3 scripts/dev/py/testing/coverage/check.py \
+            --report coverage/tarpaulin-report.json \
+            --threshold 75
+
+      - name: 📦 Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30

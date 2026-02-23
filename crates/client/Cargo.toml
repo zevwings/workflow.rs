@@ -1,0 +1,16 @@
+[package]
+name = "client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "客户端定义层，包含 HttpClient、LLMClient、GitHubClient、JiraClient 等 trait 与类型定义"
+
+[features]
+default = []
+testing = []
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+thiserror.workspace = true

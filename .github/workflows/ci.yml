@@ -99,13 +99,26 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
 
+      - name: ✅ Verify release profile (app without develop feature)
+        run: cargo check -p app --no-default-features
+
   # 运行测试
   tests:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-latest
+    name: 🧪 Run Tests - ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
     needs: check-skip-ci
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+          - os: macos-latest
+            platform: macOS
+          - os: windows-latest
+            platform: Windows
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -130,6 +143,15 @@ jobs:
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
         run: bash scripts/dev/shell/deps/install-basic.sh
+
+      - name: 📦 Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          if ! command -v pkg-config >/dev/null 2>&1; then
+            brew install pkg-config
+          else
+            echo "✅ pkg-config is already installed"
+          fi
 
       - name: 🧪 Run tests
         run: cargo test --verbose
@@ -205,6 +227,10 @@ jobs:
       - name: 🔨 Build binaries
         shell: bash
         run: |
+          # 构建信息（用于 version 命令显示）
+          export WORKFLOW_BUILD_DATE=$(date -u +%Y-%m-%d)
+          export WORKFLOW_GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
           # 设置交叉编译环境变量（仅 Linux ARM64）
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
@@ -228,19 +254,19 @@ jobs:
             pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
           fi
 
-          # 构建项目
+          # 构建项目（--no-default-features 与 release 流程一致，验证发布用精简构建）
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
             # Linux x86_64 使用详细输出以便调试
-            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+            cargo build --release --no-default-features --target ${{ matrix.target }} -p app --bin workflow --bin install
           elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             # Linux ARM64 交叉编译
             echo "🔨 Building for Linux ARM64..."
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+            cargo build --release --no-default-features --target ${{ matrix.target }} -p app --bin workflow --bin install
           else
             # 其他目标（macOS, Windows, musl）
-            cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+            cargo build --release --no-default-features --target ${{ matrix.target }} -p app --bin workflow --bin install
           fi
 
   # 确保所有检查都通过（汇总 job）

@@ -22,13 +22,8 @@ chain_width = 80
 
 # 导入相关配置
 # 自动重新排序导入（按字母顺序）
-# 注意：这是稳定版支持的功能
 reorder_imports = true
 
-# 注意：以下功能需要 nightly 版本，当前项目使用稳定版，因此不启用
-# group_imports = "StdExternalCrate"  # 需要 nightly
-# imports_granularity = "Crate"        # 需要 nightly
-#
-# 如果需要使用这些功能，可以：
-# 1. 切换到 nightly 工具链
-# 2. 或手动维护导入顺序（标准库 → 第三方库 → 项目内部）
+# 导入分组：标准库 → 外部 crate → 项目内部
+# 需使用 nightly 执行初次格式化：rustup run nightly cargo fmt --all -- --unstable-features --config group_imports=StdExternalCrate --config imports_granularity=Crate
+# 日常使用 stable cargo fmt 即可保持格式，CI 使用 cargo fmt --check

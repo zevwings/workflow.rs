@@ -44,9 +44,9 @@ function Test-WorkflowInstalled {
     }
 }
 
-# 使用 workflow uninstall 命令卸载
+# 使用 workflow uninstall 命令卸载（v2 无此子命令时会失败并回退到手动删除）
 function Uninstall-WithCommand {
-    Write-Info "Using 'workflow uninstall' command..."
+    Write-Info "Using 'workflow uninstall' command (if supported)..."
 
     try {
         & workflow uninstall

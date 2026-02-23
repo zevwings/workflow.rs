@@ -1,96 +1,125 @@
-[package]
-name = "workflow"
-version = "1.6.9"
+[workspace]
+members = [
+    "crates/client",
+    "crates/domain",
+    "crates/infra",
+    "crates/storage",
+    "crates/services",
+    "crates/app",
+    "crates/toolkit",
+    "crates/prompt",
+    "crates/di",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
 edition = "2021"
-rust-version = "1.89.0"
-default-run = "workflow"
+rust-version = "1.93"
 
-[lib]
-name = "workflow"
-path = "src/lib.rs"
-
-[dependencies]
-clap = { version = "4", features = ["derive"] }
-clap_complete = "4.5"
-color-eyre = "0.6"
-thiserror = "1.0"
-duct = "0.13"
+[workspace.dependencies]
+# 序列化
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_with = { version = "3.0", features = ["chrono"] }
-serde-saphyr = "0.0.10"
+serde_with = "3.0"
 toml = "0.8"
-chrono = "0.4"
-console = "0.15"
-indicatif = "0.17"
-inquire = "0.9"
-dialoguer = "0.11"
-fuzzy-matcher = "0.3"
-reqwest = { version = "0.11", features = ["json", "blocking", "multipart", "rustls-tls"], default-features = false }
+
+# 错误处理
+thiserror = "1.0"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4.5"
+
+# HTTP 客户端
+reqwest = { version = "0.13", features = ["json", "blocking", "multipart", "rustls", "query"], default-features = false }
+
+# Git
+git2 = { version = "0.20.3", features = ["https", "ssh", "vendored-libgit2", "vendored-openssl"] }
+
+# Shell 命令执行
+duct = "0.13"
+
+# URL 解析
+url = "2.5"
+
+# 日志
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+
+# 工具库
+anymap2 = "0.13"
+once_cell = "1.19"
 regex = "1.10"
-open = "5.0"
+chrono = "0.4"
+dirs = "5.0"
+base64 = "0.22"
 zip = "0.6"
 flate2 = "1.0"
 walkdir = "2.4"
 tar = "0.4"
+which = "6.0"
+wait-timeout = "0.2"
+glob = "0.3"
+rand = "0.9"
 sha2 = "0.10"
-dirs = "5.0"
-base64 = "0.22"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-handlebars = "5.1"
+open = "5.0"
+handlebars = "5.0"
+shellexpand = "3.1"
+whattheshell = "1.1"
+dashmap = "6.1"
+clipboard = "0.5"
+rayon = "1.10"
+
+# 终端控制
 crossterm = "0.28"
 unicode-width = "0.1"
+fuzzy-matcher = "0.3"
 
-[dev-dependencies]
+# dev-dependencies
+rstest = "0.19"
 pretty_assertions = "1.4"
-rstest = "0.18"
+tempfile = "3.10"
+serial_test = "3.2"
+criterion = { version = "0.5", features = ["html_reports"] }
 mockito = "1.2"
 insta = { version = "1.38", features = ["json"] }
-assert_cmd = "2.0"      # CLI 命令测试
-predicates = "3.0"      # 断言谓词
-tempfile = "3.8"        # 临时文件和目录
-serial_test = "3.2.0"
-gix = "0.66"            # 现代 Git 操作库 (仅用于测试)
+filetime = "0.2.27"
 
-# clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用（避免 XCB 依赖问题）
-# Linux ARM64 交叉编译时，XCB 库在 Ubuntu 源中不可用，因此禁用 clipboard 功能
-[target.'cfg(all(not(target_env = "musl"), not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))))'.dependencies]
-clipboard = "0.5"
+# 内部 crate 依赖
+client = { path = "crates/client" }
+domain = { path = "crates/domain" }
+infra = { path = "crates/infra" }
+storage = { path = "crates/storage" }
+services = { path = "crates/services" }
+toolkit = { path = "crates/toolkit" }
+prompt = { path = "crates/prompt" }
+di = { path = "crates/di" }
 
-[[bin]]
-name = "workflow"
-path = "src/bin/workflow.rs"
+[workspace.metadata.tarpaulin]
+# 覆盖率目标
+target-coverage = 80.0
 
-[[bin]]
-name = "install"
-path = "src/bin/install.rs"
+# 排除文件
+exclude-files = [
+    "src/bin/*",
+    "tests/*",
+    "benches/*",
+    "*/testing/*",
+    "*/mock/*",
+]
 
-# Release 构建优化配置
-[profile.release]
-# 启用链接时优化（Link Time Optimization），可以显著减小二进制文件大小
-lto = true
-# 启用 strip，移除符号表和调试信息，减小二进制文件大小
-strip = true
-# 设置代码生成单元为 1，提高优化效果（但会增加编译时间）
-codegen-units = 1
+# 输出格式
+output = ["Html", "Lcov", "Json"]
 
-# Lint 配置（Rust 1.74+）
-# 强制使用顶部导入，避免局部导入
-[lints.rust]
-# 检测未使用的导入（默认启用，但明确声明）
-# 这有助于保持代码整洁，移除不必要的导入
-unused_imports = "warn"
+# 输出目录
+out = "coverage/"
 
-[lints.clippy]
-# 警告函数内语句后的 item 声明（包括 use 语句）
-# 这有助于强制使用顶部导入，避免局部导入
-# 参考：.clippy.toml 注释中的推荐配置
-items_after_statements = "warn"
+# 运行类型
+run-types = ["Tests", "Doctests"]
 
-# 注意：Rust 和 Clippy 没有直接禁止局部导入的 lint
-# 但通过以下方式可以鼓励使用顶部导入：
-# 1. rustfmt 的 reorder_imports 会自动整理导入到顶部
-# 2. unused_imports 会检测未使用的导入
-# 3. items_after_statements 会警告函数内语句后的 item 声明
-# 4. 项目开发规范要求使用顶部导入（见 docs/development.md）
+# 超时设置（秒）
+timeout = 300
+
+# 详细输出
+verbose = true

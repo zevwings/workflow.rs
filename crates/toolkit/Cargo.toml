@@ -1,0 +1,51 @@
+[package]
+name = "toolkit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "工具包（Toolkit），提供通用工具、HTTP 客户端、日志、交互式提示等基础设施"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+thiserror.workspace = true
+url.workspace = true
+
+# 日志
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Shell 自动补全
+clap_complete.workspace = true
+whattheshell.workspace = true
+
+# Shell 命令执行
+duct.workspace = true
+
+# 工具
+rand.workspace = true
+base64.workspace = true
+regex.workspace = true
+open.workspace = true
+zip.workspace = true
+flate2.workspace = true
+walkdir.workspace = true
+tar.workspace = true
+sha2.workspace = true
+dirs.workspace = true
+chrono.workspace = true
+toml.workspace = true
+handlebars.workspace = true
+shellexpand.workspace = true
+
+# clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用
+[target.'cfg(all(not(target_env = "musl"), not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))))'.dependencies]
+clipboard.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+rstest.workspace = true
+pretty_assertions.workspace = true
+serial_test.workspace = true
+filetime.workspace = true

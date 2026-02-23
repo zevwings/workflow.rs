@@ -1,0 +1,18 @@
+[package]
+name = "di"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "依赖注入容器，提供轻量级的依赖注入功能"
+
+[dependencies]
+thiserror.workspace = true
+once_cell.workspace = true
+dashmap.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+rstest.workspace = true
+serial_test.workspace = true
+insta.workspace = true
+criterion.workspace = true

@@ -1,0 +1,173 @@
+//! GitHub 仓储接口
+//!
+//! 定义与 GitHub REST API v3 交互的底层接口。
+
+use crate::{
+    github::{entity::GitHubUser, error::GitHubError},
+    pr::entity::PullRequestInfo,
+};
+
+/// GitHub 仓储接口
+///
+/// 提供与 GitHub REST API 交互的底层接口，封装了 Pull Request 和用户信息的操作。
+///
+/// # 功能范围
+///
+/// - Pull Request CRUD 操作（创建、读取、更新、删除）
+/// - PR 状态管理（合并、关闭、批准）
+/// - PR 协作（评论、diff 查看）
+/// - 用户信息查询
+///
+/// # 线程安全
+///
+/// 实现须满足 [`Send`] + [`Sync`]，以便在多线程或异步上下文中共享。
+///
+/// # 认证
+///
+/// 实现需要处理 GitHub 认证（Personal Access Token 或 OAuth），
+/// 认证逻辑由具体实现负责。
+///
+/// # 错误处理
+///
+/// 所有方法返回 [`GitHubError`]，包含：
+/// - HTTP 错误（401 未授权、403 禁止、404 未找到、422 验证失败等）
+/// - 网络错误
+/// - JSON 解析错误
+pub trait GitHubRepository: Send + Sync {
+    /// 创建 Pull Request
+    fn create_pull_request(
+        &self,
+        title: &str,
+        body: &str,
+        source_branch: &str,
+        target_branch: &str,
+    ) -> Result<String, GitHubError>; // 返回 PR ID
+
+    /// 获取 Pull Request 信息
+    fn get_pull_request(&self, pr_id: &str) -> Result<PullRequestInfo, GitHubError>;
+
+    /// 合并 Pull Request
+    fn merge_pull_request(&self, pr_id: &str, force: bool) -> Result<(), GitHubError>;
+
+    /// 获取用户信息
+    fn get_user_info(&self) -> Result<GitHubUser, GitHubError>;
+
+    /// 关闭 Pull Request
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    fn close_pull_request(&self, pr_id: &str) -> Result<(), GitHubError>;
+
+    /// 列出 Pull Requests
+    ///
+    /// # 参数
+    /// * `state` - PR 状态筛选（如 "open", "closed", "merged"）
+    /// * `limit` - 返回数量限制
+    ///
+    /// # 返回
+    /// Pull Request 信息列表
+    fn list_pull_requests(
+        &self,
+        state: Option<&str>,
+        limit: Option<usize>,
+    ) -> Result<Vec<PullRequestInfo>, GitHubError>;
+
+    /// 更新 Pull Request 的标题和/或描述
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    /// * `title` - 新的标题（可选）
+    /// * `body` - 新的描述（可选）
+    fn update_pull_request(
+        &self,
+        pr_id: &str,
+        title: Option<&str>,
+        body: Option<&str>,
+    ) -> Result<(), GitHubError>;
+
+    /// 添加评论到 Pull Request
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    /// * `comment` - 评论内容
+    fn add_comment(&self, pr_id: &str, comment: &str) -> Result<(), GitHubError>;
+
+    /// 批准 Pull Request
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    fn approve_pull_request(&self, pr_id: &str) -> Result<(), GitHubError>;
+
+    /// 获取 Pull Request 的 diff 内容
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    ///
+    /// # 返回
+    /// PR 的 diff 内容（字符串格式）
+    fn get_pr_diff(&self, pr_id: &str) -> Result<String, GitHubError>;
+
+    /// 获取 PR 信息（格式化字符串）
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    ///
+    /// # 返回
+    /// 格式化的 PR 信息字符串
+    fn get_pull_request_info(&self, pr_id: &str) -> Result<String, GitHubError>;
+
+    /// 获取 PR URL
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    ///
+    /// # 返回
+    /// PR 的 URL
+    fn get_pull_request_url(&self, pr_id: &str) -> Result<String, GitHubError>;
+
+    /// 获取 PR 标题
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    ///
+    /// # 返回
+    /// PR 的标题
+    fn get_pull_request_title(&self, pr_id: &str) -> Result<String, GitHubError>;
+
+    /// 获取 PR body 内容
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    ///
+    /// # 返回
+    /// PR 的 body 内容（可能为空）
+    fn get_pull_request_body(&self, pr_id: &str) -> Result<Option<String>, GitHubError>;
+
+    /// 获取 PR 状态
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    ///
+    /// # 返回
+    /// 元组：(状态, 是否已合并, 合并时间)
+    fn get_pull_request_status(
+        &self,
+        pr_id: &str,
+    ) -> Result<(String, bool, Option<String>), GitHubError>;
+
+    /// 更新 PR 的 base 分支
+    ///
+    /// # 参数
+    /// * `pr_id` - PR ID
+    /// * `new_base` - 新的 base 分支名
+    fn update_pr_base(&self, pr_id: &str, new_base: &str) -> Result<(), GitHubError>;
+
+    /// 获取当前分支的 PR ID
+    ///
+    /// # 返回
+    /// 当前分支关联的 PR ID，如果不存在则返回 `None`
+    fn get_current_branch_pull_request(
+        &self,
+        current_branch: &str,
+    ) -> Result<Option<String>, GitHubError>;
+}

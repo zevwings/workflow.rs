@@ -16,6 +16,10 @@
 *.ipr
 out/
 
+# Claude AI
+.claude/
+.claude/**
+
 # IDE - RustRover
 .rustrover/
 
@@ -65,6 +69,10 @@ $RECYCLE.BIN/
 *.msp
 *.lnk
 
+.rs/
+.rs2/
+.git2/
+
 # Logs
 *.log
 
@@ -96,3 +104,8 @@ docs/analysis/**
 !docs/analysis/.gitkeep
 docs/report/**
 !docs/report/.gitkeep
+
+# 测试覆盖率输出
+/coverage/
+*.profraw
+*.profdata

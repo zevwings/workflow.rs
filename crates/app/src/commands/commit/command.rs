@@ -1,0 +1,167 @@
+//! Commit create 命令实现
+//!
+//! 智能生成 commit message 并提交代码。
+
+use domain::GitRepository;
+use prompt::{confirm, error, info, spinner, success};
+use toolkit::{log_debug, log_info, log_info_with_fields};
+
+use crate::bootstrap;
+use crate::util::safe_push;
+
+/// Commit Create 命令
+pub struct CommitCommand {
+    /// 是否自动添加所有更改
+    all: bool,
+    /// 是否自动推送到远端
+    push: bool,
+    /// 是否为 dry-run 模式
+    dry_run: bool,
+    /// 自定义 commit message（如果提供则跳过 AI 生成）
+    message: Option<String>,
+}
+
+impl CommitCommand {
+    /// 创建新的 CommitCreateCommand
+    ///
+    /// # 参数
+    /// - `all`: 是否添加所有更改到暂存区
+    /// - `push`: 是否在提交后自动推送到远端
+    /// - `dry_run`: 是否为 dry-run 模式（仅预览不实际提交）
+    /// - `message`: 可选的自定义 commit message
+    pub fn new(all: bool, push: bool, dry_run: bool, message: Option<String>) -> Self {
+        Self {
+            all,
+            push,
+            dry_run,
+            message,
+        }
+    }
+
+    /// 运行 `workflow commit create` 命令
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let git_repo = bootstrap::get_git_repository();
+
+        // Step 1: Stage 代码（如果需要）
+        if self.all {
+            log_debug!("Adding all files to staging area...");
+            git_repo
+                .add_all()
+                .map_err(|e| format!("Failed to add files to staging area: {}", e))?;
+        }
+
+        // Step 2: 检查暂存区是否有变更
+        let staged_files = git_repo
+            .get_staged_files()
+            .map_err(|e| format!("Failed to get staged files: {}", e))?;
+
+        if staged_files.is_empty() {
+            error!("No staged changes to commit. Use 'git add' to stage files first.");
+            return Err("No staged changes".into());
+        }
+
+        log_debug!("Found {} staged file(s) to commit", staged_files.len());
+
+        // Step 3: 生成或使用 commit message
+        let commit_message = if let Some(msg) = &self.message {
+            // 使用用户提供的 message
+            msg.clone()
+        } else {
+            // 使用 AI 生成 commit message
+            log_info!("Analyzing changes and generating commit message...");
+
+            let commit_message_service = bootstrap::get_commit_message_service();
+            let analysis =
+                spinner!("Analyzing changes and generating commit message...").with(|| {
+                    commit_message_service
+                        .generate_for_staged()
+                        .map_err(|e| format!("Failed to generate commit message: {}", e))
+                })?;
+
+            // 结构化输出生成的 commit message（便于日志采集与检索）
+            log_info_with_fields!(
+                title = % analysis.commit_message.title,
+                body = % analysis.commit_message.body,
+                footer = % analysis.commit_message.footer,
+                "Generated commit message"
+            );
+
+            if self.dry_run {
+                info!(
+                    "[DRY RUN] Commit message: {}",
+                    analysis.commit_message.title
+                );
+                return Ok(());
+            }
+
+            // 构建完整的 commit message
+            let mut full_message = analysis.commit_message.title.clone();
+            if !analysis.commit_message.body.is_empty() {
+                full_message.push_str("\n\n");
+                full_message.push_str(&analysis.commit_message.body);
+            }
+            if !analysis.commit_message.footer.is_empty() {
+                full_message.push_str("\n\n");
+                full_message.push_str(&analysis.commit_message.footer);
+            }
+
+            full_message
+        };
+
+        // dry_run 时仅预览，不实际提交
+        if self.dry_run {
+            info!(
+                "[DRY RUN] Would commit with message: {}",
+                commit_message.lines().next().unwrap_or("")
+            );
+            return Ok(());
+        }
+
+        info!(
+            "Committing changes with message: {}",
+            commit_message.lines().next().unwrap_or("")
+        );
+
+        // Step 4: 提交代码
+        let commit_sha = git_repo.commit(&commit_message, false).map_err(|e| {
+            let err_msg = e.to_string();
+            if err_msg.contains("nothing to commit") {
+                return "No changes to commit".into();
+            }
+            format!("Failed to commit changes: {}", e)
+        })?;
+
+        let short_sha = &commit_sha[..commit_sha.len().min(7)];
+        success!("Created commit: {}", short_sha);
+
+        // Step 5: 询问是否推送到远端
+        if self.push {
+            self.push_to_remote(&git_repo)?;
+        } else {
+            let should_push = confirm!("Push to remote?").default(true).prompt()?;
+            if should_push {
+                self.push_to_remote(&git_repo)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 推送到远端
+    fn push_to_remote(
+        &self,
+        git_repo: &std::sync::Arc<dyn GitRepository>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let branch_name = git_repo
+            .get_current_branch()
+            .map_err(|e| format!("Failed to get current branch: {}", e))?;
+
+        spinner!("Pushing to origin/{}...", branch_name)
+            .with(|| safe_push(&branch_name, false))
+            .map_err(|e| format!("Failed to push: {}", e))?;
+
+        success!("Pushed to origin/{}", branch_name);
+
+        Ok(())
+    }
+}

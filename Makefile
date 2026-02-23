@@ -1,23 +1,29 @@
-.PHONY: help build release clean install test lint fix setup uninstall dev bloat check-rustfmt check-clippy audit outdated check-cargo-audit check-cargo-outdated
+# 主 Makefile
+# 包含所有功能模块（按依赖顺序）
 
-# 默认目标
+# 声明所有伪目标（统一管理）
+.PHONY: help dev release clean install update uninstall test test-all lint fix setup bloat check-rustfmt check-clippy coverage coverage-detailed coverage-check coverage-open coverage-ci coverage-trend coverage-clean check-docs-links audit outdated check-cargo-audit check-cargo-outdated check-tarpaulin install-hooks bench bench-cli bench-storage bench-report bench-open bench-compare bench-regression check-criterion
+
+# 设置默认目标
 .DEFAULT_GOAL := help
 
 # 包含功能模块（按依赖顺序）
-include make/Makefile.build.mk       # 1. 构建和安装
-include make/Makefile.lint.mk        # 2. 代码检查
-include make/Makefile.test.mk        # 3. 测试
-include make/Makefile.tools.mk       # 4. 工具安装
-include make/Makefile.analyze.mk     # 5. 分析工具
-include make/Makefile.deps.mk        # 6. 依赖管理
+include make/Makefile.build.mk       # 1. 构建和安装（命令: dev, release, clean, install, update, uninstall | 变量: BINARY_NAME）
+include make/Makefile.lint.mk        # 2. 代码检查（命令: lint, fix, check-rustfmt, check-clippy, check-docs-links）
+include make/Makefile.test.mk        # 3. 测试（命令: test, test-all, coverage, coverage-open, coverage-ci, coverage-trend）
+include make/Makefile.bench.mk       # 4. 性能测试（命令: bench, bench-cli, bench-storage, bench-report, bench-compare, bench-regression）
+include make/Makefile.tools.mk       # 5. 工具安装（命令: setup, install-hooks）
+include make/Makefile.analyze.mk     # 6. 分析工具（命令: bloat）
+include make/Makefile.deps.mk        # 7. 依赖管理（命令: audit, outdated）
 
-# 显示帮助信息
+# 集成所有模块的 help 信息
 help:
 	@echo "可用的 Make 目标："
 	@echo ""
 	$(HELP_BUILD)
 	$(HELP_LINT)
 	$(HELP_TEST)
+	$(HELP_BENCH)
 	$(HELP_TOOLS)
 	$(HELP_ANALYZE)
 	$(HELP_DEPS)

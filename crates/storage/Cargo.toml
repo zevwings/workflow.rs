@@ -1,0 +1,68 @@
+[package]
+name = "storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "存储实现层（Storage Adapters），实现各种仓储接口，提供数据持久化和外部服务调用"
+
+[features]
+default = []
+testing = ["dep:tempfile"]
+
+[dependencies]
+domain.workspace = true
+client.workspace = true
+toolkit.workspace = true
+di.workspace = true
+
+# HTTP 客户端
+reqwest.workspace = true
+
+# Shell 工具
+duct.workspace = true
+
+# 工具
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+thiserror.workspace = true
+regex.workspace = true
+glob.workspace = true
+base64.workspace = true
+zip.workspace = true
+flate2.workspace = true
+walkdir.workspace = true
+tar.workspace = true
+dirs.workspace = true
+chrono.workspace = true
+toml.workspace = true
+
+# Git 库
+git2.workspace = true
+
+# Hook 工具检测
+which.workspace = true
+wait-timeout.workspace = true
+
+# 延迟初始化
+once_cell.workspace = true
+
+# 测试辅助（可选）
+tempfile = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile.workspace = true
+criterion.workspace = true
+
+[[test]]
+name = "stress_tests"
+required-features = ["testing"]
+
+[[bench]]
+name = "git_services_bench"
+harness = false
+required-features = ["testing"]
+
+[[example]]
+name = "performance_monitoring"
+required-features = ["testing"]

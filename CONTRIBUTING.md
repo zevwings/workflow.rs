@@ -95,7 +95,7 @@ make setup
 - 修复分支：`fix/pr-merge-error`
 - 热修复分支：`hotfix/critical-bug`
 
-**注意**：Workflow CLI 支持通过模板系统自定义分支命名格式。详细配置方法请参考 [模板配置指南](./docs/guidelines/template.md#分支命名模板-templatebranch)。
+**注意**：分支与提交模板等可在项目级配置中设置，详见 [迁移文档 - 分支配置](./docs/migration/README.md) 与 `workflow repo setup`。
 
 ### 工作流程
 
@@ -307,7 +307,7 @@ Extract retry logic into a separate module for better maintainability.
 - **正文**：详细说明变更原因和方式，每行不超过 72 个字符
 - **页脚**：引用相关 issue（如 `Closes #123`）
 
-**注意**：Workflow CLI 支持通过模板系统自定义提交消息格式，包括是否使用 Conventional Commits 格式。详细配置方法请参考 [模板配置指南](./docs/guidelines/template.md#提交消息模板-templatecommit)。
+**注意**：提交消息格式可在项目级配置中设置，详见 `workflow repo setup` 与 [架构设计](./docs/guidelines/architecture.md)。
 
 ---
 
@@ -526,34 +526,32 @@ Related to #456
 
 ### 模块组织
 
-遵循三层架构：
-- **CLI 入口层** (`bin/`, `main.rs`)：命令行参数解析和命令分发
-- **命令封装层** (`commands/`)：CLI 命令封装，处理用户交互
-- **核心业务逻辑层** (`lib/`)：所有业务逻辑实现
+遵循 Cargo workspace 多 crate 架构（详见 [架构设计](./docs/guidelines/architecture.md)）：
+- **app**：CLI 入口（`bin/workflow.rs`、`bin/install.rs`）、`cli/` 参数与子命令、`commands/` 命令实现、`workflows/` 工作流编排
+- **domain**：领域模型与仓储接口
+- **storage**：存储与 Git 等实现
+- **services**：应用服务（PR、completion、path、alias 等）
+- **toolkit**：HTTP、日志、路径、模板等通用能力
+- **prompt**：交互与输出
+- **registry**：依赖注入
 
 ---
 
 ## 🔗 相关文档
 
-### 开发规范
+### 开发与测试
 
-- [开发规范文档](./docs/guidelines/development/README.md) - 详细的开发规范和最佳实践
-- [测试规范文档](./docs/guidelines/testing.md) - 测试规范和测试方法
-- [文档编写指南](./docs/guidelines/document.md) - 文档编写规范和模板
+- [开发规范](./docs/guidelines/development.md) - 代码风格、错误处理、命名、模块组织、文档规范、提交规范、检查流程
+- [测试规范](./docs/guidelines/testing.md) - 测试组织、编写规范、命令参考、测试工具
 
-### 工作流指南
+### 架构与迁移
 
-- [提交前检查指南](./docs/guidelines/development/workflows/pre-commit.md) - 提交前快速检查（5-15分钟）
-- [综合深入检查指南](./docs/guidelines/development/workflows/review.md) - 综合深入检查（2-4小时）
+- [架构设计](./docs/guidelines/architecture.md) - 项目整体架构（workspace 与 crate 结构、模块职责、数据流向）
+- [迁移文档](./docs/migration/README.md) - 版本迁移与配置说明
 
-### 架构文档
+### 文档索引
 
-- [总体架构文档](./docs/architecture/architecture.md) - 项目整体架构设计
-- [CLI 架构文档](./docs/architecture/cli.md) - CLI 层架构设计
-
-### 模板配置
-
-- [模板配置指南](./docs/guidelines/template.md) - 分支命名、提交消息、PR 模板配置
+- [文档索引](./docs/README.md) - 完整文档目录与快速导航
 
 ---
 
@@ -597,4 +595,4 @@ Related to #456
 
 ---
 
-**最后更新**: 2025-12-23
+**最后更新**: 2026-02-06
