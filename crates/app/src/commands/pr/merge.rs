@@ -178,9 +178,10 @@ impl PullRequestMergeCommand {
         // 7. 恢复 stash
         if needs_stash {
             spinner!("Restoring stashed changes...")
+                .clear_on_complete(true)
                 .with(|| git_repo.stash_pop(0))
                 .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
-            log_info!("Stashed changes restored");
+            success!("Stashed changes restored");
         }
 
         success!("PR merge workflow completed!");
