@@ -16,6 +16,6 @@ pub enum CommitMessageError {
     #[error("There are no changes to commit: {0}")]
     EmptyChanges(String),
 
-    #[error("The Git operation failed")]
+    #[error("The Git operation failed: {0}")]
     Git(#[from] GitError),
 }

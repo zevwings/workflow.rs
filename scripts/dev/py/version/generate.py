@@ -200,9 +200,20 @@ def update_cargo_files(version: str) -> None:
     # 读取 Cargo.toml
     content = cargo_toml_path.read_text()
 
-    # 更新版本号
-    version_regex = re.compile(r'version\s*=\s*"[^"]+"')
-    updated_content = version_regex.sub(f'version = "{version}"', content)
+    # 1. 更新 [workspace.package] 版本号
+    version_regex = re.compile(r'^(\[workspace\.package\][^\[]*?)version\s*=\s*"[^"]+"', re.MULTILINE)
+    updated_content = version_regex.sub(r'\1version = "' + version + '"', content)
+
+    # 2. 更新 [workspace.dependencies] 中内部 crate 的版本号
+    # 匹配格式: crate_name = { path = "crates/xxx", version = "x.x.x" }
+    internal_crates = ['client', 'domain', 'infra', 'storage', 'services', 'toolkit', 'prompt', 'di']
+    for crate in internal_crates:
+        # 匹配内部 crate 的版本声明
+        crate_version_regex = re.compile(
+            rf'^({crate}\s*=\s*{{\s*path\s*=\s*"crates/[^"]+"\s*,\s*version\s*=\s*)"[^"]+"',
+            re.MULTILINE
+        )
+        updated_content = crate_version_regex.sub(r'\1"' + version + '"', updated_content)
 
     # 写入文件
     cargo_toml_path.write_text(updated_content)

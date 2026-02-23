@@ -13,7 +13,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.0.1"
+version = "2.0.0"
 edition = "2021"
 rust-version = "1.93"
 
@@ -87,14 +87,14 @@ insta = { version = "1.38", features = ["json"] }
 filetime = "0.2.27"
 
 # 内部 crate 依赖
-client = { path = "crates/client" }
-domain = { path = "crates/domain" }
-infra = { path = "crates/infra" }
-storage = { path = "crates/storage" }
-services = { path = "crates/services" }
-toolkit = { path = "crates/toolkit" }
-prompt = { path = "crates/prompt" }
-di = { path = "crates/di" }
+client = { path = "crates/client", version = "2.0.0" }
+domain = { path = "crates/domain", version = "2.0.0" }
+infra = { path = "crates/infra", version = "2.0.0" }
+storage = { path = "crates/storage", version = "2.0.0" }
+services = { path = "crates/services", version = "2.0.0" }
+toolkit = { path = "crates/toolkit", version = "2.0.0" }
+prompt = { path = "crates/prompt", version = "2.0.0" }
+di = { path = "crates/di", version = "2.0.0" }
 
 [workspace.metadata.tarpaulin]
 # 覆盖率目标
