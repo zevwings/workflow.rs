@@ -2,6 +2,7 @@
 
 use domain::{extract_jira_ticket_id, GitError};
 use prompt::{confirm, info, spinner, success, warning};
+use toolkit::log_info;
 
 use crate::{
     bootstrap::{
@@ -47,7 +48,7 @@ impl PullRequestMergeCommand {
                     )
                 })?;
 
-            success!("Found PR ID: {}", pr_id);
+            log_info!("Found PR ID: {}", pr_id);
 
             pr_id
         };
@@ -88,7 +89,7 @@ impl PullRequestMergeCommand {
             let needs_stash = !status.is_clean();
 
             if needs_stash {
-                info!("Stashing uncommitted changes before switching branch...");
+                log_info!("Stashing uncommitted changes before switching branch");
                 git_repo
                     .stash_push(Some("Auto-stash before switching to target branch"))
                     .map_err(|e| format!("Failed to stash changes: {}", e))?;
@@ -97,7 +98,6 @@ impl PullRequestMergeCommand {
             git_repo
                 .checkout_branch(&target_branch)
                 .map_err(|e| format!("Failed to switch to branch '{}': {}", target_branch, e))?;
-            success!("Switched to branch '{}'", target_branch);
 
             needs_stash
         } else {
@@ -108,7 +108,12 @@ impl PullRequestMergeCommand {
         spinner!("Pulling latest changes from '{}'...", target_branch)
             .with(|| safe_pull(&target_branch, &PullOptions::no_stash()))
             .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
-        success!("Pulled latest changes from '{}'", target_branch);
+
+        if current_branch != target_branch {
+            success!("Switched to '{}' and pulled latest", target_branch);
+        } else {
+            success!("Pulled latest changes from '{}'", target_branch);
+        }
 
         // 6. 删除本地和远程源分支
         let (local_exists, remote_exists) =
@@ -116,10 +121,11 @@ impl PullRequestMergeCommand {
 
         // 6.1 删除本地分支
         if local_exists {
-            info!("Cleaning up local branch '{}'...", source_branch);
+            log_info!("Cleaning up local branch '{}'", source_branch);
             match git_repo.delete_local_branch(&source_branch, false) {
                 Ok(()) => {
-                    success!("Deleted local branch '{}'", source_branch);
+                    log_info!("Deleted local branch '{}'", source_branch);
+                    success!("Cleaned up local branch '{}'", source_branch);
                 }
                 Err(e) => {
                     // 使用模式匹配精确判断错误类型
@@ -134,7 +140,8 @@ impl PullRequestMergeCommand {
                             if force_delete {
                                 match git_repo.delete_local_branch(&source_branch, true) {
                                     Ok(()) => {
-                                        success!("Force deleted local branch '{}'", source_branch);
+                                        log_info!("Force deleted local branch '{}'", source_branch);
+                                        success!("Cleaned up local branch '{}'", source_branch);
                                     }
                                     Err(e) => {
                                         warning!(
@@ -145,7 +152,7 @@ impl PullRequestMergeCommand {
                                     }
                                 }
                             } else {
-                                info!("Skipped deleting branch '{}'", source_branch);
+                                log_info!("Skipped deleting branch '{}'", source_branch);
                             }
                         }
                         _ => {
@@ -166,11 +173,11 @@ impl PullRequestMergeCommand {
 
         // 7. 恢复 stash
         if needs_stash {
-            info!("Restoring stashed changes...");
+            log_info!("Restoring stashed changes");
             git_repo
                 .stash_pop(0)
                 .map_err(|e| format!("Failed to restore stashed changes: {}", e))?;
-            success!("Stashed changes restored");
+            log_info!("Stashed changes restored");
         }
 
         success!("PR merge workflow completed!");
@@ -232,7 +239,7 @@ impl PullRequestMergeCommand {
                 );
             }
         } else {
-            info!("No Jira ticket associated with this PR");
+            log_info!("No Jira ticket associated with this PR");
         }
 
         // 4. 删除工作历史记录中的 PR 条目（仅当有仓库 URL 时）

@@ -2,6 +2,7 @@
 
 use domain::GitRepository;
 use prompt::{error, info, spinner, success};
+use toolkit::log_info;
 
 use crate::bootstrap;
 use crate::util::safe_push;
@@ -53,7 +54,7 @@ pub fn commit_changes(
         return Err("No commit message available".into());
     };
 
-    info!("Committing changes with message: {}", commit_message);
+    log_info!("Committing changes with message: {}", commit_message);
     // 直接尝试提交所有更改（包括未暂存的）
     // commit 函数会处理 .gitignore 并检查是否有实际更改
     let commit_sha = branch_repo.commit(&commit_message, true).map_err(|e| {

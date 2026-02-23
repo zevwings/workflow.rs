@@ -1,6 +1,6 @@
 use domain::{get_change_types_by_branch_type, BranchType, GitRepository, JiraIssue};
 use prompt::{error, info, input, spinner, success, warning};
-use toolkit::{log_debug, log_error};
+use toolkit::{log_debug, log_error, log_info};
 
 use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
 use crate::{
@@ -200,8 +200,8 @@ impl PullRequestCreateCommand {
             );
             info!("[DRY RUN] Would switch to branch '{}'", new_branch_name);
         } else {
-            info!(
-                "Creating branch '{}' from '{}'...",
+            log_info!(
+                "Creating branch '{}' from '{}'",
                 new_branch_name, source_branch
             );
             branch_repo

@@ -2,7 +2,7 @@
 
 use domain::{CodePlatform, GitRepository};
 use prompt::{error, info, select, spinner, success, warning};
-use toolkit::BrowserExt;
+use toolkit::{log_info, BrowserExt};
 
 use crate::bootstrap;
 use crate::commands::pr::create::types::TargetBranchOption;
@@ -135,7 +135,6 @@ pub fn create_pull_request(
         .map_err(|e| format!("Failed to create Pull Request: {}", e))?;
 
     success!("Pull Request created successfully!");
-    info!("PR ID: {}", pr_id);
 
     // 获取 PR URL 并打开浏览器
     let repo_info = branch_repo.get_repo_info();
@@ -149,7 +148,7 @@ pub fn create_pull_request(
     };
 
     if let Some(ref url) = pr_url {
-        info!("PR URL: {}", url);
+        info!("PR #{}: {}", pr_id, url);
 
         // 使用默认浏览器打开 PR 页面
         match url.open_in_browser() {
@@ -167,6 +166,7 @@ pub fn create_pull_request(
             pr_url: url.clone(),
         }))
     } else {
+        info!("PR #{}", pr_id);
         warning!(
             "Could not generate PR URL. Platform: {:?}, Repo: {:?}",
             repo_info.kind,
@@ -255,13 +255,22 @@ pub fn generate_pr_summary(
     // 渲染 PR body
     let pr_body = analysis.to_markdown();
 
-    // 显示摘要信息
-    info!("Type: {}", type_);
-    if let Some(ref s) = scope {
-        info!("Scope: {}", s);
+    // 调试信息写入 log
+    log_info!("PR summary type={}, scope={:?}", type_, scope);
+    log_info!("PR body:\n{}", pr_body);
+
+    // 终端仅显示简要摘要（Summary 第一段）
+    let summary_preview = pr_body
+        .strip_prefix("## Summary\n\n")
+        .unwrap_or(&pr_body)
+        .split("\n\n")
+        .next()
+        .unwrap_or("")
+        .trim();
+    if !summary_preview.is_empty() {
+        info!("{}", summary_preview);
     }
     success!("PR Summary generated successfully!");
-    info!("\n{}", pr_body);
 
     Ok(PrSummaryResult {
         type_,
