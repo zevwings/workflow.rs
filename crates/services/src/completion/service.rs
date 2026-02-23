@@ -380,6 +380,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_save_and_configure_zsh_creates_script_and_config() {
         with_test_home(|_| {
             let path_service: Arc<dyn PathService> = Arc::new(PathServiceImpl::new());
@@ -400,6 +401,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_save_and_configure_fish_writes_source_to_config() {
         with_test_home(|_| {
             let path_service: Arc<dyn PathService> = Arc::new(PathServiceImpl::new());
@@ -421,6 +423,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_check_status_marks_existing_script() {
         with_test_home(|_| {
             let path_service = Arc::new(PathServiceImpl::new());
@@ -436,6 +439,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_remove_all_removes_scripts_and_config() {
         with_test_home(|_| {
             let path_service = Arc::new(PathServiceImpl::new());
@@ -455,6 +459,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_save_and_configure_bash_creates_script_and_config() {
         with_test_home(|_| {
             let path_service = Arc::new(PathServiceImpl::new());
@@ -475,6 +480,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn test_save_and_configure_powershell_writes_source_to_config() {
         with_test_home(|_| {
             let path_service: Arc<dyn PathService> = Arc::new(PathServiceImpl::new());
@@ -496,6 +502,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_save_and_configure_idempotent() {
         with_test_home(|_| {
             let path_service = Arc::new(PathServiceImpl::new());
@@ -510,6 +517,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_save_and_configure_with_custom_output_dir() {
         with_test_home(|temp| {
             let path_service = Arc::new(PathServiceImpl::new());
@@ -551,6 +559,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_remove_current_shell_only() {
         with_test_home(|_| {
             let path_service = Arc::new(PathServiceImpl::new());
@@ -580,6 +589,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_check_status_detects_multiple_shells() {
         with_test_home(|_| {
             let path_service = Arc::new(PathServiceImpl::new());
