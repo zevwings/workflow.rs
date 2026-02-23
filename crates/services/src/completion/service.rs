@@ -345,7 +345,27 @@ mod tests {
         // 使用 into_inner 恢复中毒的锁，避免前序测试 panic 后影响后续测试
         let _lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let temp = tempdir().expect("tempdir");
-        let _guard = EnvGuard::new(&temp.path().to_path_buf());
+        let home_path = temp.path().to_path_buf();
+
+        // 为不同操作系统创建必要的配置目录
+        #[cfg(target_os = "windows")]
+        {
+            // Windows: 创建 PowerShell 配置目录
+            let ps_dir = home_path.join("Documents").join("PowerShell");
+            fs::create_dir_all(&ps_dir).expect("create PowerShell dir");
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            // Unix: 创建常用的配置目录
+            let config_dir = home_path.join(".config");
+            fs::create_dir_all(config_dir.join("fish")).expect("create fish config dir");
+            fs::create_dir_all(config_dir.join("powershell"))
+                .expect("create powershell config dir");
+            fs::create_dir_all(config_dir.join("elvish")).expect("create elvish config dir");
+        }
+
+        let _guard = EnvGuard::new(&home_path);
         f(&temp);
     }
 
