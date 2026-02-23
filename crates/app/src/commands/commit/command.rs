@@ -4,7 +4,7 @@
 
 use domain::GitRepository;
 use prompt::{confirm, error, info, spinner, success};
-use toolkit::{log_info, log_info_with_fields};
+use toolkit::{log_debug, log_info, log_info_with_fields};
 
 use crate::bootstrap;
 use crate::util::safe_push;
@@ -44,7 +44,7 @@ impl CommitCommand {
 
         // Step 1: Stage 代码（如果需要）
         if self.all {
-            info!("Adding all files to staging area...");
+            log_debug!("Adding all files to staging area...");
             git_repo
                 .add_all()
                 .map_err(|e| format!("Failed to add files to staging area: {}", e))?;
@@ -60,7 +60,7 @@ impl CommitCommand {
             return Err("No staged changes".into());
         }
 
-        info!("Found {} staged file(s) to commit", staged_files.len());
+        log_debug!("Found {} staged file(s) to commit", staged_files.len());
 
         // Step 3: 生成或使用 commit message
         let commit_message = if let Some(msg) = &self.message {
@@ -117,7 +117,7 @@ impl CommitCommand {
             return Ok(());
         }
 
-        info!(
+        log_debug!(
             "Committing changes with message: {}",
             commit_message.lines().next().unwrap_or("")
         );
@@ -131,7 +131,8 @@ impl CommitCommand {
             format!("Failed to commit changes: {}", e)
         })?;
 
-        success!("Created commit: {}", commit_sha);
+        let short_sha = &commit_sha[..commit_sha.len().min(7)];
+        success!("Created commit: {}", short_sha);
 
         // Step 5: 询问是否推送到远端
         if self.push {
