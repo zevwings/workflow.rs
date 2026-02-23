@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 
 use prompt::{banner_success, br, error, info, print, success, warning, ConfirmBuilder};
-use toolkit::{backup, cleanup_backup, log_debug, rollback, Platform};
+use toolkit::{backup, cleanup_backup, log_info, rollback, Platform};
 
 use crate::bootstrap::get_path_service;
 use crate::commands::update::{
@@ -105,7 +105,15 @@ impl UpdateCommand {
         // 准备临时目录
         let temp_manager = TempDirManager::new(&target_version, &platform)?;
         let download_url = build_download_url(&target_version, &platform);
-        log_debug!("Download URL: {}", download_url);
+
+        log_info!(
+            "Update started | target={} platform={} url={} temp_dir={} archive={}",
+            target_version,
+            platform,
+            download_url,
+            temp_manager.temp_dir.display(),
+            temp_manager.archive_path.display()
+        );
 
         // 执行更新操作
         let update_result = self.perform_update(&temp_manager, &download_url, &target_version);
@@ -113,6 +121,11 @@ impl UpdateCommand {
         if let Some(backup_dir) = backup_dir {
             match update_result {
                 Ok(()) => {
+                    log_info!(
+                        "Update completed | target={} platform={}",
+                        target_version,
+                        platform
+                    );
                     // 更新成功，输出 banner 和完成消息
                     br!();
                     banner_success!(BANNER);
@@ -155,15 +168,16 @@ impl UpdateCommand {
         };
         match backup(bin_name.as_str(), install_dir.clone()) {
             Ok(backup_dir) => {
-                log_debug!(
-                    "Backup: {} -> {}",
+                log_info!(
+                    "Backup created | binary={} source={} backup_dir={}",
+                    bin_name,
                     install_dir.display(),
                     backup_dir.display()
                 );
-                success!("Backup created");
                 Some(backup_dir)
             }
             Err(e) => {
+                log_info!("Backup failed | error={}", e);
                 warning!("Failed to create backup: {}", e);
                 warning!("Will continue update, but cannot rollback on failure");
                 warning!("If update fails, manual recovery may be required");
@@ -226,6 +240,11 @@ impl UpdateCommand {
 
         match rollback(bin_name.as_str(), backup_dir.clone(), install_dir) {
             Ok(()) => {
+                log_info!(
+                    "Rollback completed | binary={} backup_dir={}",
+                    bin_name,
+                    backup_dir.display()
+                );
                 info!("  Restored: {}", bin_name);
                 success!("Rollback completed");
                 br!();
@@ -234,6 +253,11 @@ impl UpdateCommand {
                 }
             }
             Err(rollback_err) => {
+                log_info!(
+                    "Rollback failed | error={} backup_dir={}",
+                    rollback_err,
+                    backup_dir.display()
+                );
                 error!("Rollback failed: {}", rollback_err);
                 error!("System may be in an inconsistent state");
                 error!("Please manually check and restore files");

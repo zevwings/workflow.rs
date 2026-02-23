@@ -202,7 +202,8 @@ impl PullRequestCreateCommand {
         } else {
             log_info!(
                 "Creating branch '{}' from '{}'",
-                new_branch_name, source_branch
+                new_branch_name,
+                source_branch
             );
             branch_repo
                 .create_branch(new_branch_name)

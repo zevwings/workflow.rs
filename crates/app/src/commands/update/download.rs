@@ -11,10 +11,10 @@ use std::{
 
 use client::{HttpClient, HttpClientHolder};
 use di::Container;
-use prompt::{info, spinner, success, warning, Spinner};
+use prompt::{info, spinner, warning, Spinner};
 use toolkit::{
-    archive, build_checksum_url, calculate_sha256, log_debug, parse_hash_from_content,
-    verify_checksum,
+    archive, build_checksum_url, calculate_sha256, log_debug, log_info, parse_hash_from_content,
+    verify_checksum, SizeExt,
 };
 
 use crate::commands::update::types::{GITHUB_DOWNLOAD_BASE, REPO_NAME, REPO_OWNER};
@@ -61,24 +61,36 @@ pub fn download_file(
         .map_err(|e| format!("Failed to get HTTP client: {}", e))?;
     let client = HttpClientHolder::new(http_client);
 
-    spinner!("Downloading...").with(|| -> Result<(), Box<dyn std::error::Error>> {
-        let response = client
-            .get(url)
-            .send()
-            .map_err(|e| format!("Failed to send HTTP request: {}", e))?;
+    let size_bytes =
+        spinner!("Downloading...").with(|| -> Result<usize, Box<dyn std::error::Error>> {
+            let response = client
+                .get(url)
+                .send()
+                .map_err(|e| format!("Failed to send HTTP request: {}", e))?;
 
-        if !response.is_success() {
-            return Err(format!("Download failed: HTTP {}", response.status).into());
-        }
+            if !response.is_success() {
+                return Err(format!("Download failed: HTTP {}", response.status).into());
+            }
 
-        let bytes = response.bytes();
-        let mut file = File::create(output_path)
-            .map_err(|e| format!("Failed to create file {}: {}", output_path.display(), e))?;
+            let bytes = response.bytes();
+            let len = bytes.len();
+            let mut file = File::create(output_path)
+                .map_err(|e| format!("Failed to create file {}: {}", output_path.display(), e))?;
 
-        file.write_all(bytes).map_err(|e| format!("Failed to write to file: {}", e))?;
+            file.write_all(bytes.as_ref())
+                .map_err(|e| format!("Failed to write to file: {}", e))?;
 
-        Ok(())
-    })?;
+            Ok(len)
+        })?;
+
+    let size_human = (size_bytes as u64).to_size_string();
+    log_info!(
+        "Download completed | url={} output={} size={} ({})",
+        url,
+        output_path.display(),
+        size_bytes,
+        size_human
+    );
     Ok(())
 }
 
@@ -104,24 +116,36 @@ pub fn verify_file_checksum(
         Ok(response) => {
             if response.status == 404 {
                 // 校验和文件不存在
+                let actual_hash = calculate_sha256(archive_path).ok();
+                log_info!(
+                    "Checksum skipped (404) | url={} actual_hash={:?}",
+                    checksum_url,
+                    actual_hash
+                );
                 warning!("Checksum file not found, skipping integrity verification");
                 warning!("  Checksum URL: {}", checksum_url);
                 warning!("  This may indicate the release does not include checksum files");
                 warning!("  Proceeding with update without verification...");
 
-                // 仍然计算并显示文件的 SHA256，供用户参考
-                if let Ok(actual_hash) = calculate_sha256(archive_path) {
-                    info!("Downloaded file SHA256: {}", actual_hash);
+                if let Some(hash) = actual_hash {
+                    info!("Downloaded file SHA256: {}", hash);
                 }
                 return Ok(());
             }
 
             if !response.is_success() {
+                let actual_hash = calculate_sha256(archive_path).ok();
+                log_info!(
+                    "Checksum skipped (HTTP {}) | url={} actual_hash={:?}",
+                    response.status,
+                    checksum_url,
+                    actual_hash
+                );
                 warning!("Failed to download checksum file: HTTP {}", response.status);
                 warning!("  Proceeding with update without verification...");
 
-                if let Ok(actual_hash) = calculate_sha256(archive_path) {
-                    info!("Downloaded file SHA256: {}", actual_hash);
+                if let Some(hash) = actual_hash {
+                    info!("Downloaded file SHA256: {}", hash);
                 }
                 return Ok(());
             }
@@ -139,16 +163,28 @@ pub fn verify_file_checksum(
             verify_checksum(archive_path, &expected_hash)
                 .map_err(|e| format!("File integrity verification failed: {}", e))?;
 
-            success!("Integrity verified");
+            log_info!(
+                "Integrity verified | archive={} checksum_url={} expected_hash={} algorithm=sha256",
+                archive_path.display(),
+                checksum_url,
+                expected_hash
+            );
         }
         Err(e) => {
             // 网络错误等，给出警告但继续
+            let actual_hash = calculate_sha256(archive_path).ok();
+            log_info!(
+                "Checksum skipped (error) | url={} error={} actual_hash={:?}",
+                checksum_url,
+                e,
+                actual_hash
+            );
             warning!("Failed to download checksum file: {}", e);
             warning!("  Proceeding with update without verification...");
 
             // 仍然计算并显示文件的 SHA256，供用户参考
-            if let Ok(actual_hash) = calculate_sha256(archive_path) {
-                info!("Downloaded file SHA256: {}", actual_hash);
+            if let Some(hash) = actual_hash {
+                info!("Downloaded file SHA256: {}", hash);
             }
         }
     }
@@ -175,7 +211,11 @@ pub fn extract_archive(
 
     result.map_err(|e| format!("Failed to extract archive: {}", e))?;
 
-    success!("Extracted");
+    log_info!(
+        "Archive extracted | archive={} output_dir={}",
+        archive_path.display(),
+        output_dir.display()
+    );
 
     Ok(())
 }
