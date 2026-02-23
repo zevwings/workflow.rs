@@ -5,7 +5,7 @@
 
 use domain::{extract_jira_ticket_id, GitRepository};
 use prompt::{error, info, spinner, success};
-use toolkit::{log_info, log_info_with_fields};
+use toolkit::{log_debug, log_info, log_info_with_fields};
 
 use crate::bootstrap::{get_commit_message_service, get_git_repository, get_pull_request_service};
 use crate::util::safe_push;
@@ -45,7 +45,7 @@ impl PullRequestUpdateCommand {
             .with(|| pr_service.get_pr_info())
             .map_err(|e| format!("Failed to get PR status: {}", e))?;
 
-        info!("Found PR #{}: {}", pr_status.id, pr_status.title);
+        log_debug!("Found PR #{}: {}", pr_status.id, pr_status.title);
 
         let jira_key = extract_jira_ticket_id(pr_status.title.as_str());
 
@@ -64,7 +64,7 @@ impl PullRequestUpdateCommand {
             return Err("No staged changes".into());
         }
 
-        info!("Found {} staged file(s) to commit", staged_files.len());
+        log_debug!("Found {} staged file(s) to commit", staged_files.len());
 
         // 4. 生成或使用 commit message
         log_info!("Analyzing staged changes and generating commit message...");
@@ -137,7 +137,7 @@ impl PullRequestUpdateCommand {
         git_repo: &dyn GitRepository,
         commit_message: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        info!(
+        log_debug!(
             "Committing changes with message: {}",
             commit_message.lines().next().unwrap_or("")
         );
