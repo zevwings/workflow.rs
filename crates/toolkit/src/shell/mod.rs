@@ -85,7 +85,9 @@ pub fn config_file_path(shell: &Shell) -> Option<PathBuf> {
             // Windows 使用 Documents\PowerShell 路径，Unix 使用 .config/powershell 路径
             #[cfg(target_os = "windows")]
             {
-                home.join("Documents").join("PowerShell").join("Microsoft.PowerShell_profile.ps1")
+                home.join("Documents")
+                    .join("PowerShell")
+                    .join("Microsoft.PowerShell_profile.ps1")
             }
             #[cfg(not(target_os = "windows"))]
             {
