@@ -65,6 +65,43 @@ impl BranchServiceImpl {
     pub fn new(ctx: GitContext) -> Self {
         Self { ctx }
     }
+
+    /// 解析合并检查的基准提交
+    ///
+    /// 优先使用默认分支（origin/main 或 main），确保在任意分支上删除时，
+    /// 以「是否已合并到主线」为准，而非「是否已合并到当前分支」。
+    /// 若默认分支不可用则回退到 HEAD。
+    fn resolve_merge_check_base<'a>(
+        &self,
+        repo: &'a Repository,
+    ) -> Result<git2::Commit<'a>, String> {
+        let default_name = match self.get_default_branch() {
+            Ok(name) => name,
+            Err(_) => return self.fallback_to_head(repo),
+        };
+
+        // 优先使用远程默认分支（反映 PR 合并后的状态）
+        let remote_ref = format!("origin/{}", default_name);
+        if let Ok(obj) = repo.revparse_single(&remote_ref) {
+            if let Ok(commit) = obj.peel_to_commit() {
+                return Ok(commit);
+            }
+        }
+
+        // 回退到本地默认分支
+        if let Ok(branch_ref) = repo.find_branch(&default_name, BranchType::Local) {
+            if let Ok(commit) = branch_ref.get().peel_to_commit() {
+                return Ok(commit);
+            }
+        }
+
+        self.fallback_to_head(repo)
+    }
+
+    fn fallback_to_head<'a>(&self, repo: &'a Repository) -> Result<git2::Commit<'a>, String> {
+        let head = repo.head().map_err(|e| e.to_string())?;
+        head.peel_to_commit().map_err(|e| e.to_string())
+    }
 }
 
 impl BranchService for BranchServiceImpl {
@@ -105,17 +142,19 @@ impl BranchService for BranchServiceImpl {
         }
 
         // 检查是否已合并（如果不强制删除）
+        // 以默认分支（main/master）为基准，而非 HEAD，避免在 feature 分支上删除已合并到 main 的分支时误报
         if !force {
-            let head = repo.head().map_err(|e| GitError::OperationFailed(e.to_string()))?;
-            let head_commit =
-                head.peel_to_commit().map_err(|e| GitError::OperationFailed(e.to_string()))?;
             let branch_commit = branch
                 .get()
                 .peel_to_commit()
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
+            let base_commit = self
+                .resolve_merge_check_base(&*repo)
+                .map_err(|e| GitError::OperationFailed(e.to_string()))?;
+
             let is_merged =
-                repo.graph_descendant_of(head_commit.id(), branch_commit.id()).unwrap_or(false);
+                repo.graph_descendant_of(base_commit.id(), branch_commit.id()).unwrap_or(false);
 
             if !is_merged {
                 return Err(GitError::BranchNotFullyMerged(name.to_string()));
