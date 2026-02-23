@@ -3,7 +3,7 @@
 use prompt::{br, separator};
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, SSH_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, SSH_STAGE_NAME};
 
 /// SSH Check 命令
 pub struct SshCheckCommand;

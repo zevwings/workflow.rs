@@ -10,7 +10,8 @@ use crate::commands::pr::create::{
 };
 use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
 use crate::{
-    bootstrap, util::branch::branch_type_from_branch_name, util::safe_pull, util::PullOptions,
+    bootstrap,
+    util::{branch_type_from_branch_name, safe_pull, PullOptions},
 };
 
 /// 处理非默认分支的情况

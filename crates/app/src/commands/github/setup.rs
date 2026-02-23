@@ -1,7 +1,7 @@
 //! 设置 GitHub 账号命令
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, GITHUB_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, GITHUB_STAGE_NAME};
 
 /// Github Setup 命令
 pub struct GithubSetupCommand;

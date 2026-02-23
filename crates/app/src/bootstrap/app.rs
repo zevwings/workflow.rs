@@ -11,7 +11,7 @@ use di::{bind, Container, InjectionError, Scope};
 use domain::GlobalConfigRepository;
 
 use crate::{
-    interactive::{manager::WorkflowStageManagerImpl, WorkflowStageManager},
+    interactive::{WorkflowStageManager, WorkflowStageManagerImpl},
     logger::{LoggerManager, LoggerManagerImpl},
 };
 

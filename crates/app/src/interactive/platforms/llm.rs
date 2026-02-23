@@ -11,10 +11,7 @@ use toolkit::Sensitive;
 
 use crate::bootstrap::get_language_manager;
 use crate::interactive::{
-    core::{
-        context::{WorkflowContext, WorkflowMode},
-        stage::WorkflowStage,
-    },
+    core::{WorkflowContext, WorkflowMode, WorkflowStage},
     display::VerificationResultFormatter,
 };
 

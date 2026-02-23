@@ -3,7 +3,7 @@
 use prompt::{br, separator};
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, GITHUB_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, GITHUB_STAGE_NAME};
 
 /// Github Check 命令
 pub struct GithubCheckCommand;

@@ -8,13 +8,17 @@ pub mod args;
 // CLI 定义模块（顶层命令结构）
 pub mod cli;
 
+#[cfg(feature = "develop")]
+pub mod diff;
+#[cfg(feature = "develop")]
+pub mod rollback;
+
 // 命令模块
 pub mod alias;
 pub mod branch;
 pub mod check;
 pub mod commit;
 pub mod completion;
-pub mod diff;
 pub mod github;
 pub mod install;
 pub mod jira;
@@ -22,12 +26,9 @@ pub mod llm;
 pub mod log;
 pub mod pr;
 pub mod repo;
-#[cfg(feature = "develop")]
-pub mod rollback;
 pub mod setup;
 pub mod ssh;
 pub mod stash;
-
 pub mod tag;
 pub mod uninstall;
 pub mod update;

@@ -13,8 +13,10 @@ use crate::commands::update::{
     download::{build_download_url, download_file, extract_archive, verify_file_checksum},
     types::TempDirManager,
     verify::{run_installer, verify_installation},
-    version::{compare_versions, get_current_version, get_target_version, VersionComparison},
+    // version::{compare_versions, get_current_version, get_target_version, VersionComparison},
 };
+
+use crate::util::{compare_versions, get_current_version, get_target_version, VersionComparison};
 
 /// Workflow ASCII banner（Oh My Zsh 风格）
 const BANNER: &str = r#" _       ______  ____  __ __ ________    ____ _       __   __
@@ -153,7 +155,11 @@ impl UpdateCommand {
         };
         match backup(bin_name.as_str(), install_dir.clone()) {
             Ok(backup_dir) => {
-                log_debug!("Backup: {} -> {}", install_dir.display(), backup_dir.display());
+                log_debug!(
+                    "Backup: {} -> {}",
+                    install_dir.display(),
+                    backup_dir.display()
+                );
                 success!("Backup created");
                 Some(backup_dir)
             }

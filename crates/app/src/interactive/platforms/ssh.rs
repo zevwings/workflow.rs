@@ -8,13 +8,10 @@ use prompt::{br, confirm, select, separator, success, warning};
 use crate::{
     bootstrap::{get_ssh_service, get_verification_service},
     interactive::{
-        core::{
-            context::{WorkflowContext, WorkflowMode},
-            stage::WorkflowStage,
-        },
+        core::{WorkflowContext, WorkflowMode, WorkflowStage},
         display::VerificationResultFormatter,
     },
-    util::ssh::{add_ssh_key, generate_ssh_key, remove_ssh_key, GenerateOptions},
+    util::{add_ssh_key, generate_ssh_key, remove_ssh_key, GenerateOptions},
 };
 
 /// SSH 工作流阶段
