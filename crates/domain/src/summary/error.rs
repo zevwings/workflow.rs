@@ -19,6 +19,6 @@ pub enum CommitSummaryError {
     #[error("There are no changes to analyze: the base branch has no committed changes after the commit, and the staging area has no changes. Please commit or stage the changes first")]
     NoChangesToAnalyze,
 
-    #[error("The Git operation failed")]
+    #[error("The Git operation failed: {0}")]
     Git(#[from] GitError),
 }
