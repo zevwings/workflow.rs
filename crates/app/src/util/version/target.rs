@@ -1,23 +1,20 @@
-//! 版本管理模块
-//!
-//! 提供版本获取和比较功能。
-
 use client::{Authorization, HttpClientHolder, HttpResponse};
 use di::Container;
 use prompt::Spinner;
 use toolkit::log_debug;
 
-// Re-export VersionComparison from types for convenience
-pub use crate::commands::update::types::VersionComparison;
-use crate::commands::update::types::{GITHUB_API_BASE, REPO_NAME, REPO_OWNER};
+// ============================================================================
+// 常量定义
+// ============================================================================
 
-/// 获取当前安装的版本号
-///
-/// 从编译时嵌入的版本号获取。
-pub fn get_current_version() -> Option<String> {
-    const VERSION: &str = env!("CARGO_PKG_VERSION");
-    Some(VERSION.to_string())
-}
+/// GitHub API 基础 URL
+pub const GITHUB_API_BASE: &str = "https://api.github.com";
+
+/// 仓库所有者
+pub const REPO_OWNER: &str = "zevwings";
+
+/// 仓库名称
+pub const REPO_NAME: &str = "workflow.rs";
 
 /// 获取目标版本号
 ///
@@ -121,93 +118,4 @@ fn handle_github_api_error(response: &HttpResponse) -> Result<(), Box<dyn std::e
     };
 
     Err(error_msg.into())
-}
-
-/// 比较两个版本号
-///
-/// 返回版本比较结果。
-pub fn compare_versions(current: impl AsRef<str>, target: impl AsRef<str>) -> VersionComparison {
-    let current_parts: Vec<u32> =
-        current.as_ref().split('.').filter_map(|s| s.parse().ok()).collect();
-    let target_parts: Vec<u32> =
-        target.as_ref().split('.').filter_map(|s| s.parse().ok()).collect();
-
-    // 补齐到相同长度
-    let max_len = current_parts.len().max(target_parts.len());
-    let mut current_padded = current_parts;
-    let mut target_padded = target_parts;
-    current_padded.resize(max_len, 0);
-    target_padded.resize(max_len, 0);
-
-    // 逐级比较
-    for (c, t) in current_padded.iter().zip(target_padded.iter()) {
-        if c < t {
-            return VersionComparison::NeedsUpdate;
-        } else if c > t {
-            return VersionComparison::Downgrade;
-        }
-    }
-
-    VersionComparison::UpToDate
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_compare_versions_equal() {
-        assert_eq!(
-            compare_versions("1.0.0", "1.0.0"),
-            VersionComparison::UpToDate
-        );
-        assert_eq!(
-            compare_versions("1.2.3", "1.2.3"),
-            VersionComparison::UpToDate
-        );
-    }
-
-    #[test]
-    fn test_compare_versions_needs_update() {
-        assert_eq!(
-            compare_versions("1.0.0", "1.0.1"),
-            VersionComparison::NeedsUpdate
-        );
-        assert_eq!(
-            compare_versions("1.0.0", "2.0.0"),
-            VersionComparison::NeedsUpdate
-        );
-        assert_eq!(
-            compare_versions("1.2.3", "1.3.0"),
-            VersionComparison::NeedsUpdate
-        );
-    }
-
-    #[test]
-    fn test_compare_versions_downgrade() {
-        assert_eq!(
-            compare_versions("1.0.1", "1.0.0"),
-            VersionComparison::Downgrade
-        );
-        assert_eq!(
-            compare_versions("2.0.0", "1.0.0"),
-            VersionComparison::Downgrade
-        );
-    }
-
-    #[test]
-    fn test_compare_versions_different_lengths() {
-        assert_eq!(
-            compare_versions("1.0", "1.0.0"),
-            VersionComparison::UpToDate
-        );
-        assert_eq!(
-            compare_versions("1.0.0", "1.0"),
-            VersionComparison::UpToDate
-        );
-        assert_eq!(
-            compare_versions("1.0", "1.0.1"),
-            VersionComparison::NeedsUpdate
-        );
-    }
 }

@@ -17,7 +17,8 @@ use crate::{
         },
         terminal_state,
     },
-    style::theme::get_theme, success,
+    style::theme::get_theme,
+    success,
 };
 
 /// 进度条模式

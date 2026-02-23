@@ -4,7 +4,7 @@ use prompt::{br, info, separator, success, warning};
 
 use crate::{
     bootstrap::{get_global_config_repository, get_path_service, get_workflow_stage_registry},
-    interactive::core::stage::WorkflowExecutor,
+    interactive::WorkflowExecutor,
 };
 
 /// Check 命令

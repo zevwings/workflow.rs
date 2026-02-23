@@ -1,7 +1,7 @@
 //! 设置 LLM 配置命令
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, LLM_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, LLM_STAGE_NAME};
 
 /// Llm Setup 命令
 pub struct LlmSetupCommand;

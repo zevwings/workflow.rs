@@ -21,6 +21,5 @@ mod command;
 mod download;
 mod types;
 mod verify;
-mod version;
 
 pub use command::UpdateCommand;

@@ -6,7 +6,7 @@ use domain::{GlobalConfig, VerificationService};
 use prompt::{br, info, separator, ConfirmFormField, FormBuilder, SelectFormField};
 
 use crate::interactive::{
-    core::{context::WorkflowContext, stage::WorkflowStage},
+    core::{WorkflowContext, WorkflowStage},
     display::VerificationResultFormatter,
 };
 

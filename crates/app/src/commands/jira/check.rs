@@ -3,7 +3,7 @@
 use prompt::{br, separator};
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, JIRA_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, JIRA_STAGE_NAME};
 
 /// Jira Check 命令
 pub struct JiraCheckCommand;

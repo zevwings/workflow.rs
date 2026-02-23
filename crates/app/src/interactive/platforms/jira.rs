@@ -9,10 +9,7 @@ use prompt::{
 use toolkit::Sensitive;
 
 use crate::interactive::{
-    core::{
-        context::{WorkflowContext, WorkflowMode},
-        stage::WorkflowStage,
-    },
+    core::{WorkflowContext, WorkflowMode, WorkflowStage},
     display::VerificationResultFormatter,
 };
 

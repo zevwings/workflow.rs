@@ -10,12 +10,9 @@ use prompt::{
 
 use crate::interactive::{
     core::{
-        context::{WorkflowContext, WorkflowMode},
-        platform::{
-            add_account_generic, configure_platform, AccountSetMode, GlobalConfigAccessor,
-            PlatformAccount, PlatformConfigurator, PlatformSettings,
-        },
-        stage::WorkflowStage,
+        add_account_generic, configure_platform, AccountSetMode, GlobalConfigAccessor,
+        PlatformAccount, PlatformConfigurator, PlatformSettings, WorkflowContext, WorkflowMode,
+        WorkflowStage,
     },
     display::VerificationResultFormatter,
 };

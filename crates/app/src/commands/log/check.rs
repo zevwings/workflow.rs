@@ -3,7 +3,7 @@
 use prompt::{br, separator};
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, LOG_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, LOG_STAGE_NAME};
 
 /// Log Check 命令
 pub struct LogCheckCommand;

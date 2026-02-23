@@ -1,7 +1,7 @@
 //! SSH 设置命令
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, SSH_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, SSH_STAGE_NAME};
 
 /// SSH Setup 命令
 pub struct SshSetupCommand;

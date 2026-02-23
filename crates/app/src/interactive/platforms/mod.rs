@@ -2,11 +2,11 @@
 //!
 //! 包含各个平台的工作流阶段实现。
 
-pub mod github;
-pub mod jira;
-pub mod llm;
-pub mod log;
-pub mod ssh;
+mod github;
+mod jira;
+mod llm;
+mod log;
+mod ssh;
 
 pub use github::github_stage;
 pub use jira::jira_stage;

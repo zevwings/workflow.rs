@@ -3,7 +3,7 @@
 use prompt::{br, separator};
 
 use crate::bootstrap;
-use crate::interactive::{core::stage::WorkflowExecutor, LLM_STAGE_NAME};
+use crate::interactive::{WorkflowExecutor, LLM_STAGE_NAME};
 
 /// Llm Check 命令
 pub struct LlmCheckCommand;
