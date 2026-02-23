@@ -150,7 +150,7 @@ impl BranchService for BranchServiceImpl {
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
             let base_commit = self
-                .resolve_merge_check_base(&*repo)
+                .resolve_merge_check_base(&repo)
                 .map_err(|e| GitError::OperationFailed(e.to_string()))?;
 
             let is_merged =
