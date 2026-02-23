@@ -10,8 +10,8 @@ use std::{
     process::{Command, Stdio},
 };
 
-use prompt::{success, warning, Spinner};
-use toolkit::{detect_shell, get_completion_files_for_shell, log_debug, shell_to_string};
+use prompt::{warning, Spinner};
+use toolkit::{detect_shell, get_completion_files_for_shell, log_info, shell_to_string};
 
 use crate::bootstrap::get_path_service;
 use crate::commands::update::types::VerificationResult;
@@ -150,18 +150,32 @@ fn verify_completions() -> Result<bool, Box<dyn std::error::Error>> {
         let path = comp_dir.join(file);
 
         if !path.exists() {
+            log_info!(
+                "Completion script missing | file={} path={}",
+                file,
+                path.display()
+            );
             warning!("Completion script does not exist: {}", path.display());
             all_valid = false;
             continue;
         }
 
-        log_debug!("Completion script verification passed: {}", path.display());
+        log_info!(
+            "Completion script verified | file={} path={}",
+            file,
+            path.display()
+        );
     }
 
     spinner_instance.stop();
 
     if all_valid {
-        success!("Completion OK");
+        log_info!(
+            "Completion scripts verified | shell={} files={} comp_dir={}",
+            shell_str,
+            files.len(),
+            comp_dir.display()
+        );
     } else {
         warning!("Completion verification failed");
     }
@@ -177,13 +191,23 @@ pub fn verify_installation() -> Result<VerificationResult, Box<dyn std::error::E
     let mut all_binaries_ok = true;
     for binary in &binaries {
         if !binary.exists {
+            log_info!("Binary missing | name={} path={}", binary.name, binary.path);
             warning!("Binary file does not exist: {}", binary.path);
             all_binaries_ok = false;
         } else if !binary.executable {
+            log_info!(
+                "Binary not executable | name={} path={}",
+                binary.name,
+                binary.path
+            );
             warning!("Binary file is not executable: {}", binary.path);
             all_binaries_ok = false;
         } else {
-            success!("{} OK", binary.name);
+            log_info!(
+                "Binary verified | name={} path={}",
+                binary.name,
+                binary.path
+            );
         }
     }
 
@@ -194,7 +218,11 @@ pub fn verify_installation() -> Result<VerificationResult, Box<dyn std::error::E
     let all_checks_passed = all_binaries_ok && completions_installed;
 
     if all_checks_passed {
-        success!("All checks passed");
+        log_info!(
+            "All verification checks passed | binaries_ok={} completions_ok={}",
+            all_binaries_ok,
+            completions_installed
+        );
     } else {
         warning!("Some verifications failed");
     }
@@ -242,14 +270,33 @@ pub fn run_installer(extract_dir: &Path) -> Result<(), Box<dyn std::error::Error
 
     spinner_instance.stop();
 
-    // Spinner 停止后，显示子进程的输出
+    let exit_code = output.status.code().unwrap_or(-1);
+    log_info!(
+        "Install subprocess finished | extract_dir={} binary={} exit_code={} success={}",
+        extract_dir.display(),
+        install_binary.display(),
+        exit_code,
+        output.status.success()
+    );
+
+    // 子进程输出写入日志，不输出到控制台
     if !output.stdout.is_empty() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        eprint!("{}", stdout);
+        for line in stdout.lines() {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() {
+                log_info!("[install stdout] {}", trimmed);
+            }
+        }
     }
     if !output.stderr.is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        eprint!("{}", stderr);
+        for line in stderr.lines() {
+            let trimmed = line.trim();
+            if !trimmed.is_empty() {
+                log_info!("[install stderr] {}", trimmed);
+            }
+        }
     }
 
     if !output.status.success() {
