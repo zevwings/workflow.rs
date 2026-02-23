@@ -215,7 +215,10 @@ mod tests {
         let path = config_file_path(&Shell::PowerShell);
         assert!(path.is_some());
         let path = path.unwrap();
-        assert!(path.to_string_lossy().contains("powershell"));
+        // Windows: Documents\PowerShell\Microsoft.PowerShell_profile.ps1
+        // Unix: .config/powershell/Microsoft.PowerShell_profile.ps1
+        let path_str = path.to_string_lossy().to_lowercase();
+        assert!(path_str.contains("powershell"));
     }
 
     #[test]

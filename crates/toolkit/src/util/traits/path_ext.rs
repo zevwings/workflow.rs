@@ -223,6 +223,9 @@ mod tests {
         let display2 = path2.to_display_string();
 
         // 应该显示为相同的相对路径
-        assert_eq!(display1, display2);
+        // Windows 使用反斜杠，Unix 使用正斜杠，需要规范化比较
+        let normalized1 = display1.replace('\\', "/");
+        let normalized2 = display2.replace('\\', "/");
+        assert_eq!(normalized1, normalized2);
     }
 }
