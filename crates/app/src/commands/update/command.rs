@@ -69,7 +69,6 @@ impl UpdateCommand {
         } else {
             info!("v{} ({})", target_version, platform);
         }
-        br!();
 
         // 获取用户确认
         if !self.force {
@@ -88,7 +87,6 @@ impl UpdateCommand {
                 print!("Update cancelled");
                 return Ok(());
             }
-            br!();
         }
 
         // 创建备份
@@ -119,14 +117,12 @@ impl UpdateCommand {
                         platform
                     );
 
-                    br!();
                     success!("Update complete (v{})", target_version);
                     Ok(())
                 }
                 Err(e) => {
                     // 更新失败，执行回滚
                     error!("Update failed: {}", e);
-                    br!();
 
                     self.perform_rollback(backup_dir);
 
@@ -208,7 +204,6 @@ impl UpdateCommand {
     /// 执行回滚（使用 pathService 的 install_dir，单文件恢复）
     fn perform_rollback(&self, backup_dir: PathBuf) {
         warning!("Update failed, rolling back to previous version...");
-        br!();
 
         let install_dir = match get_path_service().get_binary_install_dir() {
             Ok(d) => d,
