@@ -259,17 +259,6 @@ pub fn generate_pr_summary(
     log_info!("PR summary type={}, scope={:?}", type_, scope);
     log_info!("PR body:\n{}", pr_body);
 
-    // 终端仅显示简要摘要（Summary 第一段）
-    let summary_preview = pr_body
-        .strip_prefix("## Summary\n\n")
-        .unwrap_or(&pr_body)
-        .split("\n\n")
-        .next()
-        .unwrap_or("")
-        .trim();
-    if !summary_preview.is_empty() {
-        info!("{}", summary_preview);
-    }
     success!("PR Summary generated successfully!");
 
     Ok(PrSummaryResult {
