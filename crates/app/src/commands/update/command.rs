@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use prompt::{banner_success, br, error, info, print, success, warning, ConfirmBuilder};
+use prompt::{br, error, info, print, success, warning, ConfirmBuilder};
 use toolkit::{backup, cleanup_backup, log_info, rollback, Platform};
 
 use crate::bootstrap::get_path_service;
@@ -17,14 +17,6 @@ use crate::commands::update::{
 };
 
 use crate::util::{compare_versions, get_current_version, get_target_version, VersionComparison};
-
-/// Workflow ASCII banner（Oh My Zsh 风格）
-const BANNER: &str = r#" _       ______  ____  __ __ ________    ____ _       __   __
-| |     / / __ \/ __ \/ //_// ____/ /   / __ \ |     / /  / /
-| | /| / / / / / /_/ / ,<  / /_  / /   / / / / | /| / /  / /
-| |/ |/ / /_/ / _, _/ /| |/ __/ / /___/ /_/ /| |/ |/ /  /_/
-|__/|__/\____/_/ |_/_/ |_/_/   /_____/\____/ |__/|__/  (_)
-"#;
 
 /// 更新命令
 pub struct UpdateCommand {
@@ -126,9 +118,7 @@ impl UpdateCommand {
                         target_version,
                         platform
                     );
-                    // 更新成功，输出 banner 和完成消息
-                    br!();
-                    banner_success!(BANNER);
+
                     br!();
                     success!("Update complete (v{})", target_version);
                     Ok(())

@@ -11,7 +11,7 @@ use std::{
 
 use client::{HttpClient, HttpClientHolder};
 use di::Container;
-use prompt::{info, spinner, warning, Spinner};
+use prompt::{Spinner, info, spinner, success, warning};
 use toolkit::{
     archive, build_checksum_url, calculate_sha256, log_debug, log_info, parse_hash_from_content,
     verify_checksum, SizeExt,
@@ -83,6 +83,8 @@ pub fn download_file(
             Ok(len)
         })?;
 
+    success!("Download completed");
+
     let size_human = (size_bytes as u64).to_size_string();
     log_info!(
         "Download completed | url={} output={} size={} ({})",
@@ -111,8 +113,9 @@ pub fn verify_file_checksum(
         .map_err(|e| format!("Failed to get HTTP client: {}", e))?;
     let client = HttpClientHolder::new(http_client);
 
-    // 尝试下载校验和文件
-    match client.get(&checksum_url).send() {
+    // 尝试下载校验和文件（带 spinner）
+    spinner!("Verifying integrity...").with(|| -> Result<(), Box<dyn std::error::Error>> {
+        match client.get(&checksum_url).send() {
         Ok(response) => {
             if response.status == 404 {
                 // 校验和文件不存在
@@ -188,6 +191,9 @@ pub fn verify_file_checksum(
             }
         }
     }
+
+        Ok(())
+    })?;
 
     Ok(())
 }

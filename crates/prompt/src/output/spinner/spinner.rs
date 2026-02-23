@@ -151,6 +151,9 @@ impl Spinner {
         // 注销全局终端状态
         terminal_state::unregister_renderer();
 
+        // 等待渲染线程退出，避免竞态：stop 清行后渲染线程再写一帧导致残留
+        thread::sleep(self.interval.saturating_add(Duration::from_millis(50)));
+
         let mut stderr = io::stderr();
         let _ = stderr.queue(cursor::MoveToColumn(0));
         let _ = stderr.queue(Clear(ClearType::CurrentLine));
