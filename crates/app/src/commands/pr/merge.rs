@@ -1,7 +1,7 @@
 //! 合并 Pull Request 命令
 
-use domain::{extract_jira_ticket_id, GitError};
-use prompt::{confirm, info, spinner, success, warning};
+use domain::extract_jira_ticket_id;
+use prompt::{info, spinner, success, warning};
 use toolkit::log_info;
 
 use crate::{
@@ -124,45 +124,18 @@ impl PullRequestMergeCommand {
             git_repo.has_branch(&source_branch).unwrap_or((false, false));
 
         // 6.1 删除本地分支
+        // 注意：PR 已通过 GitHub API 合并（含 squash merge），Git 的 graph_descendant_of 会认为
+        // squash 后的分支「未完全合并」（因 squash 创建新提交，不包含原分支提交历史）。
+        // 此处直接使用 force=true，避免阻塞在 confirm 提示上。
         if local_exists {
             log_info!("Cleaning up local branch '{}'", source_branch);
-            match git_repo.delete_local_branch(&source_branch, false) {
+            match git_repo.delete_local_branch(&source_branch, true) {
                 Ok(()) => {
                     log_info!("Deleted local branch '{}'", source_branch);
                     success!("Cleaned up local branch '{}'", source_branch);
                 }
                 Err(e) => {
-                    // 使用模式匹配精确判断错误类型
-                    match e {
-                        GitError::BranchNotFullyMerged(_) => {
-                            warning!("Branch '{}' is not fully merged", source_branch);
-                            let force_delete = confirm!("Force delete branch '{}'?", source_branch)
-                                .default(false)
-                                .prompt()
-                                .unwrap_or(false);
-
-                            if force_delete {
-                                match git_repo.delete_local_branch(&source_branch, true) {
-                                    Ok(()) => {
-                                        log_info!("Force deleted local branch '{}'", source_branch);
-                                        success!("Cleaned up local branch '{}'", source_branch);
-                                    }
-                                    Err(e) => {
-                                        warning!(
-                                            "Failed to force delete local branch '{}': {}",
-                                            source_branch,
-                                            e
-                                        );
-                                    }
-                                }
-                            } else {
-                                log_info!("Skipped deleting branch '{}'", source_branch);
-                            }
-                        }
-                        _ => {
-                            warning!("Failed to delete local branch '{}': {}", source_branch, e);
-                        }
-                    }
+                    warning!("Failed to delete local branch '{}': {}", source_branch, e);
                 }
             }
         }
