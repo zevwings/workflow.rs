@@ -4,8 +4,8 @@
 //!
 //! ## 清理策略
 //!
-//! - **时间限制**：删除超过 30 天的日志文件
-//! - **数量限制**：最多保留 100 个日志文件
+//! - **时间限制**：删除超过 1 天的日志文件
+//! - **数量限制**：最多保留 20 个日志文件
 //! - **触发时机**：每次 `logger::init()` 时自动执行
 
 use std::{
@@ -15,10 +15,10 @@ use std::{
 };
 
 /// 日志文件最大保留天数
-const MAX_LOG_AGE_DAYS: u64 = 7;
+const MAX_LOG_AGE_DAYS: u64 = 1;
 
 /// 日志文件最大保留数量
-const MAX_LOG_FILES: usize = 100;
+const MAX_LOG_FILES: usize = 20;
 
 /// 清理过期的日志文件
 ///
@@ -152,7 +152,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let tracing_dir = setup_tracing_dir(&temp_dir);
 
-        // 创建 1 个新文件和 2 个过期文件（超过 30 天）
+        // 创建 1 个新文件和 2 个过期文件（超过 1 天）
         create_log_file(&tracing_dir, "new-20260208120000-1001.log");
 
         let old1 = create_log_file(&tracing_dir, "old-20251201120000-1002.log");
@@ -233,11 +233,11 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let tracing_dir = setup_tracing_dir(&temp_dir);
 
-        // 29 天的文件（未过期，应保留）
+        // 1 天内的文件（未过期，应保留）
         let within_limit = create_log_file(&tracing_dir, "within-limit-20260110120000-1001.log");
         set_file_age_days(&within_limit, MAX_LOG_AGE_DAYS - 1);
 
-        // 超过 30 天的文件（已过期，应删除）
+        // 超过 1 天的文件（已过期，应删除）
         let over_limit = create_log_file(&tracing_dir, "over-limit-20260108120000-1002.log");
         set_file_age_days(&over_limit, MAX_LOG_AGE_DAYS + 1);
 
