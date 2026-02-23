@@ -62,7 +62,7 @@ pub fn detect_shell() -> Result<Shell, ShellError> {
 /// - Zsh: `~/.zshrc`
 /// - Bash: `~/.bash_profile` (macOS) 或 `~/.bashrc` (Linux)
 /// - Fish: `~/.config/fish/config.fish`
-/// - PowerShell: `~/.config/powershell/Microsoft.PowerShell_profile.ps1`
+/// - PowerShell: `~/Documents/PowerShell/Microsoft.PowerShell_profile.ps1` (Windows) 或 `~/.config/powershell/Microsoft.PowerShell_profile.ps1` (Unix)
 /// - Elvish: `~/.config/elvish/rc.elv`
 pub fn config_file_path(shell: &Shell) -> Option<PathBuf> {
     let home = dirs::home_dir()?;
@@ -81,7 +81,17 @@ pub fn config_file_path(shell: &Shell) -> Option<PathBuf> {
             }
         }
         Shell::Fish => home.join(".config/fish/config.fish"),
-        Shell::PowerShell => home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
+        Shell::PowerShell => {
+            // Windows 使用 Documents\PowerShell 路径，Unix 使用 .config/powershell 路径
+            #[cfg(target_os = "windows")]
+            {
+                home.join("Documents").join("PowerShell").join("Microsoft.PowerShell_profile.ps1")
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                home.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
+            }
+        }
         Shell::Elvish => home.join(".config/elvish/rc.elv"),
         _ => return None,
     })
