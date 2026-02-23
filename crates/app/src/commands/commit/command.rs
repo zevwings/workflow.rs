@@ -117,8 +117,8 @@ impl CommitCommand {
             return Ok(());
         }
 
-        log_debug!(
-            "Committing changes with message: {}",
+        info!(
+            "Committing changes with message | message={}",
             commit_message.lines().next().unwrap_or("")
         );
 
@@ -132,7 +132,7 @@ impl CommitCommand {
         })?;
 
         let short_sha = &commit_sha[..commit_sha.len().min(7)];
-        success!("Created commit: {}", short_sha);
+        success!("Created commit | sha={}", short_sha);
 
         // Step 5: 询问是否推送到远端
         if self.push {
