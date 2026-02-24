@@ -7,9 +7,10 @@ use std::sync::Arc;
 use client::{GitHubClient, LLMClient, LLMConfigContext, LanguageManager};
 use di::{bind, Container, InjectionError, Scope};
 use domain::{
-    AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
-    GitHubRepository, GitHubVerificationService, GitRepository, GlobalConfigRepository,
-    JiraRepository, PathService, PullRequestService, SshService, VerificationService,
+    AliasService, BranchService, CodeupRepository, CommitMessageService, CommitSummaryService,
+    CompletionService, GitHubRepository, GitHubVerificationService, GitRepository,
+    GlobalConfigRepository, JiraRepository, PathService, PullRequestService, SshService,
+    VerificationService,
 };
 
 use crate::{
@@ -105,6 +106,7 @@ pub fn register_services() -> Result<(), InjectionError> {
         let config_repository = c.get::<dyn GlobalConfigRepository>()?;
         let jira_repository = c.get::<dyn JiraRepository>()?;
         let github_verification_service = c.get::<dyn GitHubVerificationService>()?;
+        let codeup_repository = c.get::<dyn CodeupRepository>()?;
         let llm_language_manager = c.get::<dyn LanguageManager>()?;
         let ssh_service = c.get::<dyn SshService>()?;
         Ok(Arc::new(VerificationServiceImpl::new(
@@ -113,6 +115,7 @@ pub fn register_services() -> Result<(), InjectionError> {
             config_repository,
             jira_repository,
             github_verification_service,
+            codeup_repository,
             ssh_service,
         )))
     })

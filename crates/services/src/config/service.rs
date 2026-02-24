@@ -23,6 +23,7 @@ use client::{
     IntoLLMRequestParameters, LLMClient, LLMConversation, LanguageManager, SupportedLanguage,
 };
 use domain::{
+    CodeupConfigInfo, CodeupRepository, CodeupVerificationResult, CodeupVerificationStatus,
     ConfigError, GitHubAccountInfo, GitHubVerificationResult, GitHubVerificationService,
     GitHubVerificationSummary, GlobalConfigRepository, JiraConfigInfo, JiraRepository,
     JiraVerificationResult, JiraVerificationStatus, LLMConfig, LLMSettings, LLMVerificationResult,
@@ -74,6 +75,7 @@ pub(crate) struct VerificationServiceImpl {
     config_repository: Arc<dyn GlobalConfigRepository>,
     jira_repository: Arc<dyn JiraRepository>,
     github_verification_service: Arc<dyn GitHubVerificationService>,
+    codeup_repository: Arc<dyn CodeupRepository>,
     ssh_service: Arc<dyn SshService>,
 }
 
@@ -84,6 +86,7 @@ impl VerificationServiceImpl {
         config_repository: Arc<dyn GlobalConfigRepository>,
         jira_repository: Arc<dyn JiraRepository>,
         github_verification_service: Arc<dyn GitHubVerificationService>,
+        codeup_repository: Arc<dyn CodeupRepository>,
         ssh_service: Arc<dyn SshService>,
     ) -> Self {
         Self {
@@ -92,6 +95,7 @@ impl VerificationServiceImpl {
             config_repository,
             jira_repository,
             github_verification_service,
+            codeup_repository,
             ssh_service,
         }
     }
@@ -200,6 +204,42 @@ impl VerificationService for VerificationServiceImpl {
             configured: true,
             accounts,
             summary,
+        })
+    }
+
+    /// 验证 Codeup 配置
+    fn verify_codeup_config(&self) -> Result<CodeupVerificationResult, ConfigError> {
+        let global_config = self.config_repository.load()?;
+        let codeup_settings = &global_config.codeup;
+
+        if codeup_settings.is_empty() {
+            return Ok(CodeupVerificationResult {
+                configured: false,
+                config: None,
+                verification: None,
+            });
+        }
+
+        let config = CodeupConfigInfo {
+            project_id: codeup_settings.project_id.clone(),
+            csrf_token: codeup_settings.csrf_token.mask(),
+            cookie: codeup_settings.cookie.mask(),
+        };
+
+        let verification = match self.codeup_repository.get_user_info() {
+            Ok(user) => Some(CodeupVerificationStatus::Success {
+                username: user.name.clone(),
+            }),
+            Err(e) => Some(CodeupVerificationStatus::Failed {
+                reason: e.to_string(),
+                details: vec![],
+            }),
+        };
+
+        Ok(CodeupVerificationResult {
+            configured: true,
+            config: Some(config),
+            verification,
         })
     }
 

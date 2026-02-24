@@ -17,6 +17,7 @@ pub mod rollback;
 pub mod alias;
 pub mod branch;
 pub mod check;
+pub mod codeup;
 pub mod commit;
 pub mod completion;
 pub mod github;

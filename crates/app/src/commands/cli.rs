@@ -16,6 +16,7 @@ pub use crate::commands::diff::DiffCommand;
 pub use crate::commands::rollback::RollbackCommand;
 pub use crate::commands::{
     branch::{BranchSubcommand, IgnoreSubcommand},
+    codeup::CodeupCommand,
     completion::CompletionCommand,
     github::GithubCommand,
     jira::{AttachmentsArgs, CleanArgs, InfoArgs, JiraCommand, OutputFormat},
@@ -68,6 +69,9 @@ pub enum Command {
     /// GitHub account management commands
     #[command(subcommand)]
     Github(GithubCommand),
+    /// Codeup configuration management commands
+    #[command(subcommand)]
+    Codeup(CodeupCommand),
     /// Jira configuration management commands
     #[command(subcommand)]
     Jira(JiraCommand),

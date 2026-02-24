@@ -7,9 +7,9 @@ use app::cli::{DiffCommand, RollbackCommand};
 use app::{
     bootstrap::{get_alias_service, get_logger_manager},
     cli::{
-        AliasCommand, BranchSubcommand, Cli, Command, CompletionCommand, GithubCommand,
-        IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand, RepoCommand,
-        SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
+        AliasCommand, BranchSubcommand, Cli, CodeupCommand, Command, CompletionCommand,
+        GithubCommand, IgnoreSubcommand, JiraCommand, LlmCommand, LogCommand, PrSubcommand,
+        RepoCommand, SshCommand, StashSubcommand, TagSubcommand, UninstallArgs, UpdateArgs,
     },
     commands,
 };
@@ -124,6 +124,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             GithubCommand::Setup => {
                 let cmd = commands::github::GithubSetupCommand::new();
+                cmd.run()?;
+            }
+        },
+        Command::Codeup(codeup_cmd) => match codeup_cmd {
+            CodeupCommand::Check => {
+                let cmd = commands::codeup::CodeupCheckCommand::new();
+                cmd.run()?;
+            }
+            CodeupCommand::Setup => {
+                let cmd = commands::codeup::CodeupSetupCommand::new();
                 cmd.run()?;
             }
         },

@@ -13,7 +13,9 @@ pub mod ssh;
 pub mod verification_service;
 
 // Re-export public types
-pub use codeup::CodeupSettings;
+pub use codeup::{
+    CodeupConfigInfo, CodeupSettings, CodeupVerificationResult, CodeupVerificationStatus,
+};
 pub use config::GlobalConfig;
 pub use github::{
     GitHubAccount, GitHubAccountInfo, GitHubSettings, GitHubVerificationResult,

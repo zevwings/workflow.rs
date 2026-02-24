@@ -2,12 +2,14 @@
 //!
 //! 包含各个平台的工作流阶段实现。
 
+mod codeup;
 mod github;
 mod jira;
 mod llm;
 mod log;
 mod ssh;
 
+pub use codeup::codeup_stage;
 pub use github::github_stage;
 pub use jira::jira_stage;
 pub use llm::llm_stage;

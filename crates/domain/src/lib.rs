@@ -44,6 +44,9 @@ pub use completion::{
 pub use config::{
     BranchConfig,
     BranchTemplates,
+    CodeupConfigInfo,
+    CodeupVerificationResult,
+    CodeupVerificationStatus,
     CommitTemplates,
     ConfigError,
     GitHubAccount,

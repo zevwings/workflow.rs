@@ -9,7 +9,10 @@ pub mod repo;
 // Re-export public types
 pub use error::ConfigError;
 pub use global::{
+    CodeupConfigInfo,
     CodeupSettings,
+    CodeupVerificationResult,
+    CodeupVerificationStatus,
     GitHubAccount,
     // Verification types
     GitHubAccountInfo,
