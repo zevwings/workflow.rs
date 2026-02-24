@@ -1,13 +1,15 @@
+mod codeup_context;
 mod github_context;
 mod jira_context;
 mod llm_context;
 
 use std::sync::Arc;
 
-use client::{GitHubConfigContext, JiraConfigContext, LLMConfigContext};
+use client::{CodeupConfigContext, GitHubConfigContext, JiraConfigContext, LLMConfigContext};
 use di::{bind, Container, InjectionError, Scope};
 use domain::{GlobalConfigRepository, PathService};
 
+pub use codeup_context::CodeupContextImpl;
 pub use github_context::GitHubContextImpl;
 pub use jira_context::JiraConfigContextImpl;
 pub use llm_context::LLMConfigContextImpl;
@@ -41,6 +43,13 @@ pub fn register_context() -> Result<(), InjectionError> {
     bind!(dyn GitHubConfigContext, |c: &Container| {
         let global_config = c.get::<dyn GlobalConfigRepository>()?;
         Ok(Arc::new(GitHubContextImpl::new(global_config)))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    // Codeup Config Context
+    bind!(dyn CodeupConfigContext, |c: &Container| {
+        let global_config = c.get::<dyn GlobalConfigRepository>()?;
+        Ok(Arc::new(CodeupContextImpl::new(global_config)))
     })
     .in_scope(Scope::Singleton)?;
 

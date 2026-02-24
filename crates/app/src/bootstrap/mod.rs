@@ -9,8 +9,8 @@ use std::sync::{Arc, LazyLock};
 
 use client::LanguageManager;
 use domain::{
-    AliasService, BranchService, CommitMessageService, CommitSummaryService, CompletionService,
-    GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository,
+    AliasService, BranchService, CodeupRepository, CommitMessageService, CommitSummaryService,
+    CompletionService, GitHubRepository, GitRepository, GlobalConfigRepository, JiraRepository,
     JiraWorkHistoryRepository, PathService, PullRequestService, RepoConfigRepository,
     VerificationService,
 };
@@ -155,6 +155,11 @@ pub fn get_commit_message_service() -> Arc<dyn CommitMessageService> {
 /// 获取 GitHubRepository
 pub fn get_github_repository() -> Arc<dyn GitHubRepository> {
     get_service::<dyn GitHubRepository>()
+}
+
+/// 获取 CodeupRepository
+pub fn get_codeup_repository() -> Arc<dyn CodeupRepository> {
+    get_service::<dyn CodeupRepository>()
 }
 
 /// 获取 JiraRepository

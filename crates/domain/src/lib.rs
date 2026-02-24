@@ -6,6 +6,7 @@
 
 pub(crate) mod alias;
 pub(crate) mod branch;
+pub(crate) mod codeup;
 pub(crate) mod commit;
 pub(crate) mod completion;
 pub(crate) mod config;
@@ -87,6 +88,7 @@ pub use git::{
 // Re-export SSH types
 pub use ssh::{SshError, SshKeyInfo, SshService};
 // Re-export external service types
+pub use codeup::{CodeupError, CodeupRepository, CodeupSettings, CodeupUser};
 pub use github::{GitHubError, GitHubRepository, GitHubUser, GitHubVerificationService};
 pub use jira::{
     extract_jira_project, extract_jira_ticket_id, validate_jira_ticket_format,

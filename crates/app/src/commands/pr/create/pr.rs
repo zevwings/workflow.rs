@@ -143,7 +143,13 @@ pub fn create_pull_request(
         (Some(repo_name), Some(CodePlatform::GitHub)) => {
             Some(format!("https://github.com/{}/pull/{}", repo_name, pr_id))
         }
-        // 将来可以添加其他平台支持
+        (Some(_repo_name), Some(CodePlatform::Codeup)) => {
+            // Codeup URL 格式: https://codeup.aliyun.com/project/{project_id}/merge_request/{pr_id}
+            // 从 PR 服务获取实际 URL
+            let codeup_repo = bootstrap::get_codeup_repository();
+            codeup_repo.get_pull_request_url(&pr_id).ok()
+        }
+        // 其他平台支持
         _ => None,
     };
 

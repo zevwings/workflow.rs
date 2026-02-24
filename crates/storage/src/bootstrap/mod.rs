@@ -4,6 +4,7 @@
 
 use di::InjectionError;
 
+mod codeup;
 mod config;
 mod git;
 mod github;
@@ -17,6 +18,7 @@ pub fn register_storage() -> Result<(), InjectionError> {
     git::register_git()?;
     jira::register_jira()?;
     github::register_github()?;
+    codeup::register_codeup()?;
     ssh::register_ssh()?;
 
     Ok(())

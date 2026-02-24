@@ -3,10 +3,11 @@ use std::sync::Arc;
 use di::{bind, Container, InjectionError, Scope};
 
 use client::{
-    GitHubClient, GitHubConfigContext, HttpClient, JiraClient, JiraConfigContext, LLMClient,
-    LLMConfigContext, LanguageManager,
+    CodeupClient, CodeupConfigContext, GitHubClient, GitHubConfigContext, HttpClient, JiraClient,
+    JiraConfigContext, LLMClient, LLMConfigContext, LanguageManager,
 };
 
+use crate::codeup::CodeupClientImpl;
 use crate::github::GitHubClientImpl;
 use crate::http::ReqwestHttpClient;
 use crate::jira::JiraClientImpl;
@@ -43,6 +44,13 @@ pub fn register_client() -> Result<(), InjectionError> {
         let context = c.get::<dyn JiraConfigContext>()?;
         let client = c.get::<dyn HttpClient>()?;
         Ok(Arc::new(JiraClientImpl::new(client, context)))
+    })
+    .in_scope(Scope::Singleton)?;
+
+    bind!(dyn CodeupClient, |c: &Container| {
+        let context = c.get::<dyn CodeupConfigContext>()?;
+        let client = c.get::<dyn HttpClient>()?;
+        Ok(Arc::new(CodeupClientImpl::new(client, context)))
     })
     .in_scope(Scope::Singleton)?;
 
