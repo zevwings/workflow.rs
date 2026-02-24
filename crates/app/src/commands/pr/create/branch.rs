@@ -11,7 +11,7 @@ use crate::commands::pr::create::{
 use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
 use crate::{
     bootstrap,
-    util::{branch_type_from_branch_name, safe_pull, PullOptions},
+    util::{branch_type_from_branch_name, ensure_ssh_ready, safe_pull, PullOptions},
 };
 
 /// 处理非默认分支的情况
@@ -414,7 +414,8 @@ pub fn prepare_default_branch(
         .checkout_branch(default_branch)
         .map_err(|e| format!("Failed to switch to branch '{}': {}", default_branch, e))?;
 
-    // 拉取最新代码（工作区已 stash 故无需再 stash）
+    // 确保 SSH 就绪（可能在交互式提示中配置密钥），再拉取最新代码
+    ensure_ssh_ready().map_err(|e| format!("{}", e))?;
     spinner!("Pulling latest changes from '{}'...", default_branch)
         .with(|| safe_pull(default_branch, &PullOptions::no_stash()))
         .map_err(|e| format!("Failed to pull latest changes: {}", e))?;

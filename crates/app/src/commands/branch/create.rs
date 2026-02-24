@@ -6,7 +6,7 @@ use prompt::{error, info, input, select, spinner, success};
 use crate::util::{
     generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type, to_slug,
 };
-use crate::util::{safe_pull, PullOptions};
+use crate::util::{ensure_ssh_ready, safe_pull, PullOptions};
 use crate::{bootstrap, commands::jira::utils::get_jira_id_interactive_optional};
 
 /// 源分支选项
@@ -220,7 +220,8 @@ impl BranchCreateCommand {
             .checkout_branch(default_branch)
             .map_err(|e| format!("Failed to switch to branch '{}': {}", default_branch, e))?;
 
-        // 拉取最新代码（工作区已 stash 故无需再 stash）
+        // 确保 SSH 就绪（可能在交互式提示中配置密钥），再拉取最新代码
+        ensure_ssh_ready().map_err(|e| format!("{}", e))?;
         spinner!("Pulling latest changes from '{}'...", default_branch)
             .with(|| safe_pull(default_branch, &PullOptions::no_stash()))
             .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
