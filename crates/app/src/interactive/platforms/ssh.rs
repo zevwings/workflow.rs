@@ -3,7 +3,7 @@
 use std::error::Error;
 
 use domain::{GlobalConfig, VerificationService};
-use prompt::{br, confirm, select, separator, success, warning};
+use prompt::{br, confirm, info, select, separator, success, warning};
 
 use crate::{
     bootstrap::{get_ssh_service, get_verification_service},
@@ -11,8 +11,30 @@ use crate::{
         core::{WorkflowContext, WorkflowMode, WorkflowStage},
         display::VerificationResultFormatter,
     },
-    util::{add_ssh_key, generate_ssh_key, remove_ssh_key, GenerateOptions},
+    util::{add_ssh_key, generate_ssh_key, has_unloaded_keys, remove_ssh_key, GenerateOptions},
 };
+
+/// SSH 配置操作选项
+#[derive(Debug, Clone, PartialEq)]
+enum SshAction {
+    AddExistingKey,
+    GenerateNewKey,
+    RemoveKey,
+    ContinueToNextStep,
+    Done,
+}
+
+impl std::fmt::Display for SshAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AddExistingKey => write!(f, "Add an existing key to the agent"),
+            Self::GenerateNewKey => write!(f, "Generate a new SSH key"),
+            Self::RemoveKey => write!(f, "Remove a key from the agent"),
+            Self::ContinueToNextStep => write!(f, "Continue to next step"),
+            Self::Done => write!(f, "Done"),
+        }
+    }
+}
 
 /// SSH 工作流阶段
 pub struct SshStage;
@@ -46,55 +68,73 @@ impl WorkflowStage for SshStage {
         loop {
             br!();
             let verification_result = get_verification_service().verify_ssh_config()?;
-            verification_result.format();
+            // Setup 使用简洁展示（与 Jira 一致），check 使用 VerificationResultFormatter 表格
+            if verification_result.agent_available {
+                if verification_result.loaded_keys.is_empty() {
+                    info!("SSH agent: running (no keys loaded)");
+                    info!("  - Run `workflow ssh add` to load a key.");
+                } else {
+                    info!("SSH configuration detected!");
+                    info!(
+                        "  - SSH agent: running ({} key(s) loaded)",
+                        verification_result.loaded_keys.len()
+                    );
+                    for key in &verification_result.loaded_keys {
+                        info!(
+                            "  - {} ({}): {}",
+                            key.comment, key.algorithm, key.fingerprint
+                        );
+                    }
+                }
+            }
             br!();
 
             let has_keys = !verification_result.loaded_keys.is_empty();
-            let has_key_files = !ssh.scan_keys().is_empty();
+            let has_unloaded_keys = has_unloaded_keys();
 
-            let mut options = Vec::new();
-            if has_key_files {
-                options.push("Add an existing key to the agent".to_string());
+            let mut options: Vec<SshAction> = Vec::new();
+            if has_unloaded_keys {
+                options.push(SshAction::AddExistingKey);
             }
-            options.push("Generate a new SSH key".to_string());
+            options.push(SshAction::GenerateNewKey);
             if has_keys {
-                options.push("Remove a key from the agent".to_string());
+                options.push(SshAction::RemoveKey);
             }
-
-            let exit_option = if context.mode() == WorkflowMode::Setup {
-                "Continue to next step"
-            } else {
-                "Done"
-            };
-            options.push(exit_option.to_string());
+            options.push(match context.mode() {
+                WorkflowMode::Setup => SshAction::ContinueToNextStep,
+                WorkflowMode::Command => SshAction::Done,
+            });
 
             let selected = select!("What would you like to do?", options).prompt()?;
 
-            if selected.contains("Generate") {
-                br!();
-                let key_path = generate_ssh_key(GenerateOptions::default())?;
-                br!();
-                let add_now = confirm!("Add the new key to the ssh-agent now?")
-                    .default(true)
-                    .result_title("Add key to agent")
-                    .prompt()?;
-                if add_now {
-                    add_ssh_key(Some(key_path), None)?;
-                }
-                break;
-            } else if selected.contains("Add an existing") {
-                br!();
-                add_ssh_key(None, None)?;
-                break;
-            } else if selected.contains("Remove a key") {
-                br!();
-                if let Err(e) = remove_ssh_key(None, false) {
-                    warning!("{}", e);
-                } else {
+            match selected {
+                SshAction::AddExistingKey => {
+                    br!();
+                    add_ssh_key(None, None)?;
                     break;
                 }
-            } else if selected.contains(exit_option) {
-                break;
+                SshAction::GenerateNewKey => {
+                    br!();
+                    let key_path = generate_ssh_key(GenerateOptions::default())?;
+                    br!();
+                    let add_now = confirm!("Add the new key to the ssh-agent now?")
+                        .default(true)
+                        .result_title("Add key to agent")
+                        .prompt()?;
+                    if add_now {
+                        add_ssh_key(Some(key_path), None)?;
+                    }
+                    break;
+                }
+                SshAction::RemoveKey => {
+                    br!();
+                    if let Err(e) = remove_ssh_key(None, false) {
+                        warning!("{}", e);
+                    } else {
+                        break;
+                    }
+                }
+                SshAction::ContinueToNextStep | SshAction::Done => break,
             }
         }
 

@@ -100,13 +100,16 @@ impl WorkflowStage for CodeupStage {
         }
 
         if !has_codeup {
-            let should_configure = confirm!("Do you want to configure Codeup?")
-                .default(true)
-                .result_title("Configure Codeup")
-                .prompt()
-                .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
-            if !should_configure {
-                return Ok(());
+            // 仅在 workflow setup 流程中询问是否配置；workflow codeup setup 已明确意图，直接进入表单
+            if mode == WorkflowMode::Setup {
+                let should_configure = confirm!("Do you want to configure Codeup?")
+                    .default(true)
+                    .result_title("Configure Codeup")
+                    .prompt()
+                    .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
+                if !should_configure {
+                    return Ok(());
+                }
             }
         } else if mode == WorkflowMode::Setup && has_codeup {
             let keep = confirm!("Existing Codeup configuration detected. Keep current values?")
