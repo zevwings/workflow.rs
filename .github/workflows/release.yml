@@ -212,9 +212,9 @@ jobs:
       - name: 📦 Generate version number
         id: generate_version
         run: |
-          # 使用 Python dev 工具
+          # 使用 Python dev 工具（--master 为 store_true 标志，仅当 is_master_branch 时传入）
           python3 scripts/dev/py/dev.py version generate \
-            --master ${{ steps.detect_mode.outputs.is_master_branch == 'true' }} \
+            $([ "${{ steps.detect_mode.outputs.is_master_branch }}" = "true" ] && echo "--master") \
             --update \
             --ci
 
