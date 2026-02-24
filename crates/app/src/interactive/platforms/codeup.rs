@@ -94,9 +94,21 @@ impl WorkflowStage for CodeupStage {
                 info!("  - Cookie: {}", codeup.cookie.mask());
             }
             br!();
+        } else {
+            info!("No Codeup configuration detected.");
+            br!();
         }
 
-        if mode == WorkflowMode::Setup && has_codeup {
+        if !has_codeup {
+            let should_configure = confirm!("Do you want to configure Codeup?")
+                .default(true)
+                .result_title("Configure Codeup")
+                .prompt()
+                .map_err(|e: PromptError| Box::new(e) as Box<dyn Error>)?;
+            if !should_configure {
+                return Ok(());
+            }
+        } else if mode == WorkflowMode::Setup && has_codeup {
             let keep = confirm!("Existing Codeup configuration detected. Keep current values?")
                 .default(true)
                 .result_title("Keep Codeup configuration")

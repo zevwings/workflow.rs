@@ -1,7 +1,7 @@
 //! 平台配置流程
 
 use domain::GlobalConfig;
-use prompt::{br, info, separator, SelectBuilder};
+use prompt::{br, confirm, info, separator, SelectBuilder};
 
 use crate::interactive::core::context::{WorkflowContext, WorkflowMode};
 use crate::interactive::core::platform::{
@@ -66,7 +66,14 @@ where
     } else {
         info!("No {} accounts were detected.", platform_name);
         br!();
-        add_account_fn(context, AccountSetMode::SetAsCurrent)?;
+        let should_configure = confirm!("Do you want to configure {}?", platform_name)
+            .default(true)
+            .result_title(format!("Configure {}", platform_name))
+            .prompt()
+            .map_err(|e| e.to_string())?;
+        if should_configure {
+            add_account_fn(context, AccountSetMode::SetAsCurrent)?;
+        }
     }
 
     Ok(())
