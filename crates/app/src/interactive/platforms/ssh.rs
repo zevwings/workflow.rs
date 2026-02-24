@@ -97,7 +97,7 @@ impl WorkflowStage for SshStage {
                 options.push(SshAction::AddExistingKey);
             }
             options.push(SshAction::GenerateNewKey);
-            if has_keys {
+            if has_keys && context.mode() == WorkflowMode::Command {
                 options.push(SshAction::RemoveKey);
             }
             options.push(match context.mode() {
@@ -105,7 +105,9 @@ impl WorkflowStage for SshStage {
                 WorkflowMode::Command => SshAction::Done,
             });
 
-            let selected = select!("What would you like to do?", options).prompt()?;
+            let default_idx = options.len() - 1;
+            let selected =
+                select!("What would you like to do?", options).default(default_idx).prompt()?;
 
             match selected {
                 SshAction::AddExistingKey => {
