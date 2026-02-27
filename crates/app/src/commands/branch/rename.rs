@@ -86,7 +86,7 @@ impl BranchRenameCommand {
             .map_err(|e| format!("Failed to get confirmation: {}", e))?;
 
             if should_update_remote {
-                if let Err(e) = safe_push(&new_branch, true) {
+                if let Err(e) = safe_push(Some(new_branch.clone()), true) {
                     error!("Failed to push new branch: {}", e);
                     warning!("Local branch renamed, but remote update failed");
                     return Err(format!("Failed to push new branch: {}", e).into());

@@ -121,7 +121,7 @@ impl PullRequestUpdateCommand {
         self.commit_changes(&*git_repo, &commit_message)?;
 
         // 7. 推送到远端
-        self.push_to_remote(&*git_repo)?;
+        safe_push(None, false)?;
 
         success!(
             "Successfully updated PR #{} with commit: {}",
@@ -155,24 +155,6 @@ impl PullRequestUpdateCommand {
             "Committed changes: {}",
             &commit_sha[..7.min(commit_sha.len())]
         );
-
-        Ok(())
-    }
-
-    /// 推送分支到远端
-    fn push_to_remote(
-        &self,
-        git_repo: &dyn GitRepository,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let current_branch = git_repo
-            .get_current_branch()
-            .map_err(|e| format!("Failed to get current branch: {}", e))?;
-
-        spinner!("Pushing branch '{}' to remote...", current_branch)
-            .with(|| safe_push(&current_branch, false))
-            .map_err(|e| format!("Failed to push branch: {}", e))?;
-
-        success!("Pushed branch '{}' to remote", current_branch);
 
         Ok(())
     }

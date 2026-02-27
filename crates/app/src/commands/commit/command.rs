@@ -2,7 +2,6 @@
 //!
 //! 智能生成 commit message 并提交代码。
 
-use domain::GitRepository;
 use prompt::{confirm, error, info, spinner, success};
 use toolkit::{log_debug, log_info, log_info_with_fields};
 
@@ -136,31 +135,13 @@ impl CommitCommand {
 
         // Step 5: 询问是否推送到远端
         if self.push {
-            self.push_to_remote(&git_repo)?;
+            safe_push(None, true)?;
         } else {
             let should_push = confirm!("Push to remote?").default(true).prompt()?;
             if should_push {
-                self.push_to_remote(&git_repo)?;
+                safe_push(None, false)?;
             }
         }
-
-        Ok(())
-    }
-
-    /// 推送到远端
-    fn push_to_remote(
-        &self,
-        git_repo: &std::sync::Arc<dyn GitRepository>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let branch_name = git_repo
-            .get_current_branch()
-            .map_err(|e| format!("Failed to get current branch: {}", e))?;
-
-        spinner!("Pushing to origin/{}...", branch_name)
-            .with(|| safe_push(&branch_name, false))
-            .map_err(|e| format!("Failed to push: {}", e))?;
-
-        success!("Pushed to origin/{}", branch_name);
 
         Ok(())
     }

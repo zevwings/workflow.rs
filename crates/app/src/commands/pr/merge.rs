@@ -108,10 +108,7 @@ impl PullRequestMergeCommand {
             false
         };
 
-        // 5. 拉取最新代码（工作区已 stash 故无需再 stash）
-        spinner!("Pulling latest changes from '{}'...", target_branch)
-            .with(|| safe_pull(&target_branch, &PullOptions::no_stash()))
-            .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
+        safe_pull(&target_branch, &PullOptions::no_stash())?;
 
         if current_branch != target_branch {
             success!("Switched to '{}' and pulled latest", target_branch);
