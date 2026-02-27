@@ -56,6 +56,44 @@ jobs:
             --pr-creator "${{ github.event.pull_request.user.login }}" \
             --expected-user "${{ env.WORKFLOW_USER_NAME }}" \
             --ci
+
+  # 预发布版本检查
+  pre-release-checks:
+    name: 🔢 Pre-release Version Check
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      needs_increment: ${{ steps.version.outputs.needs_increment }}
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 🔍 Determine branch type and generate version
+        id: version
+        shell: bash
+        run: |
+          # choose master flag based on ref
+          MASTER_FLAG=""
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            MASTER_FLAG="--master"
+          fi
+          python3 scripts/dev/py/dev.py version generate $MASTER_FLAG --ci
+
+      - name: ℹ️ Display computed version
+        run: |
+          echo "Computed version: ${{ steps.version.outputs.version }}"
+          echo "Computed tag: ${{ steps.version.outputs.tag }}"
+          echo "Needs increment: ${{ steps.version.outputs.needs_increment }}"
   # 代码质量检查（Lint）
   check-lint:
     name: 🔍 Code Quality Check
@@ -281,7 +319,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests, build-verify]
+    needs: [check-skip-ci, pre-release-checks, check-lint, tests, build-verify]
     if: always()
     steps:
       - name: ✅ Check lint and test status
@@ -358,6 +396,14 @@ jobs:
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
               if [ -z "$BUILD_RESULT" ] || [ "$BUILD_RESULT" == "success" ] || [ "$BUILD_RESULT" == "skipped" ]; then
                 echo "✅ All checks passed or were skipped"
+
+                # show pre-release version info if available
+                if [ -n "${{ needs.pre-release-checks.outputs.version }}" ]; then
+                  echo "🔢 Pre-release version: ${{ needs.pre-release-checks.outputs.version }}"
+                  echo "🏷️ Tag: ${{ needs.pre-release-checks.outputs.tag }}"
+                  echo "🔁 Needs increment: ${{ needs.pre-release-checks.outputs.needs_increment }}"
+                fi
+
                 exit 0
               fi
             fi

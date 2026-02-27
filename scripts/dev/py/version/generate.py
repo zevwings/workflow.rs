@@ -100,8 +100,24 @@ def determine_version_increment(commits: list[str], current_patch: int) -> str:
     return VersionIncrementType.PATCH
 
 
+def _read_cargo_workspace_version() -> Optional[str]:
+    """从 Cargo.toml 读取 [workspace.package] 版本号，如果存在则返回"""
+    cargo_toml = Path("Cargo.toml")
+    if not cargo_toml.exists():
+        return None
+    content = cargo_toml.read_text()
+    m = re.search(r'^\[workspace\.package\][^\[]*?version\s*=\s*"([^"]+)"', content, re.MULTILINE)
+    if m:
+        return m.group(1)
+    return None
+
+
 def generate_master_version(latest_version: str, latest_tag: str) -> Tuple[str, str, bool]:
-    """生成 master 分支版本号"""
+    """生成 master 分支版本号
+
+    如果 workspace Cargo.toml 手动指定了一个更高版本号，优先使用它。
+    返回 (version, tag, needs_increment)。
+    """
     major, minor, patch = parse_version(latest_version)
 
     # 检查当前 commit 是否已经有标准版本 tag 指向它
@@ -144,6 +160,26 @@ def generate_master_version(latest_version: str, latest_tag: str) -> Tuple[str, 
 
     log_success(f"Version increment type: {increment_type}")
     log_success(f"Generated version {version} ({tag}) based on Conventional Commits")
+
+    # 如果 Cargo.toml 有手动指定的版本且更高，则采用该版本
+    cargo_ver = _read_cargo_workspace_version()
+    if cargo_ver:
+        try:
+            # compare tuples
+            curr_tuple = parse_version(cargo_ver)
+            calc_tuple = parse_version(version)
+            if curr_tuple > calc_tuple:
+                log_warning(
+                    f"Workspace Cargo.toml version {cargo_ver} > calculated {version}, using Cargo.toml value"
+                )
+                version = cargo_ver
+                tag = f"v{version}"
+                # we didn't need to increment based on commits
+                needs_increment = False
+                return version, tag, needs_increment
+        except ValueError:
+            # ignore parse errors
+            pass
 
     return version, tag, True
 
@@ -221,8 +257,22 @@ def update_cargo_files(version: str) -> None:
 
     # 运行 cargo update 更新 Cargo.lock
     try:
-        run_git_command(['cargo', 'update', '--workspace'])
+        # We use subprocess.run directly rather than run_git_command
+        # because run_git_command prefixes arguments with "git" which
+        # would result in `git cargo update` and fail.
+        import subprocess
+
+        result = subprocess.run(
+            ['cargo', 'update', '--workspace'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
         log_success("Updated Cargo.lock")
+    except subprocess.CalledProcessError as e:
+        # capture stderr for context
+        log_error(f"Failed to update Cargo.lock: {e.stderr}")
+        sys.exit(1)
     except Exception as e:
         log_error(f"Failed to update Cargo.lock: {e}")
         sys.exit(1)
