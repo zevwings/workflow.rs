@@ -68,23 +68,9 @@ pub fn commit_changes(
     success!("Committed changes: {}", &commit_sha[..7]);
 
     // 推送代码到远端
-    push_branch(branch_repo)?;
+    safe_push(None, false)?;
 
     Ok(Some(commit_sha))
-}
-
-/// 推送分支到远端
-pub fn push_branch(branch_repo: &dyn GitRepository) -> Result<(), Box<dyn std::error::Error>> {
-    let current_branch = branch_repo
-        .get_current_branch()
-        .map_err(|e| format!("Failed to get current branch: {}", e))?;
-
-    spinner!("Pushing branch '{}' to remote...", current_branch)
-        .with(|| safe_push(&current_branch, true))
-        .map_err(|e| format!("Failed to push branch: {}", e))?;
-
-    success!("Pushed branch '{}' to remote", current_branch);
-    Ok(())
 }
 
 /// 检查是否需要推送分支到远端

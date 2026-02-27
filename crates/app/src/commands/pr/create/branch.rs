@@ -3,15 +3,18 @@
 use domain::{get_change_types_by_branch_type, BranchType, GitRepository};
 use prompt::{info, select, spinner, success, warning};
 
-use crate::commands::pr::create::{
-    commit::{check_needs_push, commit_changes, push_branch},
-    pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary},
-    types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption},
-};
 use crate::commands::pr::utils::{generate_pull_request_body, generate_pull_request_title};
 use crate::{
     bootstrap,
     util::{branch_type_from_branch_name, ensure_ssh_ready, safe_pull, PullOptions},
+};
+use crate::{
+    commands::pr::create::{
+        commit::{check_needs_push, commit_changes},
+        pr::{confirm_target_branch, create_pull_request, format_pr_title, generate_pr_summary},
+        types::{BranchHandleContext, BranchHandleOption, ConfirmOption, TargetBranchOption},
+    },
+    util::safe_push,
 };
 
 /// 处理非默认分支的情况
@@ -163,7 +166,7 @@ fn handle_no_existing_pr(
             // 没有未提交的更改，检查是否需要 push
             let needs_push = check_needs_push(ctx.branch_repo, ctx.current_branch)?;
             if needs_push {
-                push_branch(ctx.branch_repo)?;
+                safe_push(None, true)?;
             }
         }
     } else {
