@@ -3,7 +3,7 @@
 //! 提供带 SSH 保障和 stash 处理的 pull 操作。
 
 use domain::GitError;
-use prompt::{error, info};
+use prompt::{error, info, spinner};
 
 use crate::bootstrap;
 use crate::util::ensure_ssh_ready;
@@ -76,7 +76,8 @@ pub fn safe_pull(
             .map_err(|e| format!("Failed to stash changes: {}", e))?;
     }
 
-    let result = git_repo.pull(branch_name);
+    let result = spinner!("Pulling latest changes from '{}'...", branch_name)
+        .with(|| git_repo.pull(branch_name));
 
     if let Err(ref e) = result {
         if matches!(e, GitError::MergeConflict) {

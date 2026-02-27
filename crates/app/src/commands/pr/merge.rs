@@ -10,7 +10,7 @@ use crate::{
         get_pull_request_service,
     },
     commands::pr::utils::get_pull_request_id_interactive_optional,
-    util::{ensure_ssh_ready, safe_pull, PullOptions},
+    util::{safe_pull, PullOptions},
 };
 
 /// Pull Request Merge 命令
@@ -108,11 +108,7 @@ impl PullRequestMergeCommand {
             false
         };
 
-        // 5. 确保 SSH 就绪（可能在交互式提示中配置密钥），再拉取最新代码
-        ensure_ssh_ready().map_err(|e| format!("{}", e))?;
-        spinner!("Pulling latest changes from '{}'...", target_branch)
-            .with(|| safe_pull(&target_branch, &PullOptions::no_stash()))
-            .map_err(|e| format!("Failed to pull latest changes: {}", e))?;
+        safe_pull(&target_branch, &PullOptions::no_stash())?;
 
         if current_branch != target_branch {
             success!("Switched to '{}' and pulled latest", target_branch);
