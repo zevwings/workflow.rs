@@ -312,6 +312,12 @@ mod tests {
 
     struct EnvGuard {
         original_home: Option<OsString>,
+        #[cfg(windows)]
+        original_userprofile: Option<OsString>,
+        #[cfg(windows)]
+        original_homedrive: Option<OsString>,
+        #[cfg(windows)]
+        original_homepath: Option<OsString>,
         original_disable_icloud: Option<OsString>,
     }
 
@@ -319,10 +325,41 @@ mod tests {
         fn new(home_dir: &PathBuf) -> Self {
             let original_home = env::var_os("HOME");
             let original_disable_icloud = env::var_os("WORKFLOW_DISABLE_ICLOUD");
+            #[cfg(windows)]
+            let original_userprofile = env::var_os("USERPROFILE");
+            #[cfg(windows)]
+            let original_homedrive = env::var_os("HOMEDRIVE");
+            #[cfg(windows)]
+            let original_homepath = env::var_os("HOMEPATH");
+
+            // always set HOME so unix tests work
             env::set_var("HOME", home_dir);
             env::set_var("WORKFLOW_DISABLE_ICLOUD", "1");
-            Self {
+
+            // on Windows dirs::home_dir() ignores HOME and prefers USERPROFILE/HOMEDRIVE+HOMEPATH
+            #[cfg(windows)]
+            {
+                // USERPROFILE should point to the same directory
+                env::set_var("USERPROFILE", home_dir);
+
+                // HOMEDRIVE is drive letter, e.g. "C:"; HOMEPATH is the rest
+                if let Some(path_str) = home_dir.to_str() {
+                    if path_str.len() >= 2 && path_str.as_bytes()[1] == b':' {
+                        let drive = &path_str[0..2];
+                        env::set_var("HOMEDRIVE", drive);
+                        env::set_var("HOMEPATH", &path_str[2..]);
+                    }
+                }
+            }
+
+            EnvGuard {
                 original_home,
+                #[cfg(windows)]
+                original_userprofile,
+                #[cfg(windows)]
+                original_homedrive,
+                #[cfg(windows)]
+                original_homepath,
                 original_disable_icloud,
             }
         }
@@ -334,9 +371,26 @@ mod tests {
                 Some(value) => env::set_var("HOME", value),
                 None => env::remove_var("HOME"),
             }
+
             match &self.original_disable_icloud {
                 Some(value) => env::set_var("WORKFLOW_DISABLE_ICLOUD", value),
                 None => env::remove_var("WORKFLOW_DISABLE_ICLOUD"),
+            }
+
+            #[cfg(windows)]
+            {
+                match &self.original_userprofile {
+                    Some(val) => env::set_var("USERPROFILE", val),
+                    None => env::remove_var("USERPROFILE"),
+                }
+                match &self.original_homedrive {
+                    Some(val) => env::set_var("HOMEDRIVE", val),
+                    None => env::remove_var("HOMEDRIVE"),
+                }
+                match &self.original_homepath {
+                    Some(val) => env::set_var("HOMEPATH", val),
+                    None => env::remove_var("HOMEPATH"),
+                }
             }
         }
     }
@@ -535,10 +589,19 @@ mod tests {
 
     #[test]
     fn test_check_status_when_no_scripts_exist() {
-        with_test_home(|_| {
+        with_test_home(|temp| {
             let path_service = Arc::new(PathServiceImpl::new());
             let service = CompletionServiceImpl::new(path_service);
             let status = service.check_status().unwrap();
+
+            // the completion directory should be inside our temporary HOME
+            if let Some(dir) = &status.completion_dir {
+                assert!(
+                    dir.starts_with(temp.path()),
+                    "completion dir {:?} leaked outside of temp home",
+                    dir
+                );
+            }
 
             assert!(status.shell_statuses.iter().all(|s| !s.script_exists));
         });
