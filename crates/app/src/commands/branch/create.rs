@@ -3,10 +3,10 @@
 use domain::GitRepository;
 use prompt::{error, info, input, select, spinner, success};
 
+use crate::util::{ensure_ssh_ready, safe_pull, PullOptions};
 use crate::util::{
     generate_branch_name_from_jira, generate_branch_name_from_template, select_branch_type, to_slug,
 };
-use crate::util::{ensure_ssh_ready, safe_pull, PullOptions};
 use crate::{bootstrap, commands::jira::utils::get_jira_id_interactive_optional};
 
 /// 源分支选项
