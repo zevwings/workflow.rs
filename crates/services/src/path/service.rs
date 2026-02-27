@@ -43,8 +43,17 @@ impl PathServiceImpl {
     ///
     /// 如果无法创建目录，返回相应的错误信息。
     fn try_local_base_dir(&self) -> Result<PathBuf, PathError> {
-        let home_dir =
-            dirs::home_dir().ok_or_else(|| PathError::CannotDetermine("home".to_string()))?;
+        // `dirs::home_dir()` on Windows ignores the HOME environment variable and
+        // prefers USERPROFILE/HOMEDRIVE+HOMEPATH instead. Many of our tests rely
+        // on temporarily overriding HOME so that path services point into a
+        // temp directory. To make those tests portable and to respect the
+        // developer's intent we first check for HOME explicitly and only fall
+        // back to `dirs::home_dir()` if it's not set.
+        let home_dir = if let Ok(h) = std::env::var("HOME") {
+            PathBuf::from(h)
+        } else {
+            dirs::home_dir().ok_or_else(|| PathError::CannotDetermine("home".to_string()))?
+        };
 
         let workflow_dir = home_dir.join(MAIN_DIR);
 
@@ -287,5 +296,48 @@ impl PathService for PathServiceImpl {
         let logs_dir = self.try_local_base_dir()?.join("logs");
         self.create_dir_with_permissions(&logs_dir, "logs")?;
         Ok(logs_dir)
+    }
+}
+
+// ---------------------- tests ----------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use tempfile::tempdir;
+
+    /// On all platforms we should respect the HOME environment variable when
+    /// resolving the local base directory. Previously on Windows `dirs::home_dir()`
+    /// ignored HOME and always returned USERPROFILE. This regression caused
+    /// completion tests to fail because the temporary home directory set by the
+    /// test helper was not being honored.
+    #[test]
+    fn try_local_base_dir_respects_home_env() {
+        let temp = tempdir().expect("tempdir");
+        let home_path = temp.path().to_path_buf();
+
+        // set HOME for unix and windows tests
+        env::set_var("HOME", &home_path);
+
+        #[cfg(windows)]
+        {
+            env::set_var("USERPROFILE", &home_path);
+            if let Some(path_str) = home_path.to_str() {
+                if path_str.len() >= 2 && path_str.as_bytes()[1] == b':' {
+                    env::set_var("HOMEDRIVE", &path_str[0..2]);
+                    env::set_var("HOMEPATH", &path_str[2..]);
+                }
+            }
+        }
+
+        let svc = PathServiceImpl::new();
+        let base = svc.try_local_base_dir().expect("should return a path");
+        assert!(
+            base.starts_with(&home_path),
+            "base dir {:?} not under {:?}",
+            base,
+            home_path
+        );
     }
 }
