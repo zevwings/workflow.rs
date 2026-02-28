@@ -219,11 +219,11 @@ jobs:
             --ci
 
       - name: 🔧 Setup Rust toolchain
-        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
+        if: steps.correct_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: 📝 Update Cargo.toml and Cargo.lock version
-        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
+        if: steps.correct_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         shell: bash
         run: |
           NEW_VERSION="${{ steps.generate_version.outputs.version }}"
@@ -259,7 +259,7 @@ jobs:
 
       - name: 🔍 Check if version files have changes
         id: check_changes
-        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
+        if: steps.correct_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         shell: bash
         run: |
           # 检查 Cargo.toml 和 Cargo.lock 是否有实际的更改
@@ -279,7 +279,7 @@ jobs:
           fi
 
       - name: 📤 Upload updated version files
-        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true' && steps.check_changes.outputs.has_changes == 'true'
+        if: steps.correct_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true' && steps.check_changes.outputs.has_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: updated-version-files
