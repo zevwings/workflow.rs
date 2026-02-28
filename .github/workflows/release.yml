@@ -552,10 +552,12 @@ jobs:
 
       - name: 🔐 Calculate SHA256 checksum for archive
         id: sha256
+        # run the step in bash even on Windows so our bash-style condition works
+        shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
-            # Windows: 使用 PowerShell 计算 SHA256
+            # Windows: use PowerShell to compute SHA256
             SHA256=$(powershell -Command "(Get-FileHash -Path '$ARCHIVE_NAME' -Algorithm SHA256).Hash.ToLower()")
           else
             ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
