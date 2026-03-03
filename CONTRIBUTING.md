@@ -509,7 +509,7 @@ Related to #456
 
 ### 错误处理
 
-- **错误类型**：使用 `color_eyre::Result<T>`
+- **错误类型**：库 crate 使用 `thiserror` 定义错误类型，应用层使用 `Box<dyn std::error::Error>`
 - **错误信息**：提供清晰的错误信息和上下文
 - **错误处理模式**：考虑所有错误情况，避免使用 `unwrap()`
 
@@ -526,14 +526,16 @@ Related to #456
 
 ### 模块组织
 
-遵循 Cargo workspace 多 crate 架构（详见 [架构设计](./docs/guidelines/architecture.md)）：
-- **app**：CLI 入口（`bin/workflow.rs`、`bin/install.rs`）、`cli/` 参数与子命令、`commands/` 命令实现、`workflows/` 工作流编排
-- **domain**：领域模型与仓储接口
-- **storage**：存储与 Git 等实现
-- **services**：应用服务（PR、completion、path、alias 等）
-- **toolkit**：HTTP、日志、路径、模板等通用能力
-- **prompt**：交互与输出
-- **registry**：依赖注入
+遵循 Cargo workspace 多 crate 架构（9 个 crate，详见 [架构设计](./docs/guidelines/architecture.md)）：
+- **app**：CLI 入口（`bin/workflow.rs`、`bin/install.rs`）、`cli/` 参数与子命令、`commands/` 命令实现、`interactive/` 交互式工作流
+- **domain**：领域实体与接口（traits only，无实现）
+- **client**：客户端 trait 与类型（Http、LLM、GitHub、Jira、LanguageManager）
+- **infra**：基础设施实现（HTTP 客户端、LLM 客户端、重试机制等）
+- **storage**：仓储实现（Git、GitHub、Jira、Config）
+- **services**：应用服务（PR、分支、提交、摘要、补全、别名等）
+- **toolkit**：通用工具（日志、路径、模板、Shell、回滚等）
+- **prompt**：终端交互（对话框、表单、进度条、样式输出）
+- **di**：依赖注入容器
 
 ---
 
@@ -595,4 +597,4 @@ Related to #456
 
 ---
 
-**最后更新**: 2026-02-06
+**最后更新**: 2026-03-03

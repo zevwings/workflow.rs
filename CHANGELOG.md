@@ -7,14 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- 修复 create-tag job 中 TAG_CREATED 判断逻辑错误
+
+---
+
+## [2.0.0] - 2026-03-03
+
+### Breaking Changes
+- **架构重构**：Workspace 从 7 个 crate 重构为 9 个 crate
+  - 新增 `client` crate（客户端 trait 与类型定义：Http、LLM、GitHub、Jira、LanguageManager）
+  - 新增 `infra` crate（基础设施实现：HTTP 客户端、LLM 客户端、重试机制）
+  - `registry` crate 重命名为 `di`（基于 DashMap 的依赖注入容器，支持 Singleton/Transient 作用域）
+- **错误处理**：从 `color_eyre` 迁移为 `thiserror` + `Box<dyn std::error::Error>`
+- **最低 Rust 版本**：从 1.82 更新为 1.93
+- **命令重命名**：`branch delete` → `branch remove`，`tag delete` → `tag remove`
+- **命令移除**：`repo clean` 命令已移除，分支清理请使用 `branch clean`
+- **PR 命令变更**：`pr summarize` 替换为 `pr reword`（基于三阶段提交分析重写 PR 描述）
+- **Jira 命令调整**：`transition`、`assign`、`comment`、`status` 移至 `develop` feature flag，Release 构建中不可用
+
 ### Added
-- 新增功能将在这里记录
+- **SSH 密钥管理**：新增 `workflow ssh` 命令集
+  - `workflow ssh generate` - 生成 SSH 密钥对（支持 ed25519/rsa 算法）
+  - `workflow ssh add` - 添加密钥到 ssh-agent
+  - `workflow ssh remove` - 从 ssh-agent 移除密钥
+  - `workflow ssh check` - 检查 SSH 配置
+  - `workflow ssh setup` - 交互式 SSH 配置
+- **提交命令**：新增 `workflow commit` 命令
+  - 支持 AI 根据暂存变更自动生成 commit message
+  - 支持自定义消息（`-m`）、自动暂存（`-a`）、提交后推送（`-p`）、dry-run 预览
+- **PR 描述重写**：新增 `workflow pr reword` 命令，基于三阶段提交分析重新生成 PR 描述
+- **仓库管理增强**：新增 `repo status`、`repo push`、`repo pull` 子命令
+- **CNB 平台支持**：新增 CNB (Cloud Native Build) 代码平台识别与支持
+- **交互式工作流系统**：新增 `interactive` 模块，实现阶段化的 setup/check 工作流（Jira → GitHub → LLM → Log）
 
 ### Changed
-- 变更将在这里记录
-
-### Fixed
-- 修复将在这里记录
+- **DI 系统重写**：基于 `DashMap` 的全局 DI 容器，支持 `bind!`、`bind_instance!`、`registry!` 宏
+- **模块重组**：`workflows/` 模块重命名为 `interactive/`
+- **CI 优化**：新增 pre-check 阶段，修复 SHA256 校验和构建流程
 
 ---
 
@@ -22,6 +52,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **工作流优化**：优化工作流处理逻辑，提升性能和稳定性
+
+---
+
+## [1.6.8] - 2025-12-18
+
+### Fixed
+- 修复代码审查中发现的问题
 
 ---
 
@@ -168,7 +205,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 链接
 
 - [GitHub Releases](https://github.com/zevwings/workflow.rs/releases)
-- [项目文档](https://github.com/zevwings/workflow.rs/blob/master/README.md)
-- [架构文档](https://github.com/zevwings/workflow.rs/tree/master/docs)
+- [项目文档](./README.md)
+- [架构文档](./docs/guidelines/architecture.md)
 
 ---
