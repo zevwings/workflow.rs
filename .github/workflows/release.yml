@@ -894,6 +894,19 @@ jobs:
           fi
 
       # Step 3: Create and push tag
+      - name: 🔍 Check if tag already exists
+        id: check_tag
+        shell: bash
+        run: |
+          TAG="${{ needs.update-version.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "ℹ️  Tag already exists: $TAG"
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  Tag does not exist yet: $TAG"
+          fi
+
       - name: ⚙️ Configure Git for tag creation
         shell: bash
         run: |
@@ -943,32 +956,15 @@ jobs:
         run: |
           VERSION="${{ needs.update-version.outputs.version }}"
           TAG="${{ needs.update-version.outputs.tag }}"
-          IS_MASTER="${{ needs.update-version.outputs.is_master_branch }}"
-          NEEDS_INCREMENT="${{ needs.update-version.outputs.needs_increment }}"
 
-          # 检查是否创建了新 tag
-          if [ "$IS_MASTER" == "true" ]; then
-            # Master 分支：检查是否创建了新 tag
-            if [ "$NEEDS_INCREMENT" == "true" ]; then
-              # 需要递增版本号，会创建新 tag
-              TAG_CREATED="true"
-            else
-              # 检查 tag 是否已存在
-              if git rev-parse "$TAG" >/dev/null 2>&1; then
-                TAG_CREATED="false"
-              else
-                TAG_CREATED="true"
-              fi
-            fi
+          # 根据创建前的检查结果判断是否创建了新 tag
+          TAG_EXISTED="${{ steps.check_tag.outputs.tag_exists }}"
+          if [ "$TAG_EXISTED" == "true" ]; then
+            TAG_CREATED="false"
+            echo "ℹ️  Tag already existed before this run: $TAG"
           else
-            # 非 Master 分支：检查 tag 是否已存在
-            if git rev-parse "$TAG" >/dev/null 2>&1; then
-              TAG_CREATED="false"
-              echo "ℹ️  Tag already exists: $TAG"
-            else
-              TAG_CREATED="true"
-              echo "ℹ️  Created new pre-release tag: $TAG"
-            fi
+            TAG_CREATED="true"
+            echo "ℹ️  New tag created: $TAG"
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
