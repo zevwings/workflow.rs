@@ -1,5 +1,8 @@
 .workflow
 
+#.venv
+#python_test/
+
 # Rust
 /target/
 **/*.rs.bk

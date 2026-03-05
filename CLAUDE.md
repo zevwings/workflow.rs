@@ -97,8 +97,8 @@ The `app` crate has a `develop` feature (default-on) for dev-only commands. Rele
 
 ## Error Handling
 
-- Use `anyhow::Result<T>` with `.context()` for adding error context
-- `thiserror` for defining error types in library crates
+- Application layer (commands, main) uses `Result<(), Box<dyn std::error::Error>>`
+- Library crates use `thiserror` for defining typed errors (e.g. `GitError`, `JiraError`, `PullRequestError`)
 - The `prompt` crate provides `is_user_cancelled()` to detect Ctrl+C in interactive flows
 
 ## Conventions

@@ -3,7 +3,7 @@
 ![GitHub Release](https://img.shields.io/github/v/release/zevwings/workflow.rs)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![CI](https://github.com/zevwings/workflow.rs/workflows/CI/badge.svg)
-![Rust Version](https://img.shields.io/badge/rust-1.82+-orange)
+![Rust Version](https://img.shields.io/badge/rust-1.93+-orange)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
 
 工作流自动化工具的 Rust 实现版本。
@@ -401,6 +401,9 @@ workflow completion remove [--all] # 移除 completion 配置（--all 移除所�
 ```bash
 workflow repo setup                 # 交互式配置项目级设置（分支前缀、模板等）
 workflow repo check                 # 验证仓库配置（项目/用户配置、模板等）
+workflow repo status                # 查看仓库状态
+workflow repo push                  # 推送到远端
+workflow repo pull                  # 从远端拉取
 
 # 创建新分支
 workflow branch create [JIRA_ID] [--from-default] [--dry-run]  # 创建新分支（可选 JIRA ticket、从默认分支、预览）
@@ -422,6 +425,13 @@ workflow branch ignore list                # 列出当前仓库的忽略分支
 # 删除分支
 workflow branch remove [BRANCH_NAME] [--local-only] [--remote-only] [--dry-run] [--force]
 ```
+
+### 提交管理
+```bash
+workflow commit [-m <message>] [-a] [-p] [--dry-run]  # AI 生成或自定义消息提交
+```
+
+> **注意**：不提供 `-m` 时，AI 会根据暂存区变更自动生成 commit message。使用 `-p` 可在提交后自动推送到远端。
 
 ### Tag 管理
 ```bash
@@ -447,6 +457,15 @@ workflow alias remove [NAME]       # 移除别名（不提供则交互式选择�
 
 > **注意**：别名功能允许您为常用命令创建简短别名。例如，创建别名 `ci` 映射到 `pr create` 后，可以直接使用 `workflow ci` 来创建 PR。别名会在命令解析前自动展开。
 
+### SSH 密钥管理
+```bash
+workflow ssh generate [-o <path>] [-a <algorithm>] [-C <comment>] [--force] [--no-passphrase]  # 生成 SSH 密钥对
+workflow ssh add [-k <key>] [-t <lifetime>]     # 添加密钥到 ssh-agent
+workflow ssh remove [-f <fingerprint>] [--all]  # 从 ssh-agent 移除密钥
+workflow ssh check                              # 检查 SSH 配置
+workflow ssh setup                              # 交互式 SSH 配置
+```
+
 ### 安装命令
 ```bash
 install                            # 安装 Workflow CLI 到系统（默认安装二进制文件 + shell completions）
@@ -466,7 +485,7 @@ workflow pr update [PR_ID] [-m <message>]     # 提交本地更改并推送到 P
 workflow pr merge <PR_ID> [--force]           # 合并 PR
 workflow pr close <PR_ID>                     # 关闭 PR
 workflow pr approve <PR_ID>                    # 批准 PR
-workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR
+workflow pr reword [--dry-run]                 # 使用 LLM 重写 PR 描述
 ```
 
 ### Jira 操作
@@ -476,11 +495,9 @@ workflow jira setup                           # 设置 Jira 配置（交互式�
 workflow jira info [PROJ-123] [--json] [--markdown]   # 显示 ticket 信息
 workflow jira attachments [PROJ-123]          # 下载所有附件
 workflow jira clean [PROJ-123] [--all]        # 清理附件/日志目录（不指定 ID 则交互式）
-workflow jira transition <PROJ-123>            # 过渡 Jira 状态
-workflow jira assign <PROJ-123>                # 分配 ticket 给当前用户
 ```
 
-> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [架构设计文档](./docs/guidelines/architecture.md)。
+> **注意**：`jira transition`、`jira assign`、`jira comment`、`jira status` 仅在 `develop` feature 构建中可用。GitHub 和 CNB 平台已完整支持，Codeup 仅支持仓库识别与基础 Git 操作。
 
 ## 🚀 发布
 
@@ -594,19 +611,21 @@ make lint
 
 ## 🏗️ 架构总览
 
-v2 采用 Cargo workspace 多 crate 结构：
+v2 采用 Cargo workspace 多 crate 结构（9 个 crate）：
 
 | Crate | 职责 |
 |-------|------|
-| **app** | CLI 入口（`bin/workflow.rs`、`bin/install.rs`）、`cli/` 参数与子命令、`commands/` 命令实现、`workflows/` 工作流编排 |
-| **domain** | 领域模型与接口（config、git、jira、github、llm、pr、path、template 等） |
-| **storage** | 存储与 Git 实现（实现 domain 中的仓储） |
-| **services** | 应用服务（pull_request、completion、path、alias 等） |
-| **toolkit** | 通用能力（http、logger、paths、template、util、rollback、shell、terminal 等） |
-| **prompt** | 交互与输出（dialog、form、output、style） |
-| **registry** | 依赖注入（供 app 解析服务） |
+| **app** | CLI 入口（`bin/workflow.rs`、`bin/install.rs`）、`cli/` 参数与子命令、`commands/` 命令实现、`interactive/` 交互式工作流 |
+| **domain** | 领域实体与接口（config、git、jira、github、llm、pr、path、template 等） |
+| **client** | 客户端 trait 与类型（Http、LLM、GitHub、Jira、LanguageManager） |
+| **infra** | 基础设施实现（HTTP 客户端、LLM 客户端、重试机制等） |
+| **storage** | 仓储实现（Git、GitHub、Jira、Config） |
+| **services** | 应用服务（PR、分支、提交、摘要、补全、别名等） |
+| **toolkit** | 通用工具（日志、路径、模板、Shell、回滚等） |
+| **prompt** | 终端交互（对话框、表单、进度条、样式输出） |
+| **di** | 依赖注入容器（基于 DashMap，支持 Singleton/Transient） |
 
-数据流向：**用户输入 → app (Cli) → commands/\* → domain / storage / services → 执行操作**
+数据流向：**用户输入 → app (Cli) → commands/\* → services → domain / storage → 执行操作**
 
 更完整的层次与模块说明见 [架构设计](./docs/guidelines/architecture.md)。
 
