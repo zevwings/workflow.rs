@@ -3,6 +3,7 @@
 //! 提供跨领域的基础设施能力，作为底层技术支撑。
 
 pub mod bootstrap;
+pub mod codeup;
 pub mod github;
 pub mod http;
 pub mod jira;

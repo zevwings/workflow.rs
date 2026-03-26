@@ -4,9 +4,9 @@
 
 use crate::config::error::ConfigError;
 use crate::config::global::{
-    github::verification::GitHubVerificationResult, jira::verification::JiraVerificationResult,
-    llm::verification::LLMVerificationResult, log::verification::LogVerificationResult,
-    ssh::verification::SshVerificationResult,
+    codeup::verification::CodeupVerificationResult, github::verification::GitHubVerificationResult,
+    jira::verification::JiraVerificationResult, llm::verification::LLMVerificationResult,
+    log::verification::LogVerificationResult, ssh::verification::SshVerificationResult,
 };
 
 /// 验证服务接口
@@ -16,6 +16,9 @@ pub trait VerificationService: Send + Sync {
 
     /// 验证 GitHub 配置
     fn verify_github_config(&self) -> Result<GitHubVerificationResult, ConfigError>;
+
+    /// 验证 Codeup 配置
+    fn verify_codeup_config(&self) -> Result<CodeupVerificationResult, ConfigError>;
 
     /// 验证 LLM 配置
     fn verify_llm_config(&self) -> Result<LLMVerificationResult, ConfigError>;

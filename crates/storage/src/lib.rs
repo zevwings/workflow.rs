@@ -17,6 +17,7 @@ pub mod git;
 pub mod testing;
 
 pub(crate) mod bootstrap;
+pub(crate) mod codeup;
 pub(crate) mod config;
 pub(crate) mod github;
 pub(crate) mod jira;

@@ -9,12 +9,19 @@
 //! - LLM: `LLMClient` trait
 //! - GitHub: `GitHubClient` trait
 //! - Jira: `JiraClient` trait
+//! - Codeup: `CodeupClient` trait
 
+mod codeup;
 mod github;
 mod http;
 mod jira;
 mod llm;
 
+pub use codeup::{
+    CodeupClient, CodeupClientError, CodeupConfigContext, CodeupErrorResponse,
+    CodeupPullRequestListResponse, CodeupRequest, CodeupResponse, CreateCodeupPullRequestRequest,
+    CreateCodeupPullRequestResponse,
+};
 pub use github::{
     GitHubClient, GitHubClientError, GitHubConfigContext, GitHubErrorResource, GitHubErrorResponse,
     GitHubRequest, GitHubResponse,

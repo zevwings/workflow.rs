@@ -2,6 +2,7 @@
 //!
 //! 从 workflow.toml 配置文件读取全局应用配置
 
+pub mod codeup;
 pub mod config;
 pub mod github;
 pub mod jira;
@@ -12,6 +13,9 @@ pub mod ssh;
 pub mod verification_service;
 
 // Re-export public types
+pub use codeup::{
+    CodeupConfigInfo, CodeupSettings, CodeupVerificationResult, CodeupVerificationStatus,
+};
 pub use config::GlobalConfig;
 pub use github::{
     GitHubAccount, GitHubAccountInfo, GitHubSettings, GitHubVerificationResult,

@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::config::global::{
-    github::config::GitHubSettings, jira::config::JiraSettings, llm::config::LLMSettings,
-    log::config::LogSettings,
+    codeup::config::CodeupSettings, github::config::GitHubSettings, jira::config::JiraSettings,
+    llm::config::LLMSettings, log::config::LogSettings,
 };
 
 /// 全局配置
@@ -19,6 +19,9 @@ pub struct GlobalConfig {
     /// GitHub 配置
     #[serde(default, skip_serializing_if = "GitHubSettings::is_empty")]
     pub github: GitHubSettings,
+    /// Codeup 配置
+    #[serde(default, skip_serializing_if = "CodeupSettings::is_empty")]
+    pub codeup: CodeupSettings,
     /// 日志配置
     #[serde(default, skip_serializing_if = "LogSettings::is_empty")]
     pub log: LogSettings,
@@ -53,6 +56,7 @@ mod tests {
                 service_address: "https://jira.example.com".to_string(),
             },
             github: GitHubSettings::default(),
+            codeup: CodeupSettings::default(),
             log: LogSettings::default(),
             llm: LLMSettings::default(),
             aliases,

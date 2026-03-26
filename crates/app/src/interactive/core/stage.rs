@@ -96,7 +96,7 @@ impl<'a> WorkflowExecutor<'a> {
         let stage_name = self.stage.stage_name();
 
         if !self.stage.is_configured(settings) {
-            warning!("{} is not configured. Skipping verification.", stage_name);
+            // warning!("{} is not configured. Skipping verification.", stage_name);
             return Ok(());
         }
 

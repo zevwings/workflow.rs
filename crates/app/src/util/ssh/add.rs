@@ -6,13 +6,51 @@ use prompt::{info, select};
 use crate::bootstrap::get_ssh_service;
 use crate::util::SshOperationError;
 
+/// 是否存在可添加到 agent 的密钥（磁盘上有且未加载）
+pub fn has_unloaded_keys() -> bool {
+    let ssh = get_ssh_service();
+    let all_keys = ssh.scan_keys();
+    if all_keys.is_empty() {
+        return false;
+    }
+    if !ssh.is_agent_available() {
+        return true;
+    }
+    let loaded_paths: std::collections::HashSet<_> = ssh
+        .list_loaded_keys()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|k| ssh.find_key_path_by_fingerprint(&k.fingerprint))
+        .collect();
+    all_keys.iter().any(|p| !loaded_paths.contains(p))
+}
+
 fn select_key_interactively() -> Result<PathBuf, SshOperationError> {
     let ssh = get_ssh_service();
-    let keys = ssh.scan_keys();
+    let all_keys = ssh.scan_keys();
+
+    if all_keys.is_empty() {
+        return Err(SshOperationError::OperationFailed(
+            "No SSH keys found in ~/.ssh/. Run `workflow ssh generate` to create one.".into(),
+        ));
+    }
+
+    // 过滤掉已在 agent 中的密钥
+    let keys: Vec<PathBuf> = if ssh.is_agent_available() {
+        let loaded_paths: std::collections::HashSet<_> = ssh
+            .list_loaded_keys()
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|k| ssh.find_key_path_by_fingerprint(&k.fingerprint))
+            .collect();
+        all_keys.into_iter().filter(|p| !loaded_paths.contains(p)).collect()
+    } else {
+        all_keys
+    };
 
     if keys.is_empty() {
         return Err(SshOperationError::OperationFailed(
-            "No SSH keys found in ~/.ssh/. Run `workflow ssh generate` to create one.".into(),
+            "All SSH keys are already loaded in the agent.".into(),
         ));
     }
 

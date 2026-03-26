@@ -51,12 +51,16 @@ impl CodePlatform {
 
     /// 获取所有已实现的平台（不包括 Unknown）
     pub fn implemented() -> Vec<CodePlatform> {
-        vec![CodePlatform::GitHub, CodePlatform::CNB]
+        vec![
+            CodePlatform::GitHub,
+            CodePlatform::CNB,
+            CodePlatform::Codeup,
+        ]
     }
 
     /// 检查平台是否已完全实现（支持完整的 PR 功能）
     pub fn is_fully_implemented(&self) -> bool {
-        matches!(self, CodePlatform::GitHub)
+        matches!(self, CodePlatform::GitHub | CodePlatform::Codeup)
     }
 
     /// 从字符串解析平台类型（不包括 Unknown）
@@ -126,7 +130,7 @@ mod tests {
     fn test_code_platform_is_fully_implemented() {
         assert!(CodePlatform::GitHub.is_fully_implemented());
         assert!(!CodePlatform::CNB.is_fully_implemented());
-        assert!(!CodePlatform::Codeup.is_fully_implemented());
+        assert!(CodePlatform::Codeup.is_fully_implemented());
         assert!(!CodePlatform::Unknown.is_fully_implemented());
     }
 
@@ -156,9 +160,10 @@ mod tests {
     #[test]
     fn test_code_platform_implemented() {
         let implemented = CodePlatform::implemented();
-        assert_eq!(implemented.len(), 2);
+        assert_eq!(implemented.len(), 3);
         assert!(implemented.contains(&CodePlatform::GitHub));
         assert!(implemented.contains(&CodePlatform::CNB));
+        assert!(implemented.contains(&CodePlatform::Codeup));
     }
 
     #[test]

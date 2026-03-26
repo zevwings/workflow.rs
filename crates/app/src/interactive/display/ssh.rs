@@ -1,4 +1,6 @@
 //! SSH 验证结果格式化实现
+//!
+//! 用于 check 命令的表格展示，setup 的简洁展示在 platforms/ssh.rs 中实现。
 
 use domain::SshVerificationResult;
 use prompt::{br, info, warning, Alignment, TableBuilder};
